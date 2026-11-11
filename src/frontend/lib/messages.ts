@@ -51,6 +51,17 @@ export function sendOpenFeatureMessage(
     });
 }
 
+/** Shows another tab of the workspace in the Onshape window. */
+export function sendSwitchTabMessage(
+    elementPath: ElementPath,
+    elementId: string
+) {
+    sendMessage(elementPath, {
+        messageName: MessageType.SWITCH_TAB,
+        anotherElementId: elementId
+    });
+}
+
 let highlights = 0;
 
 /**

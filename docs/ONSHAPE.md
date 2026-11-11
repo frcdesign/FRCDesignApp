@@ -148,6 +148,9 @@ problem planted, whose answers are kept, cut down, in
   broken.
 - **An inserted sketch** is left out of the assembly definition with
   `includeNonSolids=false`, which `getAssembly` sends by default — _observed_.
+- **`openAnotherElementInCurrentWorkspace`**, a client message, shows another
+  tab of the workspace, named by `anotherElementId` — _documented_. What
+  becomes of the app's panel after the switch is _unverified_.
 - **`openFeatureDialog`**, a client message, opens a feature's dialog in a
   workspace's Part Studio — _documented_ — and a mate's in an Assembly,
   suppressed or not — _observed_. A suppressed Part Studio feature doesn't

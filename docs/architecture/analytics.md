@@ -871,9 +871,9 @@ no foreign key crosses between them):
   scope, whether it was update-only, its outcome, and how many steps failed,
   versions it created and tabs it updated. A report adds its topic, category,
   source and the team number the reporter gave, and a part report the element
-  path and insertable. A design check adds the kind of tab it read and how
-  many of each issue type it found, and no element path: the tab is somebody's
-  own. Keyed on
+  path and insertable. A design check records each tab it checks afresh, not
+  one it reuses, adding the kind of tab and how many of each issue type it
+  found, and no element path: the tab is somebody's own. Keyed on
   Onshape's element id with no foreign keys, so history survives a reload or a
   re-added tab.
 - `library_id` is null for an event that belongs to no library: an app open,
@@ -929,7 +929,7 @@ no foreign key crosses between them):
    it managed; `POST /api/update-references` records one in the background once
    it has updated a library document's references; `POST /api/feedback` calls `trackReport` once the report is
    posted to Discord (see [feedback.md](./feedback.md)); `GET /api/design-check`
-   calls `trackDesignCheck` once its checks have run (see
+   calls `trackDesignCheck` once for each tab it checks afresh (see
    [design-check.md](./design-check.md)).
 2. A use, an open, a report and a design check are recorded in the background (`runInBackground`),
    after the response; a version run's step swallows a failure to record. So

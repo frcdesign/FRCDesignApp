@@ -15,7 +15,7 @@ export enum EventType {
     VERSION_RUN = "version_run",
     /** One report posted to Discord; see `features/feedback`. */
     REPORT = "report",
-    /** One check of a Part Studio or Assembly; see `features/design-check`. */
+    /** One tab checked afresh, a Part Studio or Assembly; see `features/design-check`. */
     DESIGN_CHECK = "design_check"
 }
 

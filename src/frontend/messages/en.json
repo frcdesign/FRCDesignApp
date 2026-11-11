@@ -578,13 +578,13 @@
     "navbarSettings": "Settings",
     "navbarLightMode": "Light mode",
     "navbarDarkMode": "Dark mode",
-    "designCheckSignInTitle": "Sign in to check this tab",
+    "designCheckSignInTitle": "Sign in to check this document",
     "designCheckSignInDescription": "The design check reads it from your Onshape account.",
     "designCheckSignIn": "Sign in",
-    "designCheckChecking": "Checking this tab...",
-    "designCheckFailed": "Failed to check this tab.",
+    "designCheckChecking": "Checking this document...",
+    "designCheckFailed": "Failed to check this document.",
     "designCheckAgain": "Check again",
-    "designCheckAgainFailed": "Failed to check this tab again. These are the last results.",
+    "designCheckAgainFailed": "Failed to check this document again. These are the last results.",
     "designCheckCheckedAt": [
         {
             "declarations": [
@@ -598,8 +598,12 @@
         }
     ],
     "designCheckCleanTitle": "No issues found",
-    "designCheckCleanPartStudio": "This Part Studio follows every practice the design check looks for.",
-    "designCheckCleanAssembly": "This Assembly follows every practice the design check looks for.",
+    "designCheckCleanDocument": "Every Part Studio and Assembly in this document follows every practice the design check looks for.",
+    "designCheckThisTab": "This tab",
+    "designCheckSwitchTab": "Switch to this tab",
+    "designCheckTabClean": "Nothing to fix in this tab.",
+    "designCheckTabFailed": "Failed to check this tab.",
+    "designCheckTabNotChecked": "Not checked",
     "designCheckSketchStatusUnknown": "Onshape didn't say which sketches are fully defined, so under-defined sketches weren't checked. Over-defined sketches still show as features with errors or warnings.",
     "designCheckOpenFeature": "Open in Onshape",
     "designCheckSelectPart": "Select in Onshape",

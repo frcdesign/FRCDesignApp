@@ -72,6 +72,21 @@ export function parseInsertableTabs(
 }
 
 /** Yields each elementId in a folder tree, depth-first, in display order. */
+/** The document's tabs in the order Onshape shows them, folders opened. */
+export function elementsInTabOrder(
+    contents: OnshapeDocumentContents
+): OnshapeElement[] {
+    const byId = new Map(
+        contents.elements.map((element) => [element.id, element])
+    );
+    return [...traverseFolders(contents.folders.groups)].flatMap(
+        (elementId) => {
+            const element = byId.get(elementId);
+            return element ? [element] : [];
+        }
+    );
+}
+
 function* traverseFolders(entries: OnshapeFolderEntry[]): Generator<string> {
     for (const entry of entries) {
         if (entry.btType === OnshapeFolderEntryType.GROUP) {

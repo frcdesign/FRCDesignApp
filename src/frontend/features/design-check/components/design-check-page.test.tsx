@@ -39,15 +39,22 @@ const TARGET: TargetElement = {
 };
 
 const CHECK: DesignCheckOut = {
-    elementType: ElementType.PART_STUDIO,
-    issues: [
+    tabs: [
         {
-            type: DesignIssueType.SKETCH_UNDERDEFINED,
-            subject: "Sketch 1",
-            featureId: "S1"
+            elementId: "tab",
+            name: "Part Studio 1",
+            elementType: ElementType.PART_STUDIO,
+            issues: [
+                {
+                    type: DesignIssueType.SKETCH_UNDERDEFINED,
+                    subject: "Sketch 1",
+                    featureId: "S1"
+                }
+            ],
+            sketchStatusUnknown: false,
+            failed: false
         }
     ],
-    sketchStatusUnknown: false,
     checkedAt: Date.UTC(2026, 10, 10, 18, 30)
 };
 
@@ -71,7 +78,7 @@ describe("the design check page", () => {
     it("asks someone signed out to sign in", () => {
         renderPage(false);
 
-        expect(screen.getByText("Sign in to check this tab")).toBeTruthy();
+        expect(screen.getByText("Sign in to check this document")).toBeTruthy();
         expect(apiGet).not.toHaveBeenCalled();
     });
 
@@ -91,7 +98,7 @@ describe("the design check page", () => {
 
         expect(
             await screen.findByText(
-                "Failed to check this tab again. These are the last results."
+                "Failed to check this document again. These are the last results."
             )
         ).toBeTruthy();
         expect(screen.getByText("Sketch 1")).toBeTruthy();

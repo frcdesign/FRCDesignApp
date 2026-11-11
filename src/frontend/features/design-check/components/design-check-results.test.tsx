@@ -3,7 +3,9 @@ import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
     type DesignCheckOut,
-    DesignIssueType
+    type DesignIssue,
+    DesignIssueType,
+    type TabCheck
 } from "@backend/features/design-check/contract";
 import { ElementType } from "@backend/lib/onshape/element-type";
 import { renderWithProviders } from "../../../../__test_utils__/render";
@@ -18,13 +20,32 @@ const target: TargetElement = {
     elementType: ElementType.PART_STUDIO
 };
 
-function result(overrides: Partial<DesignCheckOut> = {}): DesignCheckOut {
+function tab(overrides: Partial<TabCheck> = {}): TabCheck {
     return {
+        elementId: "tab",
+        name: "Part Studio 1",
         elementType: ElementType.PART_STUDIO,
         issues: [],
         sketchStatusUnknown: false,
-        checkedAt: Date.UTC(2026, 10, 9, 18, 30),
+        failed: false,
         ...overrides
+    };
+}
+
+interface LaunchTab {
+    issues?: DesignIssue[];
+    sketchStatusUnknown?: boolean;
+    elementType?: ElementType;
+    /** Tabs after the launch's. */
+    others?: TabCheck[];
+}
+
+/** A check whose first tab is the launch's. */
+function result(launch: LaunchTab = {}): DesignCheckOut {
+    const { others = [], ...launchTab } = launch;
+    return {
+        tabs: [tab(launchTab), ...others],
+        checkedAt: Date.UTC(2026, 10, 9, 18, 30)
     };
 }
 
@@ -39,7 +60,7 @@ describe("design check results", () => {
         expect(screen.getByText("No issues found")).toBeTruthy();
         expect(
             screen.getByText(
-                "This Part Studio follows every practice the design check looks for."
+                "Every Part Studio and Assembly in this document follows every practice the design check looks for."
             )
         ).toBeTruthy();
     });
@@ -77,7 +98,8 @@ describe("design check results", () => {
                 "It leaves 3 features out of the model. Drag it to the bottom of the list."
             )
         ).toBeTruthy();
-        expect(screen.getByText("3 warnings")).toBeTruthy();
+        // The document's count, and its one tab's.
+        expect(screen.getAllByText("3 warnings")).toHaveLength(2);
     });
 
     it("opens a feature in Onshape when its name is clicked", async () => {
@@ -117,8 +139,13 @@ describe("design check results", () => {
         const postMessage = vi
             .spyOn(window.parent, "postMessage")
             .mockImplementation(() => undefined);
-        const suppressed = (subject: string, featureId: string) =>
+        const suppressed = (
+            subject: string,
+            featureId: string,
+            elementType = ElementType.PART_STUDIO
+        ) =>
             result({
+                elementType,
                 issues: [
                     {
                         type: DesignIssueType.FEATURE_SUPPRESSED,
@@ -140,10 +167,7 @@ describe("design check results", () => {
         renderWithProviders(
             <DesignCheckResults
                 target={{ ...target, elementType: ElementType.ASSEMBLY }}
-                result={{
-                    ...suppressed("Fastened 2", "M2"),
-                    elementType: ElementType.ASSEMBLY
-                }}
+                result={suppressed("Fastened 2", "M2", ElementType.ASSEMBLY)}
             />
         );
         await userEvent.click(
@@ -249,6 +273,79 @@ describe("design check results", () => {
             }),
             "*"
         );
+    });
+
+    it("names another tab's issues only, and switches to that tab", async () => {
+        const postMessage = vi
+            .spyOn(window.parent, "postMessage")
+            .mockImplementation(() => undefined);
+        renderWithProviders(
+            <DesignCheckResults
+                target={target}
+                result={result({
+                    others: [
+                        tab({
+                            elementId: "asm",
+                            name: "Assembly 1",
+                            elementType: ElementType.ASSEMBLY,
+                            issues: [
+                                {
+                                    type: DesignIssueType.INSTANCE_FLOATING,
+                                    subject: "Plate <1>",
+                                    instanceId: "M1",
+                                    partId: "JHD"
+                                }
+                            ]
+                        })
+                    ]
+                })}
+            />
+        );
+
+        expect(screen.getByText("Nothing to fix in this tab.")).toBeTruthy();
+        expect(screen.getByText("This tab")).toBeTruthy();
+
+        await userEvent.click(screen.getByText("Assembly 1"));
+
+        expect(screen.getByText("Plate <1>")).toBeTruthy();
+        expect(screen.queryByRole("button", { name: "Plate <1>" })).toBeNull();
+
+        await userEvent.click(
+            screen.getByRole("button", { name: "Switch to this tab" })
+        );
+
+        expect(postMessage).toHaveBeenCalledWith(
+            expect.objectContaining({
+                messageName: "openAnotherElementInCurrentWorkspace",
+                anotherElementId: "asm",
+                elementId: "tab"
+            }),
+            "*"
+        );
+    });
+
+    it("says a tab Onshape failed on went unchecked", async () => {
+        renderWithProviders(
+            <DesignCheckResults
+                target={target}
+                result={result({
+                    others: [
+                        tab({
+                            elementId: "asm",
+                            name: "Assembly 1",
+                            failed: true
+                        })
+                    ]
+                })}
+            />
+        );
+
+        expect(screen.queryByText("No issues found")).toBeNull();
+        expect(screen.getByText("Not checked")).toBeTruthy();
+
+        await userEvent.click(screen.getByText("Assembly 1"));
+
+        expect(screen.getByText("Failed to check this tab.")).toBeTruthy();
     });
 
     it("says when sketches went unchecked", () => {
