@@ -47,13 +47,15 @@ interface LaunchTab {
     elementType?: ElementType;
     /** Tabs after the launch's. */
     others?: TabCheck[];
+    canDismiss?: boolean;
 }
 
 /** A check whose first tab is the launch's. */
 function result(launch: LaunchTab = {}): DesignCheckOut {
-    const { others = [], ...launchTab } = launch;
+    const { others = [], canDismiss = true, ...launchTab } = launch;
     return {
         tabs: [tab(launchTab), ...others],
+        canDismiss,
         checkedAt: Date.UTC(2026, 10, 9, 18, 30)
     };
 }
@@ -505,5 +507,93 @@ describe("design check results", () => {
                 }
             ]
         ]);
+    });
+
+    it("leaves dismissed issues out until asked for, then shows them to put back", async () => {
+        renderWithProviders(
+            <DesignCheckResults
+                target={target}
+                result={result({
+                    issues: [
+                        {
+                            type: DesignIssueType.SKETCH_UNDERDEFINED,
+                            subject: "Sketch 1",
+                            featureId: "S1"
+                        },
+                        {
+                            type: DesignIssueType.SKETCH_UNDERDEFINED,
+                            subject: "Sketch 2",
+                            featureId: "S2",
+                            dismissed: true
+                        }
+                    ]
+                })}
+            />
+        );
+
+        expect(screen.getByText("Sketch 1")).toBeTruthy();
+        expect(screen.queryByText("Sketch 2")).toBeNull();
+
+        await userEvent.click(
+            screen.getByRole("button", { name: "Show 1 dismissed issue" })
+        );
+        expect(screen.getByText("Sketch 2")).toBeTruthy();
+
+        const [, putBack] = screen.getAllByRole("button", {
+            name: /^(Dismiss|Put back)$/
+        });
+        await userEvent.click(putBack);
+
+        expect(apiPost).toHaveBeenCalledWith("/design-check/dismiss", {
+            body: {
+                documentId: "doc",
+                elementId: "tab",
+                issueKey: "sketch-underdefined:S2",
+                dismissed: false
+            }
+        });
+    });
+
+    it("counts a document whose every issue is dismissed as clean", () => {
+        renderWithProviders(
+            <DesignCheckResults
+                target={target}
+                result={result({
+                    issues: [
+                        {
+                            type: DesignIssueType.ROLLBACK_NOT_AT_END,
+                            count: 2,
+                            dismissed: true
+                        }
+                    ]
+                })}
+            />
+        );
+
+        expect(screen.getByText("No issues found")).toBeTruthy();
+        expect(
+            screen.getByRole("button", { name: "Show 1 dismissed issue" })
+        ).toBeTruthy();
+    });
+
+    it("offers no dismissing to someone who can't edit the document", () => {
+        renderWithProviders(
+            <DesignCheckResults
+                target={target}
+                result={result({
+                    canDismiss: false,
+                    issues: [
+                        {
+                            type: DesignIssueType.SKETCH_UNDERDEFINED,
+                            subject: "Sketch 1",
+                            featureId: "S1"
+                        }
+                    ]
+                })}
+            />
+        );
+
+        expect(screen.getByText("Sketch 1")).toBeTruthy();
+        expect(screen.queryByRole("button", { name: "Dismiss" })).toBeNull();
     });
 });

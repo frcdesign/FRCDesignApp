@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import {
     AccessLevel,
     type AccessData
@@ -22,7 +23,11 @@ import {
 } from "../../../lib/query-keys";
 
 const apiGet = vi.hoisted(() => vi.fn());
-const apiPost = vi.hoisted(() => vi.fn(() => Promise.resolve({})));
+const apiPost = vi.hoisted(() =>
+    vi.fn<(path: string, options?: object) => Promise<object>>(() =>
+        Promise.resolve({})
+    )
+);
 vi.mock("../../../lib/api-client", () => ({ apiGet, apiPost }));
 vi.mock("../../../lib/library", () => ({
     useLibraryId: () => DEFAULT_LIBRARY
@@ -55,6 +60,7 @@ const CHECK: DesignCheckOut = {
             failed: false
         }
     ],
+    canDismiss: true,
     checkedAt: Date.UTC(2026, 10, 10, 18, 30)
 };
 
@@ -72,6 +78,8 @@ function renderPage(signedIn: boolean) {
 describe("the design check page", () => {
     beforeEach(() => {
         apiGet.mockReset();
+        apiPost.mockReset();
+        apiPost.mockResolvedValue({});
         useOnshapeLaunch.setState(TARGET);
     });
 
@@ -102,5 +110,27 @@ describe("the design check page", () => {
             )
         ).toBeTruthy();
         expect(screen.getByText("Sketch 1")).toBeTruthy();
+    });
+
+    it("dismisses an issue at once, and puts it back when saving fails", async () => {
+        apiGet.mockResolvedValueOnce(CHECK);
+        const saving = Promise.withResolvers<object>();
+        apiPost.mockImplementation((path) =>
+            path === "/design-check/dismiss"
+                ? saving.promise
+                : Promise.resolve({})
+        );
+        renderPage(true);
+
+        await userEvent.click(
+            await screen.findByRole("button", { name: "Dismiss" })
+        );
+
+        expect(screen.queryByText("Sketch 1")).toBeNull();
+        expect(screen.getByText("No issues found")).toBeTruthy();
+
+        act(() => saving.reject(new Error("offline")));
+
+        expect(await screen.findByText("Sketch 1")).toBeTruthy();
     });
 });

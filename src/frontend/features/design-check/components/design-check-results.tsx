@@ -9,13 +9,23 @@ import {
     Text,
     Tooltip
 } from "@mantine/core";
-import { ArrowSquareOutIcon } from "@phosphor-icons/react";
-import { type PropsWithChildren, type ReactNode, useRef } from "react";
+import {
+    ArrowSquareOutIcon,
+    EyeIcon,
+    EyeSlashIcon
+} from "@phosphor-icons/react";
+import {
+    type PropsWithChildren,
+    type ReactNode,
+    useRef,
+    useState
+} from "react";
 import {
     type DesignCheckOut,
     type DesignIssue,
     DesignIssueType,
     getDesignIssueSeverity,
+    getIssueKey,
     type TabCheck
 } from "@backend/features/design-check/contract";
 import { ElementType } from "@backend/lib/onshape/element-type";
@@ -40,6 +50,7 @@ import { severityStatus } from "../../build-status/severity-status";
 import { getFixLabel, planFix, planFixes } from "../fixes";
 import { getDesignIssueHelp, getDesignIssueName } from "../issue-text";
 import { openFixDialog } from "../open-fix-dialog";
+import { useDismissMutation } from "../queries";
 
 interface DesignCheckResultsProps {
     target: TargetElement;
@@ -48,17 +59,41 @@ interface DesignCheckResultsProps {
     failedAgain?: boolean;
 }
 
-/** Every tab of the document, each folding open to its issues, the launch's tab open. */
+/**
+ * Every tab of the document, each folding open to its issues, the launch's tab
+ * open. What someone dismissed stays out of the counts and the list until asked for.
+ */
 export function DesignCheckResults(props: DesignCheckResultsProps): ReactNode {
     const { target, result, failedAgain } = props;
-    const issues = result.tabs.flatMap((tab) => tab.issues);
-    const fixes = planFixes(target, result.tabs);
+    const [showDismissed, setShowDismissed] = useState(false);
+    const live = result.tabs.map(withoutDismissed);
+    const issues = live.flatMap((tab) => tab.issues);
+    const dismissedCount = result.tabs
+        .flatMap((tab) => tab.issues)
+        .filter((issue) => issue.dismissed).length;
+    const fixes = planFixes(target, live);
     const checkedAt = m.designCheckCheckedAt({ checkedAt: result.checkedAt });
     const failedNote = failedAgain && (
         <Callout status={Status.ERROR} text={m.designCheckAgainFailed()} />
     );
+    const dismissedToggle = dismissedCount > 0 && (
+        <Anchor
+            component="button"
+            size="sm"
+            ta="left"
+            onClick={() => setShowDismissed(!showDismissed)}
+        >
+            {showDismissed
+                ? m.designCheckHideDismissed()
+                : m.designCheckShowDismissed({ count: dismissedCount })}
+        </Anchor>
+    );
 
-    if (issues.length === 0 && result.tabs.every((tab) => !tab.failed)) {
+    if (
+        issues.length === 0 &&
+        result.tabs.every((tab) => !tab.failed) &&
+        !showDismissed
+    ) {
         return (
             <PageNotice
                 icon={
@@ -76,6 +111,7 @@ export function DesignCheckResults(props: DesignCheckResultsProps): ReactNode {
                         {result.tabs.some((tab) => tab.sketchStatusUnknown) && (
                             <SketchNote />
                         )}
+                        {dismissedToggle}
                         <Text size="xs" c="dimmed">
                             {checkedAt}
                         </Text>
@@ -110,12 +146,22 @@ export function DesignCheckResults(props: DesignCheckResultsProps): ReactNode {
                 </Group>
             </Group>
             <Accordion multiple defaultValue={[target.elementId]}>
-                {result.tabs.map((tab) => (
-                    <TabItem key={tab.elementId} target={target} tab={tab} />
+                {(showDismissed ? result.tabs : live).map((tab) => (
+                    <TabItem
+                        key={tab.elementId}
+                        target={target}
+                        tab={tab}
+                        canDismiss={result.canDismiss}
+                    />
                 ))}
             </Accordion>
+            {dismissedToggle}
         </Stack>
     );
+}
+
+function withoutDismissed(tab: TabCheck): TabCheck {
+    return { ...tab, issues: tab.issues.filter((issue) => !issue.dismissed) };
 }
 
 function SketchNote(): ReactNode {
@@ -129,11 +175,12 @@ function SketchNote(): ReactNode {
 interface TabItemProps {
     target: TargetElement;
     tab: TabCheck;
+    canDismiss: boolean;
 }
 
 /** A tab's name and counts, with a way over to it, folding open to its issues. */
 function TabItem(props: TabItemProps): ReactNode {
-    const { target, tab } = props;
+    const { target, tab, canDismiss } = props;
     const isLaunchTab = tab.elementId === target.elementId;
 
     return (
@@ -157,8 +204,9 @@ function TabItem(props: TabItemProps): ReactNode {
                             </Badge>
                         ) : (
                             <SeverityBadges
-                                severities={tab.issues.map((issue) =>
-                                    getDesignIssueSeverity(issue.type)
+                                severities={withoutDismissed(tab).issues.map(
+                                    (issue) =>
+                                        getDesignIssueSeverity(issue.type)
                                 )}
                             />
                         )}
@@ -178,7 +226,7 @@ function TabItem(props: TabItemProps): ReactNode {
                 )}
             </Group>
             <Accordion.Panel>
-                <TabIssues target={target} tab={tab} />
+                <TabIssues target={target} tab={tab} canDismiss={canDismiss} />
             </Accordion.Panel>
         </Accordion.Item>
     );
@@ -187,11 +235,12 @@ function TabItem(props: TabItemProps): ReactNode {
 interface TabIssuesProps {
     target: TargetElement;
     tab: TabCheck;
+    canDismiss: boolean;
 }
 
 /** One box per kind of issue, worst first, naming everything it was found on. */
 function TabIssues(props: TabIssuesProps): ReactNode {
-    const { target, tab } = props;
+    const { target, tab, canDismiss } = props;
     if (tab.failed) {
         return <Text size="sm">{m.designCheckTabFailed()}</Text>;
     }
@@ -209,6 +258,7 @@ function TabIssues(props: TabIssuesProps): ReactNode {
                         target={target}
                         tab={tab}
                         issues={issues}
+                        canDismiss={canDismiss}
                     />
                 ))
             )}
@@ -226,15 +276,27 @@ interface IssueGroupProps {
     tab: TabCheck;
     /** Every one of the same type. */
     issues: DesignIssue[];
+    canDismiss: boolean;
 }
 
 function IssueGroup(props: IssueGroupProps): ReactNode {
-    const { target, tab, issues } = props;
+    const { target, tab, issues, canDismiss } = props;
     const first = issues[0];
     const severity = getDesignIssueSeverity(first.type);
     const named = issues.filter((issue) => issue.subject !== undefined);
     // Onshape opens and selects only in the tab the app was launched in.
     const pointAt = tab.elementId === target.elementId ? target : undefined;
+
+    const actions = (issue: DesignIssue) => (
+        <Group gap={4} wrap="nowrap" flex="none">
+            {!issue.dismissed && (
+                <FixButton target={target} tab={tab} issue={issue} />
+            )}
+            {canDismiss && (
+                <DismissButton target={target} tab={tab} issue={issue} />
+            )}
+        </Group>
+    );
 
     return (
         <Group
@@ -244,14 +306,13 @@ function IssueGroup(props: IssueGroupProps): ReactNode {
             p="xs"
             bdrs="sm"
             bg={statusWash(severityStatus(severity))}
+            opacity={issues.every((issue) => issue.dismissed) ? 0.6 : 1}
         >
             <IssueIcon severity={severity} size={IconSize.SMALL} />
             <Stack gap={4} flex={1} miw={0}>
                 <Text fw={500}>{getDesignIssueName(first.type)}</Text>
                 <Text size="sm">{getDesignIssueHelp(first)}</Text>
-                {first.subject === undefined && (
-                    <FixButton target={target} tab={tab} issue={first} />
-                )}
+                {first.subject === undefined && actions(first)}
                 {named.length > 0 && (
                     <Stack gap={2}>
                         {named.map((issue, index) => (
@@ -260,19 +321,53 @@ function IssueGroup(props: IssueGroupProps): ReactNode {
                                 gap="xs"
                                 wrap="nowrap"
                                 justify="space-between"
+                                opacity={issue.dismissed ? 0.6 : 1}
                             >
                                 <IssueSubject target={pointAt} issue={issue} />
-                                <FixButton
-                                    target={target}
-                                    tab={tab}
-                                    issue={issue}
-                                />
+                                {actions(issue)}
                             </Group>
                         ))}
                     </Stack>
                 )}
             </Stack>
         </Group>
+    );
+}
+
+interface DismissButtonProps {
+    target: TargetElement;
+    tab: TabCheck;
+    issue: DesignIssue;
+}
+
+/** Marks the issue as meant for everyone checking the document, or puts it back. */
+function DismissButton(props: DismissButtonProps): ReactNode {
+    const { target, tab, issue } = props;
+    const dismiss = useDismissMutation(target);
+    return (
+        <ActionIcon
+            variant="subtle"
+            size="sm"
+            title={
+                issue.dismissed
+                    ? m.designCheckPutBack()
+                    : m.designCheckDismiss()
+            }
+            onClick={() =>
+                dismiss.mutate({
+                    documentId: target.documentId,
+                    elementId: tab.elementId,
+                    issueKey: getIssueKey(issue),
+                    dismissed: !issue.dismissed
+                })
+            }
+        >
+            {issue.dismissed ? (
+                <EyeIcon size={IconSize.SMALL} />
+            ) : (
+                <EyeSlashIcon size={IconSize.SMALL} />
+            )}
+        </ActionIcon>
     );
 }
 

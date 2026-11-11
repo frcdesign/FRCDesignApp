@@ -7,7 +7,8 @@ in against FRCDesign's practices, and listing what each breaks: under- and
 over-defined sketches, a missing or misplaced Origin Cube, red, yellow and
 suppressed features or mates, a rollback bar left above the end, parts without
 a material, and fixed, floating or broken assembly instances. Anybody signed in
-can run it on a document they can read.
+can run it on a document they can read. Someone who can edit it can fix some
+issues from the page, and dismiss any that are meant, for everyone.
 
 It is not the library's build check ([build-issues.md](./build-issues.md)),
 which checks the library's own documents when they load and shows editors what
@@ -24,7 +25,29 @@ In the order a check runs: asked, each tab read and checked, drawn.
 ```text
 GET /api/design-check?documentId=&instanceId=    DesignCheckOut; never cached
 POST /api/design-check/fix   DesignFixIn         {}; makes one fix, as the caller
+POST /api/design-check/dismiss   DesignDismissIn {}; 403 without edit access
 ```
+
+`src/backend/features/design-check/dismissals.ts`
+
+```ts
+// Marks each issue the document has a dismissal for.
+async function markDismissed(
+    db: Db,
+    documentId: string,
+    tabs: TabCheck[]
+): Promise<TabCheck[]>;
+// Records one, or deletes it to put the issue back.
+async function setDismissed(
+    db: Db,
+    userId: string,
+    request: DesignDismissIn
+): Promise<void>;
+```
+
+`canWrite` (`src/backend/features/version-manager/workspace-cache.ts`) says
+whether the caller may edit the document, from the permission set `canRead`
+caches.
 
 `src/backend/features/design-check/fixes.ts`
 
@@ -107,6 +130,8 @@ function getDesignIssueSeverity(type: DesignIssueType): BuildIssueSeverity;
 function compareSeverity(a: BuildIssueSeverity, b: BuildIssueSeverity): number;
 // What analytics records of a check.
 function countDesignIssues(issues: DesignIssue[]): DesignIssueCounts;
+// `{type}:{featureId, instanceId or partId}`, which a dismissal is kept under.
+function getIssueKey(issue: DesignIssue): string;
 
 enum DesignIssueType {
     SKETCH_UNDERDEFINED = "sketch-underdefined",
@@ -142,6 +167,16 @@ interface DesignIssue {
     count?: number;
     /** Set where the app can fix it, for someone who may edit the document. */
     fix?: DesignIssueFix;
+    /** Someone with edit access marked it as meant. */
+    dismissed?: boolean;
+}
+
+interface DesignDismissIn {
+    documentId: string;
+    elementId: string;
+    issueKey: string;
+    /** False puts a dismissed issue back. */
+    dismissed: boolean;
 }
 
 enum DesignIssueFix {
@@ -175,6 +210,8 @@ interface TabCheck {
 interface DesignCheckOut {
     /** The document's Part Studios and Assemblies, in the order of its tabs. */
     tabs: TabCheck[];
+    /** The caller may edit the document, and so dismiss issues. */
+    canDismiss: boolean;
     /** Epoch ms. */
     checkedAt: number;
 }
@@ -198,6 +235,8 @@ function useIsDesignCheck(): boolean;
 function useIsDesignCheckNew(): boolean;
 // Each fix in turn, stopping at the first refused, then checks again.
 function useApplyFixesMutation(target: TargetElement);
+// Shown at once in the cached check, and undone there if saving fails.
+function useDismissMutation(target: TargetElement);
 ```
 
 `src/frontend/features/design-check/fixes.ts`,
@@ -235,7 +274,8 @@ function getDesignIssueHelp(issue: DesignIssue): string;
 ```ts
 // Keeps the last results when checking again fails.
 function DesignCheckPage(): ReactNode;
-// One accordion item per tab, the launch's open, each with a switch to its tab.
+// One accordion item per tab, the launch's open, each with a switch to its tab;
+// dismissed issues left out until shown.
 function DesignCheckResults(props: DesignCheckResultsProps): ReactNode;
 
 interface DesignCheckResultsProps {
@@ -289,6 +329,16 @@ note at one microversion, for a week. Shared by everyone who can read the
 document, since a tab's issues don't depend on who asks. `CHECKS_VERSION` is
 bumped when what the checks find changes.
 
+**D1** `design_check_dismissals`
+(`src/backend/features/design-check/schema.ts`) — one row per dismissed issue:
+the document, the tab, the issue's key, who dismissed it and when. Kept until
+someone puts the issue back; a dismissal whose issue is gone matches nothing.
+
+**KV** `document-permissions:` — the caller's permission set on the document,
+for a day, shared with the version manager
+([version-manager.md](./version-manager.md)); a check reads edit access from
+it.
+
 **Query cache** the last check of each workspace, never stale, dropped five
 minutes after the page closes (TanStack's default), so coming back later checks
 again.
@@ -329,11 +379,15 @@ only with one (`canResume` in `src/frontend/routes/index.tsx`).
    recorded through `trackDesignCheck`, both in the background.
 5. A tab Onshape fails on, other than by refusing the caller, is marked failed
    and the rest go on; a refusal fails the whole check.
-6. The navbar's refresh button, **Check again**, asks again; nothing else does.
+6. Alongside, the route asks whether the caller may edit the document
+   (`canWrite`), and marks each issue the document has a dismissal for
+   (`markDismissed`); neither is cached with the tab, so a dismissal shows on
+   the next check whether or not the tab changed.
+7. The navbar's refresh button, **Check again**, asks again; nothing else does.
 
 ### The results
 
-1. With nothing found in any tab, the page says so.
+1. With nothing found in any tab, or only dismissed issues, the page says so.
 2. Otherwise the document's severity badges head the page, beside the time of
    the check, then one accordion item per tab, in tab order, with its name and
    its own badges, or **Not checked** for a tab that failed. The launch's tab is
@@ -352,6 +406,20 @@ only with one (`canResume` in `src/frontend/routes/index.tsx`).
    part by its id, an instance by its id and its part's. Hovering one selects
    it, and leaving clears the selection (`sendClearSelectionMessage`) unless it
    was clicked. A sub-assembly or broken instance is named only.
+
+### Dismissing
+
+1. For someone who may edit the document (`canDismiss`), each issue has a
+   dismiss button: beside each name it lists, or under the help for one about
+   the whole tab.
+2. Clicking it sends `POST /api/design-check/dismiss` and drops the issue from
+   the counts, badges, list and **Fix all** at once, in the cached check
+   (`useDismissMutation`). The route checks edit access again (`canWrite`) and
+   records the dismissal (`setDismissed`), keyed by the tab and `getIssueKey`.
+3. **Show {n} dismissed issues**, under the list or in the notice, shows them
+   back in place, dimmed, each with a button that puts it back the same way.
+4. Every check of the document marks the issue dismissed, for everyone, until
+   someone puts it back.
 
 ### Fixing
 
@@ -396,6 +464,11 @@ In [strings/design-check.md](../strings/design-check.md).
 - Analytics records no document, element or name from a check.
 - No fix is made without a confirmation that lists it, and each is made as the
   caller.
+- Only someone Onshape lets edit the document records or deletes a dismissal,
+  checked on the request itself, not only by hiding the button.
+- A dismissal hides one issue, of one type, on one feature, part or instance,
+  in one tab; it never hides another issue, and counts, badges and **Fix all**
+  leave out exactly the dismissed.
 
 ## Failure and recovery
 
@@ -412,6 +485,9 @@ In [strings/design-check.md](../strings/design-check.md).
 | Onshape stops sending `sketchSolveStatus`       | The note that sketches went unchecked, on every Part Studio                                | A change here     |
 | A fix is refused or fails                       | "Failed to make a fix. Checking again shows what changed.", the rest left unmade           | Fixing again      |
 | The Origin Cube's Part Studio lost the cube     | The fix is refused: "The Origin Cube's Part Studio no longer has the Origin Cube."         | Fastening by hand |
+| Saving a dismissal fails                        | The issue back as it was, with "Failed to save the change. It's back as it was."           | Dismissing again  |
+| Edit access lost since the check                | The issue back as it was, with "Dismissing an issue needs edit access to the document."    | —                 |
+| A dismissed issue's feature is renamed          | Still dismissed: the key holds its id, not its name                                        | —                 |
 
 ## Decisions
 
@@ -460,6 +536,17 @@ In [strings/design-check.md](../strings/design-check.md).
   ([ONSHAPE.md](../ONSHAPE.md)).
 - **A loose Origin Cube is reported as not fastened, not as floating.** One
   issue, with the fix that sets it right.
+- **Dismissals for the whole document, by those who can edit it.** A dismissal
+  says the issue is meant, which is the team's call, not one viewer's; kept per
+  person, a teammate would see it flagged again. Someone who can only read the
+  document can't change what its editors see.
+- **Kept in D1, not with the tab's cached result.** A dismissal must last, and
+  the cached result is shared by microversion, which a dismissal doesn't move.
+- **Keyed by the issue's type and id, not its name or the microversion.** A
+  dismissal outlives editing the tab; renaming what it names keeps it, and an
+  issue about the whole tab, such as the rollback bar, is one per tab.
+- **Shown at once, without checking again.** Checking again reads the whole
+  document over; the change is already known.
 - **Grouped by type.** A Part Studio of thirty parts with no material is one
   box listing thirty names, not thirty boxes.
 

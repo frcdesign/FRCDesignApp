@@ -117,6 +117,9 @@ function mockOnshape(
             if (path === `/documents${WORKSPACE}/contents`) {
                 return Promise.resolve(contents(elements));
             }
+            if (path === "/documents/doc/permissionset" && !answers[path]) {
+                return Promise.resolve(["READ", "WRITE"]);
+            }
             const answer = answers[path] as
                 | (() => Promise<unknown>)
                 | undefined;
@@ -189,8 +192,9 @@ describe("checking a document", () => {
                 failed: false
             }
         ]);
-        // The contents, three for the Part Studio and two for the Assembly.
-        expect(get).toHaveBeenCalledTimes(6);
+        // The contents and the caller's permissions, three for the Part
+        // Studio and two for the Assembly.
+        expect(get).toHaveBeenCalledTimes(7);
         // Without geometry ids, Onshape leaves out every feature's status.
         expect(get).toHaveBeenCalledWith(
             `/partstudios${WORKSPACE}/e/ps/features`,
@@ -442,5 +446,80 @@ describe("fixing", () => {
         });
 
         expect(res.status).toBe(403);
+    });
+});
+
+describe("dismissing", () => {
+    const DISMISS_URL = "/api/design-check/dismiss";
+    const UNDERDEFINED = `${DesignIssueType.SKETCH_UNDERDEFINED}:S1`;
+
+    function dismiss(
+        onshapeApi: MockOnshapeApi,
+        dismissed: boolean,
+        userId = "test-user"
+    ) {
+        return createTestApp({ onshapeApi, userId }).request(
+            DISMISS_URL,
+            jsonRequest("POST", {
+                documentId: "doc",
+                elementId: "ps",
+                issueKey: UNDERDEFINED,
+                dismissed
+            }),
+            env
+        );
+    }
+
+    it("needs someone signed in", async () => {
+        const res = await createTestApp({ signedIn: false }).request(
+            DISMISS_URL,
+            jsonRequest("POST", {
+                documentId: "doc",
+                elementId: "ps",
+                issueKey: UNDERDEFINED,
+                dismissed: true
+            }),
+            env
+        );
+
+        expect(res.status).toBe(401);
+    });
+
+    it("refuses someone who can only read the document", async () => {
+        const { onshapeApi } = mockOnshape([], {
+            "/documents/doc/permissionset": () => Promise.resolve(["READ"])
+        });
+
+        expect((await dismiss(onshapeApi, true)).status).toBe(403);
+    });
+
+    it("marks a dismissed issue for everyone, until it is put back", async () => {
+        const answers = partStudioAnswers();
+        expect(
+            (await dismiss(mockOnshape([], answers).onshapeApi, true)).status
+        ).toBe(200);
+        vi.restoreAllMocks();
+
+        const someoneElse = await createTestApp({
+            onshapeApi: mockOnshape([PART_STUDIO], answers).onshapeApi,
+            userId: "someone-else"
+        }).request(CHECK_URL, {}, env);
+        const body = await someoneElse.json<DesignCheckOut>();
+        expect(
+            body.tabs[0].issues.map((issue) => [issue.type, issue.dismissed])
+        ).toEqual([
+            [DesignIssueType.ORIGIN_CUBE_MISSING, undefined],
+            [DesignIssueType.SKETCH_UNDERDEFINED, true]
+        ]);
+        expect(body.canDismiss).toBe(true);
+        vi.restoreAllMocks();
+
+        await dismiss(mockOnshape([], answers).onshapeApi, false);
+        const { body: after } = await check(
+            mockOnshape([PART_STUDIO], answers).onshapeApi
+        );
+        expect(after?.tabs[0].issues.some((issue) => issue.dismissed)).toBe(
+            false
+        );
     });
 });
