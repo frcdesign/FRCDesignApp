@@ -119,7 +119,8 @@ problem planted, whose answers are kept, cut down, in
   (`BTMIndividualQuery-138` in a `BTMParameterQueryList-148`) carries
   `deterministicIds`, what it resolves to, and the lost face's was `[]` beside
   the remaining face's `["JlC"]`. A sketch plane on Top resolved to `[]` too,
-  and without geometry ids every pick is `[]` — _observed_.
+  while Top picked in a Midplane's box resolved to `["JDC"]` beside a face's
+  `["JoK"]`; without geometry ids every pick is `[]` — _observed_.
 - **A fasten to the origin** is drawn with a warning while the assembly also
   has a fixed instance — "Fastened to origin even though Assembly has fixed
   part(s)" — and its `featureStatus` is `OK` — _observed_.

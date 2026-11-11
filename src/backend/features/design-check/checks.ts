@@ -214,7 +214,7 @@ function checkFeatures(response: OnshapeFeatureListResponse): DesignIssue[] {
  * Onshape draws a feature yellow once a pick it was given is gone, and still
  * calls it OK. A selection box holding a pick that resolves beside one that
  * resolves to nothing has lost that one; a box of only unresolved picks may
- * hold default planes, which never resolve.
+ * be a sketch's plane on Top, which never resolves.
  */
 function checkMissingSelections(
     response: OnshapeFeatureListResponse

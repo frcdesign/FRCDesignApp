@@ -443,7 +443,7 @@ describe("a Part Studio", () => {
         const snapshot = partStudio({
             features: [
                 originCube(),
-                // A default plane never resolves.
+                // A sketch's plane on Top never resolves.
                 { ...sketch("onTop"), parameters: [picks([])] },
                 extrude("red", { parameters: lost }),
                 extrude("off", { parameters: lost, suppressed: true }),

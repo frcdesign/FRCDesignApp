@@ -400,7 +400,7 @@ In [strings/design-check.md](../strings/design-check.md).
 | Any other call fails or times out               | The same                                                                              | **Check again** |
 | **Check again** fails                           | The last results, under "Failed to check this tab again. These are the last results." | **Check again** |
 | A feature lost one of a box's picks, and builds | "Feature with a warning", though Onshape reports it `OK`                              | —               |
-| A feature lost every pick in a box, and builds  | Nothing: a box of default planes resolves to nothing too                              | —               |
+| A feature lost every pick in a box, and builds  | Nothing: a sketch's plane on Top resolves to nothing too                              | —               |
 | The sketches can't be listed, or time out       | The other issues, and a note that sketches went unchecked                             | **Check again** |
 | Onshape stops sending `sketchSolveStatus`       | The note that sketches went unchecked, on every Part Studio                           | A change here   |
 | The levels can't be read                        | Every issue at FRCDesign's level, and no **Levels**                                   | Reopening       |
@@ -445,9 +445,11 @@ In [strings/design-check.md](../strings/design-check.md).
   instance to look in ([ONSHAPE.md](../ONSHAPE.md)). A broken instance has no
   part left, so it is named only. A selection cancels any selection request
   outstanding, and the page makes none.
-- **A lost pick counts only beside one that still resolves.** A pick of a
-  default plane resolves to nothing as well, so a box where nothing resolves
-  can't be told from a sketch on Top.
+- **A lost pick counts only beside one that still resolves.** A sketch's plane
+  on Top resolves to nothing as well, so a box where nothing resolves can't be
+  told from a sketch on Top. Top picked beside a face, as in a Midplane,
+  resolves to its own id, so it isn't taken for a lost pick
+  ([ONSHAPE.md](../ONSHAPE.md)).
 - **Off by default goes unmentioned.** Part numbers and descriptions are a
   team's own convention; counting every part without one as "hidden" would leave
   nearly every Part Studio short of "No issues found". What a person turned off
