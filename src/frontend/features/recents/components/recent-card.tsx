@@ -1,3 +1,5 @@
+import { Group } from "@mantine/core";
+import { m } from "../../../paraglide/messages";
 import { DEFAULT_CONFIGURATION_KEY } from "@backend/features/configurations/contract";
 import { ReactNode } from "react";
 import type { RecentInsert } from "@backend/features/recents/contract";
@@ -16,6 +18,7 @@ import {
 } from "../../../components/item-row";
 import { OpenDocumentItems } from "../../../components/open-document-items";
 import { QuickInsertItems } from "../../insert/components/quick-insert-items";
+import { QuickInsertButton } from "../../insert/components/quick-insert-button";
 import { ConfigurationHoverCard } from "../../insert/components/configuration-hover-card";
 import { useIsInsertableHidden } from "../../library/visibility";
 import { CardThumbnail } from "../../thumbnails/components/thumbnail";
@@ -100,12 +103,20 @@ export function RecentCard(props: RecentCardProps): ReactNode {
                 />
             }
             rightSection={
-                <FavoriteButton
-                    favorite={favorite}
-                    insertable={insertable}
-                    selection={recent.selection}
-                    configurationKey={recent.configurationKey}
-                />
+                <Group gap={4} wrap="nowrap">
+                    <QuickInsertButton
+                        insertable={insertable}
+                        selection={recent.selection}
+                        isFavorite={favorite !== undefined}
+                        source={UseSource.RECENTS}
+                    />
+                    <FavoriteButton
+                        favorite={favorite}
+                        insertable={insertable}
+                        selection={recent.selection}
+                        configurationKey={recent.configurationKey}
+                    />
+                </Group>
             }
             menuItems={
                 <RecentMenuItems insertable={insertable} recent={recent} />
@@ -128,7 +139,7 @@ function RecentMenuItems(props: RecentMenuItemsProps): ReactNode {
     return (
         <>
             {isConnected && (
-                <MenuSection label="Insert">
+                <MenuSection label={m.libraryMenuInsert()}>
                     <QuickInsertItems
                         insertable={insertable}
                         selection={recent.selection}
@@ -137,7 +148,7 @@ function RecentMenuItems(props: RecentMenuItemsProps): ReactNode {
                     />
                 </MenuSection>
             )}
-            <MenuSection label="Favorites">
+            <MenuSection label={m.libraryMenuFavorites()}>
                 <FavoriteInsertableItem
                     favorite={favorite}
                     insertable={insertable}
@@ -145,7 +156,7 @@ function RecentMenuItems(props: RecentMenuItemsProps): ReactNode {
                     configurationKey={recent.configurationKey}
                 />
             </MenuSection>
-            <MenuSection label="Document">
+            <MenuSection label={m.libraryMenuDocument()}>
                 <OpenDocumentItems
                     path={insertable.path}
                     selection={recent.selection}

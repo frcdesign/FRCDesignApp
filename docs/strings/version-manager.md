@@ -2,9 +2,10 @@
 
 What [version-manager.md](../architecture/version-manager.md) shows a person.
 App text is a message in `src/frontend/messages/en.json`, keyed
-`versionManager…`. The page, the welcome page and the suggestions are
-migrated; the link rows, their menus, the forms and the run reports still
-write their text in `src/frontend/features/version-manager/`, and the server's
+`versionManager…`. The page, the welcome page, the suggestions and the link
+rows with their menus are migrated, but for each direction's own words
+(`direction-copy.ts`); the forms and the run reports still write their text in
+`src/frontend/features/version-manager/`, and the server's
 own errors are written in `src/backend/features/version-manager/routes.ts`.
 
 ## The page
@@ -43,3 +44,20 @@ own errors are written in `src/backend/features/version-manager/routes.ts`.
 | "Open document"                                         | Menu item         | A suggestion's right-click menu                           | Either                                                                |                                    |
 | "Linked {count} documents."                             | Success toast     |                                                           | **Link all** landed                                                   | **⚑** New; says 0 when all skipped |
 | "Unexpectedly failed to link the documents."            | Error toast       |                                                           | **Link all** failed for a reason the server didn't word               | **⚑** New                          |
+
+## A linked document's row
+
+| String                                                                                                                   | Kind                                | Where                           | When                                   | Review    |
+| ------------------------------------------------------------------------------------------------------------------------ | ----------------------------------- | ------------------------------- | -------------------------------------- | --------- |
+| "Push" / "Pull"                                                                                                          | Outlined button                     | Each row, before its ⋯          | A child / a parent the caller can open | **⚑** New |
+| "Wait for the push or pull running now to finish."                                                                       | Tooltip                             | On the disabled button          | A run is going from this workspace     | **⚑** New |
+| "Push" / "Pull"                                                                                                          | Menu section                        | The row's and the section's ⋯   | The caller can open it                 |           |
+| "Quick recursive push" / "Quick recursive pull"                                                                          | Menu item                           | In it                           | Same                                   |           |
+| "Update references" / "Update all references"                                                                            | Menu item                           | In it, a row's / the section's  | Same                                   |           |
+| "Link"                                                                                                                   | Menu section                        | The row's ⋯                     | Always                                 |           |
+| "Open document"                                                                                                          | Menu item                           | In it                           | The caller can open it                 |           |
+| "Switch to child" / "Switch to parent"                                                                                   | Menu item                           | Same                            | A parent / a child                     |           |
+| "Remove link"                                                                                                            | Menu item, confirm title and button | Same                            | Always                                 |           |
+| "Are you sure you want to delete the link to {document}?" / "Are you sure you want to delete the link to this document?" | Confirm body                        | The remove confirm              | Named / the caller can't open it       |           |
+| "Missing access"                                                                                                         | Row title                           | In place of the document's name | The caller can't open it               |           |
+| "You cannot open this document"                                                                                          | Row subtitle                        | Under it                        | Same                                   |           |

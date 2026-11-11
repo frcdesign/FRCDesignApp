@@ -471,10 +471,13 @@ In [strings/version-manager.md](../strings/version-manager.md).
   references moved, with nothing to resume from.
 - **Direct push by default.** Cutting versions in somebody else's document is
   the opt-in, not the default.
-- **The row is the form; the menu is the runs.** Rows carry no push or pull
-  button: a list of documents reads as a list, and the buttons competed with the
-  names. Clicking a row opens the form. The menu holds the runs alone —
-  anybody who did not want the defaults is one click from the form already.
+- **The row is the form; its button is the quick run.** Each row the caller
+  can open carries an outlined **Push** or **Pull** (`RowActionButton`), which
+  runs under the form's defaults as the menu's quick push or pull does, and
+  waits, disabled with why, while a run is going. Outlined, it reads as
+  secondary to the name; the library's rows and FeatureScripts carry the same
+  button, so one click does the common thing everywhere. Clicking the row opens
+  the form, and the menu holds the rest of the runs.
 - **Always a new version; updating is its own action.** A push or pull that
   sometimes versions and sometimes does not reads oddly, most of all a pull that
   versions nothing. Moving references without versioning is asked for by name

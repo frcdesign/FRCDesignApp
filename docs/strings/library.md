@@ -2,7 +2,7 @@
 
 The library's pages, which have no architecture document of their own; how a
 document loads is in [loading.md](../architecture/loading.md). Messages are
-keyed `groupPage…`, `changesBadge…` and `library…` in
+keyed `groupPage…`, `changesBadge…`, `library…` and `insert…` in
 `src/frontend/messages/en.json`. Only what has moved into the catalog is
 listed so far: the rest join as their strings move there.
 
@@ -10,12 +10,23 @@ listed so far: the rest join as their strings move there.
 
 | String                                                | Kind          | Where                                         | When                                                  | Review    |
 | ----------------------------------------------------- | ------------- | --------------------------------------------- | ----------------------------------------------------- | --------- |
-| "Insert" / "Configuration" / "Favorites" / "Document" | Menu sections | A part's menu                                 | As each applies                                       |           |
+| "Insert" / "Configuration" / "Favorites" / "Document" | Menu sections | A part's menu; a favorite's and a recent's    | As each applies                                       |           |
 | "Update references"                                   | Menu item     | The Admin section of a part's or group's menu | An editor or above                                    | **⚑** New |
 | "Updating references..."                              | Loading toast |                                               | While the update runs                                 | **⚑** New |
 | "Updated references."                                 | Success toast |                                               | Something moved                                       | **⚑** New |
 | "References are already up to date."                  | Success toast |                                               | Nothing was out of date                               | **⚑** New |
 | "Failed to update references."                        | Error toast   |                                               | The update failed for a reason the server didn't word | **⚑** New |
+
+## Row buttons
+
+Every part row (a group's, Favorites', Recently Used's) carries the same
+outlined button, beside its heart; the button is
+`src/frontend/features/insert/components/quick-insert-button.tsx`.
+
+| String                                            | Kind            | Where                  | When                                            | Review    |
+| ------------------------------------------------- | --------------- | ---------------------- | ----------------------------------------------- | --------- |
+| "Insert" / "Derive"                               | Outlined button | Each part row          | In an assembly / a Part Studio; none standalone | **⚑** New |
+| "Assemblies can't be derived into a Part Studio." | Tooltip         | On the disabled button | An assembly's row, in a Part Studio             | **⚑** New |
 
 ## Group page
 

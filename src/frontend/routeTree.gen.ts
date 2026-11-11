@@ -26,7 +26,6 @@ import { Route as PagesCookieErrorRouteImport } from './routes/_pages/cookie-err
 import { Route as PagesBetaCompleteRouteImport } from './routes/_pages/beta-complete'
 import { Route as AppFeaturescriptsRouteRouteImport } from './routes/app/featurescripts/route'
 import { Route as AppFeaturescriptsIndexRouteImport } from './routes/app/featurescripts/index'
-import { Route as AppFeaturescriptsFeatureIdRouteImport } from './routes/app/featurescripts/$featureId'
 import { Route as DashboardLibraryLibraryIdRouteRouteImport } from './routes/dashboard/library/$libraryId/route'
 import { Route as AppLibraryLibraryIdRouteRouteImport } from './routes/app/library/$libraryId/route'
 import { Route as DashboardLibraryLibraryIdIndexRouteImport } from './routes/dashboard/library/$libraryId/index'
@@ -120,12 +119,6 @@ const AppFeaturescriptsIndexRoute = AppFeaturescriptsIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppFeaturescriptsRouteRoute,
 } as any)
-const AppFeaturescriptsFeatureIdRoute =
-  AppFeaturescriptsFeatureIdRouteImport.update({
-    id: '/$featureId',
-    path: '/$featureId',
-    getParentRoute: () => AppFeaturescriptsRouteRoute,
-  } as any)
 const DashboardLibraryLibraryIdRouteRoute =
   DashboardLibraryLibraryIdRouteRouteImport.update({
     id: '/library/$libraryId',
@@ -188,7 +181,6 @@ export interface FileRoutesByFullPath {
   '/dashboard/': typeof DashboardIndexRoute
   '/app/library/$libraryId': typeof AppLibraryLibraryIdRouteRouteWithChildren
   '/dashboard/library/$libraryId': typeof DashboardLibraryLibraryIdRouteRouteWithChildren
-  '/app/featurescripts/$featureId': typeof AppFeaturescriptsFeatureIdRoute
   '/app/featurescripts/': typeof AppFeaturescriptsIndexRoute
   '/dashboard/library/$libraryId/part': typeof DashboardLibraryLibraryIdPartRoute
   '/dashboard/library/$libraryId/unused': typeof DashboardLibraryLibraryIdUnusedRoute
@@ -211,7 +203,6 @@ export interface FileRoutesByTo {
   '/version-error': typeof PagesVersionErrorRoute
   '/app/version-manager': typeof AppVersionManagerRoute
   '/dashboard': typeof DashboardIndexRoute
-  '/app/featurescripts/$featureId': typeof AppFeaturescriptsFeatureIdRoute
   '/app/featurescripts': typeof AppFeaturescriptsIndexRoute
   '/dashboard/library/$libraryId/part': typeof DashboardLibraryLibraryIdPartRoute
   '/dashboard/library/$libraryId/unused': typeof DashboardLibraryLibraryIdUnusedRoute
@@ -239,7 +230,6 @@ export interface FileRoutesById {
   '/dashboard/': typeof DashboardIndexRoute
   '/app/library/$libraryId': typeof AppLibraryLibraryIdRouteRouteWithChildren
   '/dashboard/library/$libraryId': typeof DashboardLibraryLibraryIdRouteRouteWithChildren
-  '/app/featurescripts/$featureId': typeof AppFeaturescriptsFeatureIdRoute
   '/app/featurescripts/': typeof AppFeaturescriptsIndexRoute
   '/dashboard/library/$libraryId/part': typeof DashboardLibraryLibraryIdPartRoute
   '/dashboard/library/$libraryId/unused': typeof DashboardLibraryLibraryIdUnusedRoute
@@ -268,7 +258,6 @@ export interface FileRouteTypes {
     | '/dashboard/'
     | '/app/library/$libraryId'
     | '/dashboard/library/$libraryId'
-    | '/app/featurescripts/$featureId'
     | '/app/featurescripts/'
     | '/dashboard/library/$libraryId/part'
     | '/dashboard/library/$libraryId/unused'
@@ -291,7 +280,6 @@ export interface FileRouteTypes {
     | '/version-error'
     | '/app/version-manager'
     | '/dashboard'
-    | '/app/featurescripts/$featureId'
     | '/app/featurescripts'
     | '/dashboard/library/$libraryId/part'
     | '/dashboard/library/$libraryId/unused'
@@ -318,7 +306,6 @@ export interface FileRouteTypes {
     | '/dashboard/'
     | '/app/library/$libraryId'
     | '/dashboard/library/$libraryId'
-    | '/app/featurescripts/$featureId'
     | '/app/featurescripts/'
     | '/dashboard/library/$libraryId/part'
     | '/dashboard/library/$libraryId/unused'
@@ -464,13 +451,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppFeaturescriptsIndexRouteImport
       parentRoute: typeof AppFeaturescriptsRouteRoute
     }
-    '/app/featurescripts/$featureId': {
-      id: '/app/featurescripts/$featureId'
-      path: '/$featureId'
-      fullPath: '/app/featurescripts/$featureId'
-      preLoaderRoute: typeof AppFeaturescriptsFeatureIdRouteImport
-      parentRoute: typeof AppFeaturescriptsRouteRoute
-    }
     '/dashboard/library/$libraryId': {
       id: '/dashboard/library/$libraryId'
       path: '/library/$libraryId'
@@ -524,13 +504,11 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppFeaturescriptsRouteRouteChildren {
-  AppFeaturescriptsFeatureIdRoute: typeof AppFeaturescriptsFeatureIdRoute
   AppFeaturescriptsIndexRoute: typeof AppFeaturescriptsIndexRoute
 }
 
 const AppFeaturescriptsRouteRouteChildren: AppFeaturescriptsRouteRouteChildren =
   {
-    AppFeaturescriptsFeatureIdRoute: AppFeaturescriptsFeatureIdRoute,
     AppFeaturescriptsIndexRoute: AppFeaturescriptsIndexRoute,
   }
 

@@ -1,3 +1,4 @@
+import { Group } from "@mantine/core";
 import { PropsWithChildren, ReactNode } from "react";
 import { Favorite } from "@backend/features/favorites/contract";
 import { InsertableOut } from "@backend/features/library/contract";
@@ -26,6 +27,7 @@ import { ReloadThumbnailMenuItem } from "./reload-thumbnail-item";
 import { UpdateReferencesMenuItem } from "./update-references-item";
 import { InsertableChangesBadge } from "./changes-badges";
 import { QuickInsertItems } from "../../insert/components/quick-insert-items";
+import { QuickInsertButton } from "../../insert/components/quick-insert-button";
 import { ConfigurationHoverCard } from "../../insert/components/configuration-hover-card";
 import { openCannotDeriveAssemblyAlert } from "../../../components/alerts";
 import { useIsAssemblyInPartStudio } from "../../insert/insert-hooks";
@@ -138,14 +140,22 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
             isNew={!hasOpenedReport}
             onMenuClose={markReportOpened}
             rightSection={
-                <RequireSignIn>
-                    <FavoriteButton
-                        favorite={favorite}
+                <Group gap={4} wrap="nowrap">
+                    <QuickInsertButton
                         insertable={insertable}
                         selection={hitSelection}
-                        configurationKey={match?.configurationKey}
+                        isFavorite={favorite !== undefined}
+                        source={source}
                     />
-                </RequireSignIn>
+                    <RequireSignIn>
+                        <FavoriteButton
+                            favorite={favorite}
+                            insertable={insertable}
+                            selection={hitSelection}
+                            configurationKey={match?.configurationKey}
+                        />
+                    </RequireSignIn>
+                </Group>
             }
             menuItems={
                 <InsertableMenuItems

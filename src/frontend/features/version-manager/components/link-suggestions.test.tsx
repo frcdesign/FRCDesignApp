@@ -3,8 +3,12 @@ import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
     LinkDirection,
+    type LinkedWorkspace,
     toWorkspacePath,
-    type SuggestedLink
+    type SuggestedLink,
+    VersionJobKind,
+    VersionJobState,
+    type VersionJobStatus
 } from "@backend/features/version-manager/contract";
 import { renderWithProviders } from "../../../../__test_utils__/render";
 import { apiPost } from "../../../lib/api-client";
@@ -145,5 +149,74 @@ describe("suggested links in the parents' list", () => {
         renderParents([]);
 
         expect(screen.getByText("No linked parents")).toBeTruthy();
+    });
+});
+
+describe("a linked document's row", () => {
+    const GEARBOX: LinkedWorkspace = {
+        linkId: "link-1",
+        workspace: toWorkspacePath("gearbox", "gearbox-w"),
+        isOpenable: true,
+        documentName: "Gearbox",
+        workspaceName: "Main"
+    };
+
+    function renderChildren(
+        linked: LinkedWorkspace[],
+        running?: VersionJobStatus
+    ) {
+        const actions: LinkActions = {
+            running,
+            isRunningFor: () => running !== undefined,
+            isRunningForAll: false,
+            openOne: vi.fn(),
+            quickAll: vi.fn(),
+            quickOne: vi.fn(),
+            updateOne: vi.fn(),
+            updateAll: vi.fn()
+        };
+        renderWithProviders(
+            <LinkedWorkspaceSection
+                workspace={WORKSPACE}
+                direction={LinkDirection.CHILD}
+                linked={linked}
+                suggestions={[]}
+                actions={actions}
+            />
+        );
+        return actions;
+    }
+
+    it("quick pushes from its Push button, without opening the form", async () => {
+        const actions = renderChildren([GEARBOX]);
+
+        await userEvent.click(screen.getByRole("button", { name: "Push" }));
+
+        expect(actions.quickOne).toHaveBeenCalledWith(GEARBOX, false);
+        expect(actions.openOne).not.toHaveBeenCalled();
+    });
+
+    it("holds the button while a run is going, saying why", async () => {
+        const actions = renderChildren([GEARBOX], {
+            state: VersionJobState.RUNNING,
+            kind: VersionJobKind.PUSH
+        });
+
+        const push = screen.getByRole("button", { name: "Push" });
+        await userEvent.click(push);
+        expect(actions.quickOne).not.toHaveBeenCalled();
+        await userEvent.hover(push);
+        expect(
+            await screen.findByText(
+                "Wait for the push or pull running now to finish."
+            )
+        ).toBeTruthy();
+    });
+
+    it("offers no push on a document the caller can't open", () => {
+        renderChildren([{ ...GEARBOX, isOpenable: false }]);
+
+        expect(screen.getByText("Missing access")).toBeTruthy();
+        expect(screen.queryByRole("button", { name: "Push" })).toBeNull();
     });
 });

@@ -1,7 +1,7 @@
 # FeatureScripts
 
 **Status: partly built.** The tables, the list, icon, add and favorite
-routes, and the tab with its categories, favorites and details are built. Loading them from the frontend document, the
+routes, and the tab with its categories, favorites, row buttons and popup are built. Loading them from the frontend document, the
 robot-code release changes, analytics and feedback are still the design below;
 names in the code map that don't exist yet are named from `src/backend/`
 without it.
@@ -182,8 +182,8 @@ function useFeatureScriptsQuery(): UseQueryResult<FeatureScriptsOut>;
 function useAddFeatureScriptMutation(
     feature: FeatureScriptOut
 ): UseMutationResult<AddFeatureScriptOut>;
-// Why a feature can't be added here: anywhere but a Part Studio.
-function useCannotAddReason(): string | undefined;
+// Not offered standalone; disabled, saying why, in an assembly.
+function useAddAvailability(): AddAvailability;
 function useExampleUrl(feature: FeatureScriptOut): string | undefined;
 function useIsOwner(): boolean;
 function useFeatureScriptFavoritesQuery(): UseQueryResult<FeatureScriptFavoritesOut>;
@@ -191,6 +191,17 @@ function useFeatureScriptFavoritesQuery(): UseQueryResult<FeatureScriptFavorites
 function useToggleFavoriteMutation(
     feature: FeatureScriptOut
 ): UseMutationResult<unknown, Error, boolean>;
+
+type AddAvailability =
+    | { offered: false }
+    | { offered: true; disabledReason?: string };
+```
+
+`src/frontend/features/featurescripts/open-featurescript-menu.tsx`
+
+```ts
+// The popup, opened as the insert menu is, titled with the icon and name.
+function openFeatureScriptMenu(feature: FeatureScriptOut): void;
 ```
 
 `src/frontend/features/featurescripts/categories.ts`
@@ -212,19 +223,23 @@ Under `src/frontend/features/featurescripts/components/`:
   sections.
 - `featurescript-favorite-button.tsx` — the heart, and its menu item.
 - `featurescript-card.tsx` — a row: the icon inline before the name, the
-  release version, the description's first line, the heart, and a ⋯ menu with
-  **Add to Part Studio**, **Open example** and **Favorite**.
-- `featurescript-details.tsx` — what opens on a click: the example's thumbnail
-  as a hero image across the top, the icon and name under it, the whole
-  description, **Add to Part Studio** and **Open example**.
+  release version, the description's first line, an outlined **Add**, the
+  heart, and a ⋯ menu with **Add to Part Studio**, **Open example** and
+  **Favorite**.
+- `featurescript-menu.tsx` — the popup a row opens: the example's thumbnail
+  as a hero image across the top, the badges, the whole description, and a
+  footer with the heart, **Open example** and **Add to Part Studio**.
+- `featurescript-add-button.tsx` — the row's outlined **Add**
+  (`RowActionButton`, in `src/frontend/components/row-action-button.tsx`) or
+  the popup's filled **Add to Part Studio**.
 - `featurescript-badges.tsx` — the release version, and to the owner, each
   problem with a tip saying how to fix it.
 - `featurescript-icon.tsx` — the icon as an `<img>`, or the generic puzzle
   piece.
 
 The tab is `UtilityTab.FEATURESCRIPTS`: `src/frontend/routes/app/featurescripts/route.tsx`
-loads the version and the list, `index.tsx` under it is the list and its
-search, and `$featureId.tsx` the details.
+loads the version and the list, and `index.tsx` under it shows
+`FeatureScriptList`.
 
 ## Storage
 
@@ -329,7 +344,7 @@ version loads at once, with no approval.
       several is `NOT_ONE_FEATURE`, and the feature is hidden.
     - `thumbnail-{element}`: the example's, stored by `uploadThumbnailsStep`
       under the example's element and microversion. No example skips the step:
-      `NO_EXAMPLE`, and the details show the generic FeatureScript image.
+      `NO_EXAMPLE`, and the popup shows the generic FeatureScript image.
     - `icon-{element}`: `GET /blobelements/d/{did}/v/{vid}/e/{eid}`, the
       icon tab's SVG, stored in R2. No icon tab skips the step: `NO_ICON`, and
       the card shows the generic FeatureScript icon.
@@ -364,7 +379,7 @@ owner's background session; no one else's.
    name and description: it is a few dozen features, not an index's worth.
    While searching, Favorites is left out, so each match shows once, in its
    category.
-5. The heart on a row, its ⋯ menu, and the details favorites or unfavorites
+5. The heart on a row, its ⋯ menu, and the popup's favorites or unfavorites
    the feature, shown at once and put right by the refetch of
    `GET /api/featurescripts/favorites`. Signed out, there is no heart and no
    Favorites.
@@ -373,9 +388,12 @@ owner's background session; no one else's.
    as `image/svg+xml`, immutable under its microversion, with
    `Content-Security-Policy: sandbox`, and the client shows it in an `<img>`,
    so nothing in it runs.
-7. A click opens the details at `/app/featurescripts/<featureId>`: the
-   example's large thumbnail as a hero image across the top, then the icon
-   and name, the release version, the whole description, and the buttons.
+7. Each row's outlined **Add** adds the feature in one click, as below.
+8. A click on the row opens the popup (`openFeatureScriptMenu`), sized and
+   titled as the insert menu is: the example's large thumbnail as a hero
+   image across the top, then the badges, the whole description, and the
+   footer. **Add to Part Studio** there closes the popup once sent, so the
+   feature's dialog in Onshape is what shows.
 
 ### Adding a feature — `POST /api/featurescripts/:featureId/add`
 
@@ -392,8 +410,10 @@ owner's background session; no one else's.
    selections, and toasts that it was added.
 5. In the background, records a `FEATURE_ADD` event (not built).
 
-In an assembly, or standalone, **Add to Part Studio** is disabled with a tip
-saying why.
+Standalone, where there is nothing to add to, no add is offered, as no insert
+is. In an assembly the row's **Add**, the popup's **Add to Part Studio** and the
+menu item are disabled, the buttons saying on hover that FeatureScripts can only
+be added to Part Studios.
 
 ### Opening the example
 
@@ -406,7 +426,7 @@ A FeatureScript report is a source of the one feedback form
 ([feedback.md](./feedback.md)), as a part report is, posted to Discord by
 `POST /api/feedback` with the same rate limit and diagnostics.
 
-1. **Report an issue**, in a card's ⋯ menu and in the details, opens the form
+1. **Report an issue**, in a card's ⋯ menu and in the popup, opens the form
    titled **Report issue with** the feature, with the topic
    `FeedbackTopic.FEATURESCRIPTS` fixed.
 2. It offers bug (a feature that won't add, or builds wrong, is one), feature
@@ -502,15 +522,15 @@ short has little use for them.
 
 ## Failure and recovery
 
-| What goes wrong                                     | What happens                                     | What puts it right                 |
-| --------------------------------------------------- | ------------------------------------------------ | ---------------------------------- |
-| An example is renamed or deleted                    | `NO_EXAMPLE`; the details show the generic image | Rename it back, cut a version      |
-| An example is published empty                       | A blank thumbnail                                | Model it, cut a version            |
-| A release before icons has none in the frontend     | `NO_ICON`; the generic icon                      | Its next release writes it         |
-| Featurespecs or a thumbnail fail past their retries | `LOAD_FAILED` on that feature; the rest save     | **Reload**                         |
-| Onshape cancels or deactivates the webhook          | New versions don't load                          | The next **Reload** registers it   |
-| No owner session to borrow                          | A webhook's load fails                           | The owner opens the app            |
-| Onshape refuses the feature at its defaults         | The add fails, toasted                           | Unverified; see the open questions |
+| What goes wrong                                     | What happens                                    | What puts it right                 |
+| --------------------------------------------------- | ----------------------------------------------- | ---------------------------------- |
+| An example is renamed or deleted                    | `NO_EXAMPLE`; the popup shows the generic image | Rename it back, cut a version      |
+| An example is published empty                       | A blank thumbnail                               | Model it, cut a version            |
+| A release before icons has none in the frontend     | `NO_ICON`; the generic icon                     | Its next release writes it         |
+| Featurespecs or a thumbnail fail past their retries | `LOAD_FAILED` on that feature; the rest save    | **Reload**                         |
+| Onshape cancels or deactivates the webhook          | New versions don't load                         | The next **Reload** registers it   |
+| No owner session to borrow                          | A webhook's load fails                          | The owner opens the app            |
+| Onshape refuses the feature at its defaults         | The add fails, toasted                          | Unverified; see the open questions |
 
 ## Decisions
 
@@ -560,7 +580,7 @@ Description"` is already written for every released feature, and is what
   configure, and a list this short is ordered well enough by when each was
   favorited.
 - **Opens aren't counted.** Only an add is recorded; counting how often a
-  feature's details are opened would need a call from the client for each,
+  feature's popup is opened would need a call from the client for each,
   and can be added beside `FEATURE_ADD` if adds alone don't say enough.
 
 ## Open questions

@@ -78,12 +78,23 @@ export function useIsOwner(): boolean {
     return useAccessData().currentAccessLevel === AccessLevel.OWNER;
 }
 
-/** Why a feature can't be added here, or undefined when it can. */
-export function useCannotAddReason(): string | undefined {
+/** Whether adding is offered here at all, and if it is, why it is disabled. */
+export type AddAvailability =
+    | { offered: false }
+    | { offered: true; disabledReason?: string };
+
+/**
+ * Not offered standalone, where there is nothing to add to, as an insert
+ * isn't; disabled in an assembly, which takes no Part Studio feature.
+ */
+export function useAddAvailability(): AddAvailability {
     const target = useTargetElement();
-    return target?.elementType === ElementType.PART_STUDIO
-        ? undefined
-        : m.featureScriptsAddNeedsPartStudio();
+    if (!target) {
+        return { offered: false };
+    }
+    return target.elementType === ElementType.PART_STUDIO
+        ? { offered: true }
+        : { offered: true, disabledReason: m.featureScriptsAddInAssembly() };
 }
 
 /** Adds the feature at its defaults, then opens its dialog in Onshape to finish it. */

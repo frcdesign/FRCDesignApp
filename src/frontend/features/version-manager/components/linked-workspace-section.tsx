@@ -19,6 +19,8 @@ import {
 } from "@backend/features/version-manager/contract";
 import { ThumbnailSize } from "@backend/features/thumbnails/contract";
 import { MenuButton, MenuSection } from "../../../components/app-menu";
+import { RowActionButton } from "../../../components/row-action-button";
+import { m } from "../../../paraglide/messages";
 import { InfoTooltip } from "../../../components/info-tooltip";
 import { openDeleteConfirm } from "../../../components/alerts";
 import { CardTitle, ItemRow, ItemTable } from "../../../components/item-row";
@@ -176,7 +178,13 @@ function RunMenuSection(props: RunMenuSectionProps): ReactNode {
     const copy = DIRECTION_COPY[direction];
 
     return (
-        <MenuSection label={isChild ? "Push" : "Pull"}>
+        <MenuSection
+            label={
+                isChild
+                    ? m.versionManagerMenuPush()
+                    : m.versionManagerMenuPull()
+            }
+        >
             <Menu.Item
                 leftSection={<DirectionIcon direction={direction} />}
                 disabled={disabled}
@@ -189,14 +197,18 @@ function RunMenuSection(props: RunMenuSectionProps): ReactNode {
                 disabled={disabled}
                 onClick={onQuickRecursive}
             >
-                {isChild ? "Quick recursive push" : "Quick recursive pull"}
+                {isChild
+                    ? m.versionManagerQuickRecursivePush()
+                    : m.versionManagerQuickRecursivePull()}
             </Menu.Item>
             <Menu.Item
                 leftSection={<ArrowsClockwiseIcon size={IconSize.MEDIUM} />}
                 disabled={updateDisabled}
                 onClick={onUpdate}
             >
-                {linked ? "Update references" : "Update all references"}
+                {linked
+                    ? m.versionManagerUpdateReferences()
+                    : m.versionManagerUpdateAllReferences()}
             </Menu.Item>
         </MenuSection>
     );
@@ -293,7 +305,7 @@ function LinkedWorkspaceRow(props: LinkedWorkspaceRowProps): ReactNode {
                     onUpdate={() => actions.updateOne(linked)}
                 />
             )}
-            <MenuSection label="Link">
+            <MenuSection label={m.versionManagerMenuLink()}>
                 {linked.isOpenable && (
                     <Menu.Item
                         color={StatusColor.INFO}
@@ -302,7 +314,7 @@ function LinkedWorkspaceRow(props: LinkedWorkspaceRowProps): ReactNode {
                         }
                         onClick={() => openUrlInNewTab(url)}
                     >
-                        Open document
+                        {m.versionManagerOpenDocument()}
                     </Menu.Item>
                 )}
                 <Menu.Item
@@ -310,23 +322,28 @@ function LinkedWorkspaceRow(props: LinkedWorkspaceRowProps): ReactNode {
                     onClick={onMove}
                 >
                     {direction === LinkDirection.PARENT
-                        ? "Switch to child"
-                        : "Switch to parent"}
+                        ? m.versionManagerSwitchToChild()
+                        : m.versionManagerSwitchToParent()}
                 </Menu.Item>
                 <Menu.Item
                     color={StatusColor.ERROR}
                     leftSection={<LinkBreakIcon size={IconSize.MEDIUM} />}
                     onClick={() =>
                         openDeleteConfirm({
-                            title: "Remove link",
+                            title: m.versionManagerRemoveLink(),
                             // Unnamed where the caller can't open it.
-                            text: `Are you sure you want to delete the link to ${linked.documentName ?? "this document"}?`,
-                            confirmLabel: "Remove link",
+                            text:
+                                linked.documentName === undefined
+                                    ? m.versionManagerRemoveLinkConfirmUnnamed()
+                                    : m.versionManagerRemoveLinkConfirm({
+                                          document: linked.documentName
+                                      }),
+                            confirmLabel: m.versionManagerRemoveLink(),
                             onConfirm: onRemove
                         })
                     }
                 >
-                    Remove link
+                    {m.versionManagerRemoveLink()}
                 </Menu.Item>
             </MenuSection>
         </>
@@ -352,6 +369,22 @@ function LinkedWorkspaceRow(props: LinkedWorkspaceRowProps): ReactNode {
                 <>
                     {running && actions.isRunningFor(linked) && (
                         <RunningIndicator status={running} />
+                    )}
+                    {linked.isOpenable && (
+                        <RowActionButton
+                            label={
+                                direction === LinkDirection.CHILD
+                                    ? m.versionManagerRowPush()
+                                    : m.versionManagerRowPull()
+                            }
+                            icon={<DirectionIcon direction={direction} />}
+                            disabledReason={
+                                running
+                                    ? m.versionManagerRowRunning()
+                                    : undefined
+                            }
+                            onClick={() => actions.quickOne(linked, false)}
+                        />
                     )}
                     <MenuButton>{menuItems}</MenuButton>
                 </>
@@ -400,12 +433,12 @@ function LinkedWorkspaceTitle(props: LinkedWorkspaceTitleProps): ReactNode {
     if (!linked.isOpenable) {
         return (
             <CardTitle
-                title="Missing access"
+                title={m.versionManagerMissingAccess()}
                 thumbnail={thumbnail}
                 titleColor={StatusColor.ERROR}
                 subtitle={
                     <Text size="xs" c={StatusColor.ERROR} truncate>
-                        You cannot open this document
+                        {m.versionManagerMissingAccessDescription()}
                     </Text>
                 }
             />

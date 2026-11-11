@@ -1,18 +1,19 @@
-import { Menu, Text } from "@mantine/core";
+import { Group, Menu, Text } from "@mantine/core";
 import { ArrowSquareOutIcon, PlusIcon } from "@phosphor-icons/react";
-import { useNavigate } from "@tanstack/react-router";
 import { type ReactNode } from "react";
 import { type FeatureScriptOut } from "@backend/features/featurescripts/contract";
 import { CardTitle, ItemRow } from "../../../components/item-row";
 import { openUrlInNewTab } from "../../../lib/url";
 import { IconSize } from "../../../lib/style-constants";
 import { m } from "../../../paraglide/messages";
+import { RequireSignIn } from "../../auth/components/require-access";
+import { openFeatureScriptMenu } from "../open-featurescript-menu";
 import {
+    useAddAvailability,
     useAddFeatureScriptMutation,
-    useCannotAddReason,
     useExampleUrl
 } from "../queries";
-import { RequireSignIn } from "../../auth/components/require-access";
+import { FeatureScriptAddButton } from "./featurescript-add-button";
 import { FeatureScriptBadges } from "./featurescript-badges";
 import {
     FeatureScriptFavoriteButton,
@@ -20,7 +21,7 @@ import {
 } from "./featurescript-favorite-button";
 import { FeatureScriptIcon } from "./featurescript-icon";
 
-/** Where the description starts; the details show the rest. */
+/** Where the description starts; the popup shows the rest. */
 function firstLine(description: string): string {
     return description.split("\n")[0];
 }
@@ -31,21 +32,13 @@ interface FeatureScriptCardProps {
 
 export function FeatureScriptCard(props: FeatureScriptCardProps): ReactNode {
     const { feature } = props;
-    const navigate = useNavigate();
     const add = useAddFeatureScriptMutation(feature);
-    const cannotAddReason = useCannotAddReason();
+    const availability = useAddAvailability();
     const exampleUrl = useExampleUrl(feature);
-
-    const openDetails = () => {
-        void navigate({
-            to: "/app/featurescripts/$featureId",
-            params: { featureId: feature.id }
-        });
-    };
 
     return (
         <ItemRow
-            onClick={openDetails}
+            onClick={() => openFeatureScriptMenu(feature)}
             left={
                 <CardTitle
                     title={feature.name}
@@ -65,13 +58,15 @@ export function FeatureScriptCard(props: FeatureScriptCardProps): ReactNode {
             }
             menuItems={
                 <>
-                    <Menu.Item
-                        leftSection={<PlusIcon />}
-                        disabled={cannotAddReason !== undefined}
-                        onClick={() => add.mutate()}
-                    >
-                        {m.featureScriptsAdd()}
-                    </Menu.Item>
+                    {availability.offered && (
+                        <Menu.Item
+                            leftSection={<PlusIcon />}
+                            disabled={availability.disabledReason !== undefined}
+                            onClick={() => add.mutate()}
+                        >
+                            {m.featureScriptsAdd()}
+                        </Menu.Item>
+                    )}
                     {exampleUrl && (
                         <Menu.Item
                             leftSection={<ArrowSquareOutIcon />}
@@ -86,9 +81,12 @@ export function FeatureScriptCard(props: FeatureScriptCardProps): ReactNode {
                 </>
             }
             rightSection={
-                <RequireSignIn>
-                    <FeatureScriptFavoriteButton feature={feature} />
-                </RequireSignIn>
+                <Group gap={4} wrap="nowrap">
+                    <FeatureScriptAddButton feature={feature} />
+                    <RequireSignIn>
+                        <FeatureScriptFavoriteButton feature={feature} />
+                    </RequireSignIn>
+                </Group>
             }
         />
     );

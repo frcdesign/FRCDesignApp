@@ -64,7 +64,7 @@ export interface DailyMetricPoint {
 export interface UseSourceUsage {
     source: UseSource;
     count: number;
-    /** How many of those used the context-menu quick insert. */
+    /** How many of those were quick inserts: a row's insert button, or its menu's. */
     quickInsertCount: number;
 }
 
