@@ -604,6 +604,8 @@
     "designCheckCleanDocument": "Every Part Studio and Assembly in this document follows every practice the design check looks for.",
     "designCheckThisTab": "This tab",
     "designCheckSwitchTab": "Switch to this tab",
+    "designCheckStatusOpen": "Open Design Check",
+    "designCheckStatusCount": "{count: number}",
     "designCheckTabClean": "Nothing to fix in this tab.",
     "designCheckTabFailed": "Failed to check this tab.",
     "designCheckTabNotChecked": "Not checked",

@@ -231,7 +231,8 @@ type DesignIssueCounts = Partial<Record<DesignIssueType, number>>;
 `src/frontend/features/design-check/navigation.ts`
 
 ```ts
-// Runs when the page opens on a workspace with no check cached, then only when asked.
+// Runs when the page or the library's navbar opens on a workspace with no
+// check cached, then only when asked.
 function useDesignCheckQuery(target: TargetElement | undefined);
 function checkAgain(target: TargetElement): Promise<void>;
 function useIsDesignCheck(): boolean;
@@ -269,6 +270,15 @@ function openFixDialog(target: TargetElement, fixes: PlannedFix[]): void;
 function getDesignIssueName(type: DesignIssueType): string;
 // From the first issue of its type, which carries any count.
 function getDesignIssueHelp(issue: DesignIssue): string;
+```
+
+`src/frontend/features/design-check/components/design-check-status.tsx`, in
+the library's navbar (`src/frontend/components/app-navbar.tsx`)
+
+```ts
+// The document's errors and warnings, each tab's on hover; a click opens the
+// page (`useSelectTab`). Nothing until a check has answered.
+function DesignCheckStatus(): ReactNode;
 ```
 
 `src/frontend/routes/app/design-check.tsx` (the route, with its redirect),
@@ -346,9 +356,10 @@ for a day, shared with the version manager
 ([version-manager.md](./version-manager.md)); a check reads edit access from
 it.
 
-**Query cache** the last check of each workspace, never stale, dropped five
-minutes after the page closes (TanStack's default), so coming back later checks
-again.
+**Query cache** the last check of each workspace, never stale, shared by the
+page and the navbar's summary, dropped five minutes after both close
+(TanStack's default), so coming back later checks again. Onshape reloads the
+panel on every tab switch, which empties it.
 
 **KV** `seen-hints:`, `Hint.OPENED_DESIGN_CHECK` once the page has been opened
 ([auth.md](./auth.md)).
@@ -366,9 +377,9 @@ only with one (`canResume` in `src/frontend/routes/index.tsx`).
 
 ### Checking
 
-1. Opening the page on a workspace with no check in the cache asks
-   `GET /api/design-check`, signed in. Signed out, the page asks them to sign
-   in instead.
+1. Opening the page, or a library, on a workspace with no check in the cache
+   asks `GET /api/design-check`, signed in. Signed out, the page asks them to
+   sign in instead, and the library's navbar shows nothing.
 2. The route reads the workspace's tabs as the caller (`getContents`), and
    takes its Part Studios and Assemblies in tab order. Onshape refusing the
    caller here fails the check, before anything cached is read.
@@ -390,7 +401,8 @@ only with one (`canResume` in `src/frontend/routes/index.tsx`).
    (`canWrite`), and marks each issue the document has a dismissal for
    (`markDismissed`); neither is cached with the tab, so a dismissal shows on
    the next check whether or not the tab changed.
-7. The navbar's refresh button, **Check again**, asks again; nothing else does.
+7. The page's navbar refresh button, **Check again**, asks again; nothing else
+   does while the panel stays open.
 
 ### The results
 
@@ -413,6 +425,18 @@ only with one (`canResume` in `src/frontend/routes/index.tsx`).
    part by its id, an instance by its id and its part's. Hovering one selects
    it, and leaving clears the selection (`sendClearSelectionMessage`) unless it
    was clicked. A sub-assembly or broken instance is named only.
+
+### The navbar's summary
+
+1. In a library, launched in a workspace's Part Studio or Assembly and signed
+   in, the navbar shows the Design Check icon, badged with the worst status
+   left, and the document's error and warning counts beside it; dismissed
+   issues and info are left out (`DesignCheckStatus`). It shows nothing until
+   the check has answered, or if it failed.
+2. Hovering it lists every tab with its severity badges, or **Not checked**,
+   the launch's tab in bold, and the time of the check.
+3. Clicking it, or **Open Design Check** in the card, opens the page, which
+   answers from the same cache.
 
 ### Dismissing
 
@@ -462,9 +486,10 @@ In [strings/design-check.md](../strings/design-check.md).
 - A check reads the document's tabs as the caller (`getOnshapeApi`), behind
   `requireSignInMiddleware`, before any cached result, so it answers only
   someone Onshape lets read the document.
-- A check runs when the page opens on a workspace with no check cached and on
-  **Check again**, never on its own: the query is never stale and never
-  retried, so nothing reruns while someone edits.
+- A check runs when the panel loads on a workspace with no check cached, for
+  the page or a library, and on **Check again**; never while the panel stays
+  open: the query is never stale and never retried, so nothing reruns while
+  someone edits.
 - Severity follows from the type alone; it is not sent.
 - `checkDesign` is pure, so every check is tested without Onshape.
 - A sketch's definition status failing to arrive fails no other check, and a
@@ -503,8 +528,13 @@ In [strings/design-check.md](../strings/design-check.md).
 
 - **The whole document at once.** The point is to see every issue together:
   one tab's own problems are already in front of whoever has it open.
-- **Asked for, never automatic.** Rechecking while someone works in the CAD
-  would flag what they are halfway through, so a check runs only when asked.
+- **Checked when the panel loads, then only when asked.** Rechecking while
+  someone works in the CAD would flag what they are halfway through, so while
+  the panel stays open a check runs only on **Check again**. Loading it, a
+  library included, checks the document once, so the navbar can show its
+  counts without a visit to the page. Unchanged tabs answer from KV, so a load
+  costs the tabs list and the tabs that changed. Each tab checked afresh this
+  way is recorded as a check too.
 - **Unchanged tabs reused by microversion, without webhooks.** A tab's
   microversion moves with every change to it or what it depends on, and the
   document's tabs list carries it, so one call tells which tabs to check again.
