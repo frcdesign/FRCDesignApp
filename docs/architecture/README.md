@@ -19,22 +19,23 @@ Claude, held to these documents by their invariants, the tests and CI. So:
 read and comment on, the ones a branch changed first with their diffs; the
 `review-docs` skill publishes it.
 
-| Document                                   | Covers                                                                             |
-| ------------------------------------------ | ---------------------------------------------------------------------------------- |
-| [thumbnails.md](./thumbnails.md)           | Element, group and configuration thumbnails: rendering, R2 storage, cleanup        |
-| [configurations.md](./configurations.md)   | Parameters, selections, configuration keys, indexing and enumeration               |
-| [loading.md](./loading.md)                 | Loading a document into the library: jobs, the load workflow, webhooks             |
-| [favorites.md](./favorites.md)             | Per-user favorites and the configuration each opens with                           |
-| [recents.md](./recents.md)                 | Per-user recently inserted parts, and the configuration each was inserted with     |
-| [auth.md](./auth.md)                       | Onshape OAuth, sessions, access levels, and the environment variables              |
-| [search.md](./search.md)                   | Building, serving and querying each library's search index                         |
-| [analytics.md](./analytics.md)             | Usage tracking, rollups, and the public dashboard                                  |
-| [build-issues.md](./build-issues.md)       | Build issues, the checks that raise them, and the admin card editors fix them from |
-| [version-manager.md](./version-manager.md) | Links between Onshape workspaces, and the pushes and pulls along them              |
-| [feedback.md](./feedback.md)               | Reports to Discord: the feedback form, part reports, error reports                 |
-| [download.md](./download.md)               | STEP downloads from the standalone app, and why they need sign-in                  |
-| [testbench.md](./testbench.md)             | The owner's page for probing Onshape: raw calls, rate limits, toolbar, webhooks    |
-| [platform.md](./platform.md)               | Onshape client, errors, retries and timeouts, concurrency, toasts, pushes, caching |
+| Document                                   | Covers                                                                                        |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------- |
+| [thumbnails.md](./thumbnails.md)           | Element, group and configuration thumbnails: rendering, R2 storage, cleanup                   |
+| [configurations.md](./configurations.md)   | Parameters, selections, configuration keys, indexing and enumeration                          |
+| [loading.md](./loading.md)                 | Loading a document into the library: jobs, the load workflow, webhooks                        |
+| [favorites.md](./favorites.md)             | Per-user favorites and the configuration each opens with                                      |
+| [recents.md](./recents.md)                 | Per-user recently inserted parts, and the configuration each was inserted with                |
+| [auth.md](./auth.md)                       | Onshape OAuth, sessions, access levels, and the environment variables                         |
+| [search.md](./search.md)                   | Building, serving and querying each library's search index                                    |
+| [analytics.md](./analytics.md)             | Usage tracking, rollups, and the public dashboard                                             |
+| [build-issues.md](./build-issues.md)       | Build issues, the checks that raise them, and the admin card editors fix them from            |
+| [version-manager.md](./version-manager.md) | Links between Onshape workspaces, and the pushes and pulls along them                         |
+| [feedback.md](./feedback.md)               | Reports to Discord: the feedback form, part reports, error reports                            |
+| [download.md](./download.md)               | STEP downloads from the standalone app, and why they need sign-in                             |
+| [testbench.md](./testbench.md)             | The owner's page for probing Onshape: raw calls, rate limits, toolbar, webhooks               |
+| [featurescripts.md](./featurescripts.md)   | Released FeatureScripts: loading the frontend document, examples, adding a feature (proposed) |
+| [platform.md](./platform.md)               | Onshape client, errors, retries and timeouts, concurrency, toasts, pushes, caching            |
 
 [REFERENCE.md](../REFERENCE.md) is the tour of the whole system and links here
 for depth; [GUIDE.md](../GUIDE.md) holds recipes; [ONSHAPE.md](../ONSHAPE.md)
