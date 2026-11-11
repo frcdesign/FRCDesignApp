@@ -5,8 +5,7 @@ export default defineConfig({
         "./src/backend/db/schema.ts",
         "./src/backend/features/analytics/schema.ts",
         "./src/backend/features/version-manager/schema.ts",
-        "./src/backend/features/featurescripts/schema.ts",
-        "./src/backend/features/design-check/schema.ts"
+        "./src/backend/features/featurescripts/schema.ts"
     ],
     out: "./drizzle",
     dialect: "sqlite",

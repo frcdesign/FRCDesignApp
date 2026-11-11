@@ -8,10 +8,10 @@ import type {
     OnshapeSketchSolveStatus
 } from "../../lib/onshape/types";
 import {
-    compareLevel,
+    compareSeverity,
     type DesignIssue,
     DesignIssueType,
-    getDefaultLevel
+    getDesignIssueSeverity
 } from "./contract";
 import type {
     AssemblySnapshot,
@@ -92,7 +92,10 @@ function checkPartStudio(snapshot: PartStudioSnapshot): DesignCheckResult {
 
 function bySeverity(issues: DesignIssue[]): DesignIssue[] {
     return issues.toSorted((a, b) =>
-        compareLevel(getDefaultLevel(a.type), getDefaultLevel(b.type))
+        compareSeverity(
+            getDesignIssueSeverity(a.type),
+            getDesignIssueSeverity(b.type)
+        )
     );
 }
 
@@ -268,9 +271,7 @@ function checkRollback(response: OnshapeFeatureListResponse): DesignIssue[] {
     ];
 }
 
-const isBlank = (value: string | null | undefined) => !value?.trim();
-
-/** A material for mass properties, a part number and description for the BOM. Solid parts only. */
+/** A material for mass properties. Solid parts only. */
 function checkParts(snapshot: PartStudioSnapshot): DesignIssue[] {
     return snapshot.parts.flatMap((part): DesignIssue[] => {
         const name = part.name ?? part.partId;
@@ -280,18 +281,15 @@ function checkParts(snapshot: PartStudioSnapshot): DesignIssue[] {
         ) {
             return [];
         }
-        const target = { subject: name, partId: part.partId };
-        return [
-            ...(part.material
-                ? []
-                : [{ type: DesignIssueType.PART_NO_MATERIAL, ...target }]),
-            ...(isBlank(part.partNumber)
-                ? [{ type: DesignIssueType.PART_NO_PART_NUMBER, ...target }]
-                : []),
-            ...(isBlank(part.description)
-                ? [{ type: DesignIssueType.PART_NO_DESCRIPTION, ...target }]
-                : [])
-        ];
+        return part.material
+            ? []
+            : [
+                  {
+                      type: DesignIssueType.PART_NO_MATERIAL,
+                      subject: name,
+                      partId: part.partId
+                  }
+              ];
     });
 }
 

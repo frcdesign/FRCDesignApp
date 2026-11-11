@@ -14,11 +14,5 @@ CREATE TABLE `daily_design_issue_metrics` (
 	PRIMARY KEY(`day`, `issue_type`)
 );
 --> statement-breakpoint
-CREATE TABLE `design_check_levels` (
-	`user_id` text PRIMARY KEY NOT NULL,
-	`levels` text NOT NULL,
-	`updated_at` integer NOT NULL
-);
---> statement-breakpoint
 ALTER TABLE `events` ADD `checked_element_type` text;--> statement-breakpoint
 ALTER TABLE `events` ADD `design_issue_counts` text;

@@ -1,7 +1,6 @@
 import { Card, SimpleGrid, Table } from "@mantine/core";
 import { type ReactNode } from "react";
 import type { DesignCheckTotals } from "@backend/features/analytics/contract";
-import { getDefaultLevel } from "@backend/features/design-check/contract";
 import { Section } from "../../components/section";
 import { getDesignIssueName } from "../design-check/issue-text";
 import { DashboardEmpty } from "./dashboard-state";
@@ -18,10 +17,7 @@ interface DesignCheckTilesProps {
 
 /** How often people check their own CAD, and what the checks find most. */
 export function DesignCheckTiles({ totals }: DesignCheckTilesProps): ReactNode {
-    // What is off by default shows to nobody who kept the defaults.
-    const mostFound = totals.issueTypes
-        .filter((row) => getDefaultLevel(row.type) !== "off")
-        .slice(0, MOST_FOUND_LIMIT);
+    const mostFound = totals.issueTypes.slice(0, MOST_FOUND_LIMIT);
     return (
         <Section title={m.dashboardDesignCheck()}>
             <SimpleGrid cols={{ base: 1, sm: 2 }}>

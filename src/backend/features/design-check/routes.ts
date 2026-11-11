@@ -6,15 +6,8 @@ import { type ElementPath } from "../../lib/onshape/path";
 import { validate } from "../../lib/validate";
 import { trackDesignCheck } from "../analytics/tracking";
 import { requireSignInMiddleware } from "../auth/guards";
-import { getDb } from "../../db/client";
 import { checkDesign } from "./checks";
-import {
-    DESIGN_ISSUE_LEVELS,
-    type DesignCheckLevelsOut,
-    type DesignCheckOut,
-    DesignIssueType
-} from "./contract";
-import { getLevels, setLevels } from "./levels";
+import { type DesignCheckOut } from "./contract";
 import { readSnapshot } from "./snapshot";
 
 export const designCheckRoutes = getApp();
@@ -53,38 +46,5 @@ designCheckRoutes.get(
             sketchStatusUnknown,
             checkedAt: Date.now()
         } satisfies DesignCheckOut);
-    }
-);
-
-const levelsBody = z.object({
-    levels: z.partialRecord(
-        z.enum(DesignIssueType),
-        z.enum(DESIGN_ISSUE_LEVELS)
-    )
-});
-
-/** GET /api/design-check/levels — the caller's own, which the page applies. */
-designCheckRoutes.get(
-    "/design-check/levels",
-    requireSignInMiddleware,
-    cacheMiddleware(),
-    async (c) => {
-        const levels = await getLevels(
-            getDb(c.env.DB),
-            await c.var.getUserId()
-        );
-        return c.json({ levels } satisfies DesignCheckLevelsOut);
-    }
-);
-
-/** POST /api/design-check/levels — replaces the caller's; `{}` goes back to FRCDesign's. */
-designCheckRoutes.post(
-    "/design-check/levels",
-    requireSignInMiddleware,
-    validate("json", levelsBody),
-    async (c) => {
-        const { levels } = c.req.valid("json");
-        await setLevels(getDb(c.env.DB), await c.var.getUserId(), levels);
-        return c.json({ levels } satisfies DesignCheckLevelsOut);
     }
 );

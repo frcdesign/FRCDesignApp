@@ -45,23 +45,11 @@ const CHECK: DesignCheckOut = {
             type: DesignIssueType.SKETCH_UNDERDEFINED,
             subject: "Sketch 1",
             featureId: "S1"
-        },
-        {
-            type: DesignIssueType.PART_NO_PART_NUMBER,
-            subject: "Plate",
-            partId: "JHD"
         }
     ],
     sketchStatusUnknown: false,
     checkedAt: Date.UTC(2026, 10, 10, 18, 30)
 };
-
-/** Answers the check and the levels as given, each a value or a failure. */
-function answer(check: () => Promise<unknown>, levels: () => Promise<unknown>) {
-    apiGet.mockImplementation((path: string) =>
-        path === "/design-check/levels" ? levels() : check()
-    );
-}
 
 function renderPage(signedIn: boolean) {
     const queryClient = createTestQueryClient();
@@ -88,11 +76,9 @@ describe("the design check page", () => {
     });
 
     it("keeps the last results when checking again fails", async () => {
-        const check = vi
-            .fn()
+        apiGet
             .mockResolvedValueOnce(CHECK)
             .mockRejectedValueOnce(new Error("rate limited"));
-        answer(check, () => Promise.resolve({ levels: {} }));
         const queryClient = renderPage(true);
 
         expect(await screen.findByText("Sketch 1")).toBeTruthy();
@@ -109,17 +95,5 @@ describe("the design check page", () => {
             )
         ).toBeTruthy();
         expect(screen.getByText("Sketch 1")).toBeTruthy();
-    });
-
-    it("shows the check at FRCDesign's levels when the caller's can't be read", async () => {
-        answer(
-            () => Promise.resolve(CHECK),
-            () => Promise.reject(new Error("broken"))
-        );
-        renderPage(true);
-
-        expect(await screen.findByText("Sketch 1")).toBeTruthy();
-        expect(screen.queryByText("Plate")).toBeNull();
-        expect(screen.queryByText("Change levels")).toBeNull();
     });
 });

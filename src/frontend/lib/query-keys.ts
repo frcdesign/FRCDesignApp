@@ -181,7 +181,3 @@ export function featureScriptStatsQueryKey() {
 export function designCheckQueryKey(element: ElementPath) {
     return ["design-check", element];
 }
-
-export function designCheckLevelsQueryKey() {
-    return ["design-check-levels"];
-}

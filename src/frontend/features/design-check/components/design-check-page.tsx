@@ -13,16 +13,14 @@ import { m } from "../../../paraglide/messages";
 import { useNeedsSignIn } from "../../auth/access-level";
 import { startSignIn } from "../../auth/sign-in";
 import { useMarkHintSeen } from "../../hints/queries";
-import { openDesignCheckLevels } from "../open-design-check-levels";
-import { useDesignCheckLevelsQuery, useDesignCheckQuery } from "../queries";
+import { useDesignCheckQuery } from "../queries";
 import { DesignCheckResults } from "./design-check-results";
 
-/** The check of the tab the app was launched in, at the caller's levels. */
+/** The check of the tab the app was launched in. */
 export function DesignCheckPage(): ReactNode {
     const target = useTargetElement();
     const needsSignIn = useNeedsSignIn();
     const query = useDesignCheckQuery(target);
-    const levels = useDesignCheckLevelsQuery();
     const markOpened = useMarkHintSeen(Hint.OPENED_DESIGN_CHECK);
 
     useEffect(markOpened, [markOpened]);
@@ -49,16 +47,13 @@ export function DesignCheckPage(): ReactNode {
     if (query.isError && !query.data) {
         return <PageError title={m.designCheckFailed()} error={query.error} />;
     }
-    // Levels that can't be read leave FRCDesign's, and nothing to change them with.
-    if (!query.data || levels.isPending) {
+    if (!query.data) {
         return <PageLoading title={m.designCheckChecking()} />;
     }
     return (
         <DesignCheckResults
             target={target}
             result={query.data}
-            levels={levels.data?.levels ?? {}}
-            onChangeLevels={levels.data && openDesignCheckLevels}
             failedAgain={query.isError}
         />
     );
