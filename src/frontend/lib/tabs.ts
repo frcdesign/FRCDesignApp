@@ -2,6 +2,7 @@
 import { useNavigate } from "@tanstack/react-router";
 import { type AppTab, getTabPath, isLibraryTab, UtilityTab } from "./app-tab";
 import { getLibraryName } from "./library";
+import { updateUiState } from "./ui-state";
 import { m } from "../paraglide/messages";
 
 export function useNavigateToTab(): (tabId: AppTab) => void {
@@ -16,6 +17,15 @@ export function useNavigateToTab(): (tabId: AppTab) => void {
             return;
         }
         void navigate({ href: getTabPath(tabId) });
+    };
+}
+
+/** Goes to the tab, and makes it the one the app opens to next time. */
+export function useSelectTab(): (tabId: AppTab) => void {
+    const navigateToTab = useNavigateToTab();
+    return (tabId) => {
+        updateUiState({ tabId });
+        navigateToTab(tabId);
     };
 }
 

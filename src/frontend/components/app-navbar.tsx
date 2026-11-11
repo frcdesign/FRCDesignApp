@@ -72,9 +72,10 @@ import {
     useIsDesignCheckNew
 } from "../features/design-check/navigation";
 import { checkAgain } from "../features/design-check/queries";
+import { DesignCheckStatus } from "../features/design-check/components/design-check-status";
 import { type WorkspacePath } from "@backend/features/version-manager/contract";
 import { type AppTab, UtilityTab } from "../lib/app-tab";
-import { getTabName, useNavigateToTab } from "../lib/tabs";
+import { getTabName, useSelectTab } from "../lib/tabs";
 import { useRefreshVersionManagerMutation } from "../features/version-manager/queries";
 import { RefreshButton } from "./refresh-button";
 import { useIsFetching } from "@tanstack/react-query";
@@ -126,6 +127,7 @@ export function AppNavbar(): ReactNode {
             <NavbarRow>
                 <PagePicker />
                 <Group gap="xs" ml="auto" className={styles.noShrink}>
+                    {isLibrary && <DesignCheckStatus />}
                     <SignInButton />
                     {isVersionManager && workspace && (
                         <VersionManagerRefreshButton workspace={workspace} />
@@ -262,7 +264,7 @@ function PagePicker(): ReactNode {
     const isAutoAssembly = useIsAutoAssembly();
     const isFeatureScripts = useIsFeatureScripts();
     const isDesignCheck = useIsDesignCheck();
-    const navigateToTab = useNavigateToTab();
+    const selectTab = useSelectTab();
 
     const current: AppTab = isVersionManager
         ? UtilityTab.VERSION_MANAGER
@@ -280,11 +282,6 @@ function PagePicker(): ReactNode {
         for (const libraryId of Object.values(LibraryId)) {
             void queryClient.prefetchQuery(getLibraryVersionQuery(libraryId));
         }
-    };
-
-    const selectPage = (tab: AppTab) => {
-        updateUiState({ tabId: tab });
-        navigateToTab(tab);
     };
 
     return (
@@ -338,7 +335,7 @@ function PagePicker(): ReactNode {
                                         />
                                     </DotIndicator>
                                 }
-                                onClick={() => selectPage(page.tab)}
+                                onClick={() => selectTab(page.tab)}
                             >
                                 <Group gap="xs">
                                     {getTabName(page.tab)}

@@ -19,8 +19,9 @@ import { m } from "../../paraglide/messages";
 import { useIsSignedIn } from "../auth/access-level";
 
 /**
- * A check runs when the page opens on a workspace with none cached and when
- * asked again, never on its own, so it never runs while someone is editing.
+ * A check runs when the panel loads on a workspace with none cached, for the
+ * page or the navbar's summary, and when asked again; never while the panel
+ * stays open, so it never runs while someone is editing.
  */
 export function useDesignCheckQuery(target: TargetElement | undefined) {
     const isSignedIn = useIsSignedIn();

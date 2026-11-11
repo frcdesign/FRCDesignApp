@@ -54,6 +54,16 @@ listed below that.
 The severity badges ("{n} errors", "{n} warnings", "{n} info") are the admin
 card's, listed in [build-issues.md](./build-issues.md).
 
+## The navbar's summary
+
+In a library's navbar. The card's title is the page's name, "Design Check", and
+it reuses "Not checked" and "Checked at {time}" from the page.
+
+| String              | Kind               | Where                                       | When                 | Review    |
+| ------------------- | ------------------ | ------------------------------------------- | -------------------- | --------- |
+| "{n}"               | Count              | Beside an error or warning icon             | The document has any | **⚑** New |
+| "Open Design Check" | Tooltip and button | The summary, and the foot of its hover card | A check has answered | **⚑** New |
+
 ## Fixing
 
 | String                                                                                                                                       | Kind                        | Where                                        | When                            | Review    |

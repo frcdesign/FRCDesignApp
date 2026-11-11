@@ -14,9 +14,9 @@ import {
     StatusColor
 } from "../../../lib/style-constants";
 import { getLibraryName } from "../../../lib/library";
-import { useNavigateToTab } from "../../../lib/tabs";
+import { useSelectTab } from "../../../lib/tabs";
 import { getLibraryShade } from "../../../theme";
-import { updateUiState, useUiState } from "../../../lib/ui-state";
+import { useUiState } from "../../../lib/ui-state";
 import styles from "../../../lib/styles.module.css";
 
 interface Program {
@@ -102,12 +102,7 @@ function TrademarkDisclaimer(): ReactNode {
 /** Asks a new user's program, which becomes their tab. Asked once per browser. */
 export function ProgramSelect(): ReactNode {
     const tabId = useUiState((state) => state.tabId);
-    const navigateToTab = useNavigateToTab();
-
-    const selectTab = (tabId: AppTab) => {
-        updateUiState({ tabId });
-        navigateToTab(tabId);
-    };
+    const selectTab = useSelectTab();
 
     return (
         <AppModal opened={tabId === undefined} dismissible={false} size="lg">
