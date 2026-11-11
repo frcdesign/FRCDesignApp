@@ -144,7 +144,7 @@ export interface VersionManagerTotals {
 export interface DesignCheckTotals {
     /** Part studios and assemblies together. */
     checks: number;
-    /** Checks that found nothing FRCDesign's levels show. */
+    /** Checks that found nothing. */
     cleanChecks: number;
     partStudioChecks: number;
     assemblyChecks: number;

@@ -25,7 +25,6 @@ DROP TABLE IF EXISTS `daily_version_metrics`;
 DROP TABLE IF EXISTS `daily_report_metrics`;
 DROP TABLE IF EXISTS `daily_design_check_metrics`;
 DROP TABLE IF EXISTS `daily_design_issue_metrics`;
-DROP TABLE IF EXISTS `design_check_levels`;
 DROP TABLE IF EXISTS `onshape_webhooks`;
 DROP TABLE IF EXISTS `workspace_links`;
 DROP TABLE IF EXISTS `d1_migrations`;

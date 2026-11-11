@@ -603,35 +603,6 @@
     "designCheckSketchStatusUnknown": "Onshape didn't say which sketches are fully defined, so under-defined sketches weren't checked. Over-defined sketches still show as features with errors or warnings.",
     "designCheckOpenFeature": "Open in Onshape",
     "designCheckSelectPart": "Select in Onshape",
-    "designCheckAllHiddenTitle": "Every issue found is turned off",
-    "designCheckChangeLevels": "Change levels",
-    "designCheckLevels": "Levels",
-    "designCheckLevelsTitle": "Design Check levels",
-    "designCheckLevelsIntro": "Choose how each check shows, or turn it off. Your levels are saved to your account, and apply to every tab you check.",
-    "designCheckLevelsBoth": "Part Studios and Assemblies",
-    "designCheckLevelsPartStudios": "Part Studios",
-    "designCheckLevelsAssemblies": "Assemblies",
-    "designCheckLevelsReset": "Reset to defaults",
-    "designCheckLevelsFailed": "Failed to save your levels.",
-    "designCheckLevelDefault": "FRCDesign's default: {level}",
-    "designCheckLevelError": "Error",
-    "designCheckLevelWarning": "Warning",
-    "designCheckLevelInfo": "Info",
-    "designCheckLevelOff": "Off",
-    "designCheckHidden": [
-        {
-            "declarations": [
-                "input count",
-                "local countPlural = count: plural",
-                "local formatted = count: number"
-            ],
-            "selectors": ["countPlural"],
-            "match": {
-                "countPlural=one": "An issue is hidden by your levels.",
-                "countPlural=other": "{formatted} issues are hidden by your levels."
-            }
-        }
-    ],
     "designCheckSketchUnderdefined": "Under-defined sketch",
     "designCheckSketchUnderdefinedHelp": "Add constraints or dimensions until every line is black.",
     "designCheckSketchOverdefined": "Over-defined sketch",
@@ -676,10 +647,6 @@
     ],
     "designCheckPartNoMaterial": "Part with no material",
     "designCheckPartNoMaterialHelp": "Without one, its mass is wrong.",
-    "designCheckPartNoPartNumber": "Part with no part number",
-    "designCheckPartNoPartNumberHelp": "Give it one, so it can be found in a bill of materials.",
-    "designCheckPartNoDescription": "Part with no description",
-    "designCheckPartNoDescriptionHelp": "Describe it, so others know what it is.",
     "designCheckInstanceFixed": "Fixed instance",
     "designCheckInstanceFixedHelp": "Fasten the Origin Cube to the assembly origin instead of fixing parts.",
     "designCheckInstanceFloating": "Floating instance",

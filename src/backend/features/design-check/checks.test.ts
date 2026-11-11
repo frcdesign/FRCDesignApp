@@ -212,8 +212,8 @@ describe("a Part Studio", () => {
                 issue.featureId
             ])
         ).toEqual([
-            [DesignIssueType.SKETCH_UNDERDEFINED, "S1"],
-            [DesignIssueType.SKETCH_OVERDEFINED, "S2"]
+            [DesignIssueType.SKETCH_OVERDEFINED, "S2"],
+            [DesignIssueType.SKETCH_UNDERDEFINED, "S1"]
         ]);
     });
 
@@ -258,22 +258,17 @@ describe("a Part Studio", () => {
         expect(
             result.issues.map((issue) => [issue.type, issue.subject])
         ).toEqual([
-            [DesignIssueType.SKETCH_UNDERDEFINED, "Sketch 2"],
             [DesignIssueType.SKETCH_OVERDEFINED, "Sketch 3"],
+            [DesignIssueType.FEATURE_ERROR, "Extrude 1"],
+            [DesignIssueType.ORIGIN_CUBE_NOT_FIRST, "Origin Cube"],
+            [DesignIssueType.SKETCH_UNDERDEFINED, "Sketch 2"],
             [DesignIssueType.SKETCH_UNDERDEFINED, "Sketch 4"],
             [DesignIssueType.SKETCH_UNDERDEFINED, "Sketch 6"],
             [DesignIssueType.SKETCH_UNDERDEFINED, "Sketch 7"],
-            [DesignIssueType.FEATURE_ERROR, "Extrude 1"],
             [DesignIssueType.FEATURE_WARNING, "Extrude 2"],
             [DesignIssueType.PART_NO_MATERIAL, "Part 2"],
             [DesignIssueType.PART_NO_MATERIAL, "Part 3"],
-            [DesignIssueType.ORIGIN_CUBE_NOT_FIRST, "Origin Cube"],
-            [DesignIssueType.FEATURE_SUPPRESSED, "Sketch 5"],
-            [DesignIssueType.PART_NO_PART_NUMBER, "Part 2"],
-            [DesignIssueType.PART_NO_DESCRIPTION, "Part 2"],
-            [DesignIssueType.PART_NO_PART_NUMBER, "Part 3"],
-            [DesignIssueType.PART_NO_DESCRIPTION, "Part 3"],
-            [DesignIssueType.PART_NO_DESCRIPTION, "Part 4"]
+            [DesignIssueType.FEATURE_SUPPRESSED, "Sketch 5"]
         ]);
     });
 
@@ -309,8 +304,8 @@ describe("a Part Studio", () => {
         });
 
         expect(types(snapshot)).toEqual([
-            DesignIssueType.PART_NO_MATERIAL,
             DesignIssueType.ORIGIN_CUBE_MISSING,
+            DesignIssueType.PART_NO_MATERIAL,
             DesignIssueType.FEATURE_SUPPRESSED
         ]);
     });
@@ -404,8 +399,8 @@ describe("a Part Studio", () => {
         });
 
         expect(types(snapshot)).toEqual([
-            DesignIssueType.FEATURE_WARNING,
             DesignIssueType.FEATURE_ERROR,
+            DesignIssueType.FEATURE_WARNING,
             DesignIssueType.FEATURE_SUPPRESSED
         ]);
     });
@@ -456,12 +451,12 @@ describe("a Part Studio", () => {
 
         expect(types(snapshot)).toEqual([
             DesignIssueType.FEATURE_ERROR,
-            DesignIssueType.FEATURE_SUPPRESSED,
-            DesignIssueType.ROLLBACK_NOT_AT_END
+            DesignIssueType.ROLLBACK_NOT_AT_END,
+            DesignIssueType.FEATURE_SUPPRESSED
         ]);
     });
 
-    it("flags a part with no material, part number or description", () => {
+    it("flags a part with no material, and nothing about its part number or description", () => {
         const snapshot = partStudio({
             features: [originCube()],
             parts: [
@@ -473,11 +468,7 @@ describe("a Part Studio", () => {
             ]
         });
 
-        expect(types(snapshot)).toEqual([
-            DesignIssueType.PART_NO_MATERIAL,
-            DesignIssueType.PART_NO_PART_NUMBER,
-            DesignIssueType.PART_NO_DESCRIPTION
-        ]);
+        expect(types(snapshot)).toEqual([DesignIssueType.PART_NO_MATERIAL]);
     });
 
     it("leaves the Origin Cube's part and non-solid bodies alone", () => {
@@ -573,8 +564,8 @@ describe("an Assembly", () => {
                 issue.partId
             ])
         ).toEqual([
-            ["plate", "JHD"],
-            ["gone", undefined]
+            ["gone", undefined],
+            ["plate", "JHD"]
         ]);
     });
 
@@ -593,11 +584,11 @@ describe("an Assembly", () => {
                 issue.subject
             ])
         ).toEqual([
+            [DesignIssueType.INSTANCE_BROKEN, "Part 5 <1>"],
+            [DesignIssueType.INSTANCE_BROKEN, "Part 1 <1>"],
             [DesignIssueType.INSTANCE_FIXED, "Part 3 <1>"],
             [DesignIssueType.INSTANCE_FLOATING, "Part 4 <1>"],
-            [DesignIssueType.INSTANCE_BROKEN, "Part 5 <1>"],
             [DesignIssueType.INSTANCE_FLOATING, "Part 2 <3>"],
-            [DesignIssueType.INSTANCE_BROKEN, "Part 1 <1>"],
             [DesignIssueType.INSTANCE_FLOATING, "Part 1 <2>"],
             [DesignIssueType.FEATURE_SUPPRESSED, "Fastened 2"]
         ]);

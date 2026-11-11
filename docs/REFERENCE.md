@@ -81,13 +81,13 @@ The `/app` route reads Onshape's parameters off the url once per page load, into
 
 ## Storage at a Glance
 
-| Store              | What it holds                                                                                             | Lifetime                                                | Who reads/writes it                                                                           |
-| ------------------ | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| **D1**             | Library data, groups, parts (insertables), configurations, users, favorites, recents, Design Check levels | Permanent (until explicitly changed)                    | Backend Worker on every API request                                                           |
-| **KV**             | Session tokens, borrowable admin sessions, workspace units                                                | Sessions: 30 days. Units: a week.                       | Backend Worker, through a `kvStore` per key prefix                                            |
-| **R2**             | Thumbnail images and per-library search indexes                                                           | Until a load orphans them; indexes rewritten on rebuild | Backend Worker in `src/backend/features/thumbnails/` and `src/backend/features/library/db.ts` |
-| **localStorage**   | UI state: theme, last tab and group, open/closed panels, search query, vendor filters                     | Persists across browser sessions                        | Frontend only, via `src/frontend/lib/ui-state.ts`                                             |
-| **sessionStorage** | Not used                                                                                                  | —                                                       | —                                                                                             |
+| Store              | What it holds                                                                         | Lifetime                                                | Who reads/writes it                                                                           |
+| ------------------ | ------------------------------------------------------------------------------------- | ------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| **D1**             | Library data, groups, parts (insertables), configurations, users, favorites, recents  | Permanent (until explicitly changed)                    | Backend Worker on every API request                                                           |
+| **KV**             | Session tokens, borrowable admin sessions, workspace units                            | Sessions: 30 days. Units: a week.                       | Backend Worker, through a `kvStore` per key prefix                                            |
+| **R2**             | Thumbnail images and per-library search indexes                                       | Until a load orphans them; indexes rewritten on rebuild | Backend Worker in `src/backend/features/thumbnails/` and `src/backend/features/library/db.ts` |
+| **localStorage**   | UI state: theme, last tab and group, open/closed panels, search query, vendor filters | Persists across browser sessions                        | Frontend only, via `src/frontend/lib/ui-state.ts`                                             |
+| **sessionStorage** | Not used                                                                              | —                                                       | —                                                                                             |
 
 ## Codebase Map
 

@@ -4,7 +4,6 @@ export default defineConfig({
     schema: [
         "./src/backend/db/schema.ts",
         "./src/backend/features/analytics/schema.ts",
-        "./src/backend/features/design-check/schema.ts",
         "./src/backend/features/version-manager/schema.ts"
     ],
     out: "./drizzle",

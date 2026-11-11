@@ -1,33 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { BuildIssueSeverity } from "@backend/features/build-checker/issues";
 import {
-    type DesignCheckLevelsOut,
     type DesignCheckOut,
     DesignIssueType
 } from "@backend/features/design-check/contract";
-import { DEFAULT_LIBRARY } from "@backend/features/library/library-id";
 import { ElementType } from "@backend/lib/onshape/element-type";
-import {
-    createTestQueryClient,
-    renderWithProviders
-} from "../../../../__test_utils__/render";
+import { renderWithProviders } from "../../../../__test_utils__/render";
 import { type TargetElement } from "../../../lib/onshape-launch";
-import { designCheckLevelsQueryKey } from "../../../lib/query-keys";
-
-const apiPost = vi.hoisted(() =>
-    vi.fn((_path: string, options: { body: DesignCheckLevelsOut }) =>
-        Promise.resolve(options.body)
-    )
-);
-vi.mock("../../../lib/api-client", () => ({ apiPost }));
-vi.mock("../../../lib/library", () => ({
-    useLibraryId: () => DEFAULT_LIBRARY
-}));
-
-const { DesignCheckResults } = await import("./design-check-results");
-const { DesignCheckLevels } = await import("./design-check-levels");
+import { DesignCheckResults } from "./design-check-results";
 
 const target: TargetElement = {
     documentId: "doc",
@@ -47,10 +28,7 @@ function result(overrides: Partial<DesignCheckOut> = {}): DesignCheckOut {
     };
 }
 
-afterEach(() => {
-    vi.restoreAllMocks();
-    apiPost.mockClear();
-});
+afterEach(() => vi.restoreAllMocks());
 
 describe("design check results", () => {
     it("says when there is nothing to fix", () => {
@@ -99,8 +77,7 @@ describe("design check results", () => {
                 "It leaves 3 features out of the model. Drag it to the bottom of the list."
             )
         ).toBeTruthy();
-        expect(screen.getByText("2 errors")).toBeTruthy();
-        expect(screen.getByText("1 info")).toBeTruthy();
+        expect(screen.getByText("3 warnings")).toBeTruthy();
     });
 
     it("opens a feature in Onshape when its name is clicked", async () => {
@@ -274,104 +251,6 @@ describe("design check results", () => {
         );
     });
 
-    it("shows each kind at the caller's level, and counts the ones turned off", async () => {
-        const onChangeLevels = vi.fn();
-        renderWithProviders(
-            <DesignCheckResults
-                target={target}
-                result={result({
-                    issues: [
-                        { type: DesignIssueType.ROLLBACK_NOT_AT_END, count: 1 },
-                        {
-                            type: DesignIssueType.FEATURE_SUPPRESSED,
-                            subject: "Sketch 5",
-                            featureId: "S5"
-                        },
-                        {
-                            type: DesignIssueType.PART_NO_DESCRIPTION,
-                            subject: "Plate",
-                            partId: "JHD"
-                        }
-                    ]
-                })}
-                levels={{
-                    [DesignIssueType.PART_NO_DESCRIPTION]:
-                        BuildIssueSeverity.ERROR,
-                    [DesignIssueType.FEATURE_SUPPRESSED]: "off"
-                }}
-                onChangeLevels={onChangeLevels}
-            />
-        );
-
-        expect(
-            screen
-                .getAllByText(
-                    /^(Part with no description|Rollback bar isn't at the end)$/
-                )
-                .map((heading) => heading.textContent)
-        ).toEqual([
-            "Part with no description",
-            "Rollback bar isn't at the end"
-        ]);
-        expect(screen.getByText("1 error")).toBeTruthy();
-        expect(screen.getByText("1 info")).toBeTruthy();
-        expect(screen.queryByText("Sketch 5")).toBeNull();
-        expect(
-            screen.getByText(/An issue is hidden by your levels/)
-        ).toBeTruthy();
-
-        await userEvent.click(screen.getByText("Change levels"));
-
-        expect(onChangeLevels).toHaveBeenCalledTimes(1);
-    });
-
-    it("says when everything it found is turned off", () => {
-        renderWithProviders(
-            <DesignCheckResults
-                target={target}
-                result={result({
-                    issues: [
-                        { type: DesignIssueType.ROLLBACK_NOT_AT_END, count: 1 },
-                        { type: DesignIssueType.ORIGIN_CUBE_MISSING }
-                    ]
-                })}
-                levels={{
-                    [DesignIssueType.ROLLBACK_NOT_AT_END]: "off",
-                    [DesignIssueType.ORIGIN_CUBE_MISSING]: "off"
-                }}
-            />
-        );
-
-        expect(
-            screen.getByText("Every issue found is turned off")
-        ).toBeTruthy();
-        expect(
-            screen.getByText(/2 issues are hidden by your levels/)
-        ).toBeTruthy();
-        expect(screen.queryByText("No issues found")).toBeNull();
-    });
-
-    it("doesn't mention what is off by default", () => {
-        renderWithProviders(
-            <DesignCheckResults
-                target={target}
-                result={result({
-                    issues: [
-                        {
-                            type: DesignIssueType.PART_NO_PART_NUMBER,
-                            subject: "Plate",
-                            partId: "JHD"
-                        }
-                    ]
-                })}
-            />
-        );
-
-        expect(screen.getByText("No issues found")).toBeTruthy();
-        expect(screen.queryByText(/hidden by your levels/)).toBeNull();
-        expect(screen.queryByText("Plate")).toBeNull();
-    });
-
     it("says when sketches went unchecked", () => {
         renderWithProviders(
             <DesignCheckResults
@@ -382,77 +261,6 @@ describe("design check results", () => {
 
         expect(
             screen.getByText(/under-defined sketches weren't checked/)
-        ).toBeTruthy();
-    });
-});
-
-describe("design check levels", () => {
-    function renderLevels(levels: DesignCheckLevelsOut["levels"]) {
-        const queryClient = createTestQueryClient();
-        queryClient.setQueryData<DesignCheckLevelsOut>(
-            designCheckLevelsQueryKey(),
-            { levels }
-        );
-        renderWithProviders(<DesignCheckLevels />, queryClient);
-    }
-
-    it("saves a change on top of the caller's other levels, and shows it at once", async () => {
-        renderLevels({
-            [DesignIssueType.PART_NO_DESCRIPTION]: BuildIssueSeverity.INFO
-        });
-
-        expect(screen.getByText("FRCDesign's default: Off")).toBeTruthy();
-
-        await userEvent.click(screen.getByLabelText("Under-defined sketch"));
-        await userEvent.click(screen.getByRole("option", { name: "Warning" }));
-
-        expect(apiPost).toHaveBeenCalledWith("/design-check/levels", {
-            body: {
-                levels: {
-                    [DesignIssueType.PART_NO_DESCRIPTION]: "info",
-                    [DesignIssueType.SKETCH_UNDERDEFINED]: "warning"
-                }
-            }
-        });
-        expect(screen.getByText("FRCDesign's default: Error")).toBeTruthy();
-    });
-
-    it("leaves out a level put back to FRCDesign's, and resets them all", async () => {
-        renderLevels({
-            [DesignIssueType.PART_NO_DESCRIPTION]: BuildIssueSeverity.INFO,
-            [DesignIssueType.SKETCH_UNDERDEFINED]: BuildIssueSeverity.WARNING
-        });
-
-        await userEvent.click(
-            screen.getByLabelText("Part with no description")
-        );
-        await userEvent.click(screen.getByRole("option", { name: "Off" }));
-        await userEvent.click(screen.getByText("Reset to defaults"));
-
-        expect(apiPost.mock.calls.map(([, options]) => options.body)).toEqual([
-            {
-                levels: {
-                    [DesignIssueType.SKETCH_UNDERDEFINED]: "warning"
-                }
-            },
-            { levels: {} }
-        ]);
-        expect(screen.queryByText("Reset to defaults")).toBeNull();
-    });
-
-    it("puts the saved levels back when a save fails", async () => {
-        apiPost.mockRejectedValueOnce(new Error("offline"));
-        renderLevels({
-            [DesignIssueType.PART_NO_DESCRIPTION]: BuildIssueSeverity.INFO
-        });
-
-        await userEvent.click(
-            screen.getByLabelText("Part with no description")
-        );
-        await userEvent.click(screen.getByRole("option", { name: "Off" }));
-
-        expect(
-            await screen.findByText("FRCDesign's default: Off")
         ).toBeTruthy();
     });
 });

@@ -712,21 +712,14 @@ describe("tracking", () => {
             });
         });
 
-        it("counts checks by tab, and the ones that found nothing shown by default", async () => {
+        it("counts checks by tab, and the ones that found nothing", async () => {
             await trackDesignCheck(fakeContext(), {
                 elementType: ElementType.PART_STUDIO,
                 issues: sketchIssues
             });
-            // Off by default, so it leaves the check clean.
             await trackDesignCheck(fakeContext(), {
                 elementType: ElementType.PART_STUDIO,
-                issues: [
-                    {
-                        type: DesignIssueType.PART_NO_PART_NUMBER,
-                        subject: "Plate",
-                        partId: "JHD"
-                    }
-                ]
+                issues: []
             });
             await trackDesignCheck(fakeContext(), {
                 elementType: ElementType.ASSEMBLY,
