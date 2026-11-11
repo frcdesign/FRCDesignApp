@@ -101,10 +101,13 @@ export function FeatureScriptDetails(
             </Text>
             <Group gap="sm">
                 <Tooltip label={cannotAddReason} disabled={!cannotAddReason}>
-                    {/* data-disabled, not disabled: a disabled button fires no hover for the tip. */}
+                    {/* data-disabled, so the tip still gets a hover; Mantine reads
+                        its presence, so it is left off rather than false. */}
                     <Button
                         leftSection={<PlusIcon />}
-                        data-disabled={cannotAddReason !== undefined}
+                        data-disabled={
+                            cannotAddReason !== undefined || undefined
+                        }
                         loading={add.isPending}
                         onClick={() => {
                             if (!cannotAddReason) add.mutate();

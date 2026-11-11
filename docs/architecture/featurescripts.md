@@ -1,6 +1,10 @@
 # FeatureScripts
 
-**Status: proposed.** This is the design for review; none of it is built yet.
+**Status: partly built.** The tables, the list, icon and add routes, and the
+tab with its details are built. Loading them from the frontend document, the
+robot-code release changes, analytics and feedback are still the design below;
+names in the code map that don't exist yet are named from `src/backend/`
+without it.
 
 ## Purpose
 
@@ -32,16 +36,23 @@ It is not:
 
 ## Code map
 
-Planned. Names are proposals; files that don't exist yet are named from
-`src/backend/` or `src/frontend/`, without it.
-
-`features/featurescripts/routes.ts`
+`src/backend/features/featurescripts/routes.ts`
 
 ```text
-GET    /api/featurescripts                   every shown feature, cached under the document's version
+GET    /api/featurescripts-version           the cache version keying the list
+GET    /api/featurescripts?v=                every feature, the same for every caller, immutable under its version
+GET    /api/featurescripts/icon/:elementId   a feature's icon from R2, by ?v=<microversion>, sandboxed
 POST   /api/featurescripts/:featureId/add    adds it to the Part Studio in the body
-POST   /api/featurescripts/reload            owner: loads the latest version now
-GET    /api/featurescripts/icon/:elementId   a feature's icon from R2, by ?v=<microversion>
+POST   /api/featurescripts/reload            owner: loads the latest version now (not built)
+```
+
+`src/backend/features/featurescripts/store.ts`
+
+```ts
+function getFeatureScriptsOut(db: Db): Promise<FeatureScriptsOut>;
+function getCacheVersion(db: Db): Promise<number>;
+function iconKey(elementId: string, microversionId: string): string;
+function iconUrl(elementId: string, microversionId: string): string;
 ```
 
 `features/featurescripts/workflow.ts`
@@ -99,10 +110,10 @@ function getFeatureSpecs(
 function downloadBlob(client: OnshapeApi, path: ElementPath): Promise<Response>;
 ```
 
-`lib/onshape/objects/custom-feature.ts`
+`src/backend/lib/onshape/objects/custom-feature.ts`
 
 ```ts
-// A custom feature at its defaults, named for its Feature Type Name.
+// A custom feature at its defaults; the client opens its dialog for the rest.
 class CustomFeature {
     constructor(
         featureType: string,
@@ -114,13 +125,14 @@ class CustomFeature {
 }
 ```
 
-`features/featurescripts/contract.ts`
+`src/backend/features/featurescripts/contract.ts`
 
 ```ts
 interface FeatureScriptsOut {
-    /** The frontend version loaded, for **Open example**. */
-    documentId: string;
-    versionId: string;
+    /** The frontend version loaded, for **Open example**; absent before the first load. */
+    documentId?: string;
+    versionId?: string;
+    /** In the frontend document's tab order. */
     features: FeatureScriptOut[];
 }
 
@@ -130,45 +142,72 @@ interface FeatureScriptOut {
     description: string;
     /** e.g. "1.3.0"; absent when no version names it. */
     releaseVersion?: string;
-    /** Absent without an icon tab; the card shows the generic FeatureScript icon. */
+    /** Absent without an icon tab. */
     iconUrl?: string;
     exampleElementId?: string;
     /** Absent without an example. */
     thumbnailUrls?: ThumbnailUrls;
-    /** Owner only. */
-    problems?: FeatureScriptProblem[];
+    /** Shown to the owner; a feature with `NOT_ONE_FEATURE` is hidden from everyone else. */
+    problems: FeatureScriptProblem[];
 }
 
 enum FeatureScriptProblem {
     NO_EXAMPLE = "no-example",
     NO_ICON = "no-icon",
+    /** Hidden: there is no single feature to add. */
     NOT_ONE_FEATURE = "not-one-feature",
     LOAD_FAILED = "load-failed"
 }
+
+function isHidden(feature: FeatureScriptOut): boolean;
+
+const addFeatureScriptBody: ZodObject; // targetPath, a Part Studio in a workspace
+
+interface AddFeatureScriptOut {
+    /** The feature to open in the Part Studio. */
+    featureId?: string;
+}
 ```
 
-Frontend, under `features/featurescripts/`:
+`src/frontend/features/featurescripts/queries.ts`
 
-- `queries.ts` — the list, the add mutation, and the owner's reload.
-- `components/featurescript-card.tsx` — a row: the icon inline before the
-  name, the release version, the description's first line, and a ⋯ menu with
-  **Report an issue**.
-- `components/featurescript-details.tsx` — what opens on a click: the
-  example's thumbnail as a hero image across the top, the icon and name under
-  it, the whole description, **Add to Part Studio**, **Open example** and
-  **Report an issue**.
-- `routes/app/featurescripts.tsx` and `routes/app/featurescripts.$featureId.tsx`
-  — the tab and the details, `UtilityTab.FEATURESCRIPTS`.
+```ts
+function useFeatureScriptsQuery(): UseQueryResult<FeatureScriptsOut>;
+// Posts the add, then sends Onshape `openFeatureDialog` for the new feature.
+function useAddFeatureScriptMutation(
+    feature: FeatureScriptOut
+): UseMutationResult<AddFeatureScriptOut>;
+// Why a feature can't be added here: anywhere but a Part Studio.
+function useCannotAddReason(): string | undefined;
+function useExampleUrl(feature: FeatureScriptOut): string | undefined;
+function useIsOwner(): boolean;
+```
+
+Under `src/frontend/features/featurescripts/components/`:
+
+- `featurescript-card.tsx` — a row: the icon inline before the name, the
+  release version, the description's first line, and a ⋯ menu with **Add to
+  Part Studio** and **Open example**.
+- `featurescript-details.tsx` — what opens on a click: the example's thumbnail
+  as a hero image across the top, the icon and name under it, the whole
+  description, **Add to Part Studio** and **Open example**.
+- `featurescript-badges.tsx` — the release version, and to the owner, each
+  problem with a tip saying how to fix it.
+- `featurescript-icon.tsx` — the icon as an `<img>`, or the generic puzzle
+  piece.
+
+The tab is `UtilityTab.FEATURESCRIPTS`: `src/frontend/routes/app/featurescripts/route.tsx`
+loads the version and the list, `index.tsx` under it is the list and its
+search, and `$featureId.tsx` the details.
 
 ## Storage
 
-**D1**, in `features/featurescripts/schema.ts` (nothing outside the area reads
+**D1**, in `src/backend/features/featurescripts/schema.ts` (nothing outside the area reads
 them, and they hold no foreign key into the rest; added to
 `drizzle.config.ts`):
 
 - `featurescripts_document` — one row: `document_id`, the loaded
-  `version_id` and when it was created, `cache_version` (bumped by every load
-  that wrote).
+  `version_id`, and `cache_version` (bumped by every load that wrote).
 - `featurescripts` — one row per Feature Studio in the loaded version:
 
 | Column                    | What it holds                                                                          |
@@ -270,12 +309,16 @@ owner's background session; no one else's.
 
 ### Browsing
 
-1. **FeatureScripts** sits in the navbar after the libraries.
-2. `GET /api/featurescripts` answers the shown features in tab order, cached
-   under `cache_version`, as a library is. The owner also gets the hidden ones
-   and each one's problems.
-3. The search box filters the list on the client, by name and description:
-   it is a few dozen features, not an index's worth.
+1. **FeatureScripts** sits in the page picker under Utilities, offered
+   everywhere: browsing needs no document. Its page has no library search row
+   or insert location, and themes the app in `AppColor.FEATURESCRIPTS`.
+2. The route reads `GET /api/featurescripts-version`, then
+   `GET /api/featurescripts?v=`, which answers every feature in tab order with
+   its problems, the same for every caller, so it is cached as a library is.
+   The client hides features with `NOT_ONE_FEATURE` unless the owner is
+   looking, and shows problems to the owner alone.
+3. The search box filters the list on the client, every word against the
+   name and description: it is a few dozen features, not an index's worth.
 4. Each card shows the feature's icon inline before its name, at the size
    of a line of text. `/api/featurescripts/icon/:elementId` serves it from R2
    as `image/svg+xml`, immutable under its microversion, with
@@ -287,18 +330,18 @@ owner's background session; no one else's.
 
 ### Adding a feature — `POST /api/featurescripts/:featureId/add`
 
-1. Signed in; the body names the Part Studio (`targetPath`, a workspace) and
-   where the add started (`source`: the list, or search).
+1. Signed in; the body names the Part Studio (`targetPath`, a workspace).
 2. Reads the feature and the loaded version.
 3. Posts a `CustomFeature` to the Part Studio's features
    (`addPartStudioFeature`, under `retryInsert`, finished by
    `finishEvenIfDisconnected`): `featureType` the constant, `namespace`
    `d{did}::v{vid}::e{eid}::m{mvid}` of the Feature Studio in the loaded
    version, no parameters.
-4. Answers with the new feature's id; the client toasts that it was added and
-   needs its selections. Onshape shows it in the feature list, failing until
-   they're made.
-5. In the background, records a `FEATURE_ADD` event.
+4. Answers with the new feature's id. The client sends Onshape's
+   `openFeatureDialog` client message for it (`sendOpenFeatureMessage`, as an
+   insert does for its derive), so the feature's dialog opens for its
+   selections, and toasts that it was added.
+5. In the background, records a `FEATURE_ADD` event (not built).
 
 In an assembly, or standalone, **Add to Part Studio** is disabled with a tip
 saying why.
@@ -448,9 +491,10 @@ Description"` is already written for every released feature, and is what
 - **Feedback through the one form.** A FeatureScript report differs from a
   part's only in what it names, so it is a source of the same form and route,
   and is rate limited and counted with every other report.
-- **Added at defaults, not opened.** The API can add a feature but not open
-  its dialog, so the feature lands failing until its selections are made, which
-  is how Onshape shows a new feature that needs input anyway.
+- **Added at defaults, then opened.** The API can add a feature only whole,
+  so it is added at its defaults, failing until its selections are made, and
+  the client then opens its dialog with `openFeatureDialog`, which leaves the
+  person where clicking the feature in Onshape's toolbar would.
 - **Filtered on the client.** A few dozen features need no search index.
 - **Opens aren't counted.** Only an add is recorded; counting how often a
   feature's details are opened would need a call from the client for each,
@@ -469,5 +513,7 @@ Each wants a check from the testbench before building on it, and an entry in
 - That `GET /blobelements/...` of an image tab answers the file as uploaded.
 - Whether adding a feature this way puts it in the document's or the user's
   toolbar.
+- That `openFeatureDialog` opens a custom feature added at its defaults, as it
+  does a derive.
 
 _Last reviewed: 2026-11-11_
