@@ -55,7 +55,7 @@ interface QueryListProps {
     problem?: (entity: OnshapeSelection) => RowProblem | undefined;
     /** Whether the rows' problems are being worked out, shown by a spinner beside Clear. */
     isChecking?: boolean;
-    /** Takes picks from what the Onshape window has selected, never limiting picks or prompting for them. */
+    /** Takes picks from what the Onshape window has selected without limiting or prompting for them, until clicked. */
     isPassive?: boolean;
 }
 
@@ -91,7 +91,8 @@ function defaultName(entity: OnshapeSelection, index: number): string {
  * or, holding picks, lights them up. A highlight cancels the filter, and a
  * request clears what the window shows, so hovering a row highlights its
  * entity alone, leaving lights the focused list's picks up, and the filter is
- * off until the list is clicked again. A passive list does none of this.
+ * off until the list is clicked again. A passive list does none of this until
+ * it's clicked, and listens again once the person finishes selecting.
  */
 export function QueryList(props: QueryListProps): ReactNode {
     const {
@@ -115,6 +116,8 @@ export function QueryList(props: QueryListProps): ReactNode {
         (state) => state.focused === undefined
     );
     const isFinished = useOnshapeSelection((state) => state.isFinished);
+    const isClicked = useOnshapeSelection((state) => state.active === id);
+    const isLimiting = !isPassive || isClicked;
     const layout = useOnshapeSelection((state) => state.layout);
     const isEmpty = entities.length === 0;
     // The stop names the request it ends
@@ -131,7 +134,7 @@ export function QueryList(props: QueryListProps): ReactNode {
                 );
                 if (
                     target &&
-                    !isPassive &&
+                    isLimiting &&
                     added.some((entity) => !accepts(entity))
                 ) {
                     sendMessageBubble(target, prompt);
@@ -146,7 +149,7 @@ export function QueryList(props: QueryListProps): ReactNode {
                     onChange([...kept, ...taken]);
                 }
             }),
-        [id, entities, onChange, accepts, target, prompt, isPassive]
+        [id, entities, onChange, accepts, target, prompt, isLimiting]
     );
 
     useEffect(() => holdPicks(id, entities), [id, entities]);
@@ -164,10 +167,10 @@ export function QueryList(props: QueryListProps): ReactNode {
     }, [autoFocus, id]);
 
     useEffect(() => {
-        if (autoFocus && isUnclaimed && !isFinished) {
+        if (autoFocus && isUnclaimed && (!isFinished || isPassive)) {
             useOnshapeSelection.getState().focus(id);
         }
-    }, [autoFocus, isUnclaimed, isFinished, id]);
+    }, [autoFocus, isUnclaimed, isFinished, isPassive, id]);
 
     // Gone, it leaves picks to the form's first list
     useEffect(
@@ -180,7 +183,7 @@ export function QueryList(props: QueryListProps): ReactNode {
     );
 
     useEffect(() => {
-        if (!target || !isFocused || isPassive) {
+        if (!target || !isFocused || !isLimiting) {
             return;
         }
         sendMessageBubble(target, prompt);
@@ -196,22 +199,22 @@ export function QueryList(props: QueryListProps): ReactNode {
                 selectionRequest.current = undefined;
             }
         };
-    }, [target, isFocused, filter, prompt, id, layout, isPassive]);
+    }, [target, isFocused, filter, prompt, id, layout, isLimiting]);
 
     // Cleared, by Clear, its last row's removal or the form, it asks for picks again
     const wasEmpty = useRef(isEmpty);
     useEffect(() => {
-        if (target && isFocused && !isPassive && isEmpty && !wasEmpty.current) {
+        if (target && isFocused && isLimiting && isEmpty && !wasEmpty.current) {
             sendMessageBubble(target, prompt);
             selectionRequest.current = sendSelectionRequest(target, filter);
         }
         wasEmpty.current = isEmpty;
-    }, [target, isFocused, isEmpty, prompt, filter, isPassive]);
+    }, [target, isFocused, isEmpty, prompt, filter, isLimiting]);
 
     const focus = () => {
-        useOnshapeSelection.getState().focus(id);
-        // Newly focused, the focus effect asks; already, a highlight has cancelled the request since
-        if (target && isFocused && !isPassive) {
+        useOnshapeSelection.getState().activate(id);
+        // Newly limiting, the focus effect asks; already, a highlight has cancelled the request since
+        if (target && isFocused && isLimiting) {
             sendMessageBubble(target, prompt);
             selectionRequest.current = sendSelectionRequest(target, filter);
         }

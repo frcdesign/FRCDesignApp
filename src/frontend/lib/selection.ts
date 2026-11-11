@@ -118,11 +118,15 @@ interface SelectionState {
     layout: number;
     /** The selection request limiting what the Onshape window lets be picked, by its message id. */
     filtering?: string;
-    /** The person finished selecting: no list takes picks until one is clicked. */
+    /** The list a person clicked, which limits picks even when it's passive. */
+    active?: string;
+    /** The person finished selecting: no list but a passive one takes picks until one is clicked. */
     isFinished: boolean;
     /** Takes a SELECTION message's whole selection. */
     receive: (selection: OnshapeSelection[]) => void;
     focus: (listId: string | undefined) => void;
+    /** Focuses a list a person clicked. */
+    activate: (listId: string) => void;
     finishSelecting: () => void;
 }
 
@@ -225,7 +229,11 @@ export const useOnshapeSelection = create<SelectionState>()((set, get) => ({
             });
         }
     },
-    focus: (listId) => set({ focused: listId, isFinished: false }),
+    focus: (listId) =>
+        set({ focused: listId, active: undefined, isFinished: false }),
+    activate: (listId) =>
+        set({ focused: listId, active: listId, isFinished: false }),
     // Unfocused, the list stops its request
-    finishSelecting: () => set({ focused: undefined, isFinished: true })
+    finishSelecting: () =>
+        set({ focused: undefined, active: undefined, isFinished: true })
 }));

@@ -412,7 +412,7 @@ describe("QueryList", () => {
         expect(screen.getByText("Selections are filtered.")).toBeTruthy();
     });
 
-    it("takes picks passively, never limiting or prompting for them", async () => {
+    it("takes picks passively until clicked, and listens again once selecting finishes", async () => {
         const Passive = () => {
             const [entities, setEntities] = useState<OnshapeSelection[]>([]);
             return (
@@ -437,7 +437,6 @@ describe("QueryList", () => {
         expect(screen.getByText("Edge 1")).toBeTruthy();
 
         await userEvent.click(screen.getByText("Clear"));
-        await userEvent.click(screen.getByText("Holes"));
         expect(messages).not.toContainEqual(
             expect.objectContaining({ messageName: "requestSelection" })
         );
@@ -445,6 +444,24 @@ describe("QueryList", () => {
             expect.objectContaining({ messageName: "showMessageBubble" })
         );
         expect(screen.queryByText("Selections are filtered.")).toBeNull();
+
+        await userEvent.click(screen.getByText("Holes"));
+        expect(messages).toContainEqual(
+            expect.objectContaining({
+                messageName: "showMessageBubble",
+                message: PROMPT
+            })
+        );
+        expect(screen.getByText("Selections are filtered.")).toBeTruthy();
+
+        await userEvent.click(
+            screen.getByRole("button", { name: "Finish selecting" })
+        );
+        expect(screen.queryByText("Selections are filtered.")).toBeNull();
+        // Listening again: the request it stops cleared the window
+        act(() => useOnshapeSelection.getState().receive([]));
+        select(edge("B"));
+        expect(screen.getByText("Edge 1")).toBeTruthy();
     });
 
     it("shows a spinner beside Clear while its rows are checked", () => {
