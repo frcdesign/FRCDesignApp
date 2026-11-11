@@ -3,13 +3,14 @@ import {
     ActionIcon,
     Anchor,
     Badge,
+    Button,
     Group,
     Stack,
     Text,
     Tooltip
 } from "@mantine/core";
 import { ArrowSquareOutIcon } from "@phosphor-icons/react";
-import { type PropsWithChildren, type ReactNode } from "react";
+import { type PropsWithChildren, type ReactNode, useRef } from "react";
 import {
     type DesignCheckOut,
     type DesignIssue,
@@ -23,6 +24,7 @@ import { Callout } from "../../../components/callout";
 import { StatusIcon } from "../../../components/status-icon";
 import {
     sendOpenFeatureMessage,
+    sendClearSelectionMessage,
     sendSelectPartMessage,
     sendSwitchTabMessage
 } from "../../../lib/messages";
@@ -35,7 +37,9 @@ import {
     SeverityBadges
 } from "../../build-status/components/issues";
 import { severityStatus } from "../../build-status/severity-status";
+import { getFixLabel, planFix, planFixes } from "../fixes";
 import { getDesignIssueHelp, getDesignIssueName } from "../issue-text";
+import { openFixDialog } from "../open-fix-dialog";
 
 interface DesignCheckResultsProps {
     target: TargetElement;
@@ -48,6 +52,7 @@ interface DesignCheckResultsProps {
 export function DesignCheckResults(props: DesignCheckResultsProps): ReactNode {
     const { target, result, failedAgain } = props;
     const issues = result.tabs.flatMap((tab) => tab.issues);
+    const fixes = planFixes(target, result.tabs);
     const checkedAt = m.designCheckCheckedAt({ checkedAt: result.checkedAt });
     const failedNote = failedAgain && (
         <Callout status={Status.ERROR} text={m.designCheckAgainFailed()} />
@@ -89,9 +94,20 @@ export function DesignCheckResults(props: DesignCheckResultsProps): ReactNode {
                         getDesignIssueSeverity(issue.type)
                     )}
                 />
-                <Text size="xs" c="dimmed">
-                    {checkedAt}
-                </Text>
+                <Group gap="xs" wrap="nowrap">
+                    <Text size="xs" c="dimmed">
+                        {checkedAt}
+                    </Text>
+                    {fixes.length > 0 && (
+                        <Button
+                            size="compact-sm"
+                            variant="light"
+                            onClick={() => openFixDialog(target, fixes)}
+                        >
+                            {m.designCheckFixAll()}
+                        </Button>
+                    )}
+                </Group>
             </Group>
             <Accordion multiple defaultValue={[target.elementId]}>
                 {result.tabs.map((tab) => (
@@ -162,18 +178,14 @@ function TabItem(props: TabItemProps): ReactNode {
                 )}
             </Group>
             <Accordion.Panel>
-                <TabIssues
-                    target={isLaunchTab ? target : undefined}
-                    tab={tab}
-                />
+                <TabIssues target={target} tab={tab} />
             </Accordion.Panel>
         </Accordion.Item>
     );
 }
 
 interface TabIssuesProps {
-    /** The launch's tab, when this is it. */
-    target?: TargetElement;
+    target: TargetElement;
     tab: TabCheck;
 }
 
@@ -195,6 +207,7 @@ function TabIssues(props: TabIssuesProps): ReactNode {
                     <IssueGroup
                         key={issues[0].type}
                         target={target}
+                        tab={tab}
                         issues={issues}
                     />
                 ))
@@ -209,17 +222,19 @@ function groupByType(issues: DesignIssue[]): DesignIssue[][] {
 }
 
 interface IssueGroupProps {
-    /** The launch's tab, when the issues are in it: only there can Onshape open or select them. */
-    target?: TargetElement;
+    target: TargetElement;
+    tab: TabCheck;
     /** Every one of the same type. */
     issues: DesignIssue[];
 }
 
 function IssueGroup(props: IssueGroupProps): ReactNode {
-    const { target, issues } = props;
+    const { target, tab, issues } = props;
     const first = issues[0];
     const severity = getDesignIssueSeverity(first.type);
     const named = issues.filter((issue) => issue.subject !== undefined);
+    // Onshape opens and selects only in the tab the app was launched in.
+    const pointAt = tab.elementId === target.elementId ? target : undefined;
 
     return (
         <Group
@@ -234,19 +249,55 @@ function IssueGroup(props: IssueGroupProps): ReactNode {
             <Stack gap={4} flex={1} miw={0}>
                 <Text fw={500}>{getDesignIssueName(first.type)}</Text>
                 <Text size="sm">{getDesignIssueHelp(first)}</Text>
+                {first.subject === undefined && (
+                    <FixButton target={target} tab={tab} issue={first} />
+                )}
                 {named.length > 0 && (
                     <Stack gap={2}>
                         {named.map((issue, index) => (
-                            <IssueSubject
+                            <Group
                                 key={issueKey(issue, index)}
-                                target={target}
-                                issue={issue}
-                            />
+                                gap="xs"
+                                wrap="nowrap"
+                                justify="space-between"
+                            >
+                                <IssueSubject target={pointAt} issue={issue} />
+                                <FixButton
+                                    target={target}
+                                    tab={tab}
+                                    issue={issue}
+                                />
+                            </Group>
                         ))}
                     </Stack>
                 )}
             </Stack>
         </Group>
+    );
+}
+
+interface FixButtonProps {
+    target: TargetElement;
+    tab: TabCheck;
+    issue: DesignIssue;
+}
+
+/** Asks to confirm the issue's one fix, where the app can make one. */
+function FixButton(props: FixButtonProps): ReactNode {
+    const { target, tab, issue } = props;
+    const planned = planFix(target, tab, issue);
+    if (!planned || !issue.fix) {
+        return null;
+    }
+    return (
+        <Button
+            size="compact-xs"
+            variant="light"
+            flex="none"
+            onClick={() => openFixDialog(target, [planned])}
+        >
+            {getFixLabel(issue.fix)}
+        </Button>
     );
 }
 
@@ -296,18 +347,13 @@ function IssueSubject(props: IssueSubjectProps): ReactNode {
     }
     if (partId) {
         return (
-            <SubjectLink
-                tooltip={m.designCheckSelectPart()}
-                onClick={() =>
-                    sendSelectPartMessage(
-                        target,
-                        partId,
-                        instanceId ? [instanceId] : undefined
-                    )
-                }
+            <PartLink
+                target={target}
+                partId={partId}
+                occurrencePath={instanceId ? [instanceId] : undefined}
             >
                 {subject}
-            </SubjectLink>
+            </PartLink>
         );
     }
     return <SubjectName>{subject}</SubjectName>;
@@ -321,14 +367,54 @@ function SubjectName(props: PropsWithChildren): ReactNode {
     );
 }
 
-interface SubjectLinkProps {
+interface PartLinkProps extends PropsWithChildren {
+    target: TargetElement;
+    partId: string;
+    /** The instance's, in an assembly. */
+    occurrencePath?: string[];
+}
+
+/** Hovering selects the part in the window and leaving clears it; a click keeps it. */
+function PartLink(props: PartLinkProps): ReactNode {
+    const { target, partId, occurrencePath, children } = props;
+    const isHovering = useRef(false);
+    const select = () => sendSelectPartMessage(target, partId, occurrencePath);
+
+    return (
+        <SubjectLink
+            tooltip={m.designCheckSelectPart()}
+            onMouseEnter={() => {
+                isHovering.current = true;
+                select();
+            }}
+            onMouseLeave={() => {
+                if (isHovering.current) {
+                    sendClearSelectionMessage(target);
+                    isHovering.current = false;
+                }
+            }}
+            onClick={() => {
+                // Kept: leaving no longer clears it.
+                if (!isHovering.current) {
+                    select();
+                }
+                isHovering.current = false;
+            }}
+        >
+            {children}
+        </SubjectLink>
+    );
+}
+
+interface SubjectLinkProps extends PropsWithChildren {
     tooltip: string;
     onClick: () => void;
-    children: ReactNode;
+    onMouseEnter?: () => void;
+    onMouseLeave?: () => void;
 }
 
 function SubjectLink(props: SubjectLinkProps): ReactNode {
-    const { tooltip, onClick, children } = props;
+    const { tooltip, onClick, onMouseEnter, onMouseLeave, children } = props;
     return (
         <Tooltip label={tooltip} position="top-start">
             <Anchor
@@ -338,6 +424,8 @@ function SubjectLink(props: SubjectLinkProps): ReactNode {
                 ta="left"
                 truncate
                 onClick={onClick}
+                onMouseEnter={onMouseEnter}
+                onMouseLeave={onMouseLeave}
             >
                 {children}
             </Anchor>

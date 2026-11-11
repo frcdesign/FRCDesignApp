@@ -4,8 +4,9 @@ import { getApp } from "../../lib/context";
 import { type InstancePath } from "../../lib/onshape/path";
 import { validate } from "../../lib/validate";
 import { requireSignInMiddleware } from "../auth/guards";
-import { type DesignCheckOut } from "./contract";
+import { type DesignCheckOut, DesignIssueFix } from "./contract";
 import { checkDocument } from "./document";
+import { applyFix } from "./fixes";
 
 export const designCheckRoutes = getApp();
 
@@ -36,5 +37,24 @@ designCheckRoutes.get(
             workspace
         );
         return c.json({ tabs, checkedAt: Date.now() } satisfies DesignCheckOut);
+    }
+);
+
+const fixBody = z.object({
+    documentId: z.string().min(1),
+    instanceId: z.string().min(1),
+    elementId: z.string().min(1),
+    fix: z.enum(DesignIssueFix),
+    assemblyInstanceId: z.string().min(1).optional()
+});
+
+/** POST /api/design-check/fix — makes one fix in a workspace, as the caller. */
+designCheckRoutes.post(
+    "/design-check/fix",
+    requireSignInMiddleware,
+    validate("json", fixBody),
+    async (c) => {
+        await applyFix(await c.var.getOnshapeApi(), c.req.valid("json"));
+        return c.json({});
     }
 );

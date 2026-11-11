@@ -146,6 +146,32 @@ problem planted, whose answers are kept, cut down, in
   its `id` and `name`, no `type` or `partId` — _observed_. The spec's
   `status: "DeletedElement"` and `errorStatus` were on no instance, healthy or
   broken.
+- **An instance's source**: a top-level instance names the tab it came from,
+  `documentId` and `elementId`, with `documentMicroversion` for a tab of the
+  same document — _observed_. That one from another document carries
+  `documentVersion` instead is _unverified_.
+- **The Origin Cube's mate connector**, as a fasten made by hand to the origin
+  names it, is `BTMPartStudioMateConnectorQuery-1324` with `featureId`
+  `{Origin Cube feature id}.mateConnector1` and the instance as its `path`,
+  beside an implicit mate connector the mate owns, `ON_ENTITY` with its
+  `originQuery` the origin's `featureId` `Origin` and `queryData`
+  `ORIGIN_Z` — _observed_. A fasten naming the cube's mate connector alone,
+  added through the API, is red — _observed_. One built the way a fasten made
+  by hand is, its implicit connector given a placeholder id that its second
+  query names, builds and puts the cube on the origin — _observed_.
+- **A mate's `mateType`** in the assembly definition's `featureData` is
+  `FASTENED` for a fasten — _observed_.
+- **A change made through the API** isn't undone by undo (Ctrl+Z) in the
+  Onshape window: a fasten the design check added stayed — _observed_.
+- **Deleting an instance** is `DELETE /assemblies/.../instance/nodeid/{nid}`,
+  `nid` being the instance's `id` from the definition — _documented_ (the
+  OpenAPI spec; the API guide's example shows POST), and _observed_.
+- **Deleting an Assembly's feature**, such as a mate, is
+  `DELETE /assemblies/.../features/featureid/{fid}` — _documented_ (the
+  OpenAPI spec).
+- **Moving the rollback bar** is `POST /partstudios/.../features/rollback` with
+  `{ "rollbackIndex": -1 }` to put it at the end — _documented_, and
+  _observed_.
 - **An inserted sketch** is left out of the assembly definition with
   `includeNonSolids=false`, which `getAssembly` sends by default — _observed_.
 - **`openAnotherElementInCurrentWorkspace`**, a client message, shows another
@@ -153,6 +179,10 @@ problem planted, whose answers are kept, cut down, in
   then loads the app's panel afresh for the new tab, from its extension's
   action url (`/init`), so nothing in the page's memory survives the switch —
   _observed_.
+- **`stopRequest`**, a client message, ends the request its `messageId` names
+  — _documented_. It leaves what a `requestSelectionHighlight` selected
+  selected — _observed_. A highlight of no `selections` clears the window's
+  selection — _observed_.
 - **`openFeatureDialog`**, a client message, opens a feature's dialog in a
   workspace's Part Studio — _documented_ — and a mate's in an Assembly,
   suppressed or not — _observed_. A suppressed Part Studio feature doesn't

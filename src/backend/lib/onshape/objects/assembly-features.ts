@@ -126,3 +126,19 @@ export function fastenMateToCircularEdge(
         [implicitMateConnector(circularEdgeCenterQuery(edge))]
     );
 }
+
+/**
+ * Fastens `query`'s connector to the assembly origin, as a fasten made by hand
+ * does: to an implicit connector the mate owns, on the origin's Z axis.
+ */
+export function fastenMateToOrigin(name: string, query: object): object {
+    return fastenMate(
+        name,
+        [query, featureOccurrenceQuery(PLACEHOLDER_FEATURE_ID)],
+        [
+            implicitMateConnector(
+                featureOccurrenceQuery("Origin", [], "ORIGIN_Z")
+            )
+        ]
+    );
+}

@@ -17,6 +17,8 @@ export function getDesignIssueName(type: DesignIssueType): string {
             return m.designCheckOriginCubeNotFirst();
         case DesignIssueType.ORIGIN_CUBE_SUPPRESSED:
             return m.designCheckOriginCubeSuppressed();
+        case DesignIssueType.ORIGIN_CUBE_NOT_FASTENED:
+            return m.designCheckOriginCubeNotFastened();
         case DesignIssueType.FEATURE_ERROR:
             return m.designCheckFeatureError();
         case DesignIssueType.FEATURE_WARNING:
@@ -50,6 +52,8 @@ export function getDesignIssueHelp(issue: DesignIssue): string {
             return m.designCheckOriginCubeNotFirstHelp({ position: count });
         case DesignIssueType.ORIGIN_CUBE_SUPPRESSED:
             return m.designCheckOriginCubeSuppressedHelp();
+        case DesignIssueType.ORIGIN_CUBE_NOT_FASTENED:
+            return m.designCheckOriginCubeNotFastenedHelp();
         case DesignIssueType.FEATURE_ERROR:
             return m.designCheckFeatureErrorHelp();
         case DesignIssueType.FEATURE_WARNING:

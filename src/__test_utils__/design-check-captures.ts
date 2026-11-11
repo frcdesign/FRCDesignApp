@@ -525,6 +525,7 @@ export const CAPTURED_ASSEMBLY: AssemblySnapshot = {
                     suppressed: false,
                     featureData: {
                         name: "Fastened 1",
+                        mateType: "FASTENED",
                         matedEntities: [
                             {
                                 matedOccurrence: ["Mdxh3o0oikeMdkZcB"]
@@ -557,6 +558,7 @@ export const CAPTURED_ASSEMBLY: AssemblySnapshot = {
                     suppressed: true,
                     featureData: {
                         name: "Fastened 2",
+                        mateType: "FASTENED",
                         matedEntities: [
                             {
                                 matedOccurrence: ["MyVldukVFexowNChw"]
@@ -573,6 +575,7 @@ export const CAPTURED_ASSEMBLY: AssemblySnapshot = {
                     suppressed: false,
                     featureData: {
                         name: "Fastened 3",
+                        mateType: "FASTENED",
                         matedEntities: [
                             {
                                 matedOccurrence: ["MGLhB6zXZpAJ3xUUn"]

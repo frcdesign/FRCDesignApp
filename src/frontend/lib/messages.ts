@@ -243,24 +243,46 @@ export function sendSelectPartMessage(
     partId: string,
     occurrencePath?: string[]
 ) {
-    expectSelection([
+    sendHighlight(elementPath, [
         {
             entityType: "BODY",
             selectionId: partId,
-            occurrencePath: occurrencePath ?? []
+            occurrencePath
         }
     ]);
+}
+
+/** Leaves nothing selected in the Onshape window; a `stopRequest` doesn't. */
+export function sendClearSelectionMessage(elementPath: ElementPath) {
+    sendHighlight(elementPath, []);
+}
+
+interface SelectedPart {
+    entityType: string;
+    selectionId: string;
+    /** Absent in a Part Studio, where the part's id alone selects it. */
+    occurrencePath?: string[];
+}
+
+/** Selects `parts` in the Onshape window, telling the selection store it was the app. */
+function sendHighlight(elementPath: ElementPath, parts: SelectedPart[]) {
+    expectSelection(
+        parts.map((part) => ({
+            ...part,
+            occurrencePath: part.occurrencePath ?? []
+        }))
+    );
     sendMessage(elementPath, {
         messageName: MessageType.REQUEST_HIGHLIGHT_SELECTION,
         messageId: `${HIGHLIGHT_PREFIX}${++highlights}`,
-        selections: [
-            {
+        selections: parts.map(
+            ({ entityType, selectionId, occurrencePath }) => ({
                 selectionType: "ENTITY",
-                entityType: "BODY",
-                selectionId: partId,
+                entityType,
+                selectionId,
                 ...(occurrencePath && { occurrencePath })
-            }
-        ]
+            })
+        )
     });
 }
 

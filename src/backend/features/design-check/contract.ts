@@ -8,6 +8,8 @@ export enum DesignIssueType {
     ORIGIN_CUBE_MISSING = "origin-cube-missing",
     ORIGIN_CUBE_NOT_FIRST = "origin-cube-not-first",
     ORIGIN_CUBE_SUPPRESSED = "origin-cube-suppressed",
+    /** An Assembly's Origin Cube with no fasten to the assembly origin. */
+    ORIGIN_CUBE_NOT_FASTENED = "origin-cube-not-fastened",
     /** A red feature or mate. */
     FEATURE_ERROR = "feature-error",
     /** A yellow feature or mate. */
@@ -32,6 +34,28 @@ export interface DesignIssue {
     instanceId?: string;
     /** The Origin Cube's place in the list, or how many features the rollback bar hides. */
     count?: number;
+    /** Set where the app can fix it, for someone who may edit the document. */
+    fix?: DesignIssueFix;
+}
+
+export enum DesignIssueFix {
+    /** Moves a Part Studio's rollback bar to the end. */
+    MOVE_ROLLBACK_TO_END = "move-rollback-to-end",
+    /** Deletes a broken instance from its Assembly. */
+    DELETE_INSTANCE = "delete-instance",
+    /** Fastens the Origin Cube's instance to its Assembly's origin. */
+    FASTEN_ORIGIN_CUBE = "fasten-origin-cube"
+}
+
+/** POST /api/design-check/fix */
+export interface DesignFixIn {
+    documentId: string;
+    /** The workspace. */
+    instanceId: string;
+    elementId: string;
+    fix: DesignIssueFix;
+    /** The Assembly instance an instance's fix is about. */
+    assemblyInstanceId?: string;
 }
 
 /** One Part Studio or Assembly of the document, as checked. */
@@ -67,6 +91,7 @@ export function getDesignIssueSeverity(
         case DesignIssueType.ORIGIN_CUBE_MISSING:
         case DesignIssueType.ORIGIN_CUBE_NOT_FIRST:
         case DesignIssueType.ORIGIN_CUBE_SUPPRESSED:
+        case DesignIssueType.ORIGIN_CUBE_NOT_FASTENED:
         case DesignIssueType.FEATURE_WARNING:
         case DesignIssueType.ROLLBACK_NOT_AT_END:
         case DesignIssueType.PART_NO_MATERIAL:

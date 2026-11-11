@@ -1,9 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { ModalsProvider } from "@mantine/modals";
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
     type DesignCheckOut,
     type DesignIssue,
+    DesignIssueFix,
     DesignIssueType,
     type TabCheck
 } from "@backend/features/design-check/contract";
@@ -11,6 +13,13 @@ import { ElementType } from "@backend/lib/onshape/element-type";
 import { renderWithProviders } from "../../../../__test_utils__/render";
 import { type TargetElement } from "../../../lib/onshape-launch";
 import { DesignCheckResults } from "./design-check-results";
+
+const apiPost = vi.hoisted(() =>
+    vi.fn<(path: string, options?: object) => Promise<object>>(() =>
+        Promise.resolve({})
+    )
+);
+vi.mock("../../../lib/api-client", () => ({ apiPost }));
 
 const target: TargetElement = {
     documentId: "doc",
@@ -49,7 +58,11 @@ function result(launch: LaunchTab = {}): DesignCheckOut {
     };
 }
 
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+    vi.restoreAllMocks();
+    apiPost.mockReset();
+    apiPost.mockResolvedValue({});
+});
 
 describe("design check results", () => {
     it("says when there is nothing to fix", () => {
@@ -275,6 +288,49 @@ describe("design check results", () => {
         );
     });
 
+    it("selects a part while hovered, and keeps it selected once clicked", async () => {
+        const postMessage = vi
+            .spyOn(window.parent, "postMessage")
+            .mockImplementation(() => undefined);
+        renderWithProviders(
+            <DesignCheckResults
+                target={target}
+                result={result({
+                    issues: [
+                        {
+                            type: DesignIssueType.PART_NO_MATERIAL,
+                            subject: "Plate",
+                            partId: "JHD"
+                        }
+                    ]
+                })}
+            />
+        );
+        const plate = screen.getByRole("button", { name: "Plate" });
+        const selections = () =>
+            postMessage.mock.calls.map(
+                ([message]) =>
+                    (message as { selections: { selectionId: string }[] })
+                        .selections
+            );
+
+        await userEvent.hover(plate);
+        await userEvent.unhover(plate);
+
+        expect(selections()).toEqual([
+            [expect.objectContaining({ selectionId: "JHD" })],
+            []
+        ]);
+
+        postMessage.mockClear();
+        await userEvent.click(plate);
+        await userEvent.unhover(plate);
+
+        expect(selections()).toEqual([
+            [expect.objectContaining({ selectionId: "JHD" })]
+        ]);
+    });
+
     it("names another tab's issues only, and switches to that tab", async () => {
         const postMessage = vi
             .spyOn(window.parent, "postMessage")
@@ -359,5 +415,95 @@ describe("design check results", () => {
         expect(
             screen.getByText(/under-defined sketches weren't checked/)
         ).toBeTruthy();
+    });
+
+    it("confirms one fix, and makes it", async () => {
+        renderWithProviders(
+            <ModalsProvider>
+                <DesignCheckResults
+                    target={{ ...target, elementType: ElementType.ASSEMBLY }}
+                    result={result({
+                        elementType: ElementType.ASSEMBLY,
+                        issues: [
+                            {
+                                type: DesignIssueType.INSTANCE_BROKEN,
+                                subject: "Gone <1>",
+                                instanceId: "gone",
+                                fix: DesignIssueFix.DELETE_INSTANCE
+                            }
+                        ]
+                    })}
+                />
+            </ModalsProvider>
+        );
+
+        await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+
+        expect(await screen.findByText("Delete Gone <1>")).toBeTruthy();
+        await userEvent.click(
+            screen.getByRole("button", { name: "Make 1 fix" })
+        );
+
+        expect(apiPost).toHaveBeenCalledWith("/design-check/fix", {
+            body: {
+                documentId: "doc",
+                instanceId: "work",
+                elementId: "tab",
+                fix: DesignIssueFix.DELETE_INSTANCE,
+                assemblyInstanceId: "gone"
+            }
+        });
+    });
+
+    it("lists every fix in the document under Fix all, making only those left checked", async () => {
+        renderWithProviders(
+            <ModalsProvider>
+                <DesignCheckResults
+                    target={target}
+                    result={result({
+                        issues: [
+                            {
+                                type: DesignIssueType.ROLLBACK_NOT_AT_END,
+                                count: 1,
+                                fix: DesignIssueFix.MOVE_ROLLBACK_TO_END
+                            }
+                        ],
+                        others: [
+                            tab({
+                                elementId: "asm",
+                                name: "Assembly 1",
+                                elementType: ElementType.ASSEMBLY,
+                                issues: [
+                                    {
+                                        type: DesignIssueType.INSTANCE_BROKEN,
+                                        subject: "Gone <1>",
+                                        instanceId: "gone",
+                                        fix: DesignIssueFix.DELETE_INSTANCE
+                                    }
+                                ]
+                            })
+                        ]
+                    })}
+                />
+            </ModalsProvider>
+        );
+
+        await userEvent.click(screen.getByRole("button", { name: "Fix all" }));
+        await userEvent.click(await screen.findByLabelText("Delete Gone <1>"));
+        await userEvent.click(
+            screen.getByRole("button", { name: "Make 1 fix" })
+        );
+
+        expect(apiPost.mock.calls).toEqual([
+            [
+                "/design-check/fix",
+                {
+                    body: expect.objectContaining({
+                        elementId: "tab",
+                        fix: DesignIssueFix.MOVE_ROLLBACK_TO_END
+                    })
+                }
+            ]
+        ]);
     });
 });

@@ -1,9 +1,19 @@
-import { skipToken, useQuery } from "@tanstack/react-query";
-import { type DesignCheckOut } from "@backend/features/design-check/contract";
-import { apiGet } from "../../lib/api-client";
+import {
+    skipToken,
+    useMutation,
+    useQuery,
+    useQueryClient
+} from "@tanstack/react-query";
+import {
+    type DesignCheckOut,
+    type DesignFixIn
+} from "@backend/features/design-check/contract";
+import { apiGet, apiPost } from "../../lib/api-client";
+import { getAppErrorHandler } from "../../lib/errors";
 import { type TargetElement } from "../../lib/onshape-launch";
 import { designCheckQueryKey } from "../../lib/query-keys";
 import { queryClient } from "../../lib/query-client";
+import { m } from "../../paraglide/messages";
 import { useIsSignedIn } from "../auth/access-level";
 
 /**
@@ -33,5 +43,27 @@ export function checkAgain(target: TargetElement): Promise<void> {
     return queryClient.refetchQueries({
         queryKey: designCheckQueryKey(target),
         exact: true
+    });
+}
+
+/**
+ * Makes each fix in turn, stopping at the first Onshape refuses, then checks
+ * the document again, which reads again only the tabs the fixes changed.
+ */
+export function useApplyFixesMutation(target: TargetElement) {
+    const client = useQueryClient();
+    return useMutation({
+        mutationKey: ["design-check-fix"],
+        mutationFn: async (fixes: DesignFixIn[]) => {
+            for (const fix of fixes) {
+                await apiPost("/design-check/fix", { body: fix });
+            }
+        },
+        onError: getAppErrorHandler(m.designCheckFixFailed()),
+        onSettled: () =>
+            client.refetchQueries({
+                queryKey: designCheckQueryKey(target),
+                exact: true
+            })
     });
 }

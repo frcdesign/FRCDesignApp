@@ -10,6 +10,7 @@ import type {
 import {
     compareSeverity,
     type DesignIssue,
+    DesignIssueFix,
     DesignIssueType,
     getDesignIssueSeverity
 } from "./contract";
@@ -45,6 +46,7 @@ export function checkDesign(snapshot: DesignSnapshot): DesignCheckResult {
         case ElementType.ASSEMBLY:
             return {
                 issues: bySeverity([
+                    ...checkOriginCubeFastened(snapshot.definition),
                     ...checkFeatures(snapshot.features),
                     ...checkInstances(snapshot)
                 ]),
@@ -266,7 +268,8 @@ function checkRollback(response: OnshapeFeatureListResponse): DesignIssue[] {
     return [
         {
             type: DesignIssueType.ROLLBACK_NOT_AT_END,
-            count: total - rollbackIndex
+            count: total - rollbackIndex,
+            fix: DesignIssueFix.MOVE_ROLLBACK_TO_END
         }
     ];
 }
@@ -291,6 +294,50 @@ function checkParts(snapshot: PartStudioSnapshot): DesignIssue[] {
                   }
               ];
     });
+}
+
+/** FRCDesign fastens the Origin Cube to the assembly origin, and the rest to the cube. */
+function checkOriginCubeFastened(
+    definition: OnshapeAssemblyDefinition
+): DesignIssue[] {
+    const root = definition.rootAssembly;
+    return root.instances
+        .filter((instance) => !instance.suppressed)
+        .filter(isOriginCubeInstance)
+        .filter((cube) => !isFastenedToOrigin(root.features, cube.id))
+        .map((cube) => ({
+            type: DesignIssueType.ORIGIN_CUBE_NOT_FASTENED,
+            subject: cube.name ?? cube.id,
+            instanceId: cube.id,
+            partId: cube.partId || undefined,
+            fix: DesignIssueFix.FASTEN_ORIGIN_CUBE
+        }));
+}
+
+/** An unsuppressed fasten naming the instance and nothing else but the origin. */
+function isFastenedToOrigin(
+    features: OnshapeAssemblyDefinition["rootAssembly"]["features"],
+    instanceId: string
+): boolean {
+    return features.some((feature) => {
+        const ends = (feature.featureData?.matedEntities ?? []).map(
+            (end) => end.matedOccurrence ?? []
+        );
+        const isTheInstance = (end: string[]) =>
+            end.length === 1 && end[0] === instanceId;
+        return (
+            !feature.suppressed &&
+            feature.featureData?.mateType === "FASTENED" &&
+            ends.some(isTheInstance) &&
+            ends.every((end) => end.length === 0 || isTheInstance(end))
+        );
+    });
+}
+
+/** An instance of the cube the Origin Cube makes, by the name Onshape numbers it with. */
+function isOriginCubeInstance(instance: OnshapeAssemblyInstance): boolean {
+    const partName = (instance.name ?? "").replace(/ <\d+>$/, "");
+    return instance.type === "Part" && ORIGIN_CUBE_PART_NAME.test(partName);
 }
 
 /** What it was inserted from is gone: Onshape no longer says what it is, or which part. */
@@ -355,14 +402,20 @@ function checkInstances(snapshot: AssemblySnapshot): DesignIssue[] {
         const issues: DesignIssue[] = [];
         const isBrokenInstance = isBroken(instance);
         if (isBrokenInstance) {
-            issues.push({ type: DesignIssueType.INSTANCE_BROKEN, ...target });
+            issues.push({
+                type: DesignIssueType.INSTANCE_BROKEN,
+                ...target,
+                fix: DesignIssueFix.DELETE_INSTANCE
+            });
         }
         if (fixed.has(instance.id)) {
             issues.push({ type: DesignIssueType.INSTANCE_FIXED, ...target });
         } else if (
-            // A broken instance has nothing left to mate, so it isn't floating too.
+            // A broken instance has nothing left to mate, so it isn't floating
+            // too, and a loose Origin Cube is reported as not fastened.
             !isBrokenInstance &&
-            !held.has(instance.id)
+            !held.has(instance.id) &&
+            !isOriginCubeInstance(instance)
         ) {
             issues.push({ type: DesignIssueType.INSTANCE_FLOATING, ...target });
         }

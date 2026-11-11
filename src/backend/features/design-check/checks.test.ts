@@ -12,7 +12,7 @@ import {
     CAPTURED_PART_STUDIO
 } from "../../../__test_utils__/design-check-captures";
 import { checkDesign } from "./checks";
-import { DesignIssueType } from "./contract";
+import { DesignIssueFix, DesignIssueType } from "./contract";
 import type { AssemblySnapshot, PartStudioSnapshot } from "./snapshot";
 
 type Feature = OnshapeFeatureListResponse["features"][number];
@@ -132,6 +132,7 @@ function fasten(id: string, ...ends: string[][]): OnshapeAssemblyFeature {
         suppressed: false,
         featureData: {
             name: id,
+            mateType: "FASTENED",
             matedEntities: ends.map((end) => ({ matedOccurrence: end }))
         }
     };
@@ -410,7 +411,13 @@ describe("a Part Studio", () => {
 
         expect(
             checkDesign(partStudio({ features, rollbackIndex: 1 })).issues
-        ).toEqual([{ type: DesignIssueType.ROLLBACK_NOT_AT_END, count: 2 }]);
+        ).toEqual([
+            {
+                type: DesignIssueType.ROLLBACK_NOT_AT_END,
+                count: 2,
+                fix: DesignIssueFix.MOVE_ROLLBACK_TO_END
+            }
+        ]);
         // Onshape sends the feature count with the bar at the end.
         expect(types(partStudio({ features, rollbackIndex: 3 }))).toEqual([]);
         expect(types(partStudio({ features, rollbackIndex: -1 }))).toEqual([]);
@@ -566,6 +573,80 @@ describe("an Assembly", () => {
         ).toEqual([
             ["gone", undefined],
             ["plate", "JHD"]
+        ]);
+    });
+
+    it("wants the Origin Cube fastened to the origin, and nothing else", () => {
+        const cube = instance("cube", { name: "Origin Cube <1>" });
+        const grouped: OnshapeAssemblyFeature = {
+            id: "G1",
+            featureType: "mateGroup",
+            featureData: {
+                name: "Group 1",
+                occurrences: [
+                    { occurrence: ["cube"] },
+                    { occurrence: ["plate"] }
+                ]
+            }
+        };
+        const revolute: OnshapeAssemblyFeature = {
+            ...fasten("R1", [], ["cube"]),
+            featureData: {
+                name: "Revolute 1",
+                mateType: "REVOLUTE",
+                matedEntities: [
+                    { matedOccurrence: [] },
+                    { matedOccurrence: ["cube"] }
+                ]
+            }
+        };
+        const notFastened = (mates: OnshapeAssemblyFeature[]) =>
+            types(
+                assembly({
+                    instances: [cube, instance("plate")],
+                    fixed: ["plate"],
+                    mates
+                })
+            ).includes(DesignIssueType.ORIGIN_CUBE_NOT_FASTENED);
+
+        expect(notFastened([fasten("M1", [], ["cube"])])).toBe(false);
+        expect(notFastened([fasten("M1", ["cube"])])).toBe(false);
+        expect(notFastened([grouped])).toBe(true);
+        expect(notFastened([fasten("M1", ["plate"], ["cube"])])).toBe(true);
+        expect(
+            notFastened([{ ...fasten("M1", [], ["cube"]), suppressed: true }])
+        ).toBe(true);
+        expect(notFastened([revolute])).toBe(true);
+    });
+
+    it("offers to delete a broken instance, and to fasten a loose Origin Cube", () => {
+        const snapshot = assembly({
+            instances: [
+                instance("gone", { partId: "" }),
+                instance("cube", { name: "Origin Cube <1>" }),
+                instance("loose")
+            ]
+        });
+
+        expect(
+            checkDesign(snapshot).issues.map((issue) => [
+                issue.type,
+                issue.instanceId,
+                issue.fix
+            ])
+        ).toEqual([
+            [
+                DesignIssueType.INSTANCE_BROKEN,
+                "gone",
+                DesignIssueFix.DELETE_INSTANCE
+            ],
+            // Reported as not fastened, not as floating too.
+            [
+                DesignIssueType.ORIGIN_CUBE_NOT_FASTENED,
+                "cube",
+                DesignIssueFix.FASTEN_ORIGIN_CUBE
+            ],
+            [DesignIssueType.INSTANCE_FLOATING, "loose", undefined]
         ]);
     });
 
