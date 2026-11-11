@@ -88,6 +88,7 @@ const BLUE = 0x1c7ed6;
 const ORANGE = 0xf08c00;
 const GRAY = 0x868e96;
 const GREEN = 0x2f9e44;
+const VIOLET = 0x7048e8;
 
 const CATEGORY_COLORS: Record<FeedbackCategory, number> = {
     [FeedbackCategory.BUG]: RED,
@@ -98,6 +99,7 @@ const CATEGORY_COLORS: Record<FeedbackCategory, number> = {
     [FeedbackCategory.FEATURE_REQUEST]: BLUE,
     [FeedbackCategory.PART_REQUEST]: BLUE,
     [FeedbackCategory.KUDOS]: GREEN,
+    [FeedbackCategory.QUESTION]: VIOLET,
     [FeedbackCategory.OTHER]: GRAY
 };
 

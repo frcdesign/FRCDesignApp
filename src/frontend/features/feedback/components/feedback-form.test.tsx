@@ -92,6 +92,36 @@ describe("FeedbackForm", () => {
         );
     });
 
+    it("sends a question's asker to Discord for the answer", async () => {
+        const user = userEvent.setup();
+        renderWithProviders(
+            <FeedbackForm
+                initialTopic={FeedbackTopic.APP}
+                source={FeedbackSource.GENERAL}
+            />
+        );
+        const callout = /Questions are answered in Discord/;
+        expect(screen.queryByText(callout)).toBeNull();
+
+        await user.click(screen.getByRole("combobox", { name: "Type" }));
+        await user.click(screen.getByRole("option", { name: "Question" }));
+        expect(screen.getByText(callout)).toBeTruthy();
+        const description = screen.getByRole<HTMLTextAreaElement>("textbox", {
+            name: /Description/
+        });
+        expect(description.placeholder).toBe("What would you like to know?");
+
+        // The next render reads the mutation's answer, as a sent report's does.
+        answer.data = { reportId: "r" };
+        await user.type(description, "?");
+        const forum = DISCORD_FORUMS[DiscordForum.APP];
+        expect(
+            screen.getByText(
+                `Your question is in #${forum.channel}. Follow up in its thread there for an answer.`
+            )
+        ).toBeTruthy();
+    });
+
     it("points a library's feedback at the part menu", async () => {
         const user = userEvent.setup();
         renderWithProviders(

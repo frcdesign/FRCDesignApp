@@ -1,7 +1,10 @@
 import { Button } from "@mantine/core";
 import { DiscordLogoIcon } from "@phosphor-icons/react";
 import { type ReactNode } from "react";
-import { type FeedbackTopic } from "@backend/features/feedback/contract";
+import {
+    FeedbackCategory,
+    type FeedbackTopic
+} from "@backend/features/feedback/contract";
 import {
     forumInvite,
     topicForum
@@ -17,12 +20,15 @@ import { m } from "../../../paraglide/messages";
 interface ReportSentProps {
     /** Decides the forum the report went to. */
     topic: FeedbackTopic;
+    /** A question is answered only in Discord, so it is told to go there. */
+    category: FeedbackCategory;
     onClose: () => void;
 }
 
 /** Replies happen only in the report's Discord thread, so say where it is. */
 export function ReportSent(props: ReportSentProps): ReactNode {
-    const { topic, onClose } = props;
+    const { topic, category, onClose } = props;
+    const channel = topicForum(topic).channel;
     return (
         <>
             <AppModalBody>
@@ -35,9 +41,11 @@ export function ReportSent(props: ReportSentProps): ReactNode {
                         />
                     }
                     title={m.feedbackSent()}
-                    description={m.feedbackSentWhere({
-                        channel: topicForum(topic).channel
-                    })}
+                    description={
+                        category === FeedbackCategory.QUESTION
+                            ? m.feedbackSentQuestionWhere({ channel })
+                            : m.feedbackSentWhere({ channel })
+                    }
                     action={
                         <Button
                             leftSection={<DiscordLogoIcon />}
