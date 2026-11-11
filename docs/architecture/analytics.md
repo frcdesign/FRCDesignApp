@@ -3,7 +3,7 @@
 ## Purpose
 
 Records how the libraries are used — each **use** of a part, an insert into
-Onshape or a download from the standalone app, and each launch from Onshape —
+Onshape or a STEP download, and each launch from Onshape —
 and how often people report problems, and shows it on a public dashboard: totals and trends, per-library health,
 which parts and configuration options are used, and which aren't. It exists so
 the library team can see what to maintain and what to cut.
@@ -24,7 +24,7 @@ const EVENT_SCHEMA_VERSION = 2;
 
 enum EventType {
     INSERT = "insert",
-    /** A part exported to a file from the standalone app; see `features/download`. */
+    /** A part exported to a STEP file; see `features/download`. */
     DOWNLOAD = "download",
     APP_OPEN = "app_open",
     /** One finished push or pull; see `features/version-manager`. */

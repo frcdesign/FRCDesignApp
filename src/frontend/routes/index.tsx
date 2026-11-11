@@ -11,7 +11,7 @@ export const Route = createFileRoute("/")({
     beforeLoad: ({ search }) => {
         const { tabId, groupId } = getUiState();
         // A utility page the launch gives nothing to act on is not resumed
-        // into: the version manager would send them straight back here.
+        // into: it would open on a notice saying so.
         const resumable =
             tabId && (isLibraryTab(tabId) || canResume(tabId, search));
         const tab = resumable ? tabId : DEFAULT_LIBRARY;
@@ -50,7 +50,7 @@ function utilityRoute(tab: UtilityTab) {
 
 /**
  * Whether a utility page has what it acts on. The version manager acts on the
- * workspace Onshape launched the app in, and there is no page without one.
+ * workspace Onshape launched the app in.
  */
 function canResume(tab: UtilityTab, search: Record<string, unknown>): boolean {
     switch (tab) {

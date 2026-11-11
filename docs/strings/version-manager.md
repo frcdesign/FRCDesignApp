@@ -9,12 +9,16 @@ own errors are written in `src/backend/features/version-manager/routes.ts`.
 
 ## The page
 
-| String                                                  | Kind               | Where                | When                       | Review |
-| ------------------------------------------------------- | ------------------ | -------------------- | -------------------------- | ------ |
-| "Sign in to manage versions"                            | Notice title       | In place of the page | Signed out                 |        |
-| "Pushing and pulling happen in your Onshape documents." | Notice description | Under it             | Same                       |        |
-| "Loading linked documents..."                           | Loading            | In place of the page | The links are being read   |        |
-| "Failed to load linked documents."                      | Page error         | In place of the page | The links couldn't be read |        |
+| String                                                                 | Kind               | Where                | When                               | Review    |
+| ---------------------------------------------------------------------- | ------------------ | -------------------- | ---------------------------------- | --------- |
+| "Version Manager is only available inside Onshape"                     | Notice title       | In place of the page | Standalone                         | **⚑** New |
+| "Open the app from an Onshape document to push and pull its versions." | Notice description | Under it             | Same                               | **⚑** New |
+| "Version Manager only works in a workspace"                            | Notice title       | In place of the page | Launched from Onshape in a version | **⚑** New |
+| "Open this document's workspace to push and pull its versions."        | Notice description | Under it             | Same                               | **⚑** New |
+| "Sign in to manage versions"                                           | Notice title       | In place of the page | Signed out                         |           |
+| "Pushing and pulling happen in your Onshape documents."                | Notice description | Under it             | Same                               |           |
+| "Loading linked documents..."                                          | Loading            | In place of the page | The links are being read           |           |
+| "Failed to load linked documents."                                     | Page error         | In place of the page | The links couldn't be read         |           |
 
 ## The welcome page
 

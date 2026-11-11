@@ -16,6 +16,7 @@ import {
 } from "../../../components/item-row";
 import { OpenDocumentItems } from "../../../components/open-document-items";
 import { QuickInsertItems } from "../../insert/components/quick-insert-items";
+import { DownloadStepMenuSection } from "../../download/components/download-step-menu-section";
 import { ConfigurationHoverCard } from "../../insert/components/configuration-hover-card";
 import { useIsInsertableHidden } from "../../library/visibility";
 import { CardThumbnail } from "../../thumbnails/components/thumbnail";
@@ -137,6 +138,12 @@ function RecentMenuItems(props: RecentMenuItemsProps): ReactNode {
                     />
                 </MenuSection>
             )}
+            <DownloadStepMenuSection
+                insertable={insertable}
+                selection={recent.selection}
+                isFavorite={favorite !== undefined}
+                source={UseSource.RECENTS}
+            />
             <MenuSection label="Favorites">
                 <FavoriteInsertableItem
                     favorite={favorite}

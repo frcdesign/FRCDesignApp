@@ -104,17 +104,20 @@ as a linked workspace is watched.
 
 ### Finding the page
 
-The page picker marks the version manager with a dot and a **New** badge for
-somebody who has a workspace to act on and has never opened the page
-(`useIsVersionManagerNew`). Opening it records `Hint.OPENED_VERSION_MANAGER`
+The page picker always lists the version manager. It marks it with a dot and a
+**New** badge for somebody signed in, with a workspace to act on, who has never
+opened the page (`useIsVersionManagerNew`). Opening it records `Hint.OPENED_VERSION_MANAGER`
 against the user in KV (`useMarkHintSeen`, see [auth.md](./auth.md)), so the
 dot stays gone on every computer they use.
 
 ### Showing the page
 
-The tab appears only when Onshape launched the app in a workspace
-(`useTargetWorkspace`); `beforeLoad` redirects anyone who reaches the url
-without one.
+The page acts on the workspace Onshape launched the app in
+(`useTargetWorkspace`). Without one it shows a notice instead: that the version
+manager is only available inside Onshape when the app is standalone, or that it
+only works in a workspace when Onshape launched it in a version. Entry does not
+resume into the page without a workspace (`canResume` in
+`src/frontend/routes/index.tsx`).
 
 `GET /api/workspace-links` answers `{ parents, children, documentName }` — the
 last being this workspace's own document, which the page's copy names, and

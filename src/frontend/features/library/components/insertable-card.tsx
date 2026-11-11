@@ -26,6 +26,7 @@ import { ReloadThumbnailMenuItem } from "./reload-thumbnail-item";
 import { UpdateReferencesMenuItem } from "./update-references-item";
 import { InsertableChangesBadge } from "./changes-badges";
 import { QuickInsertItems } from "../../insert/components/quick-insert-items";
+import { DownloadStepMenuSection } from "../../download/components/download-step-menu-section";
 import { ConfigurationHoverCard } from "../../insert/components/configuration-hover-card";
 import { openCannotDeriveAssemblyAlert } from "../../../components/alerts";
 import { useIsAssemblyInPartStudio } from "../../insert/insert-hooks";
@@ -198,6 +199,12 @@ export function InsertableMenuItems(
                     />
                 </MenuSection>
             )}
+            <DownloadStepMenuSection
+                insertable={insertable}
+                selection={selection}
+                isFavorite={favorite !== undefined}
+                source={source}
+            />
             <RequireSignIn>
                 {favorite && report && (
                     <MenuSection label={m.libraryMenuConfiguration()}>

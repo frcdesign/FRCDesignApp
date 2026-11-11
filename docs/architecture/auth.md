@@ -56,8 +56,9 @@ team, plus one owner set by configuration.
   losing it only shows a dot again.
 - **localStorage** (`ui-state`): `accessLevel`, the level the app is viewed as;
   `seenHints`, the hints dismissed in this browser. `useHasSeenHint` reads them
-  beside the server's list, so signed out a dot stays gone, and signed in a
-  refetch that reads KV before the dismissal lands can't bring it back.
+  beside the server's list, so a refetch that reads KV before the dismissal
+  lands can't bring a dot back. Signed out, `useHasSeenHint` reads every hint
+  as seen: no dot or **New** badge shows.
 
 ## Flows
 

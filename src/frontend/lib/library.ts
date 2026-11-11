@@ -5,8 +5,6 @@ import {
     DEFAULT_LIBRARY,
     LibraryId
 } from "@backend/features/library/library-id";
-import { isLibraryTab } from "./app-tab";
-import { getUiState } from "./ui-state";
 
 /** Falls back rather than throws, since modals and error components sit outside the library route. */
 export function useLibraryId(): LibraryId {
@@ -19,12 +17,6 @@ export function useLibraryId(): LibraryId {
         shouldThrow: false
     });
     return params?.libraryId ?? dashboardParams?.libraryId ?? DEFAULT_LIBRARY;
-}
-
-/** The library to show where the url names none: the last one picked. */
-export function getUiLibraryId(): LibraryId {
-    const { tabId } = getUiState();
-    return tabId && isLibraryTab(tabId) ? tabId : DEFAULT_LIBRARY;
 }
 
 const LibraryIdType = z.enum(LibraryId);

@@ -8,7 +8,7 @@ export const EVENT_SCHEMA_VERSION = 2;
 
 export enum EventType {
     INSERT = "insert",
-    /** A part exported to a file from the standalone app; see `features/download`. */
+    /** A part exported to a STEP file; see `features/download`. */
     DOWNLOAD = "download",
     APP_OPEN = "app_open",
     /** One finished push or pull; see `features/version-manager`. */

@@ -61,6 +61,7 @@ import {
     useIsVersionManagerNew
 } from "../features/version-manager/navigation";
 import { useTargetWorkspace } from "../lib/onshape-params";
+import { type WorkspacePath } from "@backend/features/version-manager/contract";
 import { type AppTab, UtilityTab } from "../lib/app-tab";
 import { getTabName, useNavigateToTab } from "../lib/tabs";
 import { useRefreshVersionManagerMutation } from "../features/version-manager/queries";
@@ -96,6 +97,7 @@ export function AppNavbar(): ReactNode {
     // Search and its filters belong to a library, and the version manager is
     // not one; its page fills the room they leave.
     const isVersionManager = useIsVersionManager();
+    const workspace = useTargetWorkspace();
 
     return (
         <Stack gap={0}>
@@ -105,7 +107,9 @@ export function AppNavbar(): ReactNode {
                     {/* Inserting is the library's; the version manager inserts nothing. */}
                     {!isVersionManager && <InsertLocationStatus />}
                     <SignInButton />
-                    {isVersionManager && <VersionManagerRefreshButton />}
+                    {isVersionManager && workspace && (
+                        <VersionManagerRefreshButton workspace={workspace} />
+                    )}
                     <SettingsControls />
                 </Group>
             </NavbarRow>
@@ -149,8 +153,6 @@ interface AppPage {
 }
 
 function useAppPages(): AppPage[] {
-    const targetWorkspace = useTargetWorkspace();
-    const isVersionManager = useIsVersionManager();
     const isNew = useIsVersionManagerNew();
 
     const libraries = Object.values(LibraryId).map((libraryId) => ({
@@ -166,11 +168,6 @@ function useAppPages(): AppPage[] {
         )
     }));
 
-    // Listed while it is showing even without a workspace, so the picker never
-    // names a page it does not offer.
-    if (!targetWorkspace && !isVersionManager) {
-        return libraries;
-    }
     return [
         ...libraries,
         {
@@ -291,9 +288,15 @@ export function SettingsControls(): ReactNode {
     );
 }
 
+interface VersionManagerRefreshButtonProps {
+    workspace: WorkspacePath;
+}
+
 /** Reads the linked documents again, past what the server cached of them. */
-function VersionManagerRefreshButton(): ReactNode {
-    const workspace = useTargetWorkspace();
+function VersionManagerRefreshButton(
+    props: VersionManagerRefreshButtonProps
+): ReactNode {
+    const { workspace } = props;
     const refresh = useRefreshVersionManagerMutation(workspace);
     return (
         <RefreshButton

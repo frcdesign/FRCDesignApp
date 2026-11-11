@@ -1,5 +1,5 @@
 import { FeedbackTopic } from "@backend/features/feedback/contract";
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { type ReactNode, useEffect } from "react";
 import {
     LinkDirection,
@@ -24,9 +24,10 @@ import {
     useSectionOpened
 } from "../../lib/ui-state";
 import { UtilityTab } from "../../lib/app-tab";
-import { getUiLibraryId } from "../../lib/library";
-import { toTargetWorkspace } from "../../lib/onshape-launch";
-import { useOnshapeLaunch, useTargetWorkspace } from "../../lib/onshape-params";
+import {
+    useIsConnectedToOnshape,
+    useTargetWorkspace
+} from "../../lib/onshape-params";
 import {
     DirectionIcon,
     DirectionInfo,
@@ -52,30 +53,33 @@ export const Route = createFileRoute("/app/version-manager")({
     // Where entry resumes next time, as a library would be.
     onEnter: () => {
         updateUiState({ tabId: UtilityTab.VERSION_MANAGER });
-    },
-    beforeLoad: () => {
-        // Nothing to act on: the page picker hides this page without a
-        // workspace, so this only catches a url typed or restored by hand.
-        if (!toTargetWorkspace(useOnshapeLaunch.getState())) {
-            throw redirect({
-                to: "/app/library/$libraryId",
-                params: { libraryId: getUiLibraryId() },
-                replace: true
-            });
-        }
     }
 });
 
 function VersionManagerPage(): ReactNode {
     const workspace = useTargetWorkspace();
+    const isConnected = useIsConnectedToOnshape();
     const needsSignIn = useNeedsSignIn();
     const markOpened = useMarkHintSeen(Hint.OPENED_VERSION_MANAGER);
 
     useEffect(markOpened, [markOpened]);
 
     if (!workspace) {
-        // What renders on the way out, `beforeLoad` having redirected.
-        return <PageLoading title={m.versionManagerLoading()} />;
+        return (
+            <PageNotice
+                icon={<GitBranchIcon size={IconSize.SECTION} />}
+                title={
+                    isConnected
+                        ? m.versionManagerWorkspaceOnlyTitle()
+                        : m.versionManagerOnshapeOnlyTitle()
+                }
+                description={
+                    isConnected
+                        ? m.versionManagerWorkspaceOnlyDescription()
+                        : m.versionManagerOnshapeOnlyDescription()
+                }
+            />
+        );
     }
     if (needsSignIn) {
         return (

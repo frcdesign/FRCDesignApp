@@ -92,15 +92,10 @@ async function refreshLinks(workspace: WorkspacePath): Promise<void> {
 }
 
 /** Reads the linked documents again from Onshape, past what the server cached of them. */
-export function useRefreshVersionManagerMutation(
-    workspace: WorkspacePath | undefined
-) {
+export function useRefreshVersionManagerMutation(workspace: WorkspacePath) {
     return useMutation({
         mutationKey: ["refresh-version-manager", workspace],
         mutationFn: async () => {
-            if (!workspace) {
-                return;
-            }
             await apiPost("/workspace-links/refresh", { body: { workspace } });
             await Promise.all(
                 [
