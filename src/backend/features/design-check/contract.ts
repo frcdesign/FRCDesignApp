@@ -36,6 +36,25 @@ export interface DesignIssue {
     count?: number;
     /** Set where the app can fix it, for someone who may edit the document. */
     fix?: DesignIssueFix;
+    /** Someone with edit access marked it as meant. */
+    dismissed?: boolean;
+}
+
+/** An issue's identity within its tab, which a dismissal is kept under. */
+export function getIssueKey(issue: DesignIssue): string {
+    return [
+        issue.type,
+        issue.featureId ?? issue.instanceId ?? issue.partId ?? ""
+    ].join(":");
+}
+
+/** POST /api/design-check/dismiss */
+export interface DesignDismissIn {
+    documentId: string;
+    elementId: string;
+    issueKey: string;
+    /** False puts a dismissed issue back. */
+    dismissed: boolean;
 }
 
 export enum DesignIssueFix {
@@ -74,6 +93,8 @@ export interface TabCheck {
 export interface DesignCheckOut {
     /** The document's Part Studios and Assemblies, in the order of its tabs. */
     tabs: TabCheck[];
+    /** The caller may edit the document, and so dismiss issues. */
+    canDismiss: boolean;
     /** Epoch ms. */
     checkedAt: number;
 }

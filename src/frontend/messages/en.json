@@ -618,6 +618,24 @@
     "designCheckFixDescription": "Each one changes the document in Onshape, and Ctrl+Z can't undo it. Uncheck any you'd rather leave.",
     "designCheckFixCancel": "Cancel",
     "designCheckFixFailed": "Failed to make a fix. Checking again shows what changed.",
+    "designCheckDismiss": "Dismiss",
+    "designCheckPutBack": "Put back",
+    "designCheckDismissFailed": "Failed to save the change. It's back as it was.",
+    "designCheckShowDismissed": [
+        {
+            "declarations": [
+                "input count",
+                "local countPlural = count: plural",
+                "local formatted = count: number"
+            ],
+            "selectors": ["countPlural"],
+            "match": {
+                "countPlural=one": "Show {formatted} dismissed issue",
+                "countPlural=other": "Show {formatted} dismissed issues"
+            }
+        }
+    ],
+    "designCheckHideDismissed": "Hide dismissed issues",
     "designCheckFixConfirm": [
         {
             "declarations": [

@@ -4,7 +4,12 @@ import { getApp } from "../../lib/context";
 import { type InstancePath } from "../../lib/onshape/path";
 import { validate } from "../../lib/validate";
 import { requireSignInMiddleware } from "../auth/guards";
+import { HttpStatus } from "http-status-ts";
+import { getDb } from "../../db/client";
+import { handledError } from "../../lib/api-error";
+import { canWrite } from "../version-manager/workspace-cache";
 import { type DesignCheckOut, DesignIssueFix } from "./contract";
+import { markDismissed, setDismissed } from "./dismissals";
 import { checkDocument } from "./document";
 import { applyFix } from "./fixes";
 
@@ -31,12 +36,17 @@ designCheckRoutes.get(
             ...c.req.valid("query"),
             instanceType: "w"
         };
-        const tabs = await checkDocument(
-            c,
-            await c.var.getOnshapeApi(),
-            workspace
-        );
-        return c.json({ tabs, checkedAt: Date.now() } satisfies DesignCheckOut);
+        const client = await c.var.getOnshapeApi();
+        const db = getDb(c.env.DB);
+        const [tabs, canDismiss] = await Promise.all([
+            checkDocument(c, client, workspace),
+            canWrite(c, client, workspace)
+        ]);
+        return c.json({
+            tabs: await markDismissed(db, workspace.documentId, tabs),
+            canDismiss,
+            checkedAt: Date.now()
+        } satisfies DesignCheckOut);
     }
 );
 
@@ -55,6 +65,32 @@ designCheckRoutes.post(
     validate("json", fixBody),
     async (c) => {
         await applyFix(await c.var.getOnshapeApi(), c.req.valid("json"));
+        return c.json({});
+    }
+);
+
+const dismissBody = z.object({
+    documentId: z.string().min(1),
+    elementId: z.string().min(1),
+    issueKey: z.string().min(1),
+    dismissed: z.boolean()
+});
+
+/** POST /api/design-check/dismiss — marks an issue as meant, or puts it back, for everyone. */
+designCheckRoutes.post(
+    "/design-check/dismiss",
+    requireSignInMiddleware,
+    validate("json", dismissBody),
+    async (c) => {
+        const request = c.req.valid("json");
+        const client = await c.var.getOnshapeApi();
+        if (!(await canWrite(c, client, request))) {
+            throw handledError(
+                "Dismissing an issue needs edit access to the document.",
+                HttpStatus.FORBIDDEN
+            );
+        }
+        await setDismissed(getDb(c.env.DB), await c.var.getUserId(), request);
         return c.json({});
     }
 );

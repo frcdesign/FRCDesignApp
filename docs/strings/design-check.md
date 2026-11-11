@@ -66,3 +66,14 @@ card's, listed in [build-issues.md](./build-issues.md).
 | "Cancel" / "Make {n} fix" / "Make {n} fixes"                                                                                                 | Buttons                     | Under the list                               | Same                            | **⚑** New |
 | "Failed to make a fix. Checking again shows what changed."                                                                                   | Error toast                 | Over the page                                | A fix was refused or failed     | **⚑** New |
 | "Name the instance to fix." / "That instance is no longer in the Assembly." / "The Origin Cube's Part Studio no longer has the Origin Cube." | Server errors, in the toast | `src/backend/features/design-check/fixes.ts` | A fix can't be made             | **⚑** New |
+
+## Dismissing
+
+| String                                                   | Kind                       | Where                                         | When                             | Review    |
+| -------------------------------------------------------- | -------------------------- | --------------------------------------------- | -------------------------------- | --------- |
+| "Dismiss"                                                | Tooltip                    | Beside the issue, or under its help           | The caller may edit the document | **⚑** New |
+| "Put back"                                               | Tooltip                    | Beside a dismissed issue                      | Dismissed issues shown           | **⚑** New |
+| "Show {n} dismissed issue" / "Show {n} dismissed issues" | Link                       | Under the list, or in the notice              | Any issue is dismissed           | **⚑** New |
+| "Hide dismissed issues"                                  | Link                       | Same                                          | Dismissed issues shown           | **⚑** New |
+| "Failed to save the change. It's back as it was."        | Error toast                | Over the page                                 | Saving a dismissal failed        | **⚑** New |
+| "Dismissing an issue needs edit access to the document." | Server error, in the toast | `src/backend/features/design-check/routes.ts` | Edit access lost since the check | **⚑** New |
