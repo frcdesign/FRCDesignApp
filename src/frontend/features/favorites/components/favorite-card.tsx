@@ -103,7 +103,7 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
                     match={rowMatch}
                 />
             }
-            rightSection={
+            actions={
                 <Group gap={4} wrap="nowrap">
                     <QuickInsertButton
                         insertable={insertable}

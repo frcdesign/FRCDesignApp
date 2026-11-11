@@ -36,7 +36,6 @@ export const featureScripts = sqliteTable("featurescripts", {
     description: text("description").notNull(),
     /** The folder holding its Feature Studio in the frontend document; null at the top level. */
     category: text("category"),
-    releaseVersion: text("release_version"),
     exampleElementId: text("example_element_id"),
     exampleMicroversionId: text("example_microversion_id"),
     iconElementId: text("icon_element_id"),

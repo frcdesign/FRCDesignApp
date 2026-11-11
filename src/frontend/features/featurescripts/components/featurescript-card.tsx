@@ -80,7 +80,7 @@ export function FeatureScriptCard(props: FeatureScriptCardProps): ReactNode {
                     </RequireSignIn>
                 </>
             }
-            rightSection={
+            actions={
                 <Group gap={4} wrap="nowrap">
                     <FeatureScriptAddButton feature={feature} />
                     <RequireSignIn>

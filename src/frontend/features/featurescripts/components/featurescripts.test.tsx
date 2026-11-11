@@ -35,12 +35,12 @@ vi.mock("../../../lib/library", () => ({
 }));
 const { FeatureScriptMenu } = await import("./featurescript-menu");
 const { FeatureScriptList } = await import("./featurescript-list");
+const { FeatureScriptSearchBar } = await import("./featurescript-search-bar");
 
 const FRAME: FeatureScriptOut = {
     id: "frame",
     name: "Robot frame",
     description: "Add tube along an edge.\nOr extrude it from a point.",
-    releaseVersion: "1.3.0",
     problems: []
 };
 
@@ -74,7 +74,6 @@ describe("FeatureScriptMenu", () => {
     it("shows the feature, and offers no add standalone", () => {
         renderMenu(FRAME);
 
-        expect(screen.getByText("v1.3.0")).toBeTruthy();
         expect(screen.getByText(/Or extrude it from a point/)).toBeTruthy();
         // No example: the generic hero, and nothing to open.
         expect(screen.getByText("No example yet")).toBeTruthy();
@@ -183,7 +182,14 @@ function renderList(favoriteIds: string[]) {
     });
     // What the refetch after a toggle answers.
     apiGet.mockResolvedValue({ featureScriptIds: favoriteIds });
-    renderWithProviders(<FeatureScriptList />, queryClient);
+    // The search bar sits in the navbar, sharing its query with the list.
+    renderWithProviders(
+        <>
+            <FeatureScriptSearchBar />
+            <FeatureScriptList />
+        </>,
+        queryClient
+    );
 }
 
 function sectionNames(): string[] {

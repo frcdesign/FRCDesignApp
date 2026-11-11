@@ -41,29 +41,24 @@ interface FeatureScriptBadgesProps {
     feature: FeatureScriptOut;
 }
 
-/** The release, and to the owner, what's wrong with it. */
+/** To the owner, what's wrong with it. */
 export function FeatureScriptBadges(
     props: FeatureScriptBadgesProps
 ): ReactNode {
     const { feature } = props;
     const isOwner = useIsOwner();
+    if (!isOwner || feature.problems.length === 0) {
+        return null;
+    }
     return (
         <Group gap={4} wrap="nowrap">
-            {feature.releaseVersion && (
-                <Badge variant="light" color={StatusColor.NEUTRAL}>
-                    {m.featureScriptsVersion({
-                        version: feature.releaseVersion
-                    })}
-                </Badge>
-            )}
-            {isOwner &&
-                feature.problems.map((problem) => (
-                    <Tooltip key={problem} label={problemTip(problem, feature)}>
-                        <Badge variant="light" color={StatusColor.WARNING}>
-                            {problemLabel(problem)}
-                        </Badge>
-                    </Tooltip>
-                ))}
+            {feature.problems.map((problem) => (
+                <Tooltip key={problem} label={problemTip(problem, feature)}>
+                    <Badge variant="light" color={StatusColor.WARNING}>
+                        {problemLabel(problem)}
+                    </Badge>
+                </Tooltip>
+            ))}
         </Group>
     );
 }

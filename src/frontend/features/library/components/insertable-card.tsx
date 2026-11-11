@@ -139,7 +139,7 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
             left={title}
             isNew={!hasOpenedReport}
             onMenuClose={markReportOpened}
-            rightSection={
+            actions={
                 <Group gap={4} wrap="nowrap">
                     <QuickInsertButton
                         insertable={insertable}

@@ -20,7 +20,7 @@ listed so far: the rest join as their strings move there.
 ## Row buttons
 
 Every part row (a group's, Favorites', Recently Used's) carries the same
-outlined button, beside its heart; the button is
+outlined button, before its heart and ⋯; the button is
 `src/frontend/features/insert/components/quick-insert-button.tsx`.
 
 | String                                            | Kind            | Where                  | When                                            | Review    |

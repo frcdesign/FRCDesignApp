@@ -14,7 +14,6 @@ CREATE TABLE `featurescripts` (
 	`name` text NOT NULL,
 	`description` text NOT NULL,
 	`category` text,
-	`release_version` text,
 	`example_element_id` text,
 	`example_microversion_id` text,
 	`icon_element_id` text,

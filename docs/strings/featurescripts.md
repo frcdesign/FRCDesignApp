@@ -10,8 +10,7 @@ description come from its FeatureScript and are parameters, not messages.
 | String                                                          | Kind                    | Where                                        | When                                                          | Review           |
 | --------------------------------------------------------------- | ----------------------- | -------------------------------------------- | ------------------------------------------------------------- | ---------------- |
 | "FeatureScripts"                                                | Page name               | The page picker, under Utilities             | Always                                                        | **⚑** New        |
-| "Search FeatureScripts..."                                      | Placeholder             | The search box, top of the list              | Always                                                        | **⚑** New        |
-| "v{version}"                                                    | Badge                   | A card, beside the name; the popup           | A version names its release                                   | **⚑** New        |
+| "Search FeatureScripts..."                                      | Placeholder             | The navbar's second row                      | Always                                                        | **⚑** New        |
 | "Add to Part Studio" / "Open example"                           | Menu items              | A card's ⋯ menu                              | Open example with one                                         | **⚑** New        |
 | "Add"                                                           | Outlined button         | Each row, before the heart                   | In a Part Studio or an assembly; none standalone              | **⚑** New        |
 | "FeatureScripts can only be added to Part Studios."             | Tooltip                 | On the disabled Add, row or popup            | In an assembly                                                | **⚑** New        |
@@ -61,14 +60,13 @@ FeatureScript report adds to it.
 | "FeatureScripts"                                           | Topic option      | General feedback's topic picker | Always                                              | **⚑** New                                   |
 | "Bug" / "Feature request" / "Kudos" / "Question" / "Other" | Type options      | The form                        | A FeatureScript report, or the FeatureScripts topic | Question as in [feedback.md](./feedback.md) |
 | "{category}: {name}"                                       | Suggested title   | The form's title field          | Until the reporter writes their own                 |                                             |
-| "FeatureScript: {name} v{version}"                         | Post field        | The Discord post                | A FeatureScript report                              | **⚑** New                                   |
 
 ## The dashboard (proposed)
 
-| String                                                         | Kind           | Where                          | When                 | Review    |
-| -------------------------------------------------------------- | -------------- | ------------------------------ | -------------------- | --------- |
-| "FeatureScripts"                                               | Section title  | The overview, and its own page | Always               | **⚑** New |
-| "Features added"                                               | Tile label     | The section                    | Always               | **⚑** New |
-| "Users"                                                        | Tile label     | The section                    | Always               |           |
-| "Feature" / "Adds" / "Users" / "Share" / "Reports" / "Release" | Column headers | The page's table               | Always               | **⚑** New |
-| "No features added in this range."                             | Empty notice   | The section and page           | No adds in the range | **⚑** New |
+| String                                             | Kind           | Where                          | When                 | Review    |
+| -------------------------------------------------- | -------------- | ------------------------------ | -------------------- | --------- |
+| "FeatureScripts"                                   | Section title  | The overview, and its own page | Always               | **⚑** New |
+| "Features added"                                   | Tile label     | The section                    | Always               | **⚑** New |
+| "Users"                                            | Tile label     | The section                    | Always               |           |
+| "Feature" / "Adds" / "Users" / "Share" / "Reports" | Column headers | The page's table               | Always               | **⚑** New |
+| "No features added in this range."                 | Empty notice   | The section and page           | No adds in the range | **⚑** New |

@@ -41,7 +41,6 @@ async function seed() {
             featureType: "robotFrame",
             name: "Robot frame",
             description: "Add tube along an edge.",
-            releaseVersion: "1.3.0",
             exampleElementId: "e-frame-example",
             exampleMicroversionId: "mv-frame-example",
             iconElementId: "e-frame-icon",
@@ -105,7 +104,6 @@ describe("featurescripts routes", () => {
         });
         expect(body.features[1]).toMatchObject({
             category: "Parts",
-            releaseVersion: "1.3.0",
             exampleElementId: "e-frame-example",
             iconUrl: "/api/featurescripts/icon/e-frame-icon?v=mv-frame-icon",
             problems: []

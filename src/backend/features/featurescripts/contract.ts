@@ -17,8 +17,6 @@ export interface FeatureScriptOut {
     description: string;
     /** The frontend document's folder it is in; absent at the top level. */
     category?: string;
-    /** e.g. "1.3.0"; absent when no version names it. */
-    releaseVersion?: string;
     /** Absent without an icon tab. */
     iconUrl?: string;
     exampleElementId?: string;

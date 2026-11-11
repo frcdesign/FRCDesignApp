@@ -37,7 +37,6 @@ export async function getFeatureScriptsOut(db: Db): Promise<FeatureScriptsOut> {
             name: row.name,
             description: row.description,
             category: row.category ?? undefined,
-            releaseVersion: row.releaseVersion ?? undefined,
             iconUrl:
                 row.iconElementId && row.iconMicroversionId
                     ? iconUrl(row.iconElementId, row.iconMicroversionId)

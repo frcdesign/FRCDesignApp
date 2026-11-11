@@ -11,8 +11,8 @@ without it.
 A tab of the app, beside the libraries, that lists the released FeatureScripts
 in the public frontend document (robot-code's `frontend` in `[tool.fs]`),
 grouped by category: the folder each is in there, such as Lightening, Basic
-operations or Parts. It shows each one with its icon, description and release
-version, lets a signed-in person favorite it, opens it onto
+operations or Parts. It shows each one with its icon and description, lets a
+signed-in person favorite it, opens it onto
 its example Part Studio's thumbnail as a hero image, adds its feature to the
 open Part Studio in one click, and takes feedback on it, as a part's
 **Report an issue** does.
@@ -90,11 +90,6 @@ function splitTabs(contents: DocumentContents): {
 function findExample(featureName: string, partStudios: Tab[]): Tab | undefined;
 // "<Feature Type Name> icon.svg", in any case.
 function findIcon(featureName: string, blobs: Tab[]): Tab | undefined;
-// From the newest frontend version named "<Feature Type Name> - v<semver>".
-function findReleaseVersion(
-    featureName: string,
-    versions: OnshapeVersion[]
-): string | undefined;
 // "Feature Type Description" with robot-code's CREDIT ("<br><br>FeatureScript by
 // Alex Kempen.") cut off the end, and every other <br> a line break.
 function cleanDescription(description: string): string;
@@ -145,8 +140,6 @@ interface FeatureScriptOut {
     id: string;
     name: string;
     description: string;
-    /** e.g. "1.3.0"; absent when no version names it. */
-    releaseVersion?: string;
     /** Absent without an icon tab. */
     iconUrl?: string;
     exampleElementId?: string;
@@ -219,21 +212,22 @@ interface FeatureScriptCategory {
 
 Under `src/frontend/features/featurescripts/components/`:
 
-- `featurescript-list.tsx` — the search box over Favorites and the category
-  sections.
+- `featurescript-list.tsx` — Favorites and the category sections, filtered
+  by `featurescript-search-bar.tsx`, the navbar's search, through the
+  `useFeatureScriptsSearch` store (`src/frontend/features/featurescripts/search.ts`).
 - `featurescript-favorite-button.tsx` — the heart, and its menu item.
-- `featurescript-card.tsx` — a row: the icon inline before the name, the
-  release version, the description's first line, an outlined **Add**, the
-  heart, and a ⋯ menu with **Add to Part Studio**, **Open example** and
-  **Favorite**.
+- `featurescript-card.tsx` — a row: the icon inline before the name and the
+  description's first line, then, in `ItemRow`'s `actions`, an outlined
+  **Add** and the heart, and last the ⋯ menu with **Add to Part Studio**,
+  **Open example** and **Favorite**.
 - `featurescript-menu.tsx` — the popup a row opens: the example's thumbnail
   as a hero image across the top, the badges, the whole description, and a
   footer with the heart, **Open example** and **Add to Part Studio**.
 - `featurescript-add-button.tsx` — the row's outlined **Add**
   (`RowActionButton`, in `src/frontend/components/row-action-button.tsx`) or
   the popup's filled **Add to Part Studio**.
-- `featurescript-badges.tsx` — the release version, and to the owner, each
-  problem with a tip saying how to fix it.
+- `featurescript-badges.tsx` — to the owner, each problem with a tip saying
+  how to fix it.
 - `featurescript-icon.tsx` — the icon as an `<img>`, or the generic puzzle
   piece.
 
@@ -259,7 +253,6 @@ them, and they hold no foreign key into the rest; added to
 | `feature_type`            | The exported constant, e.g. `robotFrame`: what a Part Studio stores as its type        |
 | `name`                    | The Feature Type Name, e.g. `Robot frame`, never the tab name                          |
 | `description`             | From `cleanDescription`                                                                |
-| `release_version`         | From `findReleaseVersion`; null when none matches                                      |
 | `example_element_id`      | The example Part Studio in the same version; null when there is none                   |
 | `example_microversion_id` | Its microversion, which names its thumbnail; null with it                              |
 | `icon_element_id`         | The icon tab in the same version; null when there is none                              |
@@ -329,8 +322,8 @@ version loads at once, with no approval.
 
 1. Claims the load, waiting while another run holds it, as a library reload
    does.
-2. `document`, `versions`: the document, and its versions (the latest is the
-   one to load; the rest name each feature's release).
+2. `document`, `version`: the document, and its latest version, the one to
+   load.
 3. Ends here when that version is the one loaded, unless forced.
 4. `contents`: the version's tabs, split by `splitTabs`, each Feature Studio
    with the folder it is in, its category. A folder within a folder takes
@@ -348,8 +341,8 @@ version loads at once, with no approval.
     - `icon-{element}`: `GET /blobelements/d/{did}/v/{vid}/e/{eid}`, the
       icon tab's SVG, stored in R2. No icon tab skips the step: `NO_ICON`, and
       the card shows the generic FeatureScript icon.
-7. `save`: every row in one batch — the loaded, the unchanged carried over
-   with their release versions recomputed, the removed deleted — and the
+7. `save`: every row in one batch — the loaded, the unchanged carried over,
+   the removed deleted — and the
    document row with its version and bumped `cache_version`. Then pushes
    `featurescripts-changed` to open clients.
 8. `delete-stale-thumbnails`, and the icons no row names, never fatal.
@@ -375,7 +368,8 @@ owner's background session; no one else's.
    the folders come in the document, and **Other** last for the features at
    its top level. Each section opens and closes on its own; one a new load
    adds starts open.
-4. The search box filters the list on the client, every word against the
+4. The search box, in the navbar's second row where a library's is, filters
+   the list on the client, every word against the
    name and description: it is a few dozen features, not an index's worth.
    While searching, Favorites is left out, so each match shows once, in its
    category.
@@ -434,9 +428,8 @@ A FeatureScript report is a source of the one feedback form
    included ([feedback.md](./feedback.md)). `suggestTitle` fills the
    title as for a part: "Bug: Robot frame".
 3. The body carries `featureScript: { featureScriptId }`. The server reads the
-   feature (`findReportedFeatureScript`) and the post names it, its release
-   version, and links to its Feature Studio and its example in the loaded
-   version.
+   feature (`findReportedFeatureScript`) and the post names it and links to
+   its Feature Studio and its example in the loaded version.
 4. General feedback offers **FeatureScripts** among its topics too, for one
    that isn't about any one feature.
 5. The post goes to `DiscordForum.FEATURESCRIPTS`, whose webhook secret is
@@ -450,7 +443,7 @@ library's uses, users or part counts. It is its own event,
 `EventType.FEATURE_ADD`, with `libraryId` null, as a version run is.
 
 - **Columns**, decided in `logged-event.ts` beside `NOT_A_USE`:
-  `featureScriptId`, `featureType`, `featureReleaseVersion`, `source`, and the
+  `featureScriptId`, `featureType`, `source`, and the
   target Part Studio's `documentId`, `instanceId` and `elementId`.
   `NOT_A_FEATURE_ADD` nulls them for every other event. A FeatureScript
   report is a `REPORT` event that sets `featureType` too, so reports can be
@@ -465,7 +458,7 @@ library's uses, users or part counts. It is its own event,
 - **Dashboard**: a **FeatureScripts** section on the overview (adds and users
   over the range, against the previous season, and adds per day), and a
   **FeatureScripts** page with one row per feature: adds, users, the share of
-  adds, reports, and its release version.
+  adds, and reports.
 
 ## User-facing strings
 
@@ -547,9 +540,8 @@ short has little use for them.
   needs no ids stored in either repo and survives the document being edited by
   hand. `fs check` keeps the Feature Type Name and the tab's name in step, so
   every name built from it agrees.
-- **The release version from the frontend's version names.** The versions
-  list is read anyway, and each release names its version
-  `<Feature> - v<semver>`, so the version costs no call.
+- **No version shown.** The owner's call: the panel shows what a feature does,
+  not which release of it is loaded.
 - **The description, for now, without the credit.** `"Feature Type
 Description"` is already written for every released feature, and is what
   Onshape shows in its own tooltip. Its credit line is for Onshape's tooltip,

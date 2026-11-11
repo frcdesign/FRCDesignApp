@@ -1,9 +1,4 @@
-import { Stack, TextInput } from "@mantine/core";
-import {
-    FolderSimpleIcon,
-    MagnifyingGlassIcon,
-    PuzzlePieceIcon
-} from "@phosphor-icons/react";
+import { FolderSimpleIcon, PuzzlePieceIcon } from "@phosphor-icons/react";
 import { type ReactNode, useState } from "react";
 import {
     type FeatureScriptOut,
@@ -25,6 +20,7 @@ import {
     useFeatureScriptsQuery,
     useIsOwner
 } from "../queries";
+import { useFeatureScriptsSearch } from "../search";
 import { FeatureScriptCard } from "./featurescript-card";
 
 const FAVORITES_SECTION = "favorites";
@@ -60,12 +56,12 @@ function FeatureScriptRows(props: FeatureScriptRowsProps): ReactNode {
     );
 }
 
-/** Favorites, then each category, each section opening and closing on its own. */
+/** Favorites, then each category, filtered by the navbar's search. */
 export function FeatureScriptList(): ReactNode {
     const { data, isPending, isError } = useFeatureScriptsQuery();
     const favorites = useFeatureScriptFavoritesQuery();
     const isOwner = useIsOwner();
-    const [query, setQuery] = useState("");
+    const query = useFeatureScriptsSearch((state) => state.query);
     // The closed ones, so a category a new load adds starts open.
     const [closed, setClosed] = useState<string[]>([]);
 
@@ -104,16 +100,7 @@ export function FeatureScriptList(): ReactNode {
     }
 
     return (
-        <Stack gap={0}>
-            <TextInput
-                type="search"
-                autoFocus
-                p="sm"
-                leftSection={<MagnifyingGlassIcon />}
-                placeholder={m.featureScriptsSearch()}
-                value={query}
-                onChange={(event) => setQuery(event.currentTarget.value)}
-            />
+        <>
             {sections.length === 0 ? (
                 <PageNotice
                     title={
@@ -149,6 +136,6 @@ export function FeatureScriptList(): ReactNode {
                     ))}
                 </AppSections>
             )}
-        </Stack>
+        </>
     );
 }

@@ -569,7 +569,6 @@
     "featureScriptsLoadFailed": "Failed to load FeatureScripts.",
     "featureScriptsNone": "No FeatureScripts yet",
     "featureScriptsNoMatches": "No FeatureScripts match your search",
-    "featureScriptsVersion": "v{version}",
     "featureScriptsAdd": "Add to Part Studio",
     "featureScriptsAdding": "Adding {name}...",
     "featureScriptsAdded": "Added {name}.",
