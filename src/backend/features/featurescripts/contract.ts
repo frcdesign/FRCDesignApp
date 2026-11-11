@@ -17,6 +17,8 @@ export interface FeatureScriptOut {
     description: string;
     /** The frontend document's folder it is in; absent at the top level. */
     category?: string;
+    /** Shown to everyone; the owner sees a hidden one too, marked. */
+    isVisible: boolean;
     /** Absent without an icon tab. */
     iconUrl?: string;
     exampleElementId?: string;
@@ -43,9 +45,17 @@ export interface FeatureScriptsVersionOut {
     version: number;
 }
 
+/** Left out of everyone's list but the owner's: hidden by them, or with no single feature to add. */
 export function isHidden(feature: FeatureScriptOut): boolean {
-    return feature.problems.includes(FeatureScriptProblem.NOT_ONE_FEATURE);
+    return (
+        !feature.isVisible ||
+        feature.problems.includes(FeatureScriptProblem.NOT_ONE_FEATURE)
+    );
 }
+
+export const featureScriptVisibilityBody = z.object({
+    isVisible: z.boolean()
+});
 
 export const addFeatureScriptBody = z.object({
     /** A Part Studio in a workspace. */

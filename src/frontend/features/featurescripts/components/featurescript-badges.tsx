@@ -41,17 +41,24 @@ interface FeatureScriptBadgesProps {
     feature: FeatureScriptOut;
 }
 
-/** To the owner, what's wrong with it. */
+/** To the owner: whether they hid it, and what's wrong with it. */
 export function FeatureScriptBadges(
     props: FeatureScriptBadgesProps
 ): ReactNode {
     const { feature } = props;
     const isOwner = useIsOwner();
-    if (!isOwner || feature.problems.length === 0) {
+    if (!isOwner || (feature.isVisible && feature.problems.length === 0)) {
         return null;
     }
     return (
         <Group gap={4} wrap="nowrap">
+            {!feature.isVisible && (
+                <Tooltip label={m.featureScriptsHiddenTip()}>
+                    <Badge variant="light" color={StatusColor.NEUTRAL}>
+                        {m.featureScriptsHidden()}
+                    </Badge>
+                </Tooltip>
+            )}
             {feature.problems.map((problem) => (
                 <Tooltip key={problem} label={problemTip(problem, feature)}>
                     <Badge variant="light" color={StatusColor.WARNING}>

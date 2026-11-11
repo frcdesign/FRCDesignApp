@@ -11,7 +11,8 @@ import { openFeatureScriptMenu } from "../open-featurescript-menu";
 import {
     useAddAvailability,
     useAddFeatureScriptMutation,
-    useExampleUrl
+    useExampleUrl,
+    useIsOwner
 } from "../queries";
 import { FeatureScriptAddButton } from "./featurescript-add-button";
 import { FeatureScriptBadges } from "./featurescript-badges";
@@ -20,6 +21,7 @@ import {
     FeatureScriptFavoriteItem
 } from "./featurescript-favorite-button";
 import { FeatureScriptIcon } from "./featurescript-icon";
+import { FeatureScriptVisibilityItem } from "./featurescript-visibility-item";
 
 /** Where the description starts; the popup shows the rest. */
 function firstLine(description: string): string {
@@ -35,6 +37,7 @@ export function FeatureScriptCard(props: FeatureScriptCardProps): ReactNode {
     const add = useAddFeatureScriptMutation(feature);
     const availability = useAddAvailability();
     const exampleUrl = useExampleUrl(feature);
+    const isOwner = useIsOwner();
 
     return (
         <ItemRow
@@ -78,6 +81,9 @@ export function FeatureScriptCard(props: FeatureScriptCardProps): ReactNode {
                     <RequireSignIn>
                         <FeatureScriptFavoriteItem feature={feature} />
                     </RequireSignIn>
+                    {isOwner && (
+                        <FeatureScriptVisibilityItem feature={feature} />
+                    )}
                 </>
             }
             actions={

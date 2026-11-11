@@ -11,11 +11,15 @@ import { CustomFeature } from "../../lib/onshape/objects/custom-feature";
 import { toElementPath } from "../../lib/onshape/path";
 import { retryInsert } from "../../lib/onshape/retry";
 import { validate } from "../../lib/validate";
-import { requireSignInMiddleware } from "../auth/guards";
+import {
+    requireOwnerMiddleware,
+    requireSignInMiddleware
+} from "../auth/guards";
 import {
     type AddFeatureScriptOut,
     addFeatureScriptBody,
     type FeatureScriptFavoritesOut,
+    featureScriptVisibilityBody,
     type FeatureScriptsVersionOut
 } from "./contract";
 import {
@@ -199,6 +203,35 @@ featureScriptRoutes.delete(
                     )
                 )
             );
+        return c.json({ success: true });
+    }
+);
+
+/**
+ * POST /api/featurescripts/:featureId/visibility. The owner's alone; bumps
+ * the cache version, since every caller's list is cached under it.
+ */
+featureScriptRoutes.post(
+    "/featurescripts/:featureId/visibility",
+    requireOwnerMiddleware,
+    validate("json", featureScriptVisibilityBody),
+    async (c) => {
+        const db = getDb(c.env.DB);
+        const { isVisible } = c.req.valid("json");
+        const updated = await db
+            .update(featureScripts)
+            .set({ isVisible })
+            .where(eq(featureScripts.id, c.req.param("featureId")))
+            .returning({ id: featureScripts.id });
+        if (updated.length === 0) {
+            throw handledError(
+                "That FeatureScript is no longer available. Reload the app and try again.",
+                HttpStatus.NOT_FOUND
+            );
+        }
+        await db.update(featureScriptsDocument).set({
+            cacheVersion: sql`${featureScriptsDocument.cacheVersion} + 1`
+        });
         return c.json({ success: true });
     }
 );

@@ -579,7 +579,7 @@
     "featureScriptsProblemNoExampleTip": "Name a Part Studio \"{name} example\" in the frontend document.",
     "featureScriptsProblemNoIcon": "No icon",
     "featureScriptsProblemNoIconTip": "Release it again to write \"{name} icon.svg\".",
-    "featureScriptsProblemNotOneFeature": "Hidden",
+    "featureScriptsProblemNotOneFeature": "Not one feature",
     "featureScriptsProblemNotOneFeatureTip": "Hidden from users: this Feature Studio must define exactly one feature.",
     "featureScriptsProblemLoadFailed": "Failed to load",
     "featureScriptsProblemLoadFailedTip": "The last load of this feature failed. Reload to try again.",
@@ -611,5 +611,11 @@
     "versionManagerMissingAccessDescription": "You cannot open this document",
     "versionManagerRowPush": "Push",
     "versionManagerRowPull": "Pull",
-    "versionManagerRowRunning": "Wait for the push or pull running now to finish."
+    "versionManagerRowRunning": "Wait for the push or pull running now to finish.",
+    "featureScriptsHide": "Hide from users",
+    "featureScriptsShow": "Show to users",
+    "featureScriptsHidden": "Hidden",
+    "featureScriptsHiddenTip": "Hidden from users. Show it again from its \u22ef menu.",
+    "featureScriptsHideFailed": "Failed to hide {name}.",
+    "featureScriptsShowFailed": "Failed to show {name}."
 }

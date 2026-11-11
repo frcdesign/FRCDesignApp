@@ -17,6 +17,7 @@ import {
 } from "./contract";
 import { featureScripts, featureScriptsDocument } from "./schema";
 import { iconKey } from "./store";
+import { AccessLevel } from "../auth/access-level";
 
 const db = getDb(env.DB);
 
@@ -100,6 +101,7 @@ describe("featurescripts routes", () => {
             id: "belt",
             name: "Robot belt",
             description: "Add a belt.",
+            isVisible: true,
             problems: [FeatureScriptProblem.NO_EXAMPLE]
         });
         expect(body.features[1]).toMatchObject({
@@ -250,5 +252,50 @@ describe("featurescripts routes", () => {
 
         const res = await app.request("/api/featurescripts/favorites", {}, env);
         expect(await res.json()).toEqual({ featureScriptIds: [] });
+    });
+
+    it("lets the owner hide a feature, bumping the version the list is cached under", async () => {
+        await seed();
+        const owner = createTestApp({ accessLevel: AccessLevel.OWNER });
+
+        const res = await owner.request(
+            "/api/featurescripts/frame/visibility",
+            jsonRequest("POST", { isVisible: false }),
+            env
+        );
+        expect(res.status).toBe(200);
+
+        const version = await owner.request(
+            "/api/featurescripts-version",
+            {},
+            env
+        );
+        expect(await version.json()).toEqual({ version: 4 });
+        const list = await owner.request("/api/featurescripts?v=4", {}, env);
+        const body: FeatureScriptsOut = await list.json();
+        expect(
+            body.features.find((feature) => feature.id === "frame")
+        ).toMatchObject({ isVisible: false });
+    });
+
+    it("refuses visibility to anyone but the owner, and for a feature that isn't there", async () => {
+        await seed();
+        const admin = await createTestApp({
+            accessLevel: AccessLevel.ADMIN
+        }).request(
+            "/api/featurescripts/frame/visibility",
+            jsonRequest("POST", { isVisible: false }),
+            env
+        );
+        expect(admin.status).toBe(403);
+
+        const missing = await createTestApp({
+            accessLevel: AccessLevel.OWNER
+        }).request(
+            "/api/featurescripts/gone/visibility",
+            jsonRequest("POST", { isVisible: false }),
+            env
+        );
+        expect(missing.status).toBe(404);
     });
 });

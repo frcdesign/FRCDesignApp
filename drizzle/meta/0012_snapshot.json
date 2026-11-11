@@ -1,7 +1,7 @@
 {
     "version": "6",
     "dialect": "sqlite",
-    "id": "adb93e80-85e1-4212-8136-a4c8ac0e7d97",
+    "id": "a4c2f29d-4bb1-49e0-9821-63d058853d00",
     "prevId": "37bb4e4c-1e83-444b-a08a-499eff6b6112",
     "tables": {
         "configurations": {
@@ -1751,6 +1751,14 @@
                     "primaryKey": false,
                     "notNull": false,
                     "autoincrement": false
+                },
+                "is_visible": {
+                    "name": "is_visible",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false,
+                    "default": true
                 },
                 "example_element_id": {
                     "name": "example_element_id",

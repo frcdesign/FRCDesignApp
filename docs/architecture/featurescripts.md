@@ -47,6 +47,7 @@ GET    /api/featurescripts/icon/:elementId   a feature's icon from R2, by ?v=<mi
 GET    /api/featurescripts/favorites         the caller's favorites, oldest first
 POST   /api/featurescripts/:featureId/favorite
 DELETE /api/featurescripts/:featureId/favorite
+POST   /api/featurescripts/:featureId/visibility    owner: shows or hides it, bumping the cache version
 POST   /api/featurescripts/:featureId/add    adds it to the Part Studio in the body
 POST   /api/featurescripts/reload            owner: loads the latest version now (not built)
 ```
@@ -140,6 +141,10 @@ interface FeatureScriptOut {
     id: string;
     name: string;
     description: string;
+    /** The frontend document's folder it is in; absent at the top level. */
+    category?: string;
+    /** Shown to everyone; the owner sees a hidden one too, marked. */
+    isVisible: boolean;
     /** Absent without an icon tab. */
     iconUrl?: string;
     exampleElementId?: string;
@@ -157,7 +162,10 @@ enum FeatureScriptProblem {
     LOAD_FAILED = "load-failed"
 }
 
+// Left out of everyone's list but the owner's: hidden by them, or with no single feature to add.
 function isHidden(feature: FeatureScriptOut): boolean;
+
+const featureScriptVisibilityBody: ZodObject; // isVisible
 
 const addFeatureScriptBody: ZodObject; // targetPath, a Part Studio in a workspace
 
@@ -219,15 +227,16 @@ Under `src/frontend/features/featurescripts/components/`:
 - `featurescript-card.tsx` — a row: the icon inline before the name and the
   description's first line, then, in `ItemRow`'s `actions`, an outlined
   **Add** and the heart, and last the ⋯ menu with **Add to Part Studio**,
-  **Open example** and **Favorite**.
+  **Open example**, **Favorite** and, to the owner, **Hide from users** or
+  **Show to users** (`featurescript-visibility-item.tsx`).
 - `featurescript-menu.tsx` — the popup a row opens: the example's thumbnail
   as a hero image across the top, the badges, the whole description, and a
   footer with the heart, **Open example** and **Add to Part Studio**.
 - `featurescript-add-button.tsx` — the row's outlined **Add**
   (`RowActionButton`, in `src/frontend/components/row-action-button.tsx`) or
   the popup's filled **Add to Part Studio**.
-- `featurescript-badges.tsx` — to the owner, each problem with a tip saying
-  how to fix it.
+- `featurescript-badges.tsx` — to the owner, **Hidden** on a feature they
+  hid, and each problem with a tip saying how to fix it.
 - `featurescript-icon.tsx` — the icon as an `<img>`, or the generic puzzle
   piece.
 
@@ -260,6 +269,7 @@ them, and they hold no foreign key into the rest; added to
 | `thumbnail_urls`          | As `insertables`'; null without an example                                             |
 | `problems`                | `FeatureScriptProblem[]`                                                               |
 | `category`                | The folder holding the Feature Studio in the frontend document; null at its top level  |
+| `is_visible`              | The owner's choice, true for a new feature; a load never writes it                     |
 | `sort_order`              | The tab order in the frontend document                                                 |
 
 - `featurescript_favorites` — `user_id`, `featurescript_id` (referencing
@@ -361,8 +371,10 @@ owner's background session; no one else's.
 2. The route reads `GET /api/featurescripts-version`, then
    `GET /api/featurescripts?v=`, which answers every feature in tab order with
    its problems, the same for every caller, so it is cached as a library is.
-   The client hides features with `NOT_ONE_FEATURE` unless the owner is
-   looking, and shows problems to the owner alone.
+   The client leaves out the features `isHidden` names — hidden by the owner,
+   or with `NOT_ONE_FEATURE` — unless the owner is looking, and shows problems
+   and **Hidden** to the owner alone. A favorite of a hidden feature is kept,
+   and left out of the list with it.
 3. `FeatureScriptList` shows **Favorites** first, when the signed-in caller
    has any, then one section per category (`groupByCategory`), in the order
    the folders come in the document, and **Other** last for the features at
@@ -512,6 +524,9 @@ short has little use for them.
   else sets it.
 - Favorites are a person's own: every favorite route answers for the caller
   alone, and the list is never cached.
+- Only the owner shows or hides a feature, and a load never writes
+  `is_visible`, so a choice outlasts every reload. Hiding one bumps the cache
+  version, so no cached list still shows it.
 
 ## Failure and recovery
 
@@ -568,6 +583,10 @@ Description"` is already written for every released feature, and is what
   keeps one arrangement for both, with no list of categories to keep in step in
   either repo. Filing a new feature is a step by hand, since the API can't
   move tabs into folders.
+- **Hiding keeps favorites.** A library's hide removes the part from everyone's
+  favorites; a FeatureScript's leaves them, only left out of the list while
+  hidden, so showing it again loses nothing. A new feature starts shown: a
+  release is already reviewed in robot-code.
 - **Favorites without a configuration or an order.** A feature has nothing to
   configure, and a list this short is ordered well enough by when each was
   favorited.

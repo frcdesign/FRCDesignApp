@@ -192,3 +192,26 @@ export function useToggleFavoriteMutation(feature: FeatureScriptOut) {
         onSettled: () => queryClient.invalidateQueries({ queryKey })
     });
 }
+
+/** The owner's show or hide, which bumps the version every list is cached under. */
+export function useSetVisibilityMutation(feature: FeatureScriptOut) {
+    const queryClient = useQueryClient();
+    return useMutation<unknown, Error, boolean>({
+        mutationKey: ["featurescript-visibility", feature.id],
+        mutationFn: (isVisible) =>
+            apiPost(`/featurescripts/${feature.id}/visibility`, {
+                body: { isVisible }
+            }),
+        onError: (error, isVisible) =>
+            handleAppError(
+                error,
+                isVisible
+                    ? m.featureScriptsShowFailed({ name: feature.name })
+                    : m.featureScriptsHideFailed({ name: feature.name })
+            ),
+        onSuccess: () =>
+            queryClient.invalidateQueries({
+                queryKey: featureScriptsVersionQueryKey()
+            })
+    });
+}

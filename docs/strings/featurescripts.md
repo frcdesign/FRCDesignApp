@@ -36,17 +36,21 @@ description come from its FeatureScript and are parameters, not messages.
 
 ## The owner's
 
-| String                                                                    | Kind          | Where             | When              | Review    |
-| ------------------------------------------------------------------------- | ------------- | ----------------- | ----------------- | --------- |
-| "No example"                                                              | Badge         | A card; the popup | `NO_EXAMPLE`      | **⚑** New |
-| "Name a Part Studio \"{name} example\" in the frontend document."         | Badge tooltip | On it             | Same              | **⚑** New |
-| "No icon"                                                                 | Badge         | A card; the popup | `NO_ICON`         | **⚑** New |
-| "Release it again to write \"{name} icon.svg\"."                          | Badge tooltip | On it             | Same              | **⚑** New |
-| "Hidden"                                                                  | Badge         | A card; the popup | `NOT_ONE_FEATURE` | **⚑** New |
-| "Hidden from users: this Feature Studio must define exactly one feature." | Badge tooltip | On it             | Same              | **⚑** New |
-| "Failed to load"                                                          | Badge         | A card; the popup | `LOAD_FAILED`     | **⚑** New |
-| "The last load of this feature failed. Reload to try again."              | Badge tooltip | On it             | Same              | **⚑** New |
-| "Reload" / "Reloading FeatureScripts..."                                  | Button, toast | The tab's header  | Proposed          | **⚑** New |
+| String                                                                    | Kind          | Where             | When                                       | Review    |
+| ------------------------------------------------------------------------- | ------------- | ----------------- | ------------------------------------------ | --------- |
+| "Hide from users" / "Show to users"                                       | Menu item     | A row's ⋯ menu    | The owner, shown / hidden                  | **⚑** New |
+| "Hidden"                                                                  | Badge         | A card; the popup | The owner hid it                           | **⚑** New |
+| "Hidden from users. Show it again from its ⋯ menu."                       | Badge tooltip | On it             | Same                                       | **⚑** New |
+| "Failed to hide {name}." / "Failed to show {name}."                       | Error toast   |                   | The toggle failed, without a worded reason | **⚑** New |
+| "No example"                                                              | Badge         | A card; the popup | `NO_EXAMPLE`                               | **⚑** New |
+| "Name a Part Studio \"{name} example\" in the frontend document."         | Badge tooltip | On it             | Same                                       | **⚑** New |
+| "No icon"                                                                 | Badge         | A card; the popup | `NO_ICON`                                  | **⚑** New |
+| "Release it again to write \"{name} icon.svg\"."                          | Badge tooltip | On it             | Same                                       | **⚑** New |
+| "Not one feature"                                                         | Badge         | A card; the popup | `NOT_ONE_FEATURE`                          | **⚑** New |
+| "Hidden from users: this Feature Studio must define exactly one feature." | Badge tooltip | On it             | Same                                       | **⚑** New |
+| "Failed to load"                                                          | Badge         | A card; the popup | `LOAD_FAILED`                              | **⚑** New |
+| "The last load of this feature failed. Reload to try again."              | Badge tooltip | On it             | Same                                       | **⚑** New |
+| "Reload" / "Reloading FeatureScripts..."                                  | Button, toast | The tab's header  | Proposed                                   | **⚑** New |
 
 ## Feedback (proposed)
 

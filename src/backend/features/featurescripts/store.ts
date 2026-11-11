@@ -37,6 +37,7 @@ export async function getFeatureScriptsOut(db: Db): Promise<FeatureScriptsOut> {
             name: row.name,
             description: row.description,
             category: row.category ?? undefined,
+            isVisible: row.isVisible,
             iconUrl:
                 row.iconElementId && row.iconMicroversionId
                     ? iconUrl(row.iconElementId, row.iconMicroversionId)

@@ -12,6 +12,7 @@ import {
     renderWithProviders
 } from "../../../../__test_utils__/render";
 import { useOnshapeLaunch } from "../../../lib/onshape-params";
+import { updateUiState } from "../../../lib/ui-state";
 import {
     accessDataQueryKey,
     featureScriptFavoritesQueryKey,
@@ -41,6 +42,7 @@ const FRAME: FeatureScriptOut = {
     id: "frame",
     name: "Robot frame",
     description: "Add tube along an edge.\nOr extrude it from a point.",
+    isVisible: true,
     problems: []
 };
 
@@ -149,7 +151,14 @@ function feature(
     name: string,
     category?: string
 ): FeatureScriptOut {
-    return { id, name, description: `${name}.`, category, problems: [] };
+    return {
+        id,
+        name,
+        description: `${name}.`,
+        category,
+        isVisible: true,
+        problems: []
+    };
 }
 
 /** In the frontend document's tab order, folder by folder. */
@@ -164,16 +173,21 @@ const LISTED: FeatureScriptOut[] = [
 const SECTIONS = /^(Favorites|Lightening|Basic operations|Parts|Other)$/;
 
 /** Seeded before rendering, so the list never shows loading. */
-function renderList(favoriteIds: string[]) {
+function renderList(
+    favoriteIds: string[],
+    options: { owner?: boolean; features?: FeatureScriptOut[] } = {}
+) {
+    const level = options.owner ? AccessLevel.OWNER : AccessLevel.USER;
+    updateUiState({ accessLevel: level });
     const queryClient = createTestQueryClient();
     queryClient.setQueryData(featureScriptsVersionQueryKey(), 0);
     queryClient.setQueryData<FeatureScriptsOut>(featureScriptsQueryKey(0), {
         documentId: "frontend",
         versionId: "v-1",
-        features: LISTED
+        features: options.features ?? LISTED
     });
     queryClient.setQueryData<AccessData>(accessDataQueryKey(DEFAULT_LIBRARY), {
-        maxAccessLevel: AccessLevel.USER,
+        maxAccessLevel: level,
         signedIn: true,
         seenHints: []
     });
@@ -248,6 +262,36 @@ describe("FeatureScriptList", () => {
         );
         expect(apiPost).toHaveBeenCalledWith("/featurescripts/rib/add", {
             body: { targetPath: expect.anything() }
+        });
+    });
+
+    it("leaves a hidden feature out for users, and shows it marked to the owner", async () => {
+        const features = LISTED.map((each) =>
+            each.id === "rib" ? { ...each, isVisible: false } : each
+        );
+        renderList([], { features });
+        await screen.findByText("Robot lighten");
+        expect(screen.queryByText("Quick rib")).toBeNull();
+    });
+
+    it("lets the owner show a hidden feature again from its menu", async () => {
+        const user = userEvent.setup();
+        const features = LISTED.map((each) =>
+            each.id === "rib" ? { ...each, isVisible: false } : each
+        );
+        renderList([], { owner: true, features });
+
+        const rib = (await screen.findByText("Quick rib")).closest("tr");
+        expect(within(rib as HTMLElement).getByText("Hidden")).toBeTruthy();
+        await user.pointer({
+            keys: "[MouseRight]",
+            target: rib as HTMLElement
+        });
+        await user.click(
+            await screen.findByRole("menuitem", { name: "Show to users" })
+        );
+        expect(apiPost).toHaveBeenCalledWith("/featurescripts/rib/visibility", {
+            body: { isVisible: true }
         });
     });
 
