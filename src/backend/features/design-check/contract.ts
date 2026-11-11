@@ -34,12 +34,22 @@ export interface DesignIssue {
     count?: number;
 }
 
-export interface DesignCheckOut {
+/** One Part Studio or Assembly of the document, as checked. */
+export interface TabCheck {
+    elementId: string;
+    name: string;
     elementType: ElementType;
-    /** Errors first, then warnings, then info. */
+    /** Errors first, then warnings, then info; none for a tab that failed. */
     issues: DesignIssue[];
     /** Onshape reported no sketch's definition, so under-defined sketches went unchecked. */
     sketchStatusUnknown: boolean;
+    /** Onshape answered this tab alone with an error, so it went unchecked. */
+    failed: boolean;
+}
+
+export interface DesignCheckOut {
+    /** The document's Part Studios and Assemblies, in the order of its tabs. */
+    tabs: TabCheck[];
     /** Epoch ms. */
     checkedAt: number;
 }

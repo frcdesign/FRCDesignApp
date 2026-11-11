@@ -2,28 +2,43 @@
 
 ## Purpose
 
-Checking the Part Studio or Assembly the app was launched in against
-FRCDesign's practices, and listing what it breaks: under- and over-defined
-sketches, a missing or misplaced Origin Cube, red, yellow and suppressed
-features or mates, a rollback bar left above the end, parts without a material,
-and fixed, floating or broken assembly instances. Anybody signed in can run it
-on a tab they can read.
+Checking every Part Studio and Assembly of the workspace the app was launched
+in against FRCDesign's practices, and listing what each breaks: under- and
+over-defined sketches, a missing or misplaced Origin Cube, red, yellow and
+suppressed features or mates, a rollback bar left above the end, parts without
+a material, and fixed, floating or broken assembly instances. Anybody signed in
+can run it on a document they can read.
 
 It is not the library's build check ([build-issues.md](./build-issues.md)),
 which checks the library's own documents when they load and shows editors what
-it stores. A design check reads somebody's own tab when they ask, keeps no
-result, and shows only them. It borrows the build check's severities and its
-severity badges, so the two read alike.
+it stores. A design check reads somebody's own document when they ask, and
+shows only them. It borrows the build check's severities and its severity
+badges, so the two read alike.
 
 ## Code map
 
-In the order a check runs: asked, read, checked, drawn.
+In the order a check runs: asked, each tab read and checked, drawn.
 
 `src/backend/features/design-check/routes.ts`
 
 ```text
-GET /api/design-check?documentId=&instanceId=&elementId=&elementType=    DesignCheckOut; never cached
+GET /api/design-check?documentId=&instanceId=    DesignCheckOut; never cached
 ```
+
+`src/backend/features/design-check/document.ts`
+
+```ts
+// Reads the workspace's tabs as the caller, then checks each Part Studio and
+// Assembly two at a time, reusing a cached result for a tab that hasn't changed.
+async function checkDocument(
+    c: AppContext,
+    client: OnshapeApi,
+    workspace: InstancePath
+): Promise<TabCheck[]>;
+```
+
+`elementsInTabOrder` (`src/backend/features/load/parse-document-contents.ts`)
+gives the tabs in the order Onshape shows them.
 
 `src/backend/features/design-check/snapshot.ts`
 
@@ -115,12 +130,21 @@ interface DesignIssue {
     count?: number;
 }
 
-interface DesignCheckOut {
+interface TabCheck {
+    elementId: string;
+    name: string;
     elementType: ElementType;
-    /** Errors first, then warnings, then info. */
+    /** Errors first, then warnings, then info; none for a tab that failed. */
     issues: DesignIssue[];
     /** Onshape reported no sketch's definition, so under-defined sketches went unchecked. */
     sketchStatusUnknown: boolean;
+    /** Onshape answered this tab alone with an error, so it went unchecked. */
+    failed: boolean;
+}
+
+interface DesignCheckOut {
+    /** The document's Part Studios and Assemblies, in the order of its tabs. */
+    tabs: TabCheck[];
     /** Epoch ms. */
     checkedAt: number;
 }
@@ -136,7 +160,7 @@ type DesignIssueCounts = Partial<Record<DesignIssueType, number>>;
 `src/frontend/features/design-check/navigation.ts`
 
 ```ts
-// Runs when the page opens on a tab with no check cached, then only when asked.
+// Runs when the page opens on a workspace with no check cached, then only when asked.
 function useDesignCheckQuery(target: TargetElement | undefined);
 function checkAgain(target: TargetElement): Promise<void>;
 function useIsDesignCheck(): boolean;
@@ -161,6 +185,7 @@ function getDesignIssueHelp(issue: DesignIssue): string;
 ```ts
 // Keeps the last results when checking again fails.
 function DesignCheckPage(): ReactNode;
+// One accordion item per tab, the launch's open, each with a switch to its tab.
 function DesignCheckResults(props: DesignCheckResultsProps): ReactNode;
 
 interface DesignCheckResultsProps {
@@ -203,12 +228,19 @@ named exactly "Origin Cube" or "Cube of All Time".
 
 ## Storage
 
-A check is answered and forgotten. Each one is recorded as a `design_check`
-event, with the kind of tab and how many of each issue type it found, and no
-document ([analytics.md](./analytics.md)).
+Each tab checked afresh is recorded as a `design_check` event, with the kind of
+tab and how many of each issue type it found, and no document
+([analytics.md](./analytics.md)); a reused result isn't.
 
-**Query cache** the last check of each tab, never stale, dropped five minutes
-after the page closes (TanStack's default), so coming back later checks again.
+**KV** `design-check-tab:{CHECKS_VERSION}:{documentId}:{elementId}:{microversionId}`
+(`src/backend/features/design-check/document.ts`) — one tab's issues and sketch
+note at one microversion, for a week. Shared by everyone who can read the
+document, since a tab's issues don't depend on who asks. `CHECKS_VERSION` is
+bumped when what the checks find changes.
+
+**Query cache** the last check of each workspace, never stale, dropped five
+minutes after the page closes (TanStack's default), so coming back later checks
+again.
 
 **KV** `seen-hints:`, `Hint.OPENED_DESIGN_CHECK` once the page has been opened
 ([auth.md](./auth.md)).
@@ -224,36 +256,45 @@ records `Hint.OPENED_DESIGN_CHECK` (`useMarkHintSeen`). `beforeLoad` redirects
 anyone who reaches the url without such a tab, and entry resumes into the page
 only with one (`canResume` in `src/frontend/routes/index.tsx`).
 
-### Checking
-
-1. Opening the page on a tab with no check in the cache asks
+1. Opening the page on a workspace with no check in the cache asks
    `GET /api/design-check`, signed in. Signed out, the page asks them to sign
    in instead.
-2. The route reads the tab's snapshot as the caller, in the default
-   configuration, all calls at once. A Part Studio's features are asked for
-   with geometry ids, without which Onshape sends no feature's status. If the
-   sketches can't be listed for any reason but Onshape refusing the caller, the
-   check goes on without their status and says so.
-3. `checkDesign` raises the issues and sorts them worst first. An over-defined
-   sketch, and an Origin Cube below the first feature, are each reported once,
-   as themselves, rather than also as the warning they raise; one that is red
-   is also a feature with an error.
-4. The route records the check through `trackDesignCheck`, in the background,
-   and answers.
-5. The navbar's refresh button, **Check again**, asks again; nothing else does.
+2. The route reads the workspace's tabs as the caller (`getContents`), and
+   takes its Part Studios and Assemblies in tab order. Onshape refusing the
+   caller here fails the check, before anything cached is read.
+3. Each tab, two at a time, reuses its cached result when its microversion
+   hasn't moved, which it does whenever the tab, or a tab it depends on,
+   changes ([ONSHAPE.md](../ONSHAPE.md)). Otherwise its snapshot is read as the
+   caller, in the default configuration, all calls at once. A Part Studio's
+   features are asked for with geometry ids, without which Onshape sends no
+   feature's status. If the sketches can't be listed for any reason but Onshape
+   refusing the caller, the tab is checked without their status and says so.
+4. `checkDesign` raises the tab's issues and sorts them worst first. An
+   over-defined sketch, and an Origin Cube below the first feature, are each
+   reported once, as themselves, rather than also as the warning they raise;
+   one that is red is also a feature with an error. The result is cached and
+   recorded through `trackDesignCheck`, both in the background.
+5. A tab Onshape fails on, other than by refusing the caller, is marked failed
+   and the rest go on; a refusal fails the whole check.
+6. The navbar's refresh button, **Check again**, asks again; nothing else does.
 
-### The results
-
-1. With nothing found, the page says so for the kind of tab it is.
-2. Otherwise the severity badges head the page, beside the time of the check,
-   then one tinted box per issue type, worst first: its name, what to do about
-   it, and every feature, part or instance it was found on.
-3. Clicking a feature or mate's name opens it in Onshape's feature dialog
-   (`sendOpenFeatureMessage`); a suppressed Part Studio feature, which Onshape
-   won't open, is named only. Clicking a part's or a part instance's selects
-   it in the Onshape window (`sendSelectPartMessage`): a part by its id, an
-   instance by its id and its part's. A sub-assembly or broken instance is
-   named only.
+7. With nothing found in any tab, the page says so.
+8. Otherwise the document's severity badges head the page, beside the time of
+   the check, then one accordion item per tab, in tab order, with its name and
+   its own badges, or **Not checked** for a tab that failed. The launch's tab is
+   marked **This tab** and starts open. Each tab holds one tinted box per issue
+   type, worst first: its name, what to do about it, and every feature, part or
+   instance it was found on.
+9. Every other tab has a button that switches the Onshape window to it
+   (`sendSwitchTabMessage`). Its issues are named only: Onshape opens and
+   selects in the tab the app was launched in.
+10. In the launch's tab, clicking a feature or mate's name opens it in Onshape's
+    feature dialog
+    (`sendOpenFeatureMessage`); a suppressed Part Studio feature, which Onshape
+    won't open, is named only. Clicking a part's or a part instance's selects
+    it in the Onshape window (`sendSelectPartMessage`): a part by its id, an
+    instance by its id and its part's. A sub-assembly or broken instance is
+    named only.
 
 ## User-facing strings
 
@@ -261,41 +302,45 @@ In [strings/design-check.md](../strings/design-check.md).
 
 ## Invariants
 
-- A check is never stored: what the page shows is what Onshape answered when
-  the caller last asked.
-- A check reads Onshape as the caller (`getOnshapeApi`), behind
-  `requireSignInMiddleware`, so it reaches only what they can read.
-- A check runs when the page opens on a tab with no check cached and on
+- A tab's cached result is the check of exactly that microversion, so what
+  the page shows is what checking the tab now would find.
+- A check reads the document's tabs as the caller (`getOnshapeApi`), behind
+  `requireSignInMiddleware`, before any cached result, so it answers only
+  someone Onshape lets read the document.
+- A check runs when the page opens on a workspace with no check cached and on
   **Check again**, never on its own: the query is never stale and never
-  retried.
+  retried, so nothing reruns while someone edits.
 - Severity follows from the type alone; it is not sent.
 - `checkDesign` is pure, so every check is tested without Onshape.
-- A sketch's definition status failing to arrive fails no other check; Onshape
-  refusing the caller fails the whole check.
+- A sketch's definition status failing to arrive fails no other check, and a
+  tab failing fails no other tab; Onshape refusing the caller fails the whole
+  check.
 - Analytics records no document, element or name from a check.
 
 ## Failure and recovery
 
-| What goes wrong                                 | Shows as                                                                              | Put right by    |
-| ----------------------------------------------- | ------------------------------------------------------------------------------------- | --------------- |
-| Signed out                                      | The sign-in notice                                                                    | **Sign in**     |
-| Onshape refuses or rate-limits the caller       | "Failed to check this tab.", with **Send a report**                                   | **Check again** |
-| Any other call fails or times out               | The same                                                                              | **Check again** |
-| **Check again** fails                           | The last results, under "Failed to check this tab again. These are the last results." | **Check again** |
-| A feature lost one of a box's picks, and builds | "Feature with a warning", though Onshape reports it `OK`                              | —               |
-| A feature lost every pick in a box, and builds  | Nothing: a sketch's plane on Top resolves to nothing too                              | —               |
-| The sketches can't be listed, or time out       | The other issues, and a note that sketches went unchecked                             | **Check again** |
-| Onshape stops sending `sketchSolveStatus`       | The note that sketches went unchecked, on every Part Studio                           | A change here   |
+| What goes wrong                                 | Shows as                                                                                   | Put right by    |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------ | --------------- |
+| Signed out                                      | The sign-in notice                                                                         | **Sign in**     |
+| Onshape refuses or rate-limits the caller       | "Failed to check this document.", with **Send a report**                                   | **Check again** |
+| Reading the document's tabs fails or times out  | The same                                                                                   | **Check again** |
+| One tab's calls fail or time out                | That tab marked **Not checked**, the rest as checked                                       | **Check again** |
+| **Check again** fails                           | The last results, under "Failed to check this document again. These are the last results." | **Check again** |
+| A feature lost one of a box's picks, and builds | "Feature with a warning", though Onshape reports it `OK`                                   | —               |
+| A feature lost every pick in a box, and builds  | Nothing: a sketch's plane on Top resolves to nothing too                                   | —               |
+| The sketches can't be listed, or time out       | The other issues, and a note that sketches went unchecked                                  | **Check again** |
+| Onshape stops sending `sketchSolveStatus`       | The note that sketches went unchecked, on every Part Studio                                | A change here   |
 
 ## Decisions
 
-- **Asked for, never automatic.** Each check spends three calls of the caller's
-  Onshape allocation on a Part Studio and two on an Assembly, one of them the
-  assembly definition, the scarcest ([ONSHAPE.md](../ONSHAPE.md)). Refetching on
-  focus or a timer would spend them unseen.
-- **Not stored, unlike build issues.** A tab changes with every edit, so a
-  stored result is out of date as soon as it is written; the library's
-  documents change only when a version is loaded.
+- **The whole document at once.** The point is to see every issue together:
+  one tab's own problems are already in front of whoever has it open.
+- **Asked for, never automatic.** Rechecking while someone works in the CAD
+  would flag what they are halfway through, so a check runs only when asked.
+- **Unchanged tabs reused by microversion, without webhooks.** A tab's
+  microversion moves with every change to it or what it depends on, and the
+  document's tabs list carries it, so one call tells which tabs to check again.
+  Cached in KV, since losing a result only costs checking that tab again.
 - **The default configuration.** The launch doesn't carry the configuration
   showing, so a configured tab is checked as its defaults.
 - **Workspaces only.** A version can't be edited, so there is nothing to act on.

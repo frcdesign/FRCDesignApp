@@ -1076,9 +1076,9 @@ no foreign key crosses between them):
   `feature_type`. A FeatureScript add has its feature's constant in
   `feature_type`, and its Feature Studio's path in the loaded version in the
   element columns. A default configuration saved on a favorite has its library
-  and its part's path and insertable. A design check adds the kind of tab it
-  read and how many of each issue type it found, and no element path: the tab
-  is somebody's own. Keyed on
+  and its part's path and insertable. A design check records each tab it
+  checks afresh, not one it reuses, adding the kind of tab and how many of each
+  issue type it found, and no element path: the tab is somebody's own. Keyed on
   Onshape's element id with no foreign keys, so history survives a reload or a
   re-added tab.
 - Rows imported from the legacy app (see Imported history) have
@@ -1170,7 +1170,7 @@ no foreign key crosses between them):
    `POST /api/default-selection/favorite/:favoriteId` calls
    `trackDefaultSelection` once the default is saved (see
    [favorites.md](./favorites.md)); `GET /api/design-check` calls
-   `trackDesignCheck` once its checks have run (see
+   `trackDesignCheck` once for each tab it checks afresh (see
    [design-check.md](./design-check.md)).
 2. A use, an open, a FeatureScript add, a report, a default configuration and a design check are recorded in the background (`runInBackground`),
    after the response; a workflow's step swallows a failure to record. So

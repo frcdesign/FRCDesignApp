@@ -1,10 +1,21 @@
-import { Anchor, Group, Stack, Text, Tooltip } from "@mantine/core";
-import { type ReactNode } from "react";
+import {
+    Accordion,
+    ActionIcon,
+    Anchor,
+    Badge,
+    Group,
+    Stack,
+    Text,
+    Tooltip
+} from "@mantine/core";
+import { ArrowSquareOutIcon } from "@phosphor-icons/react";
+import { type PropsWithChildren, type ReactNode } from "react";
 import {
     type DesignCheckOut,
     type DesignIssue,
     DesignIssueType,
-    getDesignIssueSeverity
+    getDesignIssueSeverity,
+    type TabCheck
 } from "@backend/features/design-check/contract";
 import { ElementType } from "@backend/lib/onshape/element-type";
 import { PageNotice } from "../../../components/app-notice";
@@ -12,7 +23,8 @@ import { Callout } from "../../../components/callout";
 import { StatusIcon } from "../../../components/status-icon";
 import {
     sendOpenFeatureMessage,
-    sendSelectPartMessage
+    sendSelectPartMessage,
+    sendSwitchTabMessage
 } from "../../../lib/messages";
 import { type TargetElement } from "../../../lib/onshape-launch";
 import { Status, statusWash } from "../../../lib/status";
@@ -32,21 +44,16 @@ interface DesignCheckResultsProps {
     failedAgain?: boolean;
 }
 
-/** One box per kind of issue, worst first, naming everything it was found on. */
+/** Every tab of the document, each folding open to its issues, the launch's tab open. */
 export function DesignCheckResults(props: DesignCheckResultsProps): ReactNode {
     const { target, result, failedAgain } = props;
-    const groups = groupByType(result.issues);
+    const issues = result.tabs.flatMap((tab) => tab.issues);
     const checkedAt = m.designCheckCheckedAt({ checkedAt: result.checkedAt });
-    const sketchNote = result.sketchStatusUnknown && (
-        <Text size="sm" c="dimmed">
-            {m.designCheckSketchStatusUnknown()}
-        </Text>
-    );
     const failedNote = failedAgain && (
         <Callout status={Status.ERROR} text={m.designCheckAgainFailed()} />
     );
 
-    if (groups.length === 0) {
+    if (issues.length === 0 && result.tabs.every((tab) => !tab.failed)) {
         return (
             <PageNotice
                 icon={
@@ -60,8 +67,10 @@ export function DesignCheckResults(props: DesignCheckResultsProps): ReactNode {
                 description={
                     <Stack gap="xs">
                         {failedNote}
-                        {getCleanDescription(result.elementType)}
-                        {sketchNote}
+                        {m.designCheckCleanDocument()}
+                        {result.tabs.some((tab) => tab.sketchStatusUnknown) && (
+                            <SketchNote />
+                        )}
                         <Text size="xs" c="dimmed">
                             {checkedAt}
                         </Text>
@@ -76,7 +85,7 @@ export function DesignCheckResults(props: DesignCheckResultsProps): ReactNode {
             {failedNote}
             <Group justify="space-between" wrap="nowrap">
                 <SeverityBadges
-                    severities={result.issues.map((issue) =>
+                    severities={issues.map((issue) =>
                         getDesignIssueSeverity(issue.type)
                     )}
                 />
@@ -84,25 +93,114 @@ export function DesignCheckResults(props: DesignCheckResultsProps): ReactNode {
                     {checkedAt}
                 </Text>
             </Group>
-            {sketchNote}
-            {groups.map((issues) => (
-                <IssueGroup
-                    key={issues[0].type}
-                    target={target}
-                    issues={issues}
-                />
-            ))}
+            <Accordion multiple defaultValue={[target.elementId]}>
+                {result.tabs.map((tab) => (
+                    <TabItem key={tab.elementId} target={target} tab={tab} />
+                ))}
+            </Accordion>
         </Stack>
     );
 }
 
-function getCleanDescription(elementType: ElementType): string {
-    switch (elementType) {
-        case ElementType.PART_STUDIO:
-            return m.designCheckCleanPartStudio();
-        case ElementType.ASSEMBLY:
-            return m.designCheckCleanAssembly();
+function SketchNote(): ReactNode {
+    return (
+        <Text size="sm" c="dimmed">
+            {m.designCheckSketchStatusUnknown()}
+        </Text>
+    );
+}
+
+interface TabItemProps {
+    target: TargetElement;
+    tab: TabCheck;
+}
+
+/** A tab's name and counts, with a way over to it, folding open to its issues. */
+function TabItem(props: TabItemProps): ReactNode {
+    const { target, tab } = props;
+    const isLaunchTab = tab.elementId === target.elementId;
+
+    return (
+        <Accordion.Item value={tab.elementId}>
+            <Group gap={0} wrap="nowrap">
+                <Accordion.Control>
+                    <Group justify="space-between" wrap="nowrap" gap="xs">
+                        <Stack gap={0} miw={0}>
+                            <Text fw={500} truncate>
+                                {tab.name}
+                            </Text>
+                            {isLaunchTab && (
+                                <Text size="xs" c="dimmed">
+                                    {m.designCheckThisTab()}
+                                </Text>
+                            )}
+                        </Stack>
+                        {tab.failed ? (
+                            <Badge color="red" variant="light">
+                                {m.designCheckTabNotChecked()}
+                            </Badge>
+                        ) : (
+                            <SeverityBadges
+                                severities={tab.issues.map((issue) =>
+                                    getDesignIssueSeverity(issue.type)
+                                )}
+                            />
+                        )}
+                    </Group>
+                </Accordion.Control>
+                {!isLaunchTab && (
+                    <ActionIcon
+                        title={m.designCheckSwitchTab()}
+                        variant="subtle"
+                        mx="xs"
+                        onClick={() =>
+                            sendSwitchTabMessage(target, tab.elementId)
+                        }
+                    >
+                        <ArrowSquareOutIcon size={IconSize.MEDIUM} />
+                    </ActionIcon>
+                )}
+            </Group>
+            <Accordion.Panel>
+                <TabIssues
+                    target={isLaunchTab ? target : undefined}
+                    tab={tab}
+                />
+            </Accordion.Panel>
+        </Accordion.Item>
+    );
+}
+
+interface TabIssuesProps {
+    /** The launch's tab, when this is it. */
+    target?: TargetElement;
+    tab: TabCheck;
+}
+
+/** One box per kind of issue, worst first, naming everything it was found on. */
+function TabIssues(props: TabIssuesProps): ReactNode {
+    const { target, tab } = props;
+    if (tab.failed) {
+        return <Text size="sm">{m.designCheckTabFailed()}</Text>;
     }
+    return (
+        <Stack gap="sm">
+            {tab.sketchStatusUnknown && <SketchNote />}
+            {tab.issues.length === 0 ? (
+                <Text size="sm" c="dimmed">
+                    {m.designCheckTabClean()}
+                </Text>
+            ) : (
+                groupByType(tab.issues).map((issues) => (
+                    <IssueGroup
+                        key={issues[0].type}
+                        target={target}
+                        issues={issues}
+                    />
+                ))
+            )}
+        </Stack>
+    );
 }
 
 /** In the order they came, which is worst first. */
@@ -111,7 +209,8 @@ function groupByType(issues: DesignIssue[]): DesignIssue[][] {
 }
 
 interface IssueGroupProps {
-    target: TargetElement;
+    /** The launch's tab, when the issues are in it: only there can Onshape open or select them. */
+    target?: TargetElement;
     /** Every one of the same type. */
     issues: DesignIssue[];
 }
@@ -157,7 +256,7 @@ function issueKey(issue: DesignIssue, index: number): string {
 }
 
 interface IssueSubjectProps {
-    target: TargetElement;
+    target?: TargetElement;
     issue: DesignIssue;
 }
 
@@ -175,13 +274,16 @@ function opensInOnshape(target: TargetElement, issue: DesignIssue): boolean {
 }
 
 /**
- * A feature opens in Onshape's feature dialog, and a part or part instance is
- * selected in the window; a broken instance or suppressed Part Studio feature
- * is only named.
+ * In the launch's tab, a feature opens in Onshape's feature dialog, and a part
+ * or part instance is selected in the window; a broken instance or suppressed
+ * Part Studio feature, and anything in another tab, is only named.
  */
 function IssueSubject(props: IssueSubjectProps): ReactNode {
     const { target, issue } = props;
     const { featureId, partId, instanceId, subject } = issue;
+    if (!target) {
+        return <SubjectName>{subject}</SubjectName>;
+    }
     if (featureId && opensInOnshape(target, issue)) {
         return (
             <SubjectLink
@@ -208,9 +310,13 @@ function IssueSubject(props: IssueSubjectProps): ReactNode {
             </SubjectLink>
         );
     }
+    return <SubjectName>{subject}</SubjectName>;
+}
+
+function SubjectName(props: PropsWithChildren): ReactNode {
     return (
         <Text size="sm" fw={500} truncate>
-            {subject}
+            {props.children}
         </Text>
     );
 }

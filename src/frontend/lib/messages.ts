@@ -94,6 +94,17 @@ export function sendOpenFeatureMessage(
     });
 }
 
+/** Shows another tab of the workspace in the Onshape window. */
+export function sendSwitchTabMessage(
+    elementPath: ElementPath,
+    elementId: string
+) {
+    sendMessage(elementPath, {
+        messageName: MessageType.SWITCH_TAB,
+        anotherElementId: elementId
+    });
+}
+
 /** Onshape wants each request identified uniquely; one highlight is up at a time. */
 const HIGHLIGHT_PREFIX = "highlight-selection-";
 let highlights = 0;

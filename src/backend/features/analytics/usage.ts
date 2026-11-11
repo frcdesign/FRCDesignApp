@@ -22,7 +22,7 @@ export enum EventType {
     FEATURE_ADD = "feature_add",
     /** A favorite's default configuration saved; see `features/favorites`. Not a use. */
     DEFAULT_SELECTION = "default_selection",
-    /** One check of a Part Studio or Assembly; see `features/design-check`. */
+    /** One tab checked afresh, a Part Studio or Assembly; see `features/design-check`. */
     DESIGN_CHECK = "design_check"
 }
 

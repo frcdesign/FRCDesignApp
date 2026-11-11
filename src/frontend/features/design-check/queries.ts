@@ -7,8 +7,8 @@ import { queryClient } from "../../lib/query-client";
 import { useIsSignedIn } from "../auth/access-level";
 
 /**
- * Each check spends Onshape calls, so it runs when the page opens on a tab
- * with none cached and when asked again, never on its own.
+ * A check runs when the page opens on a workspace with none cached and when
+ * asked again, never on its own, so it never runs while someone is editing.
  */
 export function useDesignCheckQuery(target: TargetElement | undefined) {
     const isSignedIn = useIsSignedIn();
@@ -20,9 +20,7 @@ export function useDesignCheckQuery(target: TargetElement | undefined) {
                       apiGet("/design-check", {
                           query: {
                               documentId: target.documentId,
-                              instanceId: target.instanceId,
-                              elementId: target.elementId,
-                              elementType: target.elementType
+                              instanceId: target.instanceId
                           }
                       })
                 : skipToken,

@@ -63,15 +63,24 @@ export async function readSnapshot(
     }
 }
 
+/** Onshape turning the caller away, which fails a whole check rather than one part of it. */
+export function isRefusal(error: unknown): boolean {
+    return (
+        error instanceof OnshapeApiError &&
+        (error.status === 401 || error.status === 403 || error.status === 429)
+    );
+}
+
+/** Onshape failing to answer, as opposed to a bug of ours. */
+export function isOnshapeFailure(error: unknown): boolean {
+    return (
+        error instanceof OnshapeApiError || error instanceof OnshapeTimeoutError
+    );
+}
+
 /** Sketch status is one check of many, so its failure alone doesn't fail the rest. */
 function skipSketches(error: unknown): undefined {
-    const isRefusal =
-        error instanceof OnshapeApiError &&
-        (error.status === 401 || error.status === 403 || error.status === 429);
-    const isOnshapeFailure =
-        error instanceof OnshapeApiError ||
-        error instanceof OnshapeTimeoutError;
-    if (!isOnshapeFailure || isRefusal) {
+    if (!isOnshapeFailure(error) || isRefusal(error)) {
         throw error;
     }
     console.warn("Skipping sketch status", error);
