@@ -434,8 +434,8 @@
         }
     ],
     "changesBadgeChanged": "Changed",
-    "versionManagerOnshapeOnlyTitle": "Version Manager is only available inside Onshape",
-    "versionManagerOnshapeOnlyDescription": "Open the app from an Onshape document to push and pull its versions.",
+    "versionManagerOnshapeOnlyTitle": "Version Manager is not available",
+    "versionManagerOnshapeOnlyDescription": "To use Version Manager, open FRCDesignApp in an Onshape document.",
     "versionManagerWorkspaceOnlyTitle": "Version Manager only works in a workspace",
     "versionManagerWorkspaceOnlyDescription": "Open this document's workspace to push and pull its versions.",
     "versionManagerSignInTitle": "Sign in to manage versions",
