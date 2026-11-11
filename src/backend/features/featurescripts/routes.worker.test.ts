@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import { env } from "cloudflare:workers";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
@@ -10,6 +11,7 @@ import * as PartStudioEndpoints from "../../lib/onshape/endpoints/part-studios";
 import { INSERT_RETRY } from "../../lib/onshape/retry";
 import {
     type AddFeatureScriptOut,
+    type FeatureScriptFavoritesOut,
     FeatureScriptProblem,
     type FeatureScriptsOut
 } from "./contract";
@@ -44,6 +46,7 @@ async function seed() {
             exampleMicroversionId: "mv-frame-example",
             iconElementId: "e-frame-icon",
             iconMicroversionId: "mv-frame-icon",
+            category: "Parts",
             sortOrder: 1
         },
         {
@@ -101,6 +104,7 @@ describe("featurescripts routes", () => {
             problems: [FeatureScriptProblem.NO_EXAMPLE]
         });
         expect(body.features[1]).toMatchObject({
+            category: "Parts",
             releaseVersion: "1.3.0",
             exampleElementId: "e-frame-example",
             iconUrl: "/api/featurescripts/icon/e-frame-icon?v=mv-frame-icon",
@@ -184,5 +188,69 @@ describe("featurescripts routes", () => {
         );
         expect(signedOut.status).toBe(401);
         expect(spy).not.toHaveBeenCalled();
+    });
+
+    it("favorites a feature once per caller, lists them oldest first, and unfavorites", async () => {
+        await seed();
+        const alice = createTestApp({ userId: "alice" });
+        const bob = createTestApp({ userId: "bob" });
+        const favorites = async (app: ReturnType<typeof createTestApp>) => {
+            const res = await app.request(
+                "/api/featurescripts/favorites",
+                {},
+                env
+            );
+            expect(res.headers.get("Cache-Control")).toContain("no-store");
+            const body: FeatureScriptFavoritesOut = await res.json();
+            return body.featureScriptIds;
+        };
+
+        for (const id of ["frame", "belt", "frame"]) {
+            const res = await alice.request(
+                `/api/featurescripts/${id}/favorite`,
+                { method: "POST" },
+                env
+            );
+            expect(res.status).toBe(200);
+        }
+        expect(await favorites(alice)).toEqual(["frame", "belt"]);
+        expect(await favorites(bob)).toEqual([]);
+
+        await alice.request(
+            "/api/featurescripts/frame/favorite",
+            { method: "DELETE" },
+            env
+        );
+        expect(await favorites(alice)).toEqual(["belt"]);
+    });
+
+    it("refuses to favorite a feature that isn't there, and a signed-out caller", async () => {
+        await seed();
+        const missing = await createTestApp().request(
+            "/api/featurescripts/gone/favorite",
+            { method: "POST" },
+            env
+        );
+        expect(missing.status).toBe(404);
+
+        const signedOut = await createTestApp({
+            signedIn: false,
+            isAuthenticated: false
+        }).request("/api/featurescripts/favorites", {}, env);
+        expect(signedOut.status).toBe(401);
+    });
+
+    it("drops a feature's favorites with the feature", async () => {
+        await seed();
+        const app = createTestApp();
+        await app.request(
+            "/api/featurescripts/frame/favorite",
+            { method: "POST" },
+            env
+        );
+        await db.delete(featureScripts).where(eq(featureScripts.id, "frame"));
+
+        const res = await app.request("/api/featurescripts/favorites", {}, env);
+        expect(await res.json()).toEqual({ featureScriptIds: [] });
     });
 });

@@ -1,3 +1,11 @@
+CREATE TABLE `featurescript_favorites` (
+	`user_id` text NOT NULL,
+	`featurescript_id` text NOT NULL,
+	`created_at` integer NOT NULL,
+	PRIMARY KEY(`user_id`, `featurescript_id`),
+	FOREIGN KEY (`featurescript_id`) REFERENCES `featurescripts`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
 CREATE TABLE `featurescripts` (
 	`id` text PRIMARY KEY NOT NULL,
 	`element_id` text NOT NULL,
@@ -5,6 +13,7 @@ CREATE TABLE `featurescripts` (
 	`feature_type` text NOT NULL,
 	`name` text NOT NULL,
 	`description` text NOT NULL,
+	`category` text,
 	`release_version` text,
 	`example_element_id` text,
 	`example_microversion_id` text,

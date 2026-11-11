@@ -1,7 +1,7 @@
 # FeatureScripts
 
-**Status: partly built.** The tables, the list, icon and add routes, and the
-tab with its details are built. Loading them from the frontend document, the
+**Status: partly built.** The tables, the list, icon, add and favorite
+routes, and the tab with its categories, favorites and details are built. Loading them from the frontend document, the
 robot-code release changes, analytics and feedback are still the design below;
 names in the code map that don't exist yet are named from `src/backend/`
 without it.
@@ -9,8 +9,10 @@ without it.
 ## Purpose
 
 A tab of the app, beside the libraries, that lists the released FeatureScripts
-in the public frontend document (robot-code's `frontend` in `[tool.fs]`). It
-shows each one with its icon, description and release version, opens it onto
+in the public frontend document (robot-code's `frontend` in `[tool.fs]`),
+grouped by category: the folder each is in there, such as Lightening, Basic
+operations or Parts. It shows each one with its icon, description and release
+version, lets a signed-in person favorite it, opens it onto
 its example Part Studio's thumbnail as a hero image, adds its feature to the
 open Part Studio in one click, and takes feedback on it, as a part's
 **Report an issue** does.
@@ -42,6 +44,9 @@ It is not:
 GET    /api/featurescripts-version           the cache version keying the list
 GET    /api/featurescripts?v=                every feature, the same for every caller, immutable under its version
 GET    /api/featurescripts/icon/:elementId   a feature's icon from R2, by ?v=<microversion>, sandboxed
+GET    /api/featurescripts/favorites         the caller's favorites, oldest first
+POST   /api/featurescripts/:featureId/favorite
+DELETE /api/featurescripts/:featureId/favorite
 POST   /api/featurescripts/:featureId/add    adds it to the Part Studio in the body
 POST   /api/featurescripts/reload            owner: loads the latest version now (not built)
 ```
@@ -181,13 +186,34 @@ function useAddFeatureScriptMutation(
 function useCannotAddReason(): string | undefined;
 function useExampleUrl(feature: FeatureScriptOut): string | undefined;
 function useIsOwner(): boolean;
+function useFeatureScriptFavoritesQuery(): UseQueryResult<FeatureScriptFavoritesOut>;
+// Shown at once, and put right by the refetch either way.
+function useToggleFavoriteMutation(
+    feature: FeatureScriptOut
+): UseMutationResult<unknown, Error, boolean>;
+```
+
+`src/frontend/features/featurescripts/categories.ts`
+
+```ts
+// In the folders' order in the document, the uncategorized last.
+function groupByCategory(features: FeatureScriptOut[]): FeatureScriptCategory[];
+
+interface FeatureScriptCategory {
+    /** The frontend document's folder; undefined for the features at its top level. */
+    name?: string;
+    features: FeatureScriptOut[];
+}
 ```
 
 Under `src/frontend/features/featurescripts/components/`:
 
+- `featurescript-list.tsx` — the search box over Favorites and the category
+  sections.
+- `featurescript-favorite-button.tsx` — the heart, and its menu item.
 - `featurescript-card.tsx` — a row: the icon inline before the name, the
-  release version, the description's first line, and a ⋯ menu with **Add to
-  Part Studio** and **Open example**.
+  release version, the description's first line, the heart, and a ⋯ menu with
+  **Add to Part Studio**, **Open example** and **Favorite**.
 - `featurescript-details.tsx` — what opens on a click: the example's thumbnail
   as a hero image across the top, the icon and name under it, the whole
   description, **Add to Part Studio** and **Open example**.
@@ -225,7 +251,13 @@ them, and they hold no foreign key into the rest; added to
 | `icon_microversion_id`    | Its microversion, which names its R2 object; null with it                              |
 | `thumbnail_urls`          | As `insertables`'; null without an example                                             |
 | `problems`                | `FeatureScriptProblem[]`                                                               |
+| `category`                | The folder holding the Feature Studio in the frontend document; null at its top level  |
 | `sort_order`              | The tab order in the frontend document                                                 |
+
+- `featurescript_favorites` — `user_id`, `featurescript_id` (referencing
+  `featurescripts.id`, cascading, so a feature gone from the document takes
+  its favorites with it) and `created_at`; one row per person and feature,
+  kept until unfavorited.
 
 **R2**:
 
@@ -270,6 +302,10 @@ find:
    and the icon `DEPRECATED <Feature Type Name> icon.svg` alongside its
    studio, so the app drops all three.
 
+The API can't make or move folders, so a first release lands its studio at the
+top level, under **Other**, until the owner files it into its category's
+folder by hand, once.
+
 ### Loading — `LoadFeatureScriptsWorkflow`
 
 Started by the webhook for a new frontend version, and by the owner's
@@ -281,7 +317,9 @@ version loads at once, with no approval.
 2. `document`, `versions`: the document, and its versions (the latest is the
    one to load; the rest name each feature's release).
 3. Ends here when that version is the one loaded, unless forced.
-4. `contents`: the version's tabs, split by `splitTabs`.
+4. `contents`: the version's tabs, split by `splitTabs`, each Feature Studio
+   with the folder it is in, its category. A folder within a folder takes
+   the outermost one's name.
 5. Selects the Feature Studios that are new, whose own, example's or icon's
    microversion changed, whose example or icon appeared or went, or that
    failed last time; every one when forced.
@@ -317,14 +355,25 @@ owner's background session; no one else's.
    its problems, the same for every caller, so it is cached as a library is.
    The client hides features with `NOT_ONE_FEATURE` unless the owner is
    looking, and shows problems to the owner alone.
-3. The search box filters the list on the client, every word against the
+3. `FeatureScriptList` shows **Favorites** first, when the signed-in caller
+   has any, then one section per category (`groupByCategory`), in the order
+   the folders come in the document, and **Other** last for the features at
+   its top level. Each section opens and closes on its own; one a new load
+   adds starts open.
+4. The search box filters the list on the client, every word against the
    name and description: it is a few dozen features, not an index's worth.
-4. Each card shows the feature's icon inline before its name, at the size
+   While searching, Favorites is left out, so each match shows once, in its
+   category.
+5. The heart on a row, its ⋯ menu, and the details favorites or unfavorites
+   the feature, shown at once and put right by the refetch of
+   `GET /api/featurescripts/favorites`. Signed out, there is no heart and no
+   Favorites.
+6. Each card shows the feature's icon inline before its name, at the size
    of a line of text. `/api/featurescripts/icon/:elementId` serves it from R2
    as `image/svg+xml`, immutable under its microversion, with
    `Content-Security-Policy: sandbox`, and the client shows it in an `<img>`,
    so nothing in it runs.
-5. A click opens the details at `/app/featurescripts/<featureId>`: the
+7. A click opens the details at `/app/featurescripts/<featureId>`: the
    example's large thumbnail as a hero image across the top, then the icon
    and name, the release version, the whole description, and the buttons.
 
@@ -420,8 +469,10 @@ Each is a refactor that lands, with its tests, before the area does.
 | `record` in analytics                                             | Every event shape spelled out in `logged-event.ts`   | One more shape and its rollups, as the version manager's was added                                  |
 | The feedback form, `POST /api/feedback`                           | Sources general, part, error and crash               | A `FEATURESCRIPT` source, topic and forum, and `featureScript` beside `part` in the body            |
 
-Favorites and recents stay the library's: their rows reference insertables,
-and a list this short has little use for either.
+Favorites are the area's own, since a library's reference insertables and
+carry a configuration a feature doesn't have; they reuse the library's heart
+(`FavoriteIcon`, `UnfavoriteIcon`). Recents stay the library's: a list this
+short has little use for them.
 
 ## Invariants
 
@@ -444,6 +495,10 @@ and a list this short has little use for either.
   it.
 - A load reads Onshape as the owner, its own session or a borrowed one, and
   never as a library's team.
+- A feature's category is the folder it is in, in the loaded version; nothing
+  else sets it.
+- Favorites are a person's own: every favorite route answers for the caller
+  alone, and the list is never cached.
 
 ## Failure and recovery
 
@@ -496,6 +551,14 @@ Description"` is already written for every released feature, and is what
   the client then opens its dialog with `openFeatureDialog`, which leaves the
   person where clicking the feature in Onshape's toolbar would.
 - **Filtered on the client.** A few dozen features need no search index.
+- **Categories from the document's folders.** The frontend document is what
+  people browse in Onshape too, and its folders already sort it; reading them
+  keeps one arrangement for both, with no list of categories to keep in step in
+  either repo. Filing a new feature is a step by hand, since the API can't
+  move tabs into folders.
+- **Favorites without a configuration or an order.** A feature has nothing to
+  configure, and a list this short is ordered well enough by when each was
+  favorited.
 - **Opens aren't counted.** Only an add is recorded; counting how often a
   feature's details are opened would need a call from the client for each,
   and can be added beside `FEATURE_ADD` if adds alone don't say enough.

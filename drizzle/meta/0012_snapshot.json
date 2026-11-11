@@ -1,7 +1,7 @@
 {
     "version": "6",
     "dialect": "sqlite",
-    "id": "8764597f-f3f1-4a4c-a517-10b483803d33",
+    "id": "a3e6fb36-5dfd-44d8-a626-95064abc70a8",
     "prevId": "37bb4e4c-1e83-444b-a08a-499eff6b6112",
     "tables": {
         "configurations": {
@@ -1654,6 +1654,52 @@
             "uniqueConstraints": {},
             "checkConstraints": {}
         },
+        "featurescript_favorites": {
+            "name": "featurescript_favorites",
+            "columns": {
+                "user_id": {
+                    "name": "user_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "featurescript_id": {
+                    "name": "featurescript_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "created_at": {
+                    "name": "created_at",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                }
+            },
+            "indexes": {},
+            "foreignKeys": {
+                "featurescript_favorites_featurescript_id_featurescripts_id_fk": {
+                    "name": "featurescript_favorites_featurescript_id_featurescripts_id_fk",
+                    "tableFrom": "featurescript_favorites",
+                    "tableTo": "featurescripts",
+                    "columnsFrom": ["featurescript_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                }
+            },
+            "compositePrimaryKeys": {
+                "featurescript_favorites_user_id_featurescript_id_pk": {
+                    "columns": ["user_id", "featurescript_id"],
+                    "name": "featurescript_favorites_user_id_featurescript_id_pk"
+                }
+            },
+            "uniqueConstraints": {},
+            "checkConstraints": {}
+        },
         "featurescripts": {
             "name": "featurescripts",
             "columns": {
@@ -1697,6 +1743,13 @@
                     "type": "text",
                     "primaryKey": false,
                     "notNull": true,
+                    "autoincrement": false
+                },
+                "category": {
+                    "name": "category",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false,
                     "autoincrement": false
                 },
                 "release_version": {

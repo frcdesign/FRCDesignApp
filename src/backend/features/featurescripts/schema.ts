@@ -3,7 +3,12 @@
  * nothing else reads them and they point at no library row.
  */
 
-import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import {
+    integer,
+    primaryKey,
+    sqliteTable,
+    text
+} from "drizzle-orm/sqlite-core";
 import type { ThumbnailUrls } from "../thumbnails/contract";
 import type { FeatureScriptProblem } from "./contract";
 
@@ -29,6 +34,8 @@ export const featureScripts = sqliteTable("featurescripts", {
     /** The Feature Type Name, never the tab's name. */
     name: text("name").notNull(),
     description: text("description").notNull(),
+    /** The folder holding its Feature Studio in the frontend document; null at the top level. */
+    category: text("category"),
     releaseVersion: text("release_version"),
     exampleElementId: text("example_element_id"),
     exampleMicroversionId: text("example_microversion_id"),
@@ -45,3 +52,16 @@ export const featureScripts = sqliteTable("featurescripts", {
 });
 
 export type FeatureScriptRow = typeof featureScripts.$inferSelect;
+
+/** Who favorited what; a feature gone from the document takes its favorites with it. */
+export const featureScriptFavorites = sqliteTable(
+    "featurescript_favorites",
+    {
+        userId: text("user_id").notNull(),
+        featureScriptId: text("featurescript_id")
+            .notNull()
+            .references(() => featureScripts.id, { onDelete: "cascade" }),
+        createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull()
+    },
+    (t) => [primaryKey({ columns: [t.userId, t.featureScriptId] })]
+);

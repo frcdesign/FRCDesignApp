@@ -12,7 +12,12 @@ import {
     useCannotAddReason,
     useExampleUrl
 } from "../queries";
+import { RequireSignIn } from "../../auth/components/require-access";
 import { FeatureScriptBadges } from "./featurescript-badges";
+import {
+    FeatureScriptFavoriteButton,
+    FeatureScriptFavoriteItem
+} from "./featurescript-favorite-button";
 import { FeatureScriptIcon } from "./featurescript-icon";
 
 /** Where the description starts; the details show the rest. */
@@ -75,7 +80,15 @@ export function FeatureScriptCard(props: FeatureScriptCardProps): ReactNode {
                             {m.featureScriptsOpenExample()}
                         </Menu.Item>
                     )}
+                    <RequireSignIn>
+                        <FeatureScriptFavoriteItem feature={feature} />
+                    </RequireSignIn>
                 </>
+            }
+            rightSection={
+                <RequireSignIn>
+                    <FeatureScriptFavoriteButton feature={feature} />
+                </RequireSignIn>
             }
         />
     );

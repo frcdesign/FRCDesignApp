@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { HttpStatus } from "http-status-ts";
 import { z } from "zod";
 import { getDb } from "../../db/client";
@@ -15,9 +15,14 @@ import { requireSignInMiddleware } from "../auth/guards";
 import {
     type AddFeatureScriptOut,
     addFeatureScriptBody,
+    type FeatureScriptFavoritesOut,
     type FeatureScriptsVersionOut
 } from "./contract";
-import { featureScripts, featureScriptsDocument } from "./schema";
+import {
+    featureScriptFavorites,
+    featureScripts,
+    featureScriptsDocument
+} from "./schema";
 import { getCacheVersion, getFeatureScriptsOut, iconKey } from "./store";
 
 export const featureScriptRoutes = getApp();
@@ -128,4 +133,72 @@ featureScriptRoutes.post(
                 } satisfies AddFeatureScriptOut);
             })()
         )
+);
+
+/** GET /api/featurescripts/favorites — the caller's own, so never cached. */
+featureScriptRoutes.get(
+    "/featurescripts/favorites",
+    requireSignInMiddleware,
+    cacheMiddleware(),
+    async (c) => {
+        const rows = await getDb(c.env.DB)
+            .select({ id: featureScriptFavorites.featureScriptId })
+            .from(featureScriptFavorites)
+            .where(eq(featureScriptFavorites.userId, await c.var.getUserId()))
+            // rowid breaks a tie within a millisecond, by which was inserted first.
+            .orderBy(asc(featureScriptFavorites.createdAt), sql`rowid`);
+        return c.json({
+            featureScriptIds: rows.map((row) => row.id)
+        } satisfies FeatureScriptFavoritesOut);
+    }
+);
+
+/** POST /api/featurescripts/:featureId/favorite. Favoriting twice is a no-op. */
+featureScriptRoutes.post(
+    "/featurescripts/:featureId/favorite",
+    requireSignInMiddleware,
+    async (c) => {
+        const db = getDb(c.env.DB);
+        const featureScriptId = c.req.param("featureId");
+        const feature = await db
+            .select({ id: featureScripts.id })
+            .from(featureScripts)
+            .where(eq(featureScripts.id, featureScriptId))
+            .get();
+        if (!feature) {
+            throw handledError(
+                "That FeatureScript is no longer available. Reload the app and try again.",
+                HttpStatus.NOT_FOUND
+            );
+        }
+        await db
+            .insert(featureScriptFavorites)
+            .values({
+                userId: await c.var.getUserId(),
+                featureScriptId,
+                createdAt: new Date()
+            })
+            .onConflictDoNothing();
+        return c.json({ success: true });
+    }
+);
+
+/** DELETE /api/featurescripts/:featureId/favorite. Unfavoriting what isn't is a no-op. */
+featureScriptRoutes.delete(
+    "/featurescripts/:featureId/favorite",
+    requireSignInMiddleware,
+    async (c) => {
+        await getDb(c.env.DB)
+            .delete(featureScriptFavorites)
+            .where(
+                and(
+                    eq(featureScriptFavorites.userId, await c.var.getUserId()),
+                    eq(
+                        featureScriptFavorites.featureScriptId,
+                        c.req.param("featureId")
+                    )
+                )
+            );
+        return c.json({ success: true });
+    }
 );

@@ -7,15 +7,19 @@ description come from its FeatureScript and are parameters, not messages.
 
 ## The tab and its cards
 
-| String                                                          | Kind         | Where                                | When                        | Review    |
-| --------------------------------------------------------------- | ------------ | ------------------------------------ | --------------------------- | --------- |
-| "FeatureScripts"                                                | Page name    | The page picker, under Utilities     | Always                      | **⚑** New |
-| "Search FeatureScripts..."                                      | Placeholder  | The search box, top of the list      | Always                      | **⚑** New |
-| "v{version}"                                                    | Badge        | A card, beside the name; the details | A version names its release | **⚑** New |
-| "Add to Part Studio" / "Open example"                           | Menu items   | A card's ⋯ menu                      | Open example with one       | **⚑** New |
-| "Loading FeatureScripts..."                                     | Loading      | In place of the list                 | The list is being read      | **⚑** New |
-| "Failed to load FeatureScripts."                                | Page error   | In place of the list                 | The list couldn't be read   | **⚑** New |
-| "No FeatureScripts yet" / "No FeatureScripts match your search" | Empty notice | In place of the list                 | Nothing loaded / no match   | **⚑** New |
+| String                                                          | Kind                    | Where                                         | When                                                          | Review           |
+| --------------------------------------------------------------- | ----------------------- | --------------------------------------------- | ------------------------------------------------------------- | ---------------- |
+| "FeatureScripts"                                                | Page name               | The page picker, under Utilities              | Always                                                        | **⚑** New        |
+| "Search FeatureScripts..."                                      | Placeholder             | The search box, top of the list               | Always                                                        | **⚑** New        |
+| "v{version}"                                                    | Badge                   | A card, beside the name; the details          | A version names its release                                   | **⚑** New        |
+| "Add to Part Studio" / "Open example"                           | Menu items              | A card's ⋯ menu                               | Open example with one                                         | **⚑** New        |
+| "Favorites"                                                     | Section title           | Top of the list                               | Signed in, with a favorite, not searching                     | **⚑** New        |
+| "{folder}" / "Other"                                            | Section titles          | The list, after Favorites                     | Each folder in the frontend document; Other for its top level | **⚑** New: Other |
+| "Favorite" / "Unfavorite"                                       | Button title, menu item | A card's heart and ⋯ menu; the details' heart | Signed in                                                     | **⚑** New        |
+| "Failed to favorite {name}." / "Failed to unfavorite {name}."   | Error toast             |                                               | The toggle failed, without a worded reason                    | **⚑** New        |
+| "Loading FeatureScripts..."                                     | Loading                 | In place of the list                          | The list is being read                                        | **⚑** New        |
+| "Failed to load FeatureScripts."                                | Page error              | In place of the list                          | The list couldn't be read                                     | **⚑** New        |
+| "No FeatureScripts yet" / "No FeatureScripts match your search" | Empty notice            | In place of the list                          | Nothing loaded / no match                                     | **⚑** New        |
 
 ## The details
 

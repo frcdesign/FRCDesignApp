@@ -586,5 +586,11 @@
     "featureScriptsProblemNotOneFeature": "Hidden",
     "featureScriptsProblemNotOneFeatureTip": "Hidden from users: this Feature Studio must define exactly one feature.",
     "featureScriptsProblemLoadFailed": "Failed to load",
-    "featureScriptsProblemLoadFailedTip": "The last load of this feature failed. Reload to try again."
+    "featureScriptsProblemLoadFailedTip": "The last load of this feature failed. Reload to try again.",
+    "featureScriptsFavorites": "Favorites",
+    "featureScriptsOtherCategory": "Other",
+    "featureScriptsFavorite": "Favorite",
+    "featureScriptsUnfavorite": "Unfavorite",
+    "featureScriptsFavoriteFailed": "Failed to favorite {name}.",
+    "featureScriptsUnfavoriteFailed": "Failed to unfavorite {name}."
 }

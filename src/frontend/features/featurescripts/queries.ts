@@ -2,29 +2,33 @@
 import {
     keepPreviousData,
     queryOptions,
+    skipToken,
     useMutation,
-    useQuery
+    useQuery,
+    useQueryClient
 } from "@tanstack/react-query";
 import {
     type AddFeatureScriptIn,
     type AddFeatureScriptOut,
+    type FeatureScriptFavoritesOut,
     type FeatureScriptOut,
     type FeatureScriptsOut,
     type FeatureScriptsVersionOut
 } from "@backend/features/featurescripts/contract";
 import { AccessLevel } from "@backend/features/auth/access-level";
 import { ElementType } from "@backend/lib/onshape/element-type";
-import { apiGet, apiPost } from "../../lib/api-client";
+import { apiDelete, apiGet, apiPost } from "../../lib/api-client";
 import { handleAppError } from "../../lib/errors";
 import { sendOpenFeatureMessage } from "../../lib/messages";
 import { showLoadingToast, showSuccessToast } from "../../lib/notifications";
 import { useOnshapeOrigin, useTargetElement } from "../../lib/onshape-params";
 import { makeUrl } from "../../lib/url";
 import {
+    featureScriptFavoritesQueryKey,
     featureScriptsQueryKey,
     featureScriptsVersionQueryKey
 } from "../../lib/query-keys";
-import { useAccessData } from "../auth/access-level";
+import { useAccessData, useIsSignedIn } from "../auth/access-level";
 import { m } from "../../paraglide/messages";
 
 /** The cache version keying `/featurescripts?v=`; bumped only by a load. */
@@ -124,5 +128,56 @@ export function useAddFeatureScriptMutation(feature: FeatureScriptOut) {
                 toastId
             );
         }
+    });
+}
+
+/** The caller's favorites; nothing to ask for signed out, since they're kept per account. */
+export function useFeatureScriptFavoritesQuery() {
+    const isSignedIn = useIsSignedIn();
+    return useQuery<FeatureScriptFavoritesOut>({
+        queryKey: featureScriptFavoritesQueryKey(),
+        queryFn: isSignedIn
+            ? () => apiGet("/featurescripts/favorites")
+            : skipToken
+    });
+}
+
+export function useIsFeatureScriptFavorite(featureId: string): boolean {
+    const { data } = useFeatureScriptFavoritesQuery();
+    return data?.featureScriptIds.includes(featureId) ?? false;
+}
+
+/** Shown at once, and put right by the refetch either way. */
+export function useToggleFavoriteMutation(feature: FeatureScriptOut) {
+    const queryClient = useQueryClient();
+    const queryKey = featureScriptFavoritesQueryKey();
+    return useMutation<unknown, Error, boolean>({
+        mutationKey: ["favorite-featurescript", feature.id],
+        mutationFn: (favorite) => {
+            const path = `/featurescripts/${feature.id}/favorite`;
+            return favorite ? apiPost(path) : apiDelete(path);
+        },
+        onMutate: async (favorite) => {
+            await queryClient.cancelQueries({ queryKey });
+            queryClient.setQueryData<FeatureScriptFavoritesOut>(
+                queryKey,
+                (data) =>
+                    data && {
+                        featureScriptIds: favorite
+                            ? [...data.featureScriptIds, feature.id]
+                            : data.featureScriptIds.filter(
+                                  (id) => id !== feature.id
+                              )
+                    }
+            );
+        },
+        onError: (error, favorite) =>
+            handleAppError(
+                error,
+                favorite
+                    ? m.featureScriptsFavoriteFailed({ name: feature.name })
+                    : m.featureScriptsUnfavoriteFailed({ name: feature.name })
+            ),
+        onSettled: () => queryClient.invalidateQueries({ queryKey })
     });
 }

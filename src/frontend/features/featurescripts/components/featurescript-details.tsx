@@ -26,7 +26,9 @@ import {
     useCannotAddReason,
     useExampleUrl
 } from "../queries";
+import { RequireSignIn } from "../../auth/components/require-access";
 import { FeatureScriptBadges } from "./featurescript-badges";
+import { FeatureScriptFavoriteButton } from "./featurescript-favorite-button";
 import { FeatureScriptIcon } from "./featurescript-icon";
 
 /** The hero's height, the stored large thumbnail's. */
@@ -95,6 +97,11 @@ export function FeatureScriptDetails(
                 />
                 <Title order={3}>{feature.name}</Title>
                 <FeatureScriptBadges feature={feature} />
+                <RequireSignIn>
+                    <Group ml="auto">
+                        <FeatureScriptFavoriteButton feature={feature} large />
+                    </Group>
+                </RequireSignIn>
             </Group>
             <Text style={{ whiteSpace: "pre-line" }}>
                 {feature.description}

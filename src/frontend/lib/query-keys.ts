@@ -148,3 +148,7 @@ export function featureScriptsVersionQueryKey() {
 export function featureScriptsQueryKey(cacheVersion: number) {
     return ["featurescripts", "data", cacheVersion];
 }
+
+export function featureScriptFavoritesQueryKey() {
+    return ["featurescripts", "favorites"];
+}

@@ -15,6 +15,8 @@ export interface FeatureScriptOut {
     id: string;
     name: string;
     description: string;
+    /** The frontend document's folder it is in; absent at the top level. */
+    category?: string;
     /** e.g. "1.3.0"; absent when no version names it. */
     releaseVersion?: string;
     /** Absent without an icon tab. */
@@ -32,6 +34,11 @@ export interface FeatureScriptsOut {
     versionId?: string;
     /** In the frontend document's tab order. */
     features: FeatureScriptOut[];
+}
+
+/** The caller's favorites, oldest first. */
+export interface FeatureScriptFavoritesOut {
+    featureScriptIds: string[];
 }
 
 export interface FeatureScriptsVersionOut {
