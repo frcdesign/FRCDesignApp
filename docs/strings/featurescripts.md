@@ -33,13 +33,13 @@ FeatureScript and are parameters, not messages.
 The form itself is [feedback.md](./feedback.md)'s; these are what a
 FeatureScript report adds to it.
 
-| String                                                                | Kind            | Where                           | When                                                | Review                           |
-| --------------------------------------------------------------------- | --------------- | ------------------------------- | --------------------------------------------------- | -------------------------------- |
-| "Report issue with {name}"                                            | Form title      | The feedback form               | Opened from a feature                               | **⚑** New                        |
-| "FeatureScripts"                                                      | Topic option    | General feedback's topic picker | Always                                              | **⚑** New                        |
-| "Bug" / "Feature request" / "Unclear description" / "Kudos" / "Other" | Type options    | The form                        | A FeatureScript report, or the FeatureScripts topic | **⚑** New: "Unclear description" |
-| "{category}: {name}"                                                  | Suggested title | The form's title field          | Until the reporter writes their own                 |                                  |
-| "FeatureScript: {name} v{version}"                                    | Post field      | The Discord post                | A FeatureScript report                              | **⚑** New                        |
+| String                                                     | Kind            | Where                           | When                                                | Review                                      |
+| ---------------------------------------------------------- | --------------- | ------------------------------- | --------------------------------------------------- | ------------------------------------------- |
+| "Report issue with {name}"                                 | Form title      | The feedback form               | Opened from a feature                               | **⚑** New                                   |
+| "FeatureScripts"                                           | Topic option    | General feedback's topic picker | Always                                              | **⚑** New                                   |
+| "Bug" / "Feature request" / "Kudos" / "Question" / "Other" | Type options    | The form                        | A FeatureScript report, or the FeatureScripts topic | Question as in [feedback.md](./feedback.md) |
+| "{category}: {name}"                                       | Suggested title | The form's title field          | Until the reporter writes their own                 |                                             |
+| "FeatureScript: {name} v{version}"                         | Post field      | The Discord post                | A FeatureScript report                              | **⚑** New                                   |
 
 ## The owner's
 
