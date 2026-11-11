@@ -73,17 +73,27 @@ export function sendSelectPartMessage(
     partId: string,
     occurrencePath?: string[]
 ) {
+    sendHighlight(elementPath, [
+        {
+            selectionType: "ENTITY",
+            entityType: "BODY",
+            selectionId: partId,
+            ...(occurrencePath && { occurrencePath })
+        }
+    ]);
+}
+
+/** Leaves nothing selected in the Onshape window; a `stopRequest` doesn't. */
+export function sendClearSelectionMessage(elementPath: ElementPath) {
+    sendHighlight(elementPath, []);
+}
+
+function sendHighlight(elementPath: ElementPath, selections: object[]) {
     sendMessage(elementPath, {
         messageName: MessageType.REQUEST_HIGHLIGHT_SELECTION,
+        // Onshape wants each request named uniquely.
         messageId: `highlight-${++highlights}`,
-        selections: [
-            {
-                selectionType: "ENTITY",
-                entityType: "BODY",
-                selectionId: partId,
-                ...(occurrencePath && { occurrencePath })
-            }
-        ]
+        selections
     });
 }
 

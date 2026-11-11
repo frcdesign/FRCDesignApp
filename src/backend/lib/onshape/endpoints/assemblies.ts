@@ -43,6 +43,18 @@ export function getAssemblyFeatures(
     return client.get(`/assemblies${toElementApiPath(assemblyPath)}/features`);
 }
 
+/** `DELETE /assemblies/.../instance/nodeid/{nid}`, `nid` being the instance's id. */
+export function deleteInstance(
+    client: OnshapeApi,
+    assemblyPath: ElementPath,
+    instanceId: string
+): Promise<void> {
+    assertWorkspace(assemblyPath);
+    return client.deleteNone(
+        `/assemblies${toElementApiPath(assemblyPath)}/instance/nodeid/${instanceId}`
+    );
+}
+
 /** For a part studio, `options.partTypes` defaults to PARTS and COMPOSITE_PARTS. */
 export function addElementToAssembly(
     client: OnshapeApi,

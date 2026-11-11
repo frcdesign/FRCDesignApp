@@ -26,7 +26,7 @@ const WEEK_SECONDS = 7 * 24 * 60 * 60;
  * Part of every cached result's key. A change to what the checks find must
  * bump it, or tabs that haven't changed keep the old checks' results.
  */
-const CHECKS_VERSION = 1;
+const CHECKS_VERSION = 3;
 
 /** A tab's result at one microversion, the same for everyone who can read it. */
 const tabChecks = kvStore<DesignCheckResult>("design-check-tab", {

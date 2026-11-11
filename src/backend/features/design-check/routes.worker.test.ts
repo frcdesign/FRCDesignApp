@@ -1,7 +1,7 @@
 import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createTestApp } from "../../../__test_utils__";
+import { createTestApp, jsonRequest } from "../../../__test_utils__";
 import { MockOnshapeApi } from "../../../__test_utils__/mock-onshape-api";
 import { getDb } from "../../db/client";
 import { OnshapeApiError, OnshapeTimeoutError } from "../../lib/onshape/client";
@@ -13,7 +13,15 @@ import {
 } from "../../lib/onshape/types";
 import { events } from "../analytics/schema";
 import { EventType } from "../analytics/usage";
-import { type DesignCheckOut, DesignIssueType } from "./contract";
+import {
+    fastenMateToOrigin,
+    partStudioMateConnectorQuery
+} from "../../lib/onshape/objects/assembly-features";
+import {
+    type DesignCheckOut,
+    DesignIssueFix,
+    DesignIssueType
+} from "./contract";
 
 const db = getDb(env.DB);
 const WORKSPACE = "/d/doc/w/work";
@@ -285,5 +293,154 @@ describe("checking a document", () => {
             libraryId: null,
             documentId: null
         });
+    });
+});
+
+describe("fixing", () => {
+    const FIX_URL = "/api/design-check/fix";
+
+    function fix(onshapeApi: MockOnshapeApi, body: object) {
+        return createTestApp({ onshapeApi }).request(
+            FIX_URL,
+            jsonRequest("POST", {
+                documentId: "doc",
+                instanceId: "work",
+                ...body
+            }),
+            env
+        );
+    }
+
+    it("needs someone signed in", async () => {
+        const res = await createTestApp({ signedIn: false }).request(
+            FIX_URL,
+            jsonRequest("POST", {
+                documentId: "doc",
+                instanceId: "work",
+                elementId: "ps",
+                fix: DesignIssueFix.MOVE_ROLLBACK_TO_END
+            }),
+            env
+        );
+
+        expect(res.status).toBe(401);
+    });
+
+    it("moves a Part Studio's rollback bar to the end", async () => {
+        const onshapeApi = new MockOnshapeApi();
+        const post = vi
+            .spyOn(onshapeApi, "postNone")
+            .mockResolvedValue(undefined);
+
+        const res = await fix(onshapeApi, {
+            elementId: "ps",
+            fix: DesignIssueFix.MOVE_ROLLBACK_TO_END
+        });
+
+        expect(res.status).toBe(200);
+        expect(post).toHaveBeenCalledWith(
+            `/partstudios${WORKSPACE}/e/ps/features/rollback`,
+            { body: { rollbackIndex: -1 } }
+        );
+    });
+
+    it("deletes a broken instance", async () => {
+        const onshapeApi = new MockOnshapeApi();
+        const remove = vi
+            .spyOn(onshapeApi, "deleteNone")
+            .mockResolvedValue(undefined);
+
+        const res = await fix(onshapeApi, {
+            elementId: "asm",
+            fix: DesignIssueFix.DELETE_INSTANCE,
+            assemblyInstanceId: "gone"
+        });
+
+        expect(res.status).toBe(200);
+        expect(remove).toHaveBeenCalledWith(
+            `/assemblies${WORKSPACE}/e/asm/instance/nodeid/gone`
+        );
+    });
+
+    it("fastens the Origin Cube by its mate connector, read where the instance came from", async () => {
+        const { onshapeApi } = mockOnshape([], {
+            [`/assemblies${WORKSPACE}/e/asm`]: () =>
+                Promise.resolve({
+                    rootAssembly: {
+                        instances: [
+                            {
+                                id: "cube",
+                                name: "Origin Cube <1>",
+                                type: "Part",
+                                documentId: "doc",
+                                elementId: "ps",
+                                documentMicroversion: "mv"
+                            }
+                        ],
+                        features: []
+                    },
+                    parts: [],
+                    subAssemblies: []
+                }),
+            ["/partstudios/d/doc/m/mv/e/ps/features"]: () =>
+                Promise.resolve({
+                    features: [
+                        {
+                            featureType: "myFeature",
+                            featureId: "Fcube",
+                            name: "#_name",
+                            suppressed: false,
+                            namespace: "d321c197a842fc5f1a29e6621::v1::e2::m3"
+                        }
+                    ]
+                })
+        });
+        const post = vi
+            .spyOn(onshapeApi, "post")
+            .mockResolvedValue({ feature: { featureId: "M9" } });
+
+        const res = await fix(onshapeApi, {
+            elementId: "asm",
+            fix: DesignIssueFix.FASTEN_ORIGIN_CUBE,
+            assemblyInstanceId: "cube"
+        });
+
+        expect(res.status).toBe(200);
+        expect(post).toHaveBeenCalledWith(
+            `/assemblies${WORKSPACE}/e/asm/features`,
+            {
+                body: {
+                    feature: fastenMateToOrigin(
+                        "Origin Cube",
+                        partStudioMateConnectorQuery("Fcube.mateConnector1", [
+                            "cube"
+                        ])
+                    )
+                }
+            }
+        );
+    });
+
+    it("refuses an instance's fix without the instance", async () => {
+        const res = await fix(new MockOnshapeApi(), {
+            elementId: "asm",
+            fix: DesignIssueFix.DELETE_INSTANCE
+        });
+
+        expect(res.status).toBe(400);
+    });
+
+    it("passes on Onshape refusing the caller", async () => {
+        const onshapeApi = new MockOnshapeApi();
+        vi.spyOn(onshapeApi, "postNone").mockRejectedValue(
+            new OnshapeApiError("no write access", 403)
+        );
+
+        const res = await fix(onshapeApi, {
+            elementId: "ps",
+            fix: DesignIssueFix.MOVE_ROLLBACK_TO_END
+        });
+
+        expect(res.status).toBe(403);
     });
 });

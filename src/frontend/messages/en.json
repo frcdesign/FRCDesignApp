@@ -607,6 +607,31 @@
     "designCheckSketchStatusUnknown": "Onshape didn't say which sketches are fully defined, so under-defined sketches weren't checked. Over-defined sketches still show as features with errors or warnings.",
     "designCheckOpenFeature": "Open in Onshape",
     "designCheckSelectPart": "Select in Onshape",
+    "designCheckFixRollbackLabel": "Move to the end",
+    "designCheckFixDeleteLabel": "Delete",
+    "designCheckFixFastenLabel": "Fasten to origin",
+    "designCheckFixRollback": "Move the rollback bar to the end",
+    "designCheckFixDelete": "Delete {subject}",
+    "designCheckFixFasten": "Fasten {subject} to the origin",
+    "designCheckFixAll": "Fix all",
+    "designCheckFixTitle": "Make these fixes?",
+    "designCheckFixDescription": "Each one changes the document in Onshape, and Ctrl+Z can't undo it. Uncheck any you'd rather leave.",
+    "designCheckFixCancel": "Cancel",
+    "designCheckFixFailed": "Failed to make a fix. Checking again shows what changed.",
+    "designCheckFixConfirm": [
+        {
+            "declarations": [
+                "input count",
+                "local countPlural = count: plural",
+                "local formatted = count: number"
+            ],
+            "selectors": ["countPlural"],
+            "match": {
+                "countPlural=one": "Make {formatted} fix",
+                "countPlural=other": "Make {formatted} fixes"
+            }
+        }
+    ],
     "designCheckSketchUnderdefined": "Under-defined sketch",
     "designCheckSketchUnderdefinedHelp": "Add constraints or dimensions until every line is black.",
     "designCheckSketchOverdefined": "Over-defined sketch",
@@ -628,6 +653,8 @@
     ],
     "designCheckOriginCubeSuppressed": "Origin Cube is suppressed",
     "designCheckOriginCubeSuppressedHelp": "Unsuppress it: assemblies fasten to it.",
+    "designCheckOriginCubeNotFastened": "Origin Cube isn't fastened to the origin",
+    "designCheckOriginCubeNotFastenedHelp": "Fasten it to the assembly origin, so everything else can fasten to it.",
     "designCheckFeatureError": "Feature with an error",
     "designCheckFeatureErrorHelp": "Open it to see what failed.",
     "designCheckFeatureWarning": "Feature with a warning",

@@ -257,6 +257,8 @@ export interface OnshapeAssemblyFeature {
         name?: string;
         /** A mate connector's: the path to the connector. */
         occurrence?: string[];
+        /** A mate's: "FASTENED", "REVOLUTE" and the like. */
+        mateType?: string;
         /** A mate's two ends; an empty `matedOccurrence` is the assembly origin. */
         matedEntities?: { matedOccurrence?: string[] }[];
         /** A group's members (`featureType` "mateGroup"). */
@@ -281,6 +283,10 @@ export interface OnshapeAssemblyInstance {
     documentId?: string;
     elementId?: string;
     featureId?: string;
+    /** The version it came from, for a tab of another document. */
+    documentVersion?: string;
+    /** The microversion it came from, for a tab of the same document. */
+    documentMicroversion?: string;
 }
 
 /** Where one instance sits, as a row-major 4×4 and the path that owns it. */

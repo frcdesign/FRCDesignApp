@@ -23,6 +23,16 @@ In the order a check runs: asked, each tab read and checked, drawn.
 
 ```text
 GET /api/design-check?documentId=&instanceId=    DesignCheckOut; never cached
+POST /api/design-check/fix   DesignFixIn         {}; makes one fix, as the caller
+```
+
+`src/backend/features/design-check/fixes.ts`
+
+```ts
+// Moves the rollback bar (moveRollbackBar), deletes an instance
+// (deleteInstance), or fastens the Origin Cube to the origin by its own mate
+// connector, read where the instance came from.
+async function applyFix(client: OnshapeApi, fix: DesignFixIn): Promise<void>;
 ```
 
 `src/backend/features/design-check/document.ts`
@@ -104,6 +114,8 @@ enum DesignIssueType {
     ORIGIN_CUBE_MISSING = "origin-cube-missing",
     ORIGIN_CUBE_NOT_FIRST = "origin-cube-not-first",
     ORIGIN_CUBE_SUPPRESSED = "origin-cube-suppressed",
+    /** An Assembly's Origin Cube with no fasten to the assembly origin. */
+    ORIGIN_CUBE_NOT_FASTENED = "origin-cube-not-fastened",
     /** A red feature or mate. */
     FEATURE_ERROR = "feature-error",
     /** A yellow feature or mate. */
@@ -128,6 +140,24 @@ interface DesignIssue {
     instanceId?: string;
     /** The Origin Cube's place in the list, or how many features the rollback bar hides. */
     count?: number;
+    /** Set where the app can fix it, for someone who may edit the document. */
+    fix?: DesignIssueFix;
+}
+
+enum DesignIssueFix {
+    MOVE_ROLLBACK_TO_END = "move-rollback-to-end",
+    DELETE_INSTANCE = "delete-instance",
+    FASTEN_ORIGIN_CUBE = "fasten-origin-cube"
+}
+
+interface DesignFixIn {
+    documentId: string;
+    /** The workspace. */
+    instanceId: string;
+    elementId: string;
+    fix: DesignIssueFix;
+    /** The Assembly instance an instance's fix is about. */
+    assemblyInstanceId?: string;
 }
 
 interface TabCheck {
@@ -166,6 +196,26 @@ function checkAgain(target: TargetElement): Promise<void>;
 function useIsDesignCheck(): boolean;
 // The page picker's dot and New badge, until the page is first opened.
 function useIsDesignCheckNew(): boolean;
+// Each fix in turn, stopping at the first refused, then checks again.
+function useApplyFixesMutation(target: TargetElement);
+```
+
+`src/frontend/features/design-check/fixes.ts`,
+`src/frontend/features/design-check/components/fix-dialog.tsx` and
+`src/frontend/features/design-check/open-fix-dialog.tsx`
+
+```ts
+// The fix an issue offers, as the confirmation lists it; none without one.
+function planFix(
+    target: TargetElement,
+    tab: TabCheck,
+    issue: DesignIssue
+): PlannedFix | undefined;
+// Every fix in the document, for Fix all.
+function planFixes(target: TargetElement, tabs: TabCheck[]): PlannedFix[];
+function getFixLabel(fix: DesignIssueFix): string;
+// Every fix listed and checked; only those left checked are made, on confirming.
+function openFixDialog(target: TargetElement, fixes: PlannedFix[]): void;
 ```
 
 `src/frontend/features/design-check/issue-text.ts`, from the messages in
@@ -208,11 +258,12 @@ everyone.
 | `SKETCH_UNDERDEFINED` / `SKETCH_OVERDEFINED`               | Warning / Error        | An unsuppressed sketch Onshape reports so                                                                                                                                                                                   |
 | `ORIGIN_CUBE_MISSING` / `ORIGIN_CUBE_NOT_FIRST`            | Warning / Warning      | A Part Studio with no Origin Cube, or with it below the first feature                                                                                                                                                       |
 | `ORIGIN_CUBE_SUPPRESSED`                                   | Warning                | The Origin Cube suppressed                                                                                                                                                                                                  |
+| `ORIGIN_CUBE_NOT_FASTENED`                                 | Warning                | An Assembly's unsuppressed Origin Cube instance with no unsuppressed fasten to the origin alone; grouping or mating it to a part doesn't count                                                                              |
 | `FEATURE_ERROR` / `FEATURE_WARNING` / `FEATURE_SUPPRESSED` | Error / Warning / Info | A feature or mate Onshape marks red or yellow, or one left suppressed; never the Origin Cube for the last. A built Part Studio feature is also yellow when a selection box lost one pick beside another that still resolves |
 | `ROLLBACK_NOT_AT_END`                                      | Warning                | A Part Studio's rollback bar above its last feature                                                                                                                                                                         |
 | `PART_NO_MATERIAL`                                         | Warning                | A solid part with none, the Origin Cube's own cube aside                                                                                                                                                                    |
 | `INSTANCE_FIXED`                                           | Warning                | An unsuppressed top-level instance that is fixed                                                                                                                                                                            |
-| `INSTANCE_FLOATING`                                        | Warning                | An unsuppressed top-level instance no unsuppressed mate or group holds and no pattern copies, broken ones aside                                                                                                             |
+| `INSTANCE_FLOATING`                                        | Warning                | An unsuppressed top-level instance no unsuppressed mate or group holds and no pattern copies, broken ones and the Origin Cube's aside                                                                                       |
 | `INSTANCE_BROKEN`                                          | Error                  | An unsuppressed instance Onshape sends with only its name and id, or a part instance with an empty part id                                                                                                                  |
 
 The assembly is read without non-solid instances, so an inserted sketch is
@@ -298,8 +349,30 @@ only with one (`canResume` in `src/frontend/routes/index.tsx`).
    feature dialog (`sendOpenFeatureMessage`); a suppressed Part Studio feature,
    which Onshape won't open, is named only. Clicking a part's or a part
    instance's selects it in the Onshape window (`sendSelectPartMessage`): a
-   part by its id, an instance by its id and its part's. A sub-assembly or
-   broken instance is named only.
+   part by its id, an instance by its id and its part's. Hovering one selects
+   it, and leaving clears the selection (`sendClearSelectionMessage`) unless it
+   was clicked. A sub-assembly or broken instance is named only.
+
+### Fixing
+
+1. An issue the app can fix carries `fix` from the check: a rollback bar above
+   the end, a broken instance, and an Origin Cube not fastened to the origin. It
+   shows a button beside it, in any tab; **Fix all** heads the page while there
+   is any.
+2. Either opens a confirmation listing each fix and its tab, checked: one fix,
+   or every one in the document. Only those left checked are made, on
+   confirming.
+3. Each is `POST /api/design-check/fix`, in turn, made as the caller, so
+   Onshape refuses anyone who can't edit the document. The rollback bar moves
+   to the end (`moveRollbackBar`, index -1); the instance is deleted
+   (`deleteInstance`); the Origin Cube is fastened to the origin
+   (`fastenMateToOrigin`): its own mate connector,
+   `{featureId}.mateConnector1` of the Origin Cube feature in the Part Studio
+   the instance came from, read at that version or microversion, to an
+   implicit connector the mate owns on the origin.
+4. The first fix refused stops the rest, with "Failed to make a fix. Checking
+   again shows what changed." Either way the page checks again, which reads
+   only the tabs the fixes changed.
 
 ## User-facing strings
 
@@ -321,20 +394,24 @@ In [strings/design-check.md](../strings/design-check.md).
   tab failing fails no other tab; Onshape refusing the caller fails the whole
   check.
 - Analytics records no document, element or name from a check.
+- No fix is made without a confirmation that lists it, and each is made as the
+  caller.
 
 ## Failure and recovery
 
-| What goes wrong                                 | Shows as                                                                                   | Put right by    |
-| ----------------------------------------------- | ------------------------------------------------------------------------------------------ | --------------- |
-| Signed out                                      | The sign-in notice                                                                         | **Sign in**     |
-| Onshape refuses or rate-limits the caller       | "Failed to check this document.", with **Send a report**                                   | **Check again** |
-| Reading the document's tabs fails or times out  | The same                                                                                   | **Check again** |
-| One tab's calls fail or time out                | That tab marked **Not checked**, the rest as checked                                       | **Check again** |
-| **Check again** fails                           | The last results, under "Failed to check this document again. These are the last results." | **Check again** |
-| A feature lost one of a box's picks, and builds | "Feature with a warning", though Onshape reports it `OK`                                   | —               |
-| A feature lost every pick in a box, and builds  | Nothing: a sketch's plane on Top resolves to nothing too                                   | —               |
-| The sketches can't be listed, or time out       | The other issues, and a note that sketches went unchecked                                  | **Check again** |
-| Onshape stops sending `sketchSolveStatus`       | The note that sketches went unchecked, on every Part Studio                                | A change here   |
+| What goes wrong                                 | Shows as                                                                                   | Put right by      |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------ | ----------------- |
+| Signed out                                      | The sign-in notice                                                                         | **Sign in**       |
+| Onshape refuses or rate-limits the caller       | "Failed to check this document.", with **Send a report**                                   | **Check again**   |
+| Reading the document's tabs fails or times out  | The same                                                                                   | **Check again**   |
+| One tab's calls fail or time out                | That tab marked **Not checked**, the rest as checked                                       | **Check again**   |
+| **Check again** fails                           | The last results, under "Failed to check this document again. These are the last results." | **Check again**   |
+| A feature lost one of a box's picks, and builds | "Feature with a warning", though Onshape reports it `OK`                                   | —                 |
+| A feature lost every pick in a box, and builds  | Nothing: a sketch's plane on Top resolves to nothing too                                   | —                 |
+| The sketches can't be listed, or time out       | The other issues, and a note that sketches went unchecked                                  | **Check again**   |
+| Onshape stops sending `sketchSolveStatus`       | The note that sketches went unchecked, on every Part Studio                                | A change here     |
+| A fix is refused or fails                       | "Failed to make a fix. Checking again shows what changed.", the rest left unmade           | Fixing again      |
+| The Origin Cube's Part Studio lost the cube     | The fix is refused: "The Origin Cube's Part Studio no longer has the Origin Cube."         | Fastening by hand |
 
 ## Decisions
 
@@ -372,6 +449,17 @@ In [strings/design-check.md](../strings/design-check.md).
   told from a sketch on Top. Top picked beside a face, as in a Midplane,
   resolves to its own id, so it isn't taken for a lost pick
   ([ONSHAPE.md](../ONSHAPE.md)).
+- **Every fix confirmed, even one.** A fix changes someone's CAD for them, and
+  Onshape's undo doesn't reach a change made through the API
+  ([ONSHAPE.md](../ONSHAPE.md)), so nothing changes on a single click, the
+  confirmation says so, and a list of several can be pared down.
+- **The Origin Cube fastened as a fasten made by hand is.** Its own mate
+  connector, which the cube's feature makes, to an implicit connector on the
+  origin; a fasten naming the cube's connector alone fails. Reading where the
+  instance came from finds the feature's id whichever document it is in
+  ([ONSHAPE.md](../ONSHAPE.md)).
+- **A loose Origin Cube is reported as not fastened, not as floating.** One
+  issue, with the fix that sets it right.
 - **Grouped by type.** A Part Studio of thirty parts with no material is one
   box listing thirty names, not thirty boxes.
 

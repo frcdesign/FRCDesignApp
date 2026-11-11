@@ -37,6 +37,19 @@ export function getFeatures(
     );
 }
 
+/** `POST /partstudios/.../features/rollback`; -1 puts the bar at the end of the list. */
+export function moveRollbackBar(
+    client: OnshapeApi,
+    partStudioPath: ElementPath,
+    rollbackIndex: number
+): Promise<void> {
+    assertInstanceType(partStudioPath, "w");
+    return client.postNone(
+        `/partstudios${toElementApiPath(partStudioPath)}/features/rollback`,
+        { body: { rollbackIndex } }
+    );
+}
+
 /** Every feature, sketches included, without their geometry, with each feature's status. */
 export function getAllFeatures(
     client: OnshapeApi,
