@@ -10,6 +10,8 @@ import {
     asReport,
     asVersionRun,
     asDesignCheck,
+    asDesignAction,
+    type LoggedDesignAction,
     type LoggedUse,
     type LoggedReport,
     type LoggedVersionRun,
@@ -58,6 +60,10 @@ export function rollupWrites(
             countDesignCheckDay(db, check),
             ...countDesignIssueDay(db, check)
         ];
+    }
+    const action = asDesignAction(event);
+    if (action) {
+        return [countDesignActionDay(db, action)];
     }
     // Not activity, even with a library: a report is not a use of the library.
     const report = asReport(event);
@@ -181,6 +187,25 @@ function countDesignIssueDay(db: Db, check: LoggedDesignCheck) {
                 }
             })
     );
+}
+
+/** A fix or dismissal, counted against its issue's type. */
+function countDesignActionDay(db: Db, action: LoggedDesignAction) {
+    const column = action.type === EventType.DESIGN_FIX ? "fixed" : "dismissed";
+    return db
+        .insert(dailyDesignIssueMetrics)
+        .values({
+            day: action.day,
+            issueType: action.designIssueType,
+            [column]: 1
+        })
+        .onConflictDoUpdate({
+            target: [
+                dailyDesignIssueMetrics.day,
+                dailyDesignIssueMetrics.issueType
+            ],
+            set: { [column]: increment(dailyDesignIssueMetrics[column]) }
+        });
 }
 
 /** A day's reports of one kind, about one part or none. */

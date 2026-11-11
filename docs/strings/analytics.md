@@ -71,14 +71,14 @@ On the overview.
 On the overview. An issue type's name is the one the Design Check page uses;
 see [design-check.md](./design-check.md).
 
-| String                                   | Kind          | Where                   | When                            | Review    |
-| ---------------------------------------- | ------------- | ----------------------- | ------------------------------- | --------- |
-| "Design Check"                           | Section title |                         | Always                          | **⚑** New |
-| "Checks" / "Came back clean"             | Tile labels   |                         | Always                          | **⚑** New |
-| "{n} in Part Studios, {n} in assemblies" | Tile caption  | Under Checks            | Always                          | **⚑** New |
-| "Most found" / "Checks"                  | Column titles | The issue types' table  | A check in the range found any  | **⚑** New |
-| "No issues found in this range."         | Empty notice  | In place of the table   | No check in the range found any | **⚑** New |
-| "Loading design checks..."               | Loading       | In place of the section | Its query is loading            | **⚑** New |
+| String                                                | Kind          | Where                   | When                                             | Review    |
+| ----------------------------------------------------- | ------------- | ----------------------- | ------------------------------------------------ | --------- |
+| "Design Check"                                        | Section title |                         | Always                                           | **⚑** New |
+| "Checks" / "Came back clean" / "Fixed" / "Dismissed"  | Tile labels   |                         | Always                                           | **⚑** New |
+| "{n} in Part Studios, {n} in assemblies"              | Tile caption  | Under Checks            | Always                                           | **⚑** New |
+| "Issue" / "Checks finding it" / "Fixed" / "Dismissed" | Column titles | The issue types' table  | Any issue found, fixed or dismissed in the range | **⚑** New |
+| "No issues found, fixed or dismissed in this range."  | Empty notice  | In place of the table   | None in the range                                | **⚑** New |
+| "Loading design checks..."                            | Loading       | In place of the section | Its query is loading                             | **⚑** New |
 
 ## Low usage
 

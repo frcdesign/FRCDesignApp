@@ -32,7 +32,11 @@ import {
 } from "../configurations/contract";
 import { canonicalValues } from "../configurations/selection";
 import { toDayKey } from "./day";
-import { countDesignIssues, type DesignIssue } from "../design-check/contract";
+import {
+    countDesignIssues,
+    type DesignIssue,
+    type DesignIssueType
+} from "../design-check/contract";
 import type {
     FeedbackCategory,
     FeedbackSource,
@@ -267,7 +271,31 @@ export function trackDesignCheck(
                 ...NOT_A_VERSION_RUN,
                 ...NOT_A_REPORT,
                 checkedElementType: event.elementType,
-                designIssueCounts: countDesignIssues(event.issues)
+                designIssueCounts: countDesignIssues(event.issues),
+                designIssueType: null
+            },
+            []
+        )
+    );
+}
+
+/** As `trackDesignCheck`, once a fix is made or an issue dismissed. */
+export function trackDesignAction(
+    c: AppContext,
+    type: EventType.DESIGN_FIX | EventType.DESIGN_DISMISS,
+    issueType: DesignIssueType
+): Promise<void> {
+    return runInBackground(c, `record a ${type}`, async () =>
+        record(
+            getDb(c.env.DB),
+            {
+                ...eventCore(type, null, await c.var.getUserId()),
+                ...NO_ELEMENT,
+                ...NOT_A_USE,
+                ...NOT_A_VERSION_RUN,
+                ...NOT_A_REPORT,
+                ...NOT_A_DESIGN_CHECK,
+                designIssueType: issueType
             },
             []
         )

@@ -588,7 +588,7 @@ describe("analytics routes", () => {
     });
 
     describe("GET /analytics/overview/design-check", () => {
-        it("totals the range's checks, and ranks issue types by the checks that found them", async () => {
+        it("totals the range's checks, fixes and dismissals, and ranks issue types by the checks that found them", async () => {
             await db.insert(dailyDesignCheckMetrics).values([
                 {
                     day: "2026-06-01",
@@ -620,13 +620,20 @@ describe("analytics routes", () => {
                     day: "2026-06-01",
                     issueType: DesignIssueType.FEATURE_ERROR,
                     checks: 2,
-                    issues: 2
+                    issues: 2,
+                    fixed: 0,
+                    dismissed: 1
                 },
                 {
                     day: "2026-06-02",
                     issueType: DesignIssueType.PART_NO_MATERIAL,
                     checks: 2,
                     issues: 2
+                },
+                {
+                    day: "2026-06-02",
+                    issueType: DesignIssueType.ROLLBACK_NOT_AT_END,
+                    fixed: 3
                 },
                 {
                     day: "2025-01-01",
@@ -646,16 +653,29 @@ describe("analytics routes", () => {
                 cleanChecks: 3,
                 partStudioChecks: 4,
                 assemblyChecks: 2,
+                fixes: 3,
+                dismissals: 1,
                 issueTypes: [
                     {
                         type: DesignIssueType.PART_NO_MATERIAL,
                         checks: 3,
-                        issues: 9
+                        issues: 9,
+                        fixed: 0,
+                        dismissed: 0
                     },
                     {
                         type: DesignIssueType.FEATURE_ERROR,
                         checks: 2,
-                        issues: 2
+                        issues: 2,
+                        fixed: 0,
+                        dismissed: 1
+                    },
+                    {
+                        type: DesignIssueType.ROLLBACK_NOT_AT_END,
+                        checks: 0,
+                        issues: 0,
+                        fixed: 3,
+                        dismissed: 0
                     }
                 ]
             });

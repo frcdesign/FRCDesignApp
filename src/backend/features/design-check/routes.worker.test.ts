@@ -446,6 +446,27 @@ describe("fixing", () => {
         });
 
         expect(res.status).toBe(403);
+        expect(await db.select().from(events).all()).toEqual([]);
+    });
+
+    it("records each fix made, as the type of issue it fixes, with no document", async () => {
+        const onshapeApi = new MockOnshapeApi();
+        vi.spyOn(onshapeApi, "postNone").mockResolvedValue(undefined);
+
+        await fix(onshapeApi, {
+            elementId: "ps",
+            fix: DesignIssueFix.MOVE_ROLLBACK_TO_END
+        });
+
+        expect(await db.select().from(events).all()).toMatchObject([
+            {
+                type: EventType.DESIGN_FIX,
+                userId: "test-user",
+                libraryId: null,
+                documentId: null,
+                designIssueType: DesignIssueType.ROLLBACK_NOT_AT_END
+            }
+        ]);
     });
 });
 
@@ -521,5 +542,37 @@ describe("dismissing", () => {
         expect(after?.tabs[0].issues.some((issue) => issue.dismissed)).toBe(
             false
         );
+    });
+
+    it("records a dismissal by its issue's type, and not putting one back", async () => {
+        const answers = partStudioAnswers();
+        await dismiss(mockOnshape([], answers).onshapeApi, true);
+        await dismiss(mockOnshape([], answers).onshapeApi, false);
+
+        expect(await db.select().from(events).all()).toMatchObject([
+            {
+                type: EventType.DESIGN_DISMISS,
+                libraryId: null,
+                documentId: null,
+                designIssueType: DesignIssueType.SKETCH_UNDERDEFINED
+            }
+        ]);
+    });
+
+    it("refuses a key no issue could have", async () => {
+        const res = await createTestApp({
+            onshapeApi: mockOnshape([], partStudioAnswers()).onshapeApi
+        }).request(
+            DISMISS_URL,
+            jsonRequest("POST", {
+                documentId: "doc",
+                elementId: "ps",
+                issueKey: "not-a-type:S1",
+                dismissed: true
+            }),
+            env
+        );
+
+        expect(res.status).toBe(400);
     });
 });

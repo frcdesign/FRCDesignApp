@@ -10,7 +10,10 @@ import type {
     FeedbackTopic
 } from "../feedback/contract";
 import { type ElementType } from "../../lib/onshape/element-type";
-import { type DesignIssueCounts } from "../design-check/contract";
+import {
+    type DesignIssueCounts,
+    type DesignIssueType
+} from "../design-check/contract";
 import { EventType, UseTarget, type UseSource } from "./usage";
 import { type LoggedEvent } from "./schema";
 
@@ -44,10 +47,10 @@ type ReportColumns = Pick<
     "reportTopic" | "reportCategory" | "reportSource" | "reportTeamNumber"
 >;
 
-/** What only a design check fills in. */
+/** What only a design check, fix or dismissal fills in. */
 type DesignCheckColumns = Pick<
     LoggedEvent,
-    "checkedElementType" | "designIssueCounts"
+    "checkedElementType" | "designIssueCounts" | "designIssueType"
 >;
 
 /** The part a use or a part report named. */
@@ -103,7 +106,8 @@ export const NOT_A_REPORT: ReportColumns = {
 
 export const NOT_A_DESIGN_CHECK: DesignCheckColumns = {
     checkedElementType: null,
-    designIssueCounts: null
+    designIssueCounts: null,
+    designIssueType: null
 };
 
 /** A logged run, whose own columns a reader can then count on. */
@@ -190,4 +194,21 @@ export function asDesignCheck(
         event.checkedElementType !== null &&
         event.designIssueCounts !== null;
     return isCheck ? (event as LoggedDesignCheck) : undefined;
+}
+
+/** A logged design fix or dismissal, whose own column a reader can then count on. */
+export type LoggedDesignAction = LoggedEvent & {
+    type: EventType.DESIGN_FIX | EventType.DESIGN_DISMISS;
+    designIssueType: DesignIssueType;
+};
+
+/** Undefined for another kind of event. */
+export function asDesignAction(
+    event: LoggedEvent
+): LoggedDesignAction | undefined {
+    const isAction =
+        (event.type === EventType.DESIGN_FIX ||
+            event.type === EventType.DESIGN_DISMISS) &&
+        event.designIssueType !== null;
+    return isAction ? (event as LoggedDesignAction) : undefined;
 }

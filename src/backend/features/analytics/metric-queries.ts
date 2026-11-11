@@ -488,7 +488,9 @@ export async function getDesignCheckTotals(
             .select({
                 type: dailyDesignIssueMetrics.issueType,
                 checks: sum(dailyDesignIssueMetrics.checks),
-                issues: sum(dailyDesignIssueMetrics.issues)
+                issues: sum(dailyDesignIssueMetrics.issues),
+                fixed: sum(dailyDesignIssueMetrics.fixed),
+                dismissed: sum(dailyDesignIssueMetrics.dismissed)
             })
             .from(dailyDesignIssueMetrics)
             .where(
@@ -509,9 +511,13 @@ export async function getDesignCheckTotals(
         .map((row) => ({
             type: row.type,
             checks: Number(row.checks ?? 0),
-            issues: Number(row.issues ?? 0)
+            issues: Number(row.issues ?? 0),
+            fixed: Number(row.fixed ?? 0),
+            dismissed: Number(row.dismissed ?? 0)
         }))
         .sort((a, b) => b.checks - a.checks || b.issues - a.issues);
+    const totalOf = (count: "fixed" | "dismissed") =>
+        issueTypes.reduce((total, row) => total + row[count], 0);
 
     return {
         checks: byElementType.reduce(
@@ -524,6 +530,8 @@ export async function getDesignCheckTotals(
         ),
         partStudioChecks: checksOf(ElementType.PART_STUDIO),
         assemblyChecks: checksOf(ElementType.ASSEMBLY),
+        fixes: totalOf("fixed"),
+        dismissals: totalOf("dismissed"),
         issueTypes
     };
 }

@@ -85,7 +85,9 @@ export const events = sqliteTable(
         checkedElementType: text("checked_element_type").$type<ElementType>(),
         designIssueCounts: text("design_issue_counts", {
             mode: "json"
-        }).$type<DesignIssueCounts | null>()
+        }).$type<DesignIssueCounts | null>(),
+        // What a design fix or dismissal was about.
+        designIssueType: text("design_issue_type").$type<DesignIssueType>()
     },
     // Only used to rebuild the rollups, which walk by day.
     (t) => [index("events_day_idx").on(t.day)]
@@ -344,7 +346,10 @@ export const dailyDesignIssueMetrics = sqliteTable(
         /** Checks that found at least one. */
         checks: integer("checks").notNull().default(0),
         /** How many were found, across those checks. */
-        issues: integer("issues").notNull().default(0)
+        issues: integer("issues").notNull().default(0),
+        /** Fixed from the Design Check page. */
+        fixed: integer("fixed").notNull().default(0),
+        dismissed: integer("dismissed").notNull().default(0)
     },
     (t) => [primaryKey({ columns: [t.day, t.issueType] })]
 );

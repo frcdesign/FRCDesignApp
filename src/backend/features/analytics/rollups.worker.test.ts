@@ -15,7 +15,7 @@ import { configurations } from "../../db/schema";
 import { type AppContext } from "../../lib/context";
 import { ElementType } from "../../lib/onshape/element-type";
 import { toSelection } from "../configurations/selection";
-import { UseSource } from "./usage";
+import { EventType, UseSource } from "./usage";
 import { rollupWrites } from "./rollups";
 import {
     dailyAppOpens,
@@ -35,6 +35,7 @@ import {
 } from "./schema";
 import {
     trackAppOpen,
+    trackDesignAction,
     trackDesignCheck,
     trackInsert,
     trackVersionRun,
@@ -158,6 +159,16 @@ describe("rollupWrites", () => {
             elementType: ElementType.ASSEMBLY,
             issues: []
         });
+        await trackDesignAction(
+            fakeContext(),
+            EventType.DESIGN_FIX,
+            DesignIssueType.FEATURE_ERROR
+        );
+        await trackDesignAction(
+            fakeContext(),
+            EventType.DESIGN_DISMISS,
+            DesignIssueType.FEATURE_ERROR
+        );
         clock.mockRestore();
 
         const live = await readRollups();

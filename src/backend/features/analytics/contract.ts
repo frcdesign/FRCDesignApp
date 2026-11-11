@@ -148,7 +148,10 @@ export interface DesignCheckTotals {
     cleanChecks: number;
     partStudioChecks: number;
     assemblyChecks: number;
-    /** Each type found at least once, in the most checks first. */
+    /** Fixes made from the page. */
+    fixes: number;
+    dismissals: number;
+    /** Each type found, fixed or dismissed at least once, in the most checks first. */
     issueTypes: DesignIssueTypeCount[];
 }
 
@@ -159,6 +162,8 @@ export interface DesignIssueTypeCount {
     checks: number;
     /** How many were found, across those checks. */
     issues: number;
+    fixed: number;
+    dismissed: number;
 }
 
 /** Reports of one kind about one topic, over the range. */

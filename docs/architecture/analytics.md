@@ -5,7 +5,8 @@
 Records how the libraries are used — each **use** of a part, an insert into
 Onshape or a STEP download, and each launch from Onshape —
 and how often people report problems, and what design checks find in people's
-own CAD, and shows it on a public dashboard: totals and trends, per-library health,
+own CAD and what they fix or dismiss, and shows it on a public dashboard:
+totals and trends, per-library health,
 which parts and configuration options are used, and which aren't. It exists so
 the library team can see what to maintain and what to cut, and what to teach.
 
@@ -32,8 +33,12 @@ enum EventType {
     VERSION_RUN = "version_run",
     /** One report posted to Discord; see `features/feedback`. */
     REPORT = "report",
-    /** One check of a Part Studio or Assembly; see `features/design-check`. */
-    DESIGN_CHECK = "design_check"
+    /** One tab checked afresh, a Part Studio or Assembly; see `features/design-check`. */
+    DESIGN_CHECK = "design_check",
+    /** One fix the design check made in someone's document. */
+    DESIGN_FIX = "design_fix",
+    /** One design issue dismissed as meant; putting one back isn't recorded. */
+    DESIGN_DISMISS = "design_dismiss"
 }
 
 /** A use is an insert or a download: each counts toward a part's usage. */
@@ -74,6 +79,11 @@ function trackReport(c: AppContext, event: ReportEvent): Promise<void>;
 function trackDesignCheck(
     c: AppContext,
     event: DesignCheckEvent
+): Promise<void>;
+function trackDesignAction(
+    c: AppContext,
+    type: EventType.DESIGN_FIX | EventType.DESIGN_DISMISS,
+    issueType: DesignIssueType
 ): Promise<void>;
 // Awaited inside the workflow's `record-run` step, which swallows its failure.
 async function trackVersionRun(
@@ -195,6 +205,8 @@ type LoggedEvent = {
     /** A design check's own columns: the kind of tab it read, and what it found there. */
     checkedElementType: ElementType | null;
     designIssueCounts: DesignIssueCounts | null;
+    /** What a design fix or dismissal was about. */
+    designIssueType: DesignIssueType | null;
 };
 ```
 
@@ -207,6 +219,7 @@ function asUse(event: LoggedEvent): LoggedUse | undefined;
 function asVersionRun(event: LoggedEvent): LoggedVersionRun | undefined;
 function asReport(event: LoggedEvent): LoggedReport | undefined;
 function asDesignCheck(event: LoggedEvent): LoggedDesignCheck | undefined;
+function asDesignAction(event: LoggedEvent): LoggedDesignAction | undefined;
 
 /** What every event carries, whatever kind of event it is. */
 type EventCore = Pick<
@@ -254,10 +267,10 @@ type ReportColumns = Pick<
     "reportTopic" | "reportCategory" | "reportSource" | "reportTeamNumber"
 >;
 
-/** What only a design check fills in. */
+/** What only a design check, fix or dismissal fills in. */
 type DesignCheckColumns = Pick<
     LoggedEvent,
-    "checkedElementType" | "designIssueCounts"
+    "checkedElementType" | "designIssueCounts" | "designIssueType"
 >;
 
 // Every column of its group set to null, spelled out so a new column fails to
@@ -299,6 +312,12 @@ type LoggedReport = LoggedEvent & {
 type LoggedDesignCheck = LoggedEvent & {
     checkedElementType: ElementType;
     designIssueCounts: DesignIssueCounts;
+};
+
+/** A logged design fix or dismissal, whose own column a reader can then count on. */
+type LoggedDesignAction = LoggedEvent & {
+    type: EventType.DESIGN_FIX | EventType.DESIGN_DISMISS;
+    designIssueType: DesignIssueType;
 };
 ```
 
@@ -614,7 +633,10 @@ interface DesignCheckTotals {
     cleanChecks: number;
     partStudioChecks: number;
     assemblyChecks: number;
-    /** Each type found at least once, in the most checks first. */
+    /** Fixes made from the page. */
+    fixes: number;
+    dismissals: number;
+    /** Each type found, fixed or dismissed at least once, in the most checks first. */
     issueTypes: DesignIssueTypeCount[];
 }
 
@@ -625,6 +647,8 @@ interface DesignIssueTypeCount {
     checks: number;
     /** How many were found, across those checks. */
     issues: number;
+    fixed: number;
+    dismissed: number;
 }
 
 /** Reports of one kind about one topic, over the range. */
@@ -732,13 +756,15 @@ interface InsertableReportOut {
 ```
 
 `src/backend/features/download/routes.ts`, `src/backend/features/entry/routes.ts`
-and `src/backend/features/design-check/routes.ts`, three of the routes that
+and `src/backend/features/design-check/routes.ts`, five of the routes that
 record
 
 ```text
 POST /api/step-export/insertable/:insertableId    trackDownload, once Onshape accepts the export
 POST /api/app-open                                trackAppOpen, sent by /init's handoff
 GET  /api/design-check                            trackDesignCheck, once the checks have run
+POST /api/design-check/fix                        trackDesignAction, once Onshape made the fix
+POST /api/design-check/dismiss                    trackDesignAction, once a dismissal is saved
 ```
 
 `src/frontend/features/dashboard/dashboard-queries.ts`, one query per route,
@@ -873,14 +899,15 @@ no foreign key crosses between them):
   source and the team number the reporter gave, and a part report the element
   path and insertable. A design check records each tab it checks afresh, not
   one it reuses, adding the kind of tab and how many of each issue type it
-  found, and no element path: the tab is somebody's own. Keyed on
+  found, and no element path: the tab is somebody's own. A design fix or
+  dismissal adds only the type of issue it was about. Keyed on
   Onshape's element id with no foreign keys, so history survives a reload or a
   re-added tab.
 - `library_id` is null for an event that belongs to no library: an app open,
   which is the app being opened rather than the page it resumes into, a
   version run, which acts on the Onshape document the app was launched from,
-  a design check, which reads that document too, and a report about the app
-  itself. A report from somebody signed out has
+  a design check, fix or dismissal, which reads or changes that document too,
+  and a report about the app itself. A report from somebody signed out has
   `user_id` `signed-out` (`SIGNED_OUT_USER_ID`).
 - Rollups, each derived from the log alone: `daily_metrics`,
   `daily_target_metrics`, `daily_source_metrics`, `insertable_stats`,
@@ -902,8 +929,8 @@ no foreign key crosses between them):
   updated.
 - `daily_design_check_metrics` is keyed by day and the kind of tab checked:
   checks, and checks that found nothing. `daily_design_issue_metrics` is keyed
-  by day and issue type: the checks that found at least one, and how many they
-  found.
+  by day and issue type: the checks that found at least one, how many they
+  found, and how many were fixed from the page and dismissed.
 - `daily_report_metrics` is keyed by day, topic, category, source and element
   (empty for a report that names no part): the count of reports. By topic
   rather than library, since the app's topics belong to none.
@@ -929,9 +956,10 @@ no foreign key crosses between them):
    it managed; `POST /api/update-references` records one in the background once
    it has updated a library document's references; `POST /api/feedback` calls `trackReport` once the report is
    posted to Discord (see [feedback.md](./feedback.md)); `GET /api/design-check`
-   calls `trackDesignCheck` once for each tab it checks afresh (see
-   [design-check.md](./design-check.md)).
-2. A use, an open, a report and a design check are recorded in the background (`runInBackground`),
+   calls `trackDesignCheck` once for each tab it checks afresh, and
+   `POST /api/design-check/fix` and `/dismiss` call `trackDesignAction` once a
+   fix is made or an issue dismissed (see [design-check.md](./design-check.md)).
+2. A use, an open, a report and a design check, fix or dismissal are recorded in the background (`runInBackground`),
    after the response; a version run's step swallows a failure to record. So
    tracking never slows or fails what the user asked for.
 3. The selection is stored canonically (`canonicalValues`), so `5 in` and
@@ -956,7 +984,8 @@ panel. Its routes read only rollups and return only aggregates:
   section shows as soon as its numbers arrive: **usage** (totals, the metric
   series behind the headline tiles and the trend tiles, growth), **series**
   (uses per library per day), **sources**, the **version manager**'s totals,
-  the **design check**'s checks and the issue types it finds most, and
+  the **design check**'s checks, fixes and dismissals, and per issue type the
+  checks that found it and how many were fixed and dismissed, and
   **reports** by topic and type. Its usage breakdown reads each library's
   **Parts** report.
 - **Library** — its summary, health (build issues by severity, hidden elements
@@ -994,8 +1023,9 @@ only on **All time**, its own window being a season rather than the picked one.
   replaying the log.
 - An event without a library writes its own rollups and no other:
   `daily_app_opens` for an open, `daily_version_metrics` for a version run,
-  and for a design check `daily_design_check_metrics` and a
-  `daily_design_issue_metrics` row per type it found. A report writes
+  for a design check `daily_design_check_metrics` and a
+  `daily_design_issue_metrics` row per type it found, and for a design fix or
+  dismissal its type's `daily_design_issue_metrics` row. A report writes
   `daily_report_metrics` alone, with a library or without. Every other rollup
   is keyed by library.
 - An event's columns are decided in `logged-event.ts`; a new column fails to
@@ -1043,6 +1073,10 @@ only on **All time**, its own window being a season rather than the picked one.
   or `user_stats`: "active user" means somebody who used a part,
   and counting runs there would move the line under every historical
   figure. An open is activity, which is why it is unioned in.
+- **A design fix or dismissal counts against its issue's type.** Beside the
+  checks that found the type, so the table shows what people act on and what
+  they wave off. Putting an issue back isn't recorded: the dismissal was still
+  made.
 - **A design check has no library, records no document, and is not
   activity.** It reads whatever Part Studio or Assembly Onshape launched the
   app in, which is somebody's own work: the row keeps the kind of tab and
