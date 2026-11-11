@@ -256,6 +256,8 @@ records `Hint.OPENED_DESIGN_CHECK` (`useMarkHintSeen`). `beforeLoad` redirects
 anyone who reaches the url without such a tab, and entry resumes into the page
 only with one (`canResume` in `src/frontend/routes/index.tsx`).
 
+### Checking
+
 1. Opening the page on a workspace with no check in the cache asks
    `GET /api/design-check`, signed in. Signed out, the page asks them to sign
    in instead.
@@ -278,23 +280,26 @@ only with one (`canResume` in `src/frontend/routes/index.tsx`).
    and the rest go on; a refusal fails the whole check.
 6. The navbar's refresh button, **Check again**, asks again; nothing else does.
 
-7. With nothing found in any tab, the page says so.
-8. Otherwise the document's severity badges head the page, beside the time of
+### The results
+
+1. With nothing found in any tab, the page says so.
+2. Otherwise the document's severity badges head the page, beside the time of
    the check, then one accordion item per tab, in tab order, with its name and
    its own badges, or **Not checked** for a tab that failed. The launch's tab is
    marked **This tab** and starts open. Each tab holds one tinted box per issue
    type, worst first: its name, what to do about it, and every feature, part or
    instance it was found on.
-9. Every other tab has a button that switches the Onshape window to it
-   (`sendSwitchTabMessage`). Its issues are named only: Onshape opens and
-   selects in the tab the app was launched in.
-10. In the launch's tab, clicking a feature or mate's name opens it in Onshape's
-    feature dialog
-    (`sendOpenFeatureMessage`); a suppressed Part Studio feature, which Onshape
-    won't open, is named only. Clicking a part's or a part instance's selects
-    it in the Onshape window (`sendSelectPartMessage`): a part by its id, an
-    instance by its id and its part's. A sub-assembly or broken instance is
-    named only.
+3. Every other tab has a button that switches the Onshape window to it
+   (`sendSwitchTabMessage`). Onshape loads the panel afresh there, and the
+   check it asks for answers from the cache. A tab's issues are named only
+   until the app is launched in it: Onshape opens and selects in the tab the
+   app was launched in.
+4. In the launch's tab, clicking a feature or mate's name opens it in Onshape's
+   feature dialog (`sendOpenFeatureMessage`); a suppressed Part Studio feature,
+   which Onshape won't open, is named only. Clicking a part's or a part
+   instance's selects it in the Onshape window (`sendSelectPartMessage`): a
+   part by its id, an instance by its id and its part's. A sub-assembly or
+   broken instance is named only.
 
 ## User-facing strings
 
