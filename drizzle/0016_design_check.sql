@@ -11,6 +11,8 @@ CREATE TABLE `daily_design_issue_metrics` (
 	`issue_type` text NOT NULL,
 	`checks` integer DEFAULT 0 NOT NULL,
 	`issues` integer DEFAULT 0 NOT NULL,
+	`fixed` integer DEFAULT 0 NOT NULL,
+	`dismissed` integer DEFAULT 0 NOT NULL,
 	PRIMARY KEY(`day`, `issue_type`)
 );
 --> statement-breakpoint
@@ -24,4 +26,5 @@ CREATE TABLE `design_check_dismissals` (
 );
 --> statement-breakpoint
 ALTER TABLE `events` ADD `checked_element_type` text;--> statement-breakpoint
-ALTER TABLE `events` ADD `design_issue_counts` text;
+ALTER TABLE `events` ADD `design_issue_counts` text;--> statement-breakpoint
+ALTER TABLE `events` ADD `design_issue_type` text;

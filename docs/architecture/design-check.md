@@ -132,6 +132,10 @@ function compareSeverity(a: BuildIssueSeverity, b: BuildIssueSeverity): number;
 function countDesignIssues(issues: DesignIssue[]): DesignIssueCounts;
 // `{type}:{featureId, instanceId or partId}`, which a dismissal is kept under.
 function getIssueKey(issue: DesignIssue): string;
+// Undefined for a key no issue could have, which the dismiss route refuses.
+function getIssueKeyType(key: string): DesignIssueType | undefined;
+// The one type each fix is offered for, which analytics records it as.
+function getFixedIssueType(fix: DesignIssueFix): DesignIssueType;
 
 enum DesignIssueType {
     SKETCH_UNDERDEFINED = "sketch-underdefined",
@@ -321,7 +325,10 @@ named exactly "Origin Cube" or "Cube of All Time".
 
 Each tab checked afresh is recorded as a `design_check` event, with the kind of
 tab and how many of each issue type it found, and no document
-([analytics.md](./analytics.md)); a reused result isn't.
+([analytics.md](./analytics.md)); a reused result isn't. Each fix made is a
+`design_fix` event and each dismissal a `design_dismiss`, with the issue's type
+(`getFixedIssueType` for a fix, `getIssueKeyType` for a dismissal) and no
+document; putting an issue back isn't recorded.
 
 **KV** `design-check-tab:{CHECKS_VERSION}:{documentId}:{elementId}:{microversionId}`
 (`src/backend/features/design-check/document.ts`) — one tab's issues and sketch
@@ -414,8 +421,9 @@ only with one (`canResume` in `src/frontend/routes/index.tsx`).
    the whole tab.
 2. Clicking it sends `POST /api/design-check/dismiss` and drops the issue from
    the counts, badges, list and **Fix all** at once, in the cached check
-   (`useDismissMutation`). The route checks edit access again (`canWrite`) and
-   records the dismissal (`setDismissed`), keyed by the tab and `getIssueKey`.
+   (`useDismissMutation`). The route checks edit access again (`canWrite`),
+   saves the dismissal (`setDismissed`), keyed by the tab and `getIssueKey`, and
+   records it for analytics (`trackDesignAction`).
 3. **Show {n} dismissed issues**, under the list or in the notice, shows them
    back in place, dimmed, each with a button that puts it back the same way.
 4. Every check of the document marks the issue dismissed, for everyone, until
@@ -438,9 +446,10 @@ only with one (`canResume` in `src/frontend/routes/index.tsx`).
    `{featureId}.mateConnector1` of the Origin Cube feature in the Part Studio
    the instance came from, read at that version or microversion, to an
    implicit connector the mate owns on the origin.
-4. The first fix refused stops the rest, with "Failed to make a fix. Checking
-   again shows what changed." Either way the page checks again, which reads
-   only the tabs the fixes changed.
+4. Each fix Onshape makes is recorded (`trackDesignAction`). The first fix
+   refused stops the rest, with "Failed to make a fix. Checking again shows
+   what changed." Either way the page checks again, which reads only the tabs
+   the fixes changed.
 
 ## User-facing strings
 
@@ -461,7 +470,8 @@ In [strings/design-check.md](../strings/design-check.md).
 - A sketch's definition status failing to arrive fails no other check, and a
   tab failing fails no other tab; Onshape refusing the caller fails the whole
   check.
-- Analytics records no document, element or name from a check.
+- Analytics records no document, element or name from a check, fix or
+  dismissal.
 - No fix is made without a confirmation that lists it, and each is made as the
   caller.
 - Only someone Onshape lets edit the document records or deletes a dismissal,

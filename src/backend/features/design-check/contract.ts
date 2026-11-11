@@ -48,6 +48,12 @@ export function getIssueKey(issue: DesignIssue): string {
     ].join(":");
 }
 
+/** The type an issue key names; undefined for a key no issue could have. */
+export function getIssueKeyType(key: string): DesignIssueType | undefined {
+    const type = key.slice(0, key.indexOf(":"));
+    return Object.values(DesignIssueType).find((each) => each === type);
+}
+
 /** POST /api/design-check/dismiss */
 export interface DesignDismissIn {
     documentId: string;
@@ -64,6 +70,18 @@ export enum DesignIssueFix {
     DELETE_INSTANCE = "delete-instance",
     /** Fastens the Origin Cube's instance to its Assembly's origin. */
     FASTEN_ORIGIN_CUBE = "fasten-origin-cube"
+}
+
+/** The one type of issue each fix is offered for. */
+export function getFixedIssueType(fix: DesignIssueFix): DesignIssueType {
+    switch (fix) {
+        case DesignIssueFix.MOVE_ROLLBACK_TO_END:
+            return DesignIssueType.ROLLBACK_NOT_AT_END;
+        case DesignIssueFix.DELETE_INSTANCE:
+            return DesignIssueType.INSTANCE_BROKEN;
+        case DesignIssueFix.FASTEN_ORIGIN_CUBE:
+            return DesignIssueType.ORIGIN_CUBE_NOT_FASTENED;
+    }
 }
 
 /** POST /api/design-check/fix */

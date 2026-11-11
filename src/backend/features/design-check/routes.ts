@@ -7,8 +7,15 @@ import { requireSignInMiddleware } from "../auth/guards";
 import { HttpStatus } from "http-status-ts";
 import { getDb } from "../../db/client";
 import { handledError } from "../../lib/api-error";
+import { trackDesignAction } from "../analytics/tracking";
+import { EventType } from "../analytics/usage";
 import { canWrite } from "../version-manager/workspace-cache";
-import { type DesignCheckOut, DesignIssueFix } from "./contract";
+import {
+    type DesignCheckOut,
+    DesignIssueFix,
+    getFixedIssueType,
+    getIssueKeyType
+} from "./contract";
 import { markDismissed, setDismissed } from "./dismissals";
 import { checkDocument } from "./document";
 import { applyFix } from "./fixes";
@@ -64,7 +71,13 @@ designCheckRoutes.post(
     requireSignInMiddleware,
     validate("json", fixBody),
     async (c) => {
-        await applyFix(await c.var.getOnshapeApi(), c.req.valid("json"));
+        const fix = c.req.valid("json");
+        await applyFix(await c.var.getOnshapeApi(), fix);
+        await trackDesignAction(
+            c,
+            EventType.DESIGN_FIX,
+            getFixedIssueType(fix.fix)
+        );
         return c.json({});
     }
 );
@@ -72,7 +85,7 @@ designCheckRoutes.post(
 const dismissBody = z.object({
     documentId: z.string().min(1),
     elementId: z.string().min(1),
-    issueKey: z.string().min(1),
+    issueKey: z.string().refine((key) => getIssueKeyType(key) !== undefined),
     dismissed: z.boolean()
 });
 
@@ -91,6 +104,10 @@ designCheckRoutes.post(
             );
         }
         await setDismissed(getDb(c.env.DB), await c.var.getUserId(), request);
+        const issueType = getIssueKeyType(request.issueKey);
+        if (request.dismissed && issueType) {
+            await trackDesignAction(c, EventType.DESIGN_DISMISS, issueType);
+        }
         return c.json({});
     }
 );

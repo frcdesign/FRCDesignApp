@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "0007a805-d9ab-4d77-87c7-e037dcb8c44a",
+  "id": "fd4fa90a-63a6-4691-8f9a-87149559fb92",
   "prevId": "ff62ef01-c8b8-43fc-8665-bcae522a5613",
   "tables": {
     "configurations": {
@@ -1039,6 +1039,22 @@
           "notNull": true,
           "autoincrement": false,
           "default": 0
+        },
+        "fixed": {
+          "name": "fixed",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "dismissed": {
+          "name": "dismissed",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
         }
       },
       "indexes": {},
@@ -1925,6 +1941,13 @@
         },
         "design_issue_counts": {
           "name": "design_issue_counts",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "design_issue_type": {
+          "name": "design_issue_type",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
