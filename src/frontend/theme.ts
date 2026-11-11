@@ -22,6 +22,7 @@ import {
 } from "./features/dashboard/dashboard-nav";
 import { LibraryId } from "@backend/features/library/library-id";
 import { useIsVersionManager } from "./features/version-manager/navigation";
+import { useIsFeatureScripts } from "./features/featurescripts/navigation";
 import {
     FILLED_SHADE,
     FontWeight,
@@ -72,7 +73,9 @@ export enum AppColor {
     /** FRCDesign's own, on the dashboard pages that span every library. */
     DASHBOARD = "frcGreen",
     /** The version manager acts on the open document, which is no library's. */
-    VERSION_MANAGER = "blue"
+    VERSION_MANAGER = "blue",
+    /** FeatureScripts are their own area, released apart from any library. */
+    FEATURESCRIPTS = "grape"
 }
 
 /**
@@ -83,6 +86,7 @@ export function useAppColor(libraryId: string): string {
     const isDashboard = useIsDashboard();
     const dashboardLibraryId = useDashboardLibraryId();
     const isVersionManager = useIsVersionManager();
+    const isFeatureScripts = useIsFeatureScripts();
 
     if (isDashboard) {
         return dashboardLibraryId
@@ -91,6 +95,9 @@ export function useAppColor(libraryId: string): string {
     }
     if (isVersionManager) {
         return AppColor.VERSION_MANAGER;
+    }
+    if (isFeatureScripts) {
+        return AppColor.FEATURESCRIPTS;
     }
     return getLibraryColor(libraryId);
 }

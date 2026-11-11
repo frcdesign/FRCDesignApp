@@ -24,6 +24,9 @@ import { Route as PagesGrantDeniedRouteImport } from './routes/_pages/grant-deni
 import { Route as PagesDocumentAccessRouteImport } from './routes/_pages/document-access'
 import { Route as PagesCookieErrorRouteImport } from './routes/_pages/cookie-error'
 import { Route as PagesBetaCompleteRouteImport } from './routes/_pages/beta-complete'
+import { Route as AppFeaturescriptsRouteRouteImport } from './routes/app/featurescripts/route'
+import { Route as AppFeaturescriptsIndexRouteImport } from './routes/app/featurescripts/index'
+import { Route as AppFeaturescriptsFeatureIdRouteImport } from './routes/app/featurescripts/$featureId'
 import { Route as DashboardLibraryLibraryIdRouteRouteImport } from './routes/dashboard/library/$libraryId/route'
 import { Route as AppLibraryLibraryIdRouteRouteImport } from './routes/app/library/$libraryId/route'
 import { Route as DashboardLibraryLibraryIdIndexRouteImport } from './routes/dashboard/library/$libraryId/index'
@@ -107,6 +110,22 @@ const PagesBetaCompleteRoute = PagesBetaCompleteRouteImport.update({
   path: '/beta-complete',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppFeaturescriptsRouteRoute = AppFeaturescriptsRouteRouteImport.update({
+  id: '/featurescripts',
+  path: '/featurescripts',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppFeaturescriptsIndexRoute = AppFeaturescriptsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppFeaturescriptsRouteRoute,
+} as any)
+const AppFeaturescriptsFeatureIdRoute =
+  AppFeaturescriptsFeatureIdRouteImport.update({
+    id: '/$featureId',
+    path: '/$featureId',
+    getParentRoute: () => AppFeaturescriptsRouteRoute,
+  } as any)
 const DashboardLibraryLibraryIdRouteRoute =
   DashboardLibraryLibraryIdRouteRouteImport.update({
     id: '/library/$libraryId',
@@ -155,6 +174,7 @@ export interface FileRoutesByFullPath {
   '/app': typeof AppRouteRouteWithChildren
   '/dashboard': typeof DashboardRouteRouteWithChildren
   '/testbench': typeof TestbenchRoute
+  '/app/featurescripts': typeof AppFeaturescriptsRouteRouteWithChildren
   '/beta-complete': typeof PagesBetaCompleteRoute
   '/cookie-error': typeof PagesCookieErrorRoute
   '/document-access': typeof PagesDocumentAccessRoute
@@ -168,6 +188,8 @@ export interface FileRoutesByFullPath {
   '/dashboard/': typeof DashboardIndexRoute
   '/app/library/$libraryId': typeof AppLibraryLibraryIdRouteRouteWithChildren
   '/dashboard/library/$libraryId': typeof DashboardLibraryLibraryIdRouteRouteWithChildren
+  '/app/featurescripts/$featureId': typeof AppFeaturescriptsFeatureIdRoute
+  '/app/featurescripts/': typeof AppFeaturescriptsIndexRoute
   '/dashboard/library/$libraryId/part': typeof DashboardLibraryLibraryIdPartRoute
   '/dashboard/library/$libraryId/unused': typeof DashboardLibraryLibraryIdUnusedRoute
   '/app/library/$libraryId/': typeof AppLibraryLibraryIdIndexRoute
@@ -189,6 +211,8 @@ export interface FileRoutesByTo {
   '/version-error': typeof PagesVersionErrorRoute
   '/app/version-manager': typeof AppVersionManagerRoute
   '/dashboard': typeof DashboardIndexRoute
+  '/app/featurescripts/$featureId': typeof AppFeaturescriptsFeatureIdRoute
+  '/app/featurescripts': typeof AppFeaturescriptsIndexRoute
   '/dashboard/library/$libraryId/part': typeof DashboardLibraryLibraryIdPartRoute
   '/dashboard/library/$libraryId/unused': typeof DashboardLibraryLibraryIdUnusedRoute
   '/app/library/$libraryId': typeof AppLibraryLibraryIdIndexRoute
@@ -201,6 +225,7 @@ export interface FileRoutesById {
   '/app': typeof AppRouteRouteWithChildren
   '/dashboard': typeof DashboardRouteRouteWithChildren
   '/testbench': typeof TestbenchRoute
+  '/app/featurescripts': typeof AppFeaturescriptsRouteRouteWithChildren
   '/_pages/beta-complete': typeof PagesBetaCompleteRoute
   '/_pages/cookie-error': typeof PagesCookieErrorRoute
   '/_pages/document-access': typeof PagesDocumentAccessRoute
@@ -214,6 +239,8 @@ export interface FileRoutesById {
   '/dashboard/': typeof DashboardIndexRoute
   '/app/library/$libraryId': typeof AppLibraryLibraryIdRouteRouteWithChildren
   '/dashboard/library/$libraryId': typeof DashboardLibraryLibraryIdRouteRouteWithChildren
+  '/app/featurescripts/$featureId': typeof AppFeaturescriptsFeatureIdRoute
+  '/app/featurescripts/': typeof AppFeaturescriptsIndexRoute
   '/dashboard/library/$libraryId/part': typeof DashboardLibraryLibraryIdPartRoute
   '/dashboard/library/$libraryId/unused': typeof DashboardLibraryLibraryIdUnusedRoute
   '/app/library/$libraryId/': typeof AppLibraryLibraryIdIndexRoute
@@ -227,6 +254,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/dashboard'
     | '/testbench'
+    | '/app/featurescripts'
     | '/beta-complete'
     | '/cookie-error'
     | '/document-access'
@@ -240,6 +268,8 @@ export interface FileRouteTypes {
     | '/dashboard/'
     | '/app/library/$libraryId'
     | '/dashboard/library/$libraryId'
+    | '/app/featurescripts/$featureId'
+    | '/app/featurescripts/'
     | '/dashboard/library/$libraryId/part'
     | '/dashboard/library/$libraryId/unused'
     | '/app/library/$libraryId/'
@@ -261,6 +291,8 @@ export interface FileRouteTypes {
     | '/version-error'
     | '/app/version-manager'
     | '/dashboard'
+    | '/app/featurescripts/$featureId'
+    | '/app/featurescripts'
     | '/dashboard/library/$libraryId/part'
     | '/dashboard/library/$libraryId/unused'
     | '/app/library/$libraryId'
@@ -272,6 +304,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/dashboard'
     | '/testbench'
+    | '/app/featurescripts'
     | '/_pages/beta-complete'
     | '/_pages/cookie-error'
     | '/_pages/document-access'
@@ -285,6 +318,8 @@ export interface FileRouteTypes {
     | '/dashboard/'
     | '/app/library/$libraryId'
     | '/dashboard/library/$libraryId'
+    | '/app/featurescripts/$featureId'
+    | '/app/featurescripts/'
     | '/dashboard/library/$libraryId/part'
     | '/dashboard/library/$libraryId/unused'
     | '/app/library/$libraryId/'
@@ -415,6 +450,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PagesBetaCompleteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/app/featurescripts': {
+      id: '/app/featurescripts'
+      path: '/featurescripts'
+      fullPath: '/app/featurescripts'
+      preLoaderRoute: typeof AppFeaturescriptsRouteRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/app/featurescripts/': {
+      id: '/app/featurescripts/'
+      path: '/'
+      fullPath: '/app/featurescripts/'
+      preLoaderRoute: typeof AppFeaturescriptsIndexRouteImport
+      parentRoute: typeof AppFeaturescriptsRouteRoute
+    }
+    '/app/featurescripts/$featureId': {
+      id: '/app/featurescripts/$featureId'
+      path: '/$featureId'
+      fullPath: '/app/featurescripts/$featureId'
+      preLoaderRoute: typeof AppFeaturescriptsFeatureIdRouteImport
+      parentRoute: typeof AppFeaturescriptsRouteRoute
+    }
     '/dashboard/library/$libraryId': {
       id: '/dashboard/library/$libraryId'
       path: '/library/$libraryId'
@@ -467,6 +523,22 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AppFeaturescriptsRouteRouteChildren {
+  AppFeaturescriptsFeatureIdRoute: typeof AppFeaturescriptsFeatureIdRoute
+  AppFeaturescriptsIndexRoute: typeof AppFeaturescriptsIndexRoute
+}
+
+const AppFeaturescriptsRouteRouteChildren: AppFeaturescriptsRouteRouteChildren =
+  {
+    AppFeaturescriptsFeatureIdRoute: AppFeaturescriptsFeatureIdRoute,
+    AppFeaturescriptsIndexRoute: AppFeaturescriptsIndexRoute,
+  }
+
+const AppFeaturescriptsRouteRouteWithChildren =
+  AppFeaturescriptsRouteRoute._addFileChildren(
+    AppFeaturescriptsRouteRouteChildren,
+  )
+
 interface AppLibraryLibraryIdRouteRouteChildren {
   AppLibraryLibraryIdIndexRoute: typeof AppLibraryLibraryIdIndexRoute
   AppLibraryLibraryIdGroupsGroupIdRoute: typeof AppLibraryLibraryIdGroupsGroupIdRoute
@@ -485,11 +557,13 @@ const AppLibraryLibraryIdRouteRouteWithChildren =
   )
 
 interface AppRouteRouteChildren {
+  AppFeaturescriptsRouteRoute: typeof AppFeaturescriptsRouteRouteWithChildren
   AppVersionManagerRoute: typeof AppVersionManagerRoute
   AppLibraryLibraryIdRouteRoute: typeof AppLibraryLibraryIdRouteRouteWithChildren
 }
 
 const AppRouteRouteChildren: AppRouteRouteChildren = {
+  AppFeaturescriptsRouteRoute: AppFeaturescriptsRouteRouteWithChildren,
   AppVersionManagerRoute: AppVersionManagerRoute,
   AppLibraryLibraryIdRouteRoute: AppLibraryLibraryIdRouteRouteWithChildren,
 }

@@ -16,6 +16,7 @@ import {
     type Icon,
     MagnifyingGlassIcon,
     MoonIcon,
+    PuzzlePieceIcon,
     SunIcon
 } from "@phosphor-icons/react";
 import {
@@ -60,6 +61,7 @@ import {
     useIsVersionManager,
     useIsVersionManagerNew
 } from "../features/version-manager/navigation";
+import { useIsFeatureScripts } from "../features/featurescripts/navigation";
 import { useTargetWorkspace } from "../lib/onshape-params";
 import { type AppTab, UtilityTab } from "../lib/app-tab";
 import { getTabName, useNavigateToTab } from "../lib/tabs";
@@ -93,23 +95,25 @@ export function NavbarRow(props: PropsWithChildren): ReactNode {
 
 /** The page picker with the brand and settings, over search and its filters. */
 export function AppNavbar(): ReactNode {
-    // Search and its filters belong to a library, and the version manager is
-    // not one; its page fills the room they leave.
+    // Search and its filters belong to a library, and neither utility page is
+    // one; each fills the room they leave, FeatureScripts with a search of its own.
     const isVersionManager = useIsVersionManager();
+    const isFeatureScripts = useIsFeatureScripts();
+    const isLibrary = !isVersionManager && !isFeatureScripts;
 
     return (
         <Stack gap={0}>
             <NavbarRow>
                 <PagePicker />
                 <Group gap="xs" ml="auto" className={styles.noShrink}>
-                    {/* Inserting is the library's; the version manager inserts nothing. */}
-                    {!isVersionManager && <InsertLocationStatus />}
+                    {/* The insert location is where a library's parts land in an assembly. */}
+                    {isLibrary && <InsertLocationStatus />}
                     <SignInButton />
                     {isVersionManager && <VersionManagerRefreshButton />}
                     <SettingsControls />
                 </Group>
             </NavbarRow>
-            {!isVersionManager && (
+            {isLibrary && (
                 <Group gap="xs" px="sm" h={NAVBAR_ROW_HEIGHT}>
                     <SearchBar />
                     <VendorMenu />
@@ -166,13 +170,22 @@ function useAppPages(): AppPage[] {
         )
     }));
 
+    // Needs no document: browsing works anywhere, and adding says why it can't.
+    const featureScripts: AppPage = {
+        tab: UtilityTab.FEATURESCRIPTS,
+        group: UTILITIES_GROUP,
+        icon: PuzzlePieceIcon,
+        color: AppColor.FEATURESCRIPTS
+    };
+
     // Listed while it is showing even without a workspace, so the picker never
     // names a page it does not offer.
     if (!targetWorkspace && !isVersionManager) {
-        return libraries;
+        return [...libraries, featureScripts];
     }
     return [
         ...libraries,
+        featureScripts,
         {
             tab: UtilityTab.VERSION_MANAGER,
             group: UTILITIES_GROUP,
@@ -198,11 +211,14 @@ function PagePicker(): ReactNode {
     const pages = useAppPages();
     const currentLibraryId = useLibraryId();
     const isVersionManager = useIsVersionManager();
+    const isFeatureScripts = useIsFeatureScripts();
     const navigateToTab = useNavigateToTab();
 
     const current: AppTab = isVersionManager
         ? UtilityTab.VERSION_MANAGER
-        : currentLibraryId;
+        : isFeatureScripts
+          ? UtilityTab.FEATURESCRIPTS
+          : currentLibraryId;
     const currentPage = pages.find((page) => page.tab === current);
 
     // Warm the versions on hover, so picking one has nothing left to wait for.

@@ -45,6 +45,8 @@ function utilityRoute(tab: UtilityTab) {
     switch (tab) {
         case UtilityTab.VERSION_MANAGER:
             return "/app/version-manager" as const;
+        case UtilityTab.FEATURESCRIPTS:
+            return "/app/featurescripts" as const;
     }
 }
 
@@ -58,5 +60,8 @@ function canResume(tab: UtilityTab, search: Record<string, unknown>): boolean {
             return (
                 toTargetWorkspace(OnshapeLaunchType.parse(search)) !== undefined
             );
+        // Browsing needs nothing; adding says why it can't.
+        case UtilityTab.FEATURESCRIPTS:
+            return true;
     }
 }

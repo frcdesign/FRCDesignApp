@@ -138,3 +138,13 @@ export function versionJobQueryKey(workspace: InstancePath | undefined) {
 export function nextVersionNameQueryKey(workspace: InstancePath | undefined) {
     return ["next-version-name", workspace];
 }
+
+/** Not library-scoped: FeatureScripts are their own area. */
+export function featureScriptsVersionQueryKey() {
+    return ["featurescripts", "version"];
+}
+
+/** Immutable under its version, as a library's data is. */
+export function featureScriptsQueryKey(cacheVersion: number) {
+    return ["featurescripts", "data", cacheVersion];
+}
