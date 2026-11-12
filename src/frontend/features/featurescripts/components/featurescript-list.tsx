@@ -11,7 +11,7 @@ import {
     PageNotice
 } from "../../../components/app-notice";
 import { ItemTable } from "../../../components/item-row";
-import { IconSize } from "../../../lib/style-constants";
+import { IconSize, PrimaryColor } from "../../../lib/style-constants";
 import { m } from "../../../paraglide/messages";
 import { FavoriteIcon } from "../../favorites/components/favorite-button";
 import { groupByCategory } from "../categories";
@@ -108,7 +108,12 @@ export function FeatureScriptList(): ReactNode {
                             ? m.featureScriptsNoMatches()
                             : m.featureScriptsNone()
                     }
-                    icon={<PuzzlePieceIcon size={IconSize.SECTION} />}
+                    icon={
+                        <PuzzlePieceIcon
+                            size={IconSize.SECTION}
+                            color={PrimaryColor.FILLED}
+                        />
+                    }
                     justifyUp
                 />
             ) : (

@@ -229,9 +229,10 @@ Under `src/frontend/features/featurescripts/components/`:
 - `featurescript-favorite-button.tsx` — the heart. Favoriting has no menu
   item: the heart is on every row and in the popup.
 - `featurescript-menu-items.tsx` — `FeatureScriptMenuItems`, the one menu a
-  row's ⋯ and right-click and the popup's ⋯ share: **Add to Part Studio**,
-  **Get FeatureScript**, **Open example** and **View code**, the popup's
-  leaving out the two its buttons already do.
+  row's ⋯ and right-click and the popup's ⋯ share: only what no button beside
+  it does, **Get FeatureScript**, **Open example** and **View code**, the
+  popup's leaving out **Open example**, its own button. Adding and favoriting
+  are the buttons'.
 - `featurescript-card.tsx` — a row: the icon inline before the name and the
   owner's card, then, in `ItemRow`'s `actions`, an outlined **Add** and the
   heart, and last the ⋯ menu.
@@ -416,7 +417,7 @@ version loads at once, with no approval.
 8. Per selected entry, under the shared limiter:
     - `thumbnail-{element}`: the example's, stored by `uploadThumbnailsStep`
       under the example's element and microversion. No example skips the step:
-      `NO_EXAMPLE`, and the popup shows the generic FeatureScript image.
+      `NO_EXAMPLE`, and the popup shows the app's empty state in its place.
     - `icon-{element}`: the icon tab's SVG, stored in R2. No icon skips the
       step: `NO_ICON`, and the card shows the generic FeatureScript icon.
     - An entry naming a tab the version doesn't have is `LOAD_FAILED`.
@@ -473,7 +474,8 @@ owner's background session; no one else's.
    and the release's **Version**) and **Usage**.
 9. A click on the row opens the popup (`openFeatureScriptMenu`), sized and
    titled as the insert menu is: the example's large thumbnail as a hero
-   image across the top, then the whole description, and the
+   image across the top (or, without an example, a `SectionNotice` with the
+   theme's puzzle piece), then the whole description, and the
    footer. **Add to Part Studio** there closes the popup once sent, so the
    feature's dialog in Onshape is what shows.
 
@@ -659,6 +661,9 @@ Type Description"` is already written for every released feature, and is
 - **A thumbnail as the hero, an icon in the list.** A list of features reads
   by name, and the icon is what Onshape's own toolbar shows beside one; the
   example is what a feature does, worth the space only once one is chosen.
+- **A menu holds what no button does.** Adding and favoriting each have a
+  button on the row and in the popup, so their menus leave them out rather
+  than offer the same action twice.
 - **Feedback through the one form.** A FeatureScript report differs from a
   part's only in what it names, so it is a source of the same form and route,
   and is rate limited and counted with every other report.

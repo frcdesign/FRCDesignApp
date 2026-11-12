@@ -8,32 +8,33 @@ messages.
 
 ## The tab and its cards
 
-| String                                                                    | Kind            | Where                                                              | When                                                                  | Review                                  |
-| ------------------------------------------------------------------------- | --------------- | ------------------------------------------------------------------ | --------------------------------------------------------------------- | --------------------------------------- |
-| "FeatureScripts"                                                          | Page name       | The page picker, under Utilities                                   | Always                                                                | **⚑** New                               |
-| "Search FeatureScripts..."                                                | Placeholder     | The navbar's second row                                            | Always                                                                | **⚑** New                               |
-| "Add to Part Studio" / "Get FeatureScript" / "Open example" / "View code" | Menu items      | A card's ⋯ menu; the popup's ⋯ has Get FeatureScript and View code | Add in Onshape; Open example with an example; View code with a source | **⚑** New: Get FeatureScript, View code |
-| "Add"                                                                     | Outlined button | Each row, before the heart                                         | In a Part Studio or an assembly; none standalone                      | **⚑** New                               |
-| "FeatureScripts can only be added to Part Studios."                       | Tooltip         | On the disabled Add, row or popup                                  | In an assembly                                                        | **⚑** New                               |
-| "Favorites"                                                               | Section title   | Top of the list                                                    | Signed in, with a favorite, not searching                             | **⚑** New                               |
-| "{folder}" / "Other"                                                      | Section titles  | The list, after Favorites                                          | Each folder in the frontend document; Other for its top level         | **⚑** New: Other                        |
-| "Favorite" / "Unfavorite"                                                 | Button title    | A card's heart; the popup's heart                                  | Signed in                                                             | **⚑** New                               |
-| "Failed to favorite {name}." / "Failed to unfavorite {name}."             | Error toast     |                                                                    | The toggle failed, without a worded reason                            | **⚑** New                               |
-| "Loading FeatureScripts..."                                               | Loading         | In place of the list                                               | The list is being read                                                | **⚑** New                               |
-| "Failed to load FeatureScripts."                                          | Page error      | In place of the list                                               | The list couldn't be read                                             | **⚑** New                               |
-| "No FeatureScripts yet" / "No FeatureScripts match your search"           | Empty notice    | In place of the list                                               | Nothing loaded / no match                                             | **⚑** New                               |
+| String                                                          | Kind            | Where                                                              | When                                                          | Review                                  |
+| --------------------------------------------------------------- | --------------- | ------------------------------------------------------------------ | ------------------------------------------------------------- | --------------------------------------- |
+| "FeatureScripts"                                                | Page name       | The page picker, under Utilities                                   | Always                                                        | **⚑** New                               |
+| "Search FeatureScripts..."                                      | Placeholder     | The navbar's second row                                            | Always                                                        | **⚑** New                               |
+| "Get FeatureScript" / "Open example" / "View code"              | Menu items      | A card's ⋯ menu; the popup's ⋯ has Get FeatureScript and View code | Open example with an example; View code with a source         | **⚑** New: Get FeatureScript, View code |
+| "Add"                                                           | Outlined button | Each row, before the heart                                         | In a Part Studio or an assembly; none standalone              | **⚑** New                               |
+| "FeatureScripts can only be added to Part Studios."             | Tooltip         | On the disabled Add, row or popup                                  | In an assembly                                                | **⚑** New                               |
+| "Favorites"                                                     | Section title   | Top of the list                                                    | Signed in, with a favorite, not searching                     | **⚑** New                               |
+| "{folder}" / "Other"                                            | Section titles  | The list, after Favorites                                          | Each folder in the frontend document; Other for its top level | **⚑** New: Other                        |
+| "Favorite" / "Unfavorite"                                       | Button title    | A card's heart; the popup's heart                                  | Signed in                                                     | **⚑** New                               |
+| "Failed to favorite {name}." / "Failed to unfavorite {name}."   | Error toast     |                                                                    | The toggle failed, without a worded reason                    | **⚑** New                               |
+| "Loading FeatureScripts..."                                     | Loading         | In place of the list                                               | The list is being read                                        | **⚑** New                               |
+| "Failed to load FeatureScripts."                                | Page error      | In place of the list                                               | The list couldn't be read                                     | **⚑** New                               |
+| "No FeatureScripts yet" / "No FeatureScripts match your search" | Empty notice    | In place of the list                                               | Nothing loaded / no match                                     | **⚑** New                               |
 
 ## The popup
 
-| String                  | Kind          | Where                     | When                                        | Review    |
-| ----------------------- | ------------- | ------------------------- | ------------------------------------------- | --------- |
-| "{name}"                | Popup title   | Beside the feature's icon | Opened from a row                           |           |
-| "No example yet"        | Image caption | In the hero image         | The feature has no example Part Studio      | **⚑** New |
-| "Open example"          | Button        | The footer                | The feature has an example                  | **⚑** New |
-| "Add to Part Studio"    | Button        | The footer, last          | In a Part Studio or an assembly             | **⚑** New |
-| "Adding {name}..."      | Loading toast |                           | The add started                             | **⚑** New |
-| "Added {name}."         | Success toast |                           | The add landed; its dialog opens in Onshape | **⚑** New |
-| "Failed to add {name}." | Error toast   |                           | Onshape refused it, without a worded reason | **⚑** New |
+| String                                           | Kind                    | Where                      | When                                        | Review    |
+| ------------------------------------------------ | ----------------------- | -------------------------- | ------------------------------------------- | --------- |
+| "{name}"                                         | Popup title             | Beside the feature's icon  | Opened from a row                           |           |
+| "No example yet"                                 | Empty state title       | In place of the hero image | The feature has no example Part Studio      | **⚑** New |
+| "Add it to a Part Studio to see what it builds." | Empty state description | Under it                   | Same                                        | **⚑** New |
+| "Open example"                                   | Button                  | The footer                 | The feature has an example                  | **⚑** New |
+| "Add to Part Studio"                             | Button                  | The footer, last           | In a Part Studio or an assembly             | **⚑** New |
+| "Adding {name}..."                               | Loading toast           |                            | The add started                             | **⚑** New |
+| "Added {name}."                                  | Success toast           |                            | The add landed; its dialog opens in Onshape | **⚑** New |
+| "Failed to add {name}."                          | Error toast             |                            | Onshape refused it, without a worded reason | **⚑** New |
 
 ## The owner's card
 

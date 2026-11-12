@@ -1,10 +1,15 @@
-import { Button, Card, Center, Group, Image, Stack, Text } from "@mantine/core";
+import { Button, Card, Center, Group, Image, Text } from "@mantine/core";
 import { ArrowSquareOutIcon, PuzzlePieceIcon } from "@phosphor-icons/react";
 import { type ReactNode } from "react";
 import { type FeatureScriptOut } from "@backend/features/featurescripts/contract";
 import { AppModalBody, AppModalFooter } from "../../../components/app-modal";
 import { useAppModal } from "../../../components/open-app-modal";
-import { IconSize, RENDER_BACKGROUND } from "../../../lib/style-constants";
+import {
+    IconSize,
+    PrimaryColor,
+    RENDER_BACKGROUND
+} from "../../../lib/style-constants";
+import { SectionNotice } from "../../../components/app-notice";
 import { openUrlInNewTab } from "../../../lib/url";
 import { m } from "../../../paraglide/messages";
 import { RequireSignIn } from "../../auth/components/require-access";
@@ -22,28 +27,33 @@ interface FeatureScriptHeroProps {
     feature: FeatureScriptOut;
 }
 
-/** The example's thumbnail across the top, or the generic image without one. */
+/** The example's thumbnail across the top, or the app's empty state without one. */
 function FeatureScriptHero(props: FeatureScriptHeroProps): ReactNode {
     const { feature } = props;
+    if (!feature.thumbnailUrls) {
+        return (
+            <SectionNotice
+                icon={
+                    <PuzzlePieceIcon
+                        size={IconSize.SECTION}
+                        color={PrimaryColor.FILLED}
+                    />
+                }
+                title={m.featureScriptsNoExample()}
+                description={m.featureScriptsNoExampleDescription()}
+            />
+        );
+    }
     return (
         <Card p="xs" radius="sm" bg={RENDER_BACKGROUND}>
             <Center h={HERO_HEIGHT}>
-                {feature.thumbnailUrls ? (
-                    <Image
-                        src={feature.thumbnailUrls.large}
-                        h={HERO_HEIGHT}
-                        w="auto"
-                        fit="contain"
-                        alt=""
-                    />
-                ) : (
-                    <Stack align="center" gap="xs">
-                        <PuzzlePieceIcon size={IconSize.PAGE} />
-                        <Text c="dimmed" size="sm">
-                            {m.featureScriptsNoExample()}
-                        </Text>
-                    </Stack>
-                )}
+                <Image
+                    src={feature.thumbnailUrls.large}
+                    h={HERO_HEIGHT}
+                    w="auto"
+                    fit="contain"
+                    alt=""
+                />
             </Center>
         </Card>
     );

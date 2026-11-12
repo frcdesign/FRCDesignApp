@@ -84,6 +84,9 @@ describe("FeatureScriptMenu", () => {
         // No example: the generic hero, and nothing to open.
         expect(screen.getByText("No example yet")).toBeTruthy();
         expect(
+            screen.getByText("Add it to a Part Studio to see what it builds.")
+        ).toBeTruthy();
+        expect(
             screen.queryByRole("button", { name: "Open example" })
         ).toBeNull();
         expect(
@@ -357,8 +360,11 @@ describe("FeatureScriptList", () => {
         expect(
             await screen.findByRole("menuitem", { name: "Get FeatureScript" })
         ).toBeTruthy();
-        // Favoriting is the row's heart, not a menu item.
+        // Favoriting and adding are the row's own buttons, not menu items.
         expect(screen.queryByRole("menuitem", { name: "Favorite" })).toBeNull();
+        expect(
+            screen.queryByRole("menuitem", { name: "Add to Part Studio" })
+        ).toBeNull();
         await user.click(
             screen.getByRole("menuitem", { name: "Get FeatureScript" })
         );
