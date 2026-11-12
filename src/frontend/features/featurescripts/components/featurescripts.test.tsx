@@ -40,6 +40,7 @@ const { FeatureScriptSearchBar } = await import("./featurescript-search-bar");
 
 const FRAME: FeatureScriptOut = {
     id: "frame",
+    elementId: "e-frame",
     name: "Robot frame",
     description: "Add tube along an edge.\nOr extrude it from a point.",
     isVisible: true,
@@ -153,6 +154,7 @@ function feature(
 ): FeatureScriptOut {
     return {
         id,
+        elementId: `e-${id}`,
         name,
         description: `${name}.`,
         category,
@@ -274,25 +276,74 @@ describe("FeatureScriptList", () => {
         expect(screen.queryByText("Quick rib")).toBeNull();
     });
 
-    it("lets the owner show a hidden feature again from its menu", async () => {
+    it("gives the owner a card with the version and a visibility switch", async () => {
         const user = userEvent.setup();
         const features = LISTED.map((each) =>
-            each.id === "rib" ? { ...each, isVisible: false } : each
+            each.id === "rib"
+                ? {
+                      ...each,
+                      isVisible: false,
+                      releaseVersion: "1.0.0",
+                      iconUrl: "/icon.svg"
+                  }
+                : each
         );
         renderList([], { owner: true, features });
 
         const rib = (await screen.findByText("Quick rib")).closest("tr");
-        expect(within(rib as HTMLElement).getByText("Hidden")).toBeTruthy();
+        // The icon is an <img>, so the row's first svg is the card's target.
+        const target = (rib as HTMLElement).querySelector("svg");
+        await user.hover(target as SVGElement);
+
+        expect(await screen.findByText("Visible to users")).toBeTruthy();
+        expect(screen.getByText("v1.0.0")).toBeTruthy();
+        await user.click(screen.getByRole("switch"));
+        expect(apiPost).toHaveBeenCalledWith("/featurescripts/rib/visibility", {
+            body: { isVisible: true }
+        });
+    });
+
+    it("shows no description or card to a user, and opens the tab and the code from the menu", async () => {
+        const user = userEvent.setup();
+        const open = vi.spyOn(window, "open").mockReturnValue(null);
+        const features = LISTED.map((each) =>
+            each.id === "rib"
+                ? {
+                      ...each,
+                      sourceUrl:
+                          "https://github.com/robot-education/robot-code/blob/quickRib/v1.0.0/featurescripts/released/lighten/quickRib.fs"
+                  }
+                : each
+        );
+        renderList([], { features });
+
+        const rib = (await screen.findByText("Quick rib")).closest("tr");
+        expect(screen.queryByText("Quick rib.")).toBeNull();
+        expect(screen.queryByText("Visible to users")).toBeNull();
+
         await user.pointer({
             keys: "[MouseRight]",
             target: rib as HTMLElement
         });
         await user.click(
-            await screen.findByRole("menuitem", { name: "Show to users" })
+            await screen.findByRole("menuitem", { name: "Get FeatureScript" })
         );
-        expect(apiPost).toHaveBeenCalledWith("/featurescripts/rib/visibility", {
-            body: { isVisible: true }
+        expect(open).toHaveBeenLastCalledWith(
+            "https://cad.onshape.com/documents/frontend/v/v-1/e/e-rib",
+            "_blank"
+        );
+
+        await user.pointer({
+            keys: "[MouseRight]",
+            target: rib as HTMLElement
         });
+        await user.click(
+            await screen.findByRole("menuitem", { name: "View code" })
+        );
+        expect(open).toHaveBeenLastCalledWith(
+            "https://github.com/robot-education/robot-code/blob/quickRib/v1.0.0/featurescripts/released/lighten/quickRib.fs",
+            "_blank"
+        );
     });
 
     it("offers no Add on rows standalone", async () => {

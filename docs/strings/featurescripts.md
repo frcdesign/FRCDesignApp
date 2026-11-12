@@ -3,24 +3,25 @@
 What [featurescripts.md](../architecture/featurescripts.md) shows a person.
 Each is a message in `src/frontend/messages/en.json`, keyed `featureScripts…`;
 the sections marked proposed aren't built yet. A feature's name and
-description come from its FeatureScript and are parameters, not messages.
+description come from the manifest robot-code writes and are parameters, not
+messages.
 
 ## The tab and its cards
 
-| String                                                          | Kind                    | Where                                        | When                                                          | Review           |
-| --------------------------------------------------------------- | ----------------------- | -------------------------------------------- | ------------------------------------------------------------- | ---------------- |
-| "FeatureScripts"                                                | Page name               | The page picker, under Utilities             | Always                                                        | **⚑** New        |
-| "Search FeatureScripts..."                                      | Placeholder             | The navbar's second row                      | Always                                                        | **⚑** New        |
-| "Add to Part Studio" / "Open example"                           | Menu items              | A card's ⋯ menu                              | Open example with one                                         | **⚑** New        |
-| "Add"                                                           | Outlined button         | Each row, before the heart                   | In a Part Studio or an assembly; none standalone              | **⚑** New        |
-| "FeatureScripts can only be added to Part Studios."             | Tooltip                 | On the disabled Add, row or popup            | In an assembly                                                | **⚑** New        |
-| "Favorites"                                                     | Section title           | Top of the list                              | Signed in, with a favorite, not searching                     | **⚑** New        |
-| "{folder}" / "Other"                                            | Section titles          | The list, after Favorites                    | Each folder in the frontend document; Other for its top level | **⚑** New: Other |
-| "Favorite" / "Unfavorite"                                       | Button title, menu item | A card's heart and ⋯ menu; the popup's heart | Signed in                                                     | **⚑** New        |
-| "Failed to favorite {name}." / "Failed to unfavorite {name}."   | Error toast             |                                              | The toggle failed, without a worded reason                    | **⚑** New        |
-| "Loading FeatureScripts..."                                     | Loading                 | In place of the list                         | The list is being read                                        | **⚑** New        |
-| "Failed to load FeatureScripts."                                | Page error              | In place of the list                         | The list couldn't be read                                     | **⚑** New        |
-| "No FeatureScripts yet" / "No FeatureScripts match your search" | Empty notice            | In place of the list                         | Nothing loaded / no match                                     | **⚑** New        |
+| String                                                                    | Kind                    | Where                                        | When                                                                  | Review                                  |
+| ------------------------------------------------------------------------- | ----------------------- | -------------------------------------------- | --------------------------------------------------------------------- | --------------------------------------- |
+| "FeatureScripts"                                                          | Page name               | The page picker, under Utilities             | Always                                                                | **⚑** New                               |
+| "Search FeatureScripts..."                                                | Placeholder             | The navbar's second row                      | Always                                                                | **⚑** New                               |
+| "Add to Part Studio" / "Get FeatureScript" / "Open example" / "View code" | Menu items              | A card's ⋯ menu                              | Add in Onshape; Open example with an example; View code with a source | **⚑** New: Get FeatureScript, View code |
+| "Add"                                                                     | Outlined button         | Each row, before the heart                   | In a Part Studio or an assembly; none standalone                      | **⚑** New                               |
+| "FeatureScripts can only be added to Part Studios."                       | Tooltip                 | On the disabled Add, row or popup            | In an assembly                                                        | **⚑** New                               |
+| "Favorites"                                                               | Section title           | Top of the list                              | Signed in, with a favorite, not searching                             | **⚑** New                               |
+| "{folder}" / "Other"                                                      | Section titles          | The list, after Favorites                    | Each folder in the frontend document; Other for its top level         | **⚑** New: Other                        |
+| "Favorite" / "Unfavorite"                                                 | Button title, menu item | A card's heart and ⋯ menu; the popup's heart | Signed in                                                             | **⚑** New                               |
+| "Failed to favorite {name}." / "Failed to unfavorite {name}."             | Error toast             |                                              | The toggle failed, without a worded reason                            | **⚑** New                               |
+| "Loading FeatureScripts..."                                               | Loading                 | In place of the list                         | The list is being read                                                | **⚑** New                               |
+| "Failed to load FeatureScripts."                                          | Page error              | In place of the list                         | The list couldn't be read                                             | **⚑** New                               |
+| "No FeatureScripts yet" / "No FeatureScripts match your search"           | Empty notice            | In place of the list                         | Nothing loaded / no match                                             | **⚑** New                               |
 
 ## The popup
 
@@ -34,23 +35,25 @@ description come from its FeatureScript and are parameters, not messages.
 | "Added {name}."         | Success toast |                           | The add landed; its dialog opens in Onshape | **⚑** New |
 | "Failed to add {name}." | Error toast   |                           | Onshape refused it, without a worded reason | **⚑** New |
 
-## The owner's
+## The owner's card
 
-| String                                                                    | Kind          | Where             | When                                       | Review    |
-| ------------------------------------------------------------------------- | ------------- | ----------------- | ------------------------------------------ | --------- |
-| "Hide from users" / "Show to users"                                       | Menu item     | A row's ⋯ menu    | The owner, shown / hidden                  | **⚑** New |
-| "Hidden"                                                                  | Badge         | A card; the popup | The owner hid it                           | **⚑** New |
-| "Hidden from users. Show it again from its ⋯ menu."                       | Badge tooltip | On it             | Same                                       | **⚑** New |
-| "Failed to hide {name}." / "Failed to show {name}."                       | Error toast   |                   | The toggle failed, without a worded reason | **⚑** New |
-| "No example"                                                              | Badge         | A card; the popup | `NO_EXAMPLE`                               | **⚑** New |
-| "Name a Part Studio \"{name} example\" in the frontend document."         | Badge tooltip | On it             | Same                                       | **⚑** New |
-| "No icon"                                                                 | Badge         | A card; the popup | `NO_ICON`                                  | **⚑** New |
-| "Release it again to write \"{name} icon.svg\"."                          | Badge tooltip | On it             | Same                                       | **⚑** New |
-| "Not one feature"                                                         | Badge         | A card; the popup | `NOT_ONE_FEATURE`                          | **⚑** New |
-| "Hidden from users: this Feature Studio must define exactly one feature." | Badge tooltip | On it             | Same                                       | **⚑** New |
-| "Failed to load"                                                          | Badge         | A card; the popup | `LOAD_FAILED`                              | **⚑** New |
-| "The last load of this feature failed. Reload to try again."              | Badge tooltip | On it             | Same                                       | **⚑** New |
-| "Reload" / "Reloading FeatureScripts..."                                  | Button, toast | The tab's header  | Proposed                                   | **⚑** New |
+A status icon beside each row's name and in the popup's footer, opening a hover
+card modeled on a part's admin card. The owner's alone.
+
+| String                                                                 | Kind            | Where                     | When                                       | Review    |
+| ---------------------------------------------------------------------- | --------------- | ------------------------- | ------------------------------------------ | --------- |
+| "{name}"                                                               | Card title      | Beside the feature's icon | Always                                     |           |
+| "Visible to users"                                                     | Switch row      | The card                  | Always                                     | **⚑** New |
+| "Version"                                                              | Row label       | Under it                  | Always                                     | **⚑** New |
+| "v{version}" / "Unknown"                                               | Row value       | Beside it                 | The manifest gave one / didn't             | **⚑** New |
+| "No example"                                                           | Row label       | The card                  | `NO_EXAMPLE`                               | **⚑** New |
+| "Release it again to make \"{name} example\", then model the example." | Row description | Under it                  | Same                                       | **⚑** New |
+| "No icon"                                                              | Row label       | The card                  | `NO_ICON`                                  | **⚑** New |
+| "Release it again to write \"{name} icon.svg\"."                       | Row description | Under it                  | Same                                       | **⚑** New |
+| "Failed to load"                                                       | Row label       | The card                  | `LOAD_FAILED`                              | **⚑** New |
+| "The last load of this feature failed. Reload to try again."           | Row description | Under it                  | Same                                       | **⚑** New |
+| "Failed to hide {name}." / "Failed to show {name}."                    | Error toast     |                           | The switch failed, without a worded reason | **⚑** New |
+| "Reload" / "Reloading FeatureScripts..."                               | Button, toast   | The tab's header          | Proposed                                   | **⚑** New |
 
 ## Feedback (proposed)
 

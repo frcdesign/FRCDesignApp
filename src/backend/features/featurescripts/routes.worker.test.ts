@@ -47,6 +47,9 @@ async function seed() {
             iconElementId: "e-frame-icon",
             iconMicroversionId: "mv-frame-icon",
             category: "Parts",
+            releaseVersion: "1.3.0",
+            sourceUrl:
+                "https://github.com/robot-education/robot-code/blob/robotFrame/v1.3.0/featurescripts/released/frame/robotFrame.fs",
             sortOrder: 1
         },
         {
@@ -99,6 +102,7 @@ describe("featurescripts routes", () => {
         ]);
         expect(body.features[0]).toEqual({
             id: "belt",
+            elementId: "e-belt",
             name: "Robot belt",
             description: "Add a belt.",
             isVisible: true,
@@ -106,6 +110,9 @@ describe("featurescripts routes", () => {
         });
         expect(body.features[1]).toMatchObject({
             category: "Parts",
+            releaseVersion: "1.3.0",
+            sourceUrl:
+                "https://github.com/robot-education/robot-code/blob/robotFrame/v1.3.0/featurescripts/released/frame/robotFrame.fs",
             exampleElementId: "e-frame-example",
             iconUrl: "/api/featurescripts/icon/e-frame-icon?v=mv-frame-icon",
             problems: []

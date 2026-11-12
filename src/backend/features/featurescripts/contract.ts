@@ -6,13 +6,13 @@ import type { ThumbnailUrls } from "../thumbnails/contract";
 export enum FeatureScriptProblem {
     NO_EXAMPLE = "no-example",
     NO_ICON = "no-icon",
-    /** Hidden: there is no single feature to add. */
-    NOT_ONE_FEATURE = "not-one-feature",
     LOAD_FAILED = "load-failed"
 }
 
 export interface FeatureScriptOut {
     id: string;
+    /** The frontend Feature Studio's tab, which **Get FeatureScript** opens. */
+    elementId: string;
     name: string;
     description: string;
     /** The frontend document's folder it is in; absent at the top level. */
@@ -24,7 +24,11 @@ export interface FeatureScriptOut {
     exampleElementId?: string;
     /** Absent without an example. */
     thumbnailUrls?: ThumbnailUrls;
-    /** Shown to the owner; a feature with `NOT_ONE_FEATURE` is hidden from everyone else. */
+    /** e.g. "1.3.0", from the manifest; shown to the owner alone. */
+    releaseVersion?: string;
+    /** The released file on GitHub, at its release's tag. */
+    sourceUrl?: string;
+    /** Shown to the owner alone. */
     problems: FeatureScriptProblem[];
 }
 
@@ -45,12 +49,9 @@ export interface FeatureScriptsVersionOut {
     version: number;
 }
 
-/** Left out of everyone's list but the owner's: hidden by them, or with no single feature to add. */
+/** Left out of everyone's list but the owner's. */
 export function isHidden(feature: FeatureScriptOut): boolean {
-    return (
-        !feature.isVisible ||
-        feature.problems.includes(FeatureScriptProblem.NOT_ONE_FEATURE)
-    );
+    return !feature.isVisible;
 }
 
 export const featureScriptVisibilityBody = z.object({

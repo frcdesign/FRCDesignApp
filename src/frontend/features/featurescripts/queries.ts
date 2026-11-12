@@ -58,22 +58,24 @@ export function useFeatureScriptsQuery() {
     return useQuery(getFeatureScriptsQuery(version.data ?? 0));
 }
 
-/** The example in the loaded version, when the feature has one. */
-export function useExampleUrl(feature: FeatureScriptOut): string | undefined {
+/** A tab of the frontend document in the loaded version: the example, or the Feature Studio. */
+export function useFrontendTabUrl(
+    elementId: string | undefined
+): string | undefined {
     const origin = useOnshapeOrigin();
     const { data } = useFeatureScriptsQuery();
-    if (!feature.exampleElementId || !data?.documentId || !data.versionId) {
+    if (!elementId || !data?.documentId || !data.versionId) {
         return undefined;
     }
     return makeUrl(origin, {
         documentId: data.documentId,
         instanceType: "v",
         instanceId: data.versionId,
-        elementId: feature.exampleElementId
+        elementId
     });
 }
 
-/** Every feature but the hidden, which the owner sees too, to fix them. */
+/** The owner sees every feature, hidden or not, and the card about each. */
 export function useIsOwner(): boolean {
     return useAccessData().currentAccessLevel === AccessLevel.OWNER;
 }

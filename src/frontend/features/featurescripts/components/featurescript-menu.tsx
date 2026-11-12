@@ -8,9 +8,9 @@ import { IconSize, RENDER_BACKGROUND } from "../../../lib/style-constants";
 import { openUrlInNewTab } from "../../../lib/url";
 import { m } from "../../../paraglide/messages";
 import { RequireSignIn } from "../../auth/components/require-access";
-import { useExampleUrl } from "../queries";
+import { useFrontendTabUrl } from "../queries";
 import { FeatureScriptAddButton } from "./featurescript-add-button";
-import { FeatureScriptBadges } from "./featurescript-badges";
+import { FeatureScriptStatus } from "./featurescript-status";
 import { FeatureScriptFavoriteButton } from "./featurescript-favorite-button";
 
 /** The hero's height, the stored large thumbnail's. */
@@ -55,21 +55,23 @@ interface FeatureScriptMenuProps {
 export function FeatureScriptMenu(props: FeatureScriptMenuProps): ReactNode {
     const { feature } = props;
     const modal = useAppModal();
-    const exampleUrl = useExampleUrl(feature);
+    const exampleUrl = useFrontendTabUrl(feature.exampleElementId);
 
     return (
         <>
             <AppModalBody>
                 <FeatureScriptHero feature={feature} />
-                <FeatureScriptBadges feature={feature} />
                 <Text style={{ whiteSpace: "pre-line" }}>
                     {feature.description}
                 </Text>
             </AppModalBody>
             <AppModalFooter>
-                <RequireSignIn>
-                    <FeatureScriptFavoriteButton feature={feature} large />
-                </RequireSignIn>
+                <Group gap="sm">
+                    <RequireSignIn>
+                        <FeatureScriptFavoriteButton feature={feature} large />
+                    </RequireSignIn>
+                    <FeatureScriptStatus feature={feature} />
+                </Group>
                 <Group gap="sm" ml="auto">
                     {exampleUrl && (
                         <Button

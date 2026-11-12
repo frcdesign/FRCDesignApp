@@ -1,5 +1,10 @@
-import { Group, Menu, Text } from "@mantine/core";
-import { ArrowSquareOutIcon, PlusIcon } from "@phosphor-icons/react";
+import { Group, Menu } from "@mantine/core";
+import {
+    ArrowSquareOutIcon,
+    CodeIcon,
+    PlusIcon,
+    PuzzlePieceIcon
+} from "@phosphor-icons/react";
 import { type ReactNode } from "react";
 import { type FeatureScriptOut } from "@backend/features/featurescripts/contract";
 import { CardTitle, ItemRow } from "../../../components/item-row";
@@ -11,33 +16,28 @@ import { openFeatureScriptMenu } from "../open-featurescript-menu";
 import {
     useAddAvailability,
     useAddFeatureScriptMutation,
-    useExampleUrl,
-    useIsOwner
+    useFrontendTabUrl
 } from "../queries";
 import { FeatureScriptAddButton } from "./featurescript-add-button";
-import { FeatureScriptBadges } from "./featurescript-badges";
 import {
     FeatureScriptFavoriteButton,
     FeatureScriptFavoriteItem
 } from "./featurescript-favorite-button";
 import { FeatureScriptIcon } from "./featurescript-icon";
-import { FeatureScriptVisibilityItem } from "./featurescript-visibility-item";
-
-/** Where the description starts; the popup shows the rest. */
-function firstLine(description: string): string {
-    return description.split("\n")[0];
-}
+import { FeatureScriptStatus } from "./featurescript-status";
 
 interface FeatureScriptCardProps {
     feature: FeatureScriptOut;
 }
 
+/** A row: its icon and name, the owner's card, then Add, the heart and the menu. */
 export function FeatureScriptCard(props: FeatureScriptCardProps): ReactNode {
     const { feature } = props;
     const add = useAddFeatureScriptMutation(feature);
     const availability = useAddAvailability();
-    const exampleUrl = useExampleUrl(feature);
-    const isOwner = useIsOwner();
+    const exampleUrl = useFrontendTabUrl(feature.exampleElementId);
+    const studioUrl = useFrontendTabUrl(feature.elementId);
+    const { sourceUrl } = feature;
 
     return (
         <ItemRow
@@ -51,12 +51,7 @@ export function FeatureScriptCard(props: FeatureScriptCardProps): ReactNode {
                             size={IconSize.CONTROL}
                         />
                     }
-                    badge={<FeatureScriptBadges feature={feature} />}
-                    subtitle={
-                        <Text size="xs" c="dimmed" truncate>
-                            {firstLine(feature.description)}
-                        </Text>
-                    }
+                    badge={<FeatureScriptStatus feature={feature} />}
                 />
             }
             menuItems={
@@ -70,6 +65,14 @@ export function FeatureScriptCard(props: FeatureScriptCardProps): ReactNode {
                             {m.featureScriptsAdd()}
                         </Menu.Item>
                     )}
+                    {studioUrl && (
+                        <Menu.Item
+                            leftSection={<PuzzlePieceIcon />}
+                            onClick={() => openUrlInNewTab(studioUrl)}
+                        >
+                            {m.featureScriptsGet()}
+                        </Menu.Item>
+                    )}
                     {exampleUrl && (
                         <Menu.Item
                             leftSection={<ArrowSquareOutIcon />}
@@ -78,12 +81,17 @@ export function FeatureScriptCard(props: FeatureScriptCardProps): ReactNode {
                             {m.featureScriptsOpenExample()}
                         </Menu.Item>
                     )}
+                    {sourceUrl && (
+                        <Menu.Item
+                            leftSection={<CodeIcon />}
+                            onClick={() => openUrlInNewTab(sourceUrl)}
+                        >
+                            {m.featureScriptsViewCode()}
+                        </Menu.Item>
+                    )}
                     <RequireSignIn>
                         <FeatureScriptFavoriteItem feature={feature} />
                     </RequireSignIn>
-                    {isOwner && (
-                        <FeatureScriptVisibilityItem feature={feature} />
-                    )}
                 </>
             }
             actions={

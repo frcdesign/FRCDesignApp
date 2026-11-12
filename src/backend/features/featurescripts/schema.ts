@@ -36,6 +36,10 @@ export const featureScripts = sqliteTable("featurescripts", {
     description: text("description").notNull(),
     /** The folder holding its Feature Studio in the frontend document; null at the top level. */
     category: text("category"),
+    /** From the manifest, as robot-code tagged it, e.g. "1.3.0". */
+    releaseVersion: text("release_version"),
+    /** From the manifest: the released file on GitHub, at its release's tag. */
+    sourceUrl: text("source_url"),
     /** The owner's choice, which a load never writes; a new feature starts shown. */
     isVisible: integer("is_visible", { mode: "boolean" })
         .notNull()

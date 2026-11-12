@@ -34,9 +34,12 @@ export async function getFeatureScriptsOut(db: Db): Promise<FeatureScriptsOut> {
         versionId: document?.versionId,
         features: rows.map((row) => ({
             id: row.id,
+            elementId: row.elementId,
             name: row.name,
             description: row.description,
             category: row.category ?? undefined,
+            releaseVersion: row.releaseVersion ?? undefined,
+            sourceUrl: row.sourceUrl ?? undefined,
             isVisible: row.isVisible,
             iconUrl:
                 row.iconElementId && row.iconMicroversionId

@@ -1,7 +1,7 @@
 {
     "version": "6",
     "dialect": "sqlite",
-    "id": "a4c2f29d-4bb1-49e0-9821-63d058853d00",
+    "id": "a2a10882-c9f8-450b-a9df-124a209c0faf",
     "prevId": "37bb4e4c-1e83-444b-a08a-499eff6b6112",
     "tables": {
         "configurations": {
@@ -1747,6 +1747,20 @@
                 },
                 "category": {
                     "name": "category",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false,
+                    "autoincrement": false
+                },
+                "release_version": {
+                    "name": "release_version",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false,
+                    "autoincrement": false
+                },
+                "source_url": {
+                    "name": "source_url",
                     "type": "text",
                     "primaryKey": false,
                     "notNull": false,
