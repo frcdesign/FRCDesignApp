@@ -13,6 +13,7 @@ import {
     type FeatureScriptFavoritesOut,
     type FeatureScriptOut,
     type FeatureScriptsOut,
+    type FeatureScriptStatsOut,
     type FeatureScriptsVersionOut
 } from "@backend/features/featurescripts/contract";
 import { AccessLevel } from "@backend/features/auth/access-level";
@@ -25,6 +26,7 @@ import { useOnshapeOrigin, useTargetElement } from "../../lib/onshape-params";
 import { makeUrl } from "../../lib/url";
 import {
     featureScriptFavoritesQueryKey,
+    featureScriptStatsQueryKey,
     featureScriptsQueryKey,
     featureScriptsVersionQueryKey
 } from "../../lib/query-keys";
@@ -215,5 +217,17 @@ export function useSetVisibilityMutation(feature: FeatureScriptOut) {
             queryClient.invalidateQueries({
                 queryKey: featureScriptsVersionQueryKey()
             })
+    });
+}
+
+/** Adds come in slowly, so reopening a card within minutes needn't ask again. */
+const STATS_STALE_TIME = 5 * 60 * 1000;
+
+/** The owner's Usage numbers, every feature's in one fetch, asked for while a card's Usage is open. */
+export function useFeatureScriptStatsQuery() {
+    return useQuery<FeatureScriptStatsOut>({
+        queryKey: featureScriptStatsQueryKey(),
+        queryFn: () => apiGet("/featurescripts/stats"),
+        staleTime: STATS_STALE_TIME
     });
 }

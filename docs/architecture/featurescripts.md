@@ -1,9 +1,10 @@
 # FeatureScripts
 
-**Status: partly built.** The tables, the list, icon, add, favorite and
-visibility routes, and the tab with its categories, favorites, row buttons,
-owner's card and popup are built. The manifest, loading from it, the robot-code
-release changes, analytics and feedback are still the design below;
+**Status: partly built.** The tables, the list, icon, add, favorite,
+visibility and stats routes, recording each add, and the tab with its
+categories, favorites, row buttons, owner's card and popup are built. The
+manifest, loading from it, the robot-code release changes, the dashboard's
+section and feedback are still the design below;
 names in the code map that don't exist yet are named from `src/backend/`
 without it.
 
@@ -52,6 +53,7 @@ POST   /api/featurescripts/:featureId/favorite
 DELETE /api/featurescripts/:featureId/favorite
 POST   /api/featurescripts/:featureId/visibility    owner: shows or hides it, bumping the cache version
 POST   /api/featurescripts/:featureId/add    adds it to the Part Studio in the body
+GET    /api/featurescripts/stats             owner: each feature's adds, users and favorites, all time
 POST   /api/featurescripts/reload            owner: loads the latest version now (not built)
 ```
 
@@ -88,6 +90,11 @@ interface LoadParams {
 function findManifestTab(contents: DocumentContents): Tab | undefined;
 // Refuses a file of another schema version, or one that doesn't parse.
 function parseManifest(json: unknown): FeatureScriptsManifest;
+// The Part Studio named "<Feature Type Name> example", in any case, outside a deprecated folder.
+function findExample(
+    contents: DocumentContents,
+    featureName: string
+): Tab | undefined;
 // The outermost folder holding a tab; undefined at the top level.
 function categoryOf(
     contents: DocumentContents,
@@ -219,21 +226,32 @@ Under `src/frontend/features/featurescripts/components/`:
 - `featurescript-list.tsx` — Favorites and the category sections, filtered
   by `featurescript-search-bar.tsx`, the navbar's search, through the
   `useFeatureScriptsSearch` store (`src/frontend/features/featurescripts/search.ts`).
-- `featurescript-favorite-button.tsx` — the heart, and its menu item.
+- `featurescript-favorite-button.tsx` — the heart. Favoriting has no menu
+  item: the heart is on every row and in the popup.
+- `featurescript-menu-items.tsx` — `FeatureScriptMenuItems`, the one menu a
+  row's ⋯ and right-click and the popup's ⋯ share: **Add to Part Studio**,
+  **Get FeatureScript**, **Open example** and **View code**, the popup's
+  leaving out the two its buttons already do.
 - `featurescript-card.tsx` — a row: the icon inline before the name and the
   owner's card, then, in `ItemRow`'s `actions`, an outlined **Add** and the
-  heart, and last the ⋯ menu with **Add to Part Studio**, **Get
-  FeatureScript**, **Open example**, **View code** and **Favorite**.
+  heart, and last the ⋯ menu.
 - `featurescript-menu.tsx` — the popup a row opens: the example's thumbnail
   as a hero image across the top, the whole description, and a footer with
-  the heart, the owner's card, **Open example** and **Add to Part Studio**.
+  the heart, the owner's card and a ⋯, as the insert menu's has, then **Open
+  example** and **Add to Part Studio**.
 - `featurescript-add-button.tsx` — the row's outlined **Add**
   (`RowActionButton`, in `src/frontend/components/row-action-button.tsx`) or
   the popup's filled **Add to Part Studio**.
-- `featurescript-status.tsx` — the owner's card, modeled on a part's admin
-  card: a status icon beside the name (an eye struck through when hidden,
-  else the worst problem's) opening a hover card with **Visible to users**, the
-  **Version**, and each problem with how to fix it. Nothing for anyone else.
+- `featurescript-status.tsx` — the owner's card, built from a part's admin
+  card's own pieces (`CardSections`, `CardSection`, `SwitchRow`, `Stat`): a
+  status icon beside the name (an eye struck through when hidden, else the
+  worst problem's) opening a hover card with the same sections: **Build
+  checks**, each problem as a tinted callout with how to fix it, shown only
+  when there is one; **Settings**, with **Visible to users** and the
+  **Version**; and **Usage**, with adds, users and favorites from
+  `GET /api/featurescripts/stats`, fetched only while it is open. The sections
+  open and close with the admin card's, as one setting. Nothing for anyone
+  else.
 - `featurescript-icon.tsx` — the icon as an `<img>`, or the generic puzzle
   piece.
 
@@ -261,7 +279,7 @@ them, and they hold no foreign key into the rest; added to
 | `description`             | From the manifest, its credit already cut by robot-code                                |
 | `release_version`         | From the manifest, e.g. `1.3.0`; shown to the owner alone                              |
 | `source_url`              | From the manifest: the released file on GitHub at its release's tag                    |
-| `example_element_id`      | The example Part Studio the manifest names; null when it names none                    |
+| `example_element_id`      | The Part Studio named `<Feature Type Name> example` in the version; null without one   |
 | `example_microversion_id` | Its microversion, which names its thumbnail; null with it                              |
 | `icon_element_id`         | The icon tab the manifest names; null when it names none                               |
 | `icon_microversion_id`    | Its microversion, which names its R2 object; null with it                              |
@@ -322,9 +340,10 @@ reads one file for every feature:
 5. It reads `featurescripts.json` from the frontend workspace, puts the
    feature's entry in it — replacing the one with the same `studioElementId`,
    or adding one — and writes it back, creating the tab on the first release.
-   The entry's ids are the tabs steps 2 and 4 found or made, and the version
-   the one this release is cutting, so the frontend version holds the manifest
-   that describes it.
+   The entry's icon is the tab step 4 found or made, and its version the one
+   this release is cutting, so the frontend version holds the manifest that
+   describes it. The example isn't in it: the app finds it by name, so a Part
+   Studio renamed by hand to `<Feature Type Name> example` is the example.
 6. `fs deprecate` renames the example `DEPRECATED <Feature Type Name> example`
    and the icon `DEPRECATED <Feature Type Name> icon.svg` alongside its
    studio, and removes its entry from the manifest.
@@ -337,7 +356,8 @@ folder by hand, once.
 
 `featurescripts.json`, at the top level of the frontend document, is the whole
 contract between robot-code and the app: everything the app shows of a feature
-but its category (a folder) and its pictures (the tabs it names). Written only
+but its category (a folder) and its example (a Part Studio found by name).
+Written only
 by `fs release` and `fs deprecate`; the app only reads it.
 
 ```json
@@ -350,7 +370,6 @@ by `fs release` and `fs deprecate`; the app only reads it.
             "name": "Robot frame",
             "description": "Add tube, channel, angle, or extrusion along an edge, or extrude it from a point.",
             "version": "1.3.0",
-            "exampleElementId": "…",
             "iconElementId": "…",
             "sourceUrl": "https://github.com/robot-education/robot-code/blob/robotFrame/v1.3.0/featurescripts/released/frame/robotFrame.fs"
         }
@@ -358,17 +377,16 @@ by `fs release` and `fs deprecate`; the app only reads it.
 }
 ```
 
-| Field              | What it is                                                                                                               |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------ |
-| `schemaVersion`    | Bumped by robot-code when a field's meaning changes; the app refuses one it doesn't know rather than guess               |
-| `studioElementId`  | The frontend Feature Studio's tab; what an entry is keyed by                                                             |
-| `featureType`      | The constant `defineFeature` is exported as, read from the source                                                        |
-| `name`             | The Feature Type Name                                                                                                    |
-| `description`      | `"Feature Type Description"` with `CREDIT` cut off and each `<br>` a line break                                          |
-| `version`          | The release's version, without the `v`                                                                                   |
-| `exampleElementId` | The example Part Studio; null when there is none                                                                         |
-| `iconElementId`    | The icon tab; null for a feature with no `"Icon"`                                                                        |
-| `sourceUrl`        | The file at its release's tag (`release_tag`, e.g. `robotFrame/v1.3.0`), whose path is the studio's in `fs-studios.json` |
+| Field             | What it is                                                                                                               |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `schemaVersion`   | Bumped by robot-code when a field's meaning changes; the app refuses one it doesn't know rather than guess               |
+| `studioElementId` | The frontend Feature Studio's tab; what an entry is keyed by                                                             |
+| `featureType`     | The constant `defineFeature` is exported as, read from the source                                                        |
+| `name`            | The Feature Type Name                                                                                                    |
+| `description`     | `"Feature Type Description"` with `CREDIT` cut off and each `<br>` a line break                                          |
+| `version`         | The release's version, without the `v`                                                                                   |
+| `iconElementId`   | The icon tab; null for a feature with no `"Icon"`                                                                        |
+| `sourceUrl`       | The file at its release's tag (`release_tag`, e.g. `robotFrame/v1.3.0`), whose path is the studio's in `fs-studios.json` |
 
 The tag is made when the release is final, after the manifest is written; the
 url names it ahead, as `release_tag` names it the same way, so it works from
@@ -389,23 +407,26 @@ version loads at once, with no approval.
 5. `manifest`: `findManifestTab`, then `GET /blobelements/d/{did}/v/{vid}/e/{eid}`,
    then `parseManifest`. A version without one, or with one that doesn't
    parse, fails the load and changes nothing.
-6. Selects the entries that are new, whose studio's, example's or icon's
-   microversion changed, or that failed last time; every one when forced. An
-   entry is the list: a Feature Studio the manifest doesn't name isn't shown.
-7. Per selected entry, under the shared limiter:
+6. Pairs each entry with its example: `findExample`, the Part Studio named
+   `<Feature Type Name> example`, in any case, in this version.
+7. Selects the entries that are new, whose studio's, example's or icon's
+   microversion changed, whose example appeared or went, or that failed last
+   time; every one when forced. An entry is the list: a Feature Studio the
+   manifest doesn't name isn't shown.
+8. Per selected entry, under the shared limiter:
     - `thumbnail-{element}`: the example's, stored by `uploadThumbnailsStep`
       under the example's element and microversion. No example skips the step:
       `NO_EXAMPLE`, and the popup shows the generic FeatureScript image.
     - `icon-{element}`: the icon tab's SVG, stored in R2. No icon skips the
       step: `NO_ICON`, and the card shows the generic FeatureScript icon.
     - An entry naming a tab the version doesn't have is `LOAD_FAILED`.
-8. `save`: every row in one batch — the loaded, the unchanged carried over
+9. `save`: every row in one batch — the loaded, the unchanged carried over
    with the manifest's fields and each category rewritten, the removed deleted
    — and the document row with its version and bumped `cache_version`. Then
    pushes `featurescripts-changed` to open clients.
-9. `delete-stale-thumbnails`, and the icons no row names, never fatal.
-10. `register-webhook`: `ensureWebhook` for the document.
-11. Releases the load.
+10. `delete-stale-thumbnails`, and the icons no row names, never fatal.
+11. `register-webhook`: `ensureWebhook` for the document.
+12. Releases the load.
 
 Steps retry as a library's do (`ONSHAPE_STEP_RETRIES`, `THUMBNAIL_RETRIES`). It
 reads Onshape as the owner when the owner asked, and otherwise borrows the
@@ -447,8 +468,9 @@ owner's background session; no one else's.
    FeatureScript**), for anyone who would rather add it to their toolbar
    Onshape's own way, and its source on GitHub (**View code**).
 8. To the owner, each row and the popup carry the status card
-   (`FeatureScriptStatus`): **Visible to users**, which posts to the visibility
-   route, the release's **Version**, and each problem.
+   (`FeatureScriptStatus`), in the admin card's sections: **Build checks**,
+   **Settings** (**Visible to users**, which posts to the visibility route,
+   and the release's **Version**) and **Usage**.
 9. A click on the row opens the popup (`openFeatureScriptMenu`), sized and
    titled as the insert menu is: the example's large thumbnail as a hero
    image across the top, then the whole description, and the
@@ -509,19 +531,23 @@ library's uses, users or part counts. It is its own event,
 `EventType.FEATURE_ADD`, with `libraryId` null, as a version run is.
 
 - **Columns**, decided in `logged-event.ts` beside `NOT_A_USE`:
-  `featureScriptId`, `featureType`, `source`, and the
-  target Part Studio's `documentId`, `instanceId` and `elementId`.
-  `NOT_A_FEATURE_ADD` nulls them for every other event. A FeatureScript
-  report is a `REPORT` event that sets `featureType` too, so reports can be
-  counted per feature.
+  `featureType`, the feature's constant, and in the element columns its
+  Feature Studio's path in the loaded version. `NOT_A_FEATURE_ADD` nulls
+  `featureType` for every other event. `trackFeatureAdd` records one once
+  Onshape accepted the feature. A FeatureScript report will be a `REPORT`
+  event that sets `featureType` too, so reports can be counted per feature.
 - **Reports** roll up into `daily_report_metrics` as every report does, under
   the FeatureScripts topic.
-- **Rollups**, in `rollupWrites`: `daily_feature_adds` (day, feature type →
-  adds) and `daily_feature_users` (day, feature type, user), so distinct users
+- **Rollups**, in `rollupWrites`: `daily_featurescript_metrics` (day, feature
+  type → adds) and `daily_featurescript_users` (day, feature type, user), in
+  `src/backend/features/analytics/schema.ts`, so distinct users
   per feature and in total come from rollups, never from scanning events.
   Keyed by feature type, which never changes for a released feature, so a
   feature's history survives its row being replaced.
-- **Dashboard**: a **FeatureScripts** section on the overview (adds and users
+- **The owner's card** reads them, and the favorites table, through
+  `GET /api/featurescripts/stats`: each feature's adds, distinct users and
+  favorites, all time.
+- **Dashboard** (to come): a **FeatureScripts** section on the overview (adds and users
   over the range, against the previous season, and adds per day), and a
   **FeatureScripts** page with one row per feature: adds, users, the share of
   adds, and reports.
@@ -558,11 +584,11 @@ short has little use for them.
 - A feature is added from the version loaded, never from a workspace, so
   what's added is what was released.
 - The manifest is the list: a feature is shown only when the loaded version's
-  manifest names it, with the name, type, description, version, source,
-  example and icon it gives. The app pairs nothing by name, and never writes
-  the manifest.
-- An example and an icon are the tabs the manifest names in the **same
-  version** as the Feature Studio.
+  manifest names it, with the name, type, description, version, source and
+  icon it gives. The app never writes the manifest.
+- An example is the Part Studio named `<Feature Type Name> example` in the
+  **same version** as the Feature Studio, and an icon the tab the manifest
+  names there.
 - The credit line is never shown: robot-code cuts it before writing the
   description.
 - An icon is only ever shown as an image, never inlined into the page.
@@ -585,17 +611,17 @@ short has little use for them.
 
 ## Failure and recovery
 
-| What goes wrong                                    | What happens                                    | What puts it right                 |
-| -------------------------------------------------- | ----------------------------------------------- | ---------------------------------- |
-| An example is renamed or deleted                   | `NO_EXAMPLE`; the popup shows the generic image | Rename it back, cut a version      |
-| An example is published empty                      | A blank thumbnail                               | Model it, cut a version            |
-| A release before icons has none in the frontend    | `NO_ICON`; the generic icon                     | Its next release writes it         |
-| A thumbnail or an icon fails past its retries      | `LOAD_FAILED` on that feature; the rest save    | **Reload**                         |
-| A version has no manifest, or one that won't parse | The load fails; the last version stays shown    | Release again; **Reload**          |
-| An entry names a tab the version lacks             | `LOAD_FAILED` on that feature                   | Release it again                   |
-| Onshape cancels or deactivates the webhook         | New versions don't load                         | The next **Reload** registers it   |
-| No owner session to borrow                         | A webhook's load fails                          | The owner opens the app            |
-| Onshape refuses the feature at its defaults        | The add fails, toasted                          | Unverified; see the open questions |
+| What goes wrong                                    | What happens                                    | What puts it right                                    |
+| -------------------------------------------------- | ----------------------------------------------- | ----------------------------------------------------- |
+| An example is renamed or deleted                   | `NO_EXAMPLE`; the popup shows the generic image | Name one `<Feature Type Name> example`, cut a version |
+| An example is published empty                      | A blank thumbnail                               | Model it, cut a version                               |
+| A release before icons has none in the frontend    | `NO_ICON`; the generic icon                     | Its next release writes it                            |
+| A thumbnail or an icon fails past its retries      | `LOAD_FAILED` on that feature; the rest save    | **Reload**                                            |
+| A version has no manifest, or one that won't parse | The load fails; the last version stays shown    | Release again; **Reload**                             |
+| An entry names a tab the version lacks             | `LOAD_FAILED` on that feature                   | Release it again                                      |
+| Onshape cancels or deactivates the webhook         | New versions don't load                         | The next **Reload** registers it                      |
+| No owner session to borrow                         | A webhook's load fails                          | The owner opens the app                               |
+| Onshape refuses the feature at its defaults        | The add fails, toasted                          | Unverified; see the open questions                    |
 
 ## Decisions
 
@@ -611,10 +637,14 @@ short has little use for them.
   app shows: each feature's constant, name, description, version, file and
   the tabs it made. Writing that into the frontend document as it releases
   makes the version the app loads carry its own description, read in one call,
-  where reading each studio's featurespecs, matching examples and icons by
-  name, and parsing versions from version names would take a call per feature
-  and break on a hand-renamed tab. It lives in the document rather than on
-  GitHub, so a version and the file describing it can't disagree.
+  where reading each studio's featurespecs and parsing versions from version
+  names would take a call per feature. It lives in the document rather than
+  on GitHub, so a version and the file describing it can't disagree.
+- **Examples by name, not in the manifest.** The examples already modeled in
+  the frontend document are kept by renaming them `<Feature Type Name>
+example`; with an id in the manifest, each would need a release to record
+  it, and a remade or swapped example another. A name is the one thing the
+  owner sets by hand in Onshape, so it is what pairs them.
 - **The version to the owner alone.** The panel shows users what a feature
   does, not which release is loaded; the owner checks it in the card.
 - **The description, for now, without the credit, in the popup.** `"Feature

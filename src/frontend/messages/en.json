@@ -576,7 +576,7 @@
     "featureScriptsOpenExample": "Open example",
     "featureScriptsNoExample": "No example yet",
     "featureScriptsProblemNoExample": "No example",
-    "featureScriptsProblemNoExampleTip": "Release it again to make \"{name} example\", then model the example.",
+    "featureScriptsProblemNoExampleTip": "Name a Part Studio \"{name} example\" in the frontend document.",
     "featureScriptsProblemNoIcon": "No icon",
     "featureScriptsProblemNoIconTip": "Release it again to write \"{name} icon.svg\".",
     "featureScriptsProblemLoadFailed": "Failed to load",
@@ -617,5 +617,11 @@
     "featureScriptsVersionValue": "v{version}",
     "featureScriptsVersionUnknown": "Unknown",
     "featureScriptsGet": "Get FeatureScript",
-    "featureScriptsViewCode": "View code"
+    "featureScriptsViewCode": "View code",
+    "featureScriptsBuildChecks": "Build checks",
+    "featureScriptsSettings": "Settings",
+    "featureScriptsUsage": "Usage",
+    "featureScriptsAdds": "Adds",
+    "featureScriptsUsers": "Users",
+    "featureScriptsFavoritesCount": "Favorites"
 }

@@ -1,7 +1,7 @@
 {
     "version": "6",
     "dialect": "sqlite",
-    "id": "a2a10882-c9f8-450b-a9df-124a209c0faf",
+    "id": "7e47641a-ad7d-4327-b439-d7e69b19f7bf",
     "prevId": "37bb4e4c-1e83-444b-a08a-499eff6b6112",
     "tables": {
         "configurations": {
@@ -800,6 +800,79 @@
             "uniqueConstraints": {},
             "checkConstraints": {}
         },
+        "daily_featurescript_metrics": {
+            "name": "daily_featurescript_metrics",
+            "columns": {
+                "day": {
+                    "name": "day",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "feature_type": {
+                    "name": "feature_type",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "adds": {
+                    "name": "adds",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false,
+                    "default": 0
+                }
+            },
+            "indexes": {},
+            "foreignKeys": {},
+            "compositePrimaryKeys": {
+                "daily_featurescript_metrics_day_feature_type_pk": {
+                    "columns": ["day", "feature_type"],
+                    "name": "daily_featurescript_metrics_day_feature_type_pk"
+                }
+            },
+            "uniqueConstraints": {},
+            "checkConstraints": {}
+        },
+        "daily_featurescript_users": {
+            "name": "daily_featurescript_users",
+            "columns": {
+                "day": {
+                    "name": "day",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "feature_type": {
+                    "name": "feature_type",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "user_id": {
+                    "name": "user_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                }
+            },
+            "indexes": {},
+            "foreignKeys": {},
+            "compositePrimaryKeys": {
+                "daily_featurescript_users_day_feature_type_user_id_pk": {
+                    "columns": ["day", "feature_type", "user_id"],
+                    "name": "daily_featurescript_users_day_feature_type_user_id_pk"
+                }
+            },
+            "uniqueConstraints": {},
+            "checkConstraints": {}
+        },
         "daily_insertable_metrics": {
             "name": "daily_insertable_metrics",
             "columns": {
@@ -1456,6 +1529,13 @@
                 "report_team_number": {
                     "name": "report_team_number",
                     "type": "integer",
+                    "primaryKey": false,
+                    "notNull": false,
+                    "autoincrement": false
+                },
+                "feature_type": {
+                    "name": "feature_type",
+                    "type": "text",
                     "primaryKey": false,
                     "notNull": false,
                     "autoincrement": false

@@ -6,6 +6,7 @@ import { events, type LoggedEvent } from "./schema";
 import {
     NO_ELEMENT,
     NOT_A_USE,
+    NOT_A_FEATURE_ADD,
     NOT_A_REPORT,
     NOT_A_VERSION_RUN,
     type ElementColumns,
@@ -96,6 +97,7 @@ function trackUse(
                 ...eventCore(type, event.libraryId, await c.var.getUserId()),
                 ...NOT_A_VERSION_RUN,
                 ...NOT_A_REPORT,
+                ...NOT_A_FEATURE_ADD,
                 ...event.path,
                 insertableId: event.insertableId,
                 selection: appliedSelection(event.selection, event.parameters),
@@ -118,7 +120,8 @@ export function trackAppOpen(c: AppContext): Promise<void> {
                 ...NO_ELEMENT,
                 ...NOT_A_USE,
                 ...NOT_A_VERSION_RUN,
-                ...NOT_A_REPORT
+                ...NOT_A_REPORT,
+                ...NOT_A_FEATURE_ADD
             },
             []
         )
@@ -175,6 +178,7 @@ export async function trackVersionRun(
             ...NO_ELEMENT,
             ...NOT_A_USE,
             ...NOT_A_REPORT,
+            ...NOT_A_FEATURE_ADD,
             versionKind: event.kind,
             versionScope: event.scope,
             versionUpdateOnly: status.updateOnly ?? false,
@@ -225,10 +229,43 @@ export function trackReport(c: AppContext, event: ReportEvent): Promise<void> {
                 ...element,
                 ...NOT_A_USE,
                 ...NOT_A_VERSION_RUN,
+                ...NOT_A_FEATURE_ADD,
                 reportTopic: event.topic,
                 reportCategory: event.category,
                 reportSource: event.source,
                 reportTeamNumber: event.teamNumber ?? null
+            },
+            []
+        )
+    );
+}
+
+/** A FeatureScript added to a Part Studio; `path` is its Feature Studio in the loaded version. */
+export interface FeatureAddEvent {
+    featureType: string;
+    path: ElementPath;
+}
+
+/** As `trackInsert`, once Onshape accepted the feature. Not a use: it belongs to no library. */
+export function trackFeatureAdd(
+    c: AppContext,
+    event: FeatureAddEvent
+): Promise<void> {
+    return runInBackground(c, "record a FeatureScript add", async () =>
+        record(
+            getDb(c.env.DB),
+            {
+                ...eventCore(
+                    EventType.FEATURE_ADD,
+                    null,
+                    await c.var.getUserId()
+                ),
+                ...event.path,
+                insertableId: null,
+                ...NOT_A_USE,
+                ...NOT_A_VERSION_RUN,
+                ...NOT_A_REPORT,
+                featureType: event.featureType
             },
             []
         )

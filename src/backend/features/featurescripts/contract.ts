@@ -45,6 +45,16 @@ export interface FeatureScriptFavoritesOut {
     featureScriptIds: string[];
 }
 
+/** All time, from the rollups; the owner's card reads it. */
+export interface FeatureScriptStats {
+    adds: number;
+    users: number;
+    favorites: number;
+}
+
+/** By feature id; a feature nobody has added or favorited is absent. */
+export type FeatureScriptStatsOut = Record<string, FeatureScriptStats>;
+
 export interface FeatureScriptsVersionOut {
     version: number;
 }

@@ -48,6 +48,9 @@ export type ElementColumns = Pick<
     "elementId" | "documentId" | "instanceId" | "instanceType" | "insertableId"
 >;
 
+/** What only a FeatureScript add fills in, beside the element columns of the studio it came from. */
+type FeatureAddColumns = Pick<LoggedEvent, "featureType">;
+
 /** What only a use, an insert or a download, fills in. */
 type UseColumns = Omit<
     LoggedEvent,
@@ -55,6 +58,7 @@ type UseColumns = Omit<
     | keyof VersionRunColumns
     | keyof ReportColumns
     | keyof ElementColumns
+    | keyof FeatureAddColumns
 >;
 
 /** Spelled out, so a new column fails to compile until someone decides its value here. */
@@ -84,6 +88,20 @@ export const NOT_A_VERSION_RUN: VersionRunColumns = {
     createdVersions: null,
     updatedElements: null
 };
+
+export const NOT_A_FEATURE_ADD: FeatureAddColumns = {
+    featureType: null
+};
+
+/** A logged FeatureScript add, whose feature a reader can then count on. */
+export type LoggedFeatureAdd = LoggedEvent & { featureType: string };
+
+/** Undefined for another kind of event. */
+export function asFeatureAdd(event: LoggedEvent): LoggedFeatureAdd | undefined {
+    const isAdd =
+        event.type === EventType.FEATURE_ADD && event.featureType !== null;
+    return isAdd ? (event as LoggedFeatureAdd) : undefined;
+}
 
 export const NOT_A_REPORT: ReportColumns = {
     reportTopic: null,

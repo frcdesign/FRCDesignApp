@@ -1,3 +1,17 @@
+CREATE TABLE `daily_featurescript_metrics` (
+	`day` text NOT NULL,
+	`feature_type` text NOT NULL,
+	`adds` integer DEFAULT 0 NOT NULL,
+	PRIMARY KEY(`day`, `feature_type`)
+);
+--> statement-breakpoint
+CREATE TABLE `daily_featurescript_users` (
+	`day` text NOT NULL,
+	`feature_type` text NOT NULL,
+	`user_id` text NOT NULL,
+	PRIMARY KEY(`day`, `feature_type`, `user_id`)
+);
+--> statement-breakpoint
 CREATE TABLE `featurescript_favorites` (
 	`user_id` text NOT NULL,
 	`featurescript_id` text NOT NULL,
@@ -32,3 +46,5 @@ CREATE TABLE `featurescripts_document` (
 	`version_id` text NOT NULL,
 	`cache_version` integer DEFAULT 0 NOT NULL
 );
+--> statement-breakpoint
+ALTER TABLE `events` ADD `feature_type` text;

@@ -1,4 +1,4 @@
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, count, countDistinct, eq, sql, sum } from "drizzle-orm";
 import { HttpStatus } from "http-status-ts";
 import { z } from "zod";
 import { getDb } from "../../db/client";
@@ -19,6 +19,7 @@ import {
     type AddFeatureScriptOut,
     addFeatureScriptBody,
     type FeatureScriptFavoritesOut,
+    type FeatureScriptStatsOut,
     featureScriptVisibilityBody,
     type FeatureScriptsVersionOut
 } from "./contract";
@@ -28,6 +29,11 @@ import {
     featureScriptsDocument
 } from "./schema";
 import { getCacheVersion, getFeatureScriptsOut, iconKey } from "./store";
+import { trackFeatureAdd } from "../analytics/tracking";
+import {
+    dailyFeatureScriptMetrics,
+    dailyFeatureScriptUsers
+} from "../analytics/schema";
 
 export const featureScriptRoutes = getApp();
 
@@ -114,14 +120,15 @@ featureScriptRoutes.post(
                     );
                 }
 
+                const studioPath = toElementPath({
+                    documentId: document.documentId,
+                    versionId: document.versionId,
+                    elementId: row.elementId
+                });
                 const feature = new CustomFeature(
                     row.featureType,
                     row.name,
-                    toElementPath({
-                        documentId: document.documentId,
-                        versionId: document.versionId,
-                        elementId: row.elementId
-                    }),
+                    studioPath,
                     row.microversionId
                 );
                 const result = await retryInsert((timeoutMs) =>
@@ -132,6 +139,10 @@ featureScriptRoutes.post(
                         timeoutMs
                     )
                 );
+                await trackFeatureAdd(c, {
+                    featureType: row.featureType,
+                    path: studioPath
+                });
                 return c.json({
                     featureId: result.feature?.featureId
                 } satisfies AddFeatureScriptOut);
@@ -233,5 +244,65 @@ featureScriptRoutes.post(
             cacheVersion: sql`${featureScriptsDocument.cacheVersion} + 1`
         });
         return c.json({ success: true });
+    }
+);
+
+/** GET /api/featurescripts/stats — the owner's card's Usage, all time. */
+featureScriptRoutes.get(
+    "/featurescripts/stats",
+    requireOwnerMiddleware,
+    cacheMiddleware(),
+    async (c) => {
+        const db = getDb(c.env.DB);
+        const [features, adds, users, favorites] = await Promise.all([
+            db
+                .select({
+                    id: featureScripts.id,
+                    featureType: featureScripts.featureType
+                })
+                .from(featureScripts),
+            db
+                .select({
+                    featureType: dailyFeatureScriptMetrics.featureType,
+                    adds: sum(dailyFeatureScriptMetrics.adds).mapWith(Number)
+                })
+                .from(dailyFeatureScriptMetrics)
+                .groupBy(dailyFeatureScriptMetrics.featureType),
+            db
+                .select({
+                    featureType: dailyFeatureScriptUsers.featureType,
+                    users: countDistinct(dailyFeatureScriptUsers.userId)
+                })
+                .from(dailyFeatureScriptUsers)
+                .groupBy(dailyFeatureScriptUsers.featureType),
+            db
+                .select({
+                    id: featureScriptFavorites.featureScriptId,
+                    favorites: count()
+                })
+                .from(featureScriptFavorites)
+                .groupBy(featureScriptFavorites.featureScriptId)
+        ]);
+        const addsByType = new Map(
+            adds.map((row) => [row.featureType, row.adds])
+        );
+        const usersByType = new Map(
+            users.map((row) => [row.featureType, row.users])
+        );
+        const favoritesById = new Map(
+            favorites.map((row) => [row.id, row.favorites])
+        );
+        const stats: FeatureScriptStatsOut = {};
+        for (const feature of features) {
+            const added = addsByType.get(feature.featureType) ?? 0;
+            const favorited = favoritesById.get(feature.id) ?? 0;
+            if (added === 0 && favorited === 0) continue;
+            stats[feature.id] = {
+                adds: added,
+                users: usersByType.get(feature.featureType) ?? 0,
+                favorites: favorited
+            };
+        }
+        return c.json(stats);
     }
 );

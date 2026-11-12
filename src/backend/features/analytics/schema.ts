@@ -76,7 +76,9 @@ export const events = sqliteTable(
         reportTopic: text("report_topic").$type<FeedbackTopic>(),
         reportCategory: text("report_category").$type<FeedbackCategory>(),
         reportSource: text("report_source").$type<FeedbackSource>(),
-        reportTeamNumber: integer("report_team_number")
+        reportTeamNumber: integer("report_team_number"),
+        // A FeatureScript add's: the feature's constant, which never changes once released.
+        featureType: text("feature_type")
     },
     // Only used to rebuild the rollups, which walk by day.
     (t) => [index("events_day_idx").on(t.day)]
@@ -308,4 +310,29 @@ export const dailyReportMetrics = sqliteTable(
             columns: [t.day, t.topic, t.category, t.source, t.elementId]
         })
     ]
+);
+
+/**
+ * A day's FeatureScript adds, by feature. Keyed by the feature's constant
+ * rather than a row, so a feature's history outlasts its row being replaced.
+ */
+export const dailyFeatureScriptMetrics = sqliteTable(
+    "daily_featurescript_metrics",
+    {
+        day: text("day").notNull(),
+        featureType: text("feature_type").notNull(),
+        adds: integer("adds").notNull().default(0)
+    },
+    (t) => [primaryKey({ columns: [t.day, t.featureType] })]
+);
+
+/** Who added each feature on a day, so distinct users come from rollups. */
+export const dailyFeatureScriptUsers = sqliteTable(
+    "daily_featurescript_users",
+    {
+        day: text("day").notNull(),
+        featureType: text("feature_type").notNull(),
+        userId: text("user_id").notNull()
+    },
+    (t) => [primaryKey({ columns: [t.day, t.featureType, t.userId] })]
 );

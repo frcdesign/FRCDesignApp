@@ -13,11 +13,14 @@ import {
     type AddFeatureScriptOut,
     type FeatureScriptFavoritesOut,
     FeatureScriptProblem,
+    type FeatureScriptStatsOut,
     type FeatureScriptsOut
 } from "./contract";
 import { featureScripts, featureScriptsDocument } from "./schema";
 import { iconKey } from "./store";
 import { AccessLevel } from "../auth/access-level";
+import { events } from "../analytics/schema";
+import { EventType } from "../analytics/usage";
 
 const db = getDb(env.DB);
 
@@ -304,5 +307,53 @@ describe("featurescripts routes", () => {
             env
         );
         expect(missing.status).toBe(404);
+    });
+
+    it("records each add as a FeatureScript add, which the owner's stats total", async () => {
+        await seed();
+        vi.spyOn(PartStudioEndpoints, "addPartStudioFeature").mockResolvedValue(
+            { feature: { featureId: "feat-1" } }
+        );
+        const add = (userId: string) =>
+            createTestApp({ userId }).request(
+                "/api/featurescripts/frame/add",
+                jsonRequest("POST", { targetPath }),
+                env
+            );
+        await add("alice");
+        await add("alice");
+        await add("bob");
+        await createTestApp({ userId: "carol" }).request(
+            "/api/featurescripts/belt/favorite",
+            { method: "POST" },
+            env
+        );
+
+        const logged = await db.select().from(events).all();
+        expect(logged).toHaveLength(3);
+        expect(logged[0]).toMatchObject({
+            type: EventType.FEATURE_ADD,
+            libraryId: null,
+            featureType: "robotFrame",
+            documentId: "frontend",
+            instanceId: "v-1",
+            elementId: "e-frame"
+        });
+
+        const res = await createTestApp({
+            accessLevel: AccessLevel.OWNER
+        }).request("/api/featurescripts/stats", {}, env);
+        expect(res.status).toBe(200);
+        expect(await res.json()).toEqual({
+            frame: { adds: 3, users: 2, favorites: 0 },
+            belt: { adds: 0, users: 0, favorites: 1 }
+        } satisfies FeatureScriptStatsOut);
+    });
+
+    it("keeps the stats from anyone but the owner", async () => {
+        const res = await createTestApp({
+            accessLevel: AccessLevel.ADMIN
+        }).request("/api/featurescripts/stats", {}, env);
+        expect(res.status).toBe(403);
     });
 });

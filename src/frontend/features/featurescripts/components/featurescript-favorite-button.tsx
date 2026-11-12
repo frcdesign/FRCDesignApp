@@ -1,4 +1,4 @@
-import { ActionIcon, Menu } from "@mantine/core";
+import { ActionIcon } from "@mantine/core";
 import { type ReactNode, useState } from "react";
 import { type FeatureScriptOut } from "@backend/features/featurescripts/contract";
 import {
@@ -53,28 +53,5 @@ export function FeatureScriptFavoriteButton(
         >
             {icon}
         </ActionIcon>
-    );
-}
-
-interface FeatureScriptFavoriteItemProps {
-    feature: FeatureScriptOut;
-}
-
-export function FeatureScriptFavoriteItem(
-    props: FeatureScriptFavoriteItemProps
-): ReactNode {
-    const { feature } = props;
-    const isFavorite = useIsFeatureScriptFavorite(feature.id);
-    const toggle = useToggleFavoriteMutation(feature);
-    return (
-        <Menu.Item
-            leftSection={isFavorite ? <UnfavoriteIcon /> : <FavoriteIcon />}
-            color={isFavorite ? "red" : undefined}
-            onClick={() => toggle.mutate(!isFavorite)}
-        >
-            {isFavorite
-                ? m.featureScriptsUnfavorite()
-                : m.featureScriptsFavorite()}
-        </Menu.Item>
     );
 }

@@ -3,6 +3,8 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
     type FeatureScriptOut,
+    FeatureScriptProblem,
+    type FeatureScriptStatsOut,
     type FeatureScriptsOut
 } from "@backend/features/featurescripts/contract";
 import { ElementType } from "@backend/lib/onshape/element-type";
@@ -15,6 +17,7 @@ import { useOnshapeLaunch } from "../../../lib/onshape-params";
 import { updateUiState } from "../../../lib/ui-state";
 import {
     accessDataQueryKey,
+    featureScriptStatsQueryKey,
     featureScriptFavoritesQueryKey,
     featureScriptsQueryKey,
     featureScriptsVersionQueryKey
@@ -139,6 +142,15 @@ describe("FeatureScriptMenu", () => {
         );
 
         const open = vi.spyOn(window, "open").mockReturnValue(null);
+        // Its ⋯ holds what its buttons don't.
+        await user.click(screen.getByRole("button", { name: "View options" }));
+        expect(
+            await screen.findByRole("menuitem", { name: "Get FeatureScript" })
+        ).toBeTruthy();
+        expect(
+            screen.queryByRole("menuitem", { name: "Add to Part Studio" })
+        ).toBeNull();
+        await user.keyboard("{Escape}");
         await user.click(screen.getByRole("button", { name: "Open example" }));
         expect(open).toHaveBeenCalledWith(
             "https://cad.onshape.com/documents/frontend/v/v-1/e/e-example",
@@ -177,7 +189,11 @@ const SECTIONS = /^(Favorites|Lightening|Basic operations|Parts|Other)$/;
 /** Seeded before rendering, so the list never shows loading. */
 function renderList(
     favoriteIds: string[],
-    options: { owner?: boolean; features?: FeatureScriptOut[] } = {}
+    options: {
+        owner?: boolean;
+        features?: FeatureScriptOut[];
+        stats?: FeatureScriptStatsOut;
+    } = {}
 ) {
     const level = options.owner ? AccessLevel.OWNER : AccessLevel.USER;
     updateUiState({ accessLevel: level });
@@ -196,6 +212,9 @@ function renderList(
     queryClient.setQueryData(featureScriptFavoritesQueryKey(), {
         featureScriptIds: favoriteIds
     });
+    if (options.stats) {
+        queryClient.setQueryData(featureScriptStatsQueryKey(), options.stats);
+    }
     // What the refetch after a toggle answers.
     apiGet.mockResolvedValue({ featureScriptIds: favoriteIds });
     // The search bar sits in the navbar, sharing its query with the list.
@@ -276,7 +295,7 @@ describe("FeatureScriptList", () => {
         expect(screen.queryByText("Quick rib")).toBeNull();
     });
 
-    it("gives the owner a card with the version and a visibility switch", async () => {
+    it("gives the owner an admin card: build checks, settings and usage", async () => {
         const user = userEvent.setup();
         const features = LISTED.map((each) =>
             each.id === "rib"
@@ -284,11 +303,16 @@ describe("FeatureScriptList", () => {
                       ...each,
                       isVisible: false,
                       releaseVersion: "1.0.0",
-                      iconUrl: "/icon.svg"
+                      iconUrl: "/icon.svg",
+                      problems: [FeatureScriptProblem.NO_EXAMPLE]
                   }
                 : each
         );
-        renderList([], { owner: true, features });
+        renderList([], {
+            owner: true,
+            features,
+            stats: { rib: { adds: 12, users: 5, favorites: 3 } }
+        });
 
         const rib = (await screen.findByText("Quick rib")).closest("tr");
         // The icon is an <img>, so the row's first svg is the card's target.
@@ -297,6 +321,11 @@ describe("FeatureScriptList", () => {
 
         expect(await screen.findByText("Visible to users")).toBeTruthy();
         expect(screen.getByText("v1.0.0")).toBeTruthy();
+        expect(screen.getByText("Build checks")).toBeTruthy();
+        expect(screen.getByText("No example")).toBeTruthy();
+        expect(screen.getByText("Usage")).toBeTruthy();
+        expect(screen.getByText("12")).toBeTruthy();
+        expect(screen.getByText("Adds")).toBeTruthy();
         await user.click(screen.getByRole("switch"));
         expect(apiPost).toHaveBeenCalledWith("/featurescripts/rib/visibility", {
             body: { isVisible: true }
@@ -325,8 +354,13 @@ describe("FeatureScriptList", () => {
             keys: "[MouseRight]",
             target: rib as HTMLElement
         });
-        await user.click(
+        expect(
             await screen.findByRole("menuitem", { name: "Get FeatureScript" })
+        ).toBeTruthy();
+        // Favoriting is the row's heart, not a menu item.
+        expect(screen.queryByRole("menuitem", { name: "Favorite" })).toBeNull();
+        await user.click(
+            screen.getByRole("menuitem", { name: "Get FeatureScript" })
         );
         expect(open).toHaveBeenLastCalledWith(
             "https://cad.onshape.com/documents/frontend/v/v-1/e/e-rib",

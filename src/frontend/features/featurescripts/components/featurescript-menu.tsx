@@ -11,6 +11,8 @@ import { RequireSignIn } from "../../auth/components/require-access";
 import { useFrontendTabUrl } from "../queries";
 import { FeatureScriptAddButton } from "./featurescript-add-button";
 import { FeatureScriptStatus } from "./featurescript-status";
+import { FeatureScriptMenuItems } from "./featurescript-menu-items";
+import { MenuButton } from "../../../components/app-menu";
 import { FeatureScriptFavoriteButton } from "./featurescript-favorite-button";
 
 /** The hero's height, the stored large thumbnail's. */
@@ -71,6 +73,9 @@ export function FeatureScriptMenu(props: FeatureScriptMenuProps): ReactNode {
                         <FeatureScriptFavoriteButton feature={feature} large />
                     </RequireSignIn>
                     <FeatureScriptStatus feature={feature} />
+                    <MenuButton large wide>
+                        <FeatureScriptMenuItems feature={feature} inPopup />
+                    </MenuButton>
                 </Group>
                 <Group gap="sm" ml="auto">
                     {exampleUrl && (

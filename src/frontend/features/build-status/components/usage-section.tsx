@@ -144,7 +144,7 @@ interface StatProps {
     value?: number;
 }
 
-function Stat(props: StatProps): ReactNode {
+export function Stat(props: StatProps): ReactNode {
     const { label, value } = props;
     return (
         <Stack gap={0}>
