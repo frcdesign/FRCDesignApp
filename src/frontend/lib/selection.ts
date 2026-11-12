@@ -190,6 +190,20 @@ export function holdPicks(
     };
 }
 
+/** Each mounted query list's label, for saying which one limits picks. */
+const labels = new Map<string, string>();
+
+export function nameList(listId: string, label: string): () => void {
+    labels.set(listId, label);
+    return () => {
+        labels.delete(listId);
+    };
+}
+
+export function listLabel(listId: string | undefined): string | undefined {
+    return listId === undefined ? undefined : labels.get(listId);
+}
+
 /** A list's picks, as it last held them. */
 export function heldPicks(listId: string): OnshapeSelection[] {
     return picksByList.get(listId) ?? [];

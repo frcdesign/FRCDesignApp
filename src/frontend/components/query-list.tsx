@@ -23,6 +23,7 @@ import {
     focusedPicks,
     heldPicks,
     holdPicks,
+    nameList,
     onPick,
     selectionKey,
     useOnshapeSelection,
@@ -153,6 +154,8 @@ export function QueryList(props: QueryListProps): ReactNode {
     );
 
     useEffect(() => holdPicks(id, entities), [id, entities]);
+
+    useEffect(() => nameList(id, label), [id, label]);
 
     useEffect(() => {
         bumpLayout();

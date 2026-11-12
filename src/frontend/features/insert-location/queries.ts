@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { skipToken, useMutation, useQuery } from "@tanstack/react-query";
 import { ElementType } from "@backend/lib/onshape/element-type";
 import { type InsertLocationOut } from "@backend/features/insert-location/contract";
@@ -42,6 +43,26 @@ export function useInsertLocationQuery(target: TargetElement | undefined) {
 export function useInsertLocationId(): string | undefined {
     const target = useInsertLocationTarget();
     return useInsertLocationQuery(target).data?.instanceId;
+}
+
+/** Where a new part lands in the open assembly. */
+export interface InsertLocation {
+    target: TargetElement;
+    /** The marker's instance, or nothing when the assembly has none. */
+    instanceId?: string;
+}
+
+/** Undefined outside an assembly, and until the answer is in. */
+export function useInsertLocation(): InsertLocation | undefined {
+    const target = useInsertLocationTarget();
+    const { data, isPending, isError } = useInsertLocationQuery(target);
+    return useMemo(
+        () =>
+            !target || isPending || isError
+                ? undefined
+                : { target, instanceId: data?.instanceId },
+        [target, isPending, isError, data?.instanceId]
+    );
 }
 
 /** Adds the connector to the assembly, and takes the answer as the new state. */

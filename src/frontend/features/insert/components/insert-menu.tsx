@@ -43,11 +43,12 @@ import { RequireSignIn } from "../../auth/components/require-access";
 import { useIsSignedIn } from "../../auth/access-level";
 import { Hint } from "@backend/features/hints/contract";
 import { useHasSeenHint, useMarkHintSeen } from "../../hints/queries";
-import { useTargetElementType } from "../insert-hooks";
+import { useCanFasten, useTargetElementType } from "../insert-hooks";
 import { UseSource } from "@backend/features/analytics/usage";
+import { FastenSection } from "./fasten-section";
 import { InsertLocationStatus } from "../../insert-location/components/insert-location-status";
-import { InfoCheckbox } from "../../../components/info-checkbox";
-import { FastenCircularEdgesStatus } from "./fasten-circular-edges-status";
+import { ParameterGrid } from "../../../components/parameter-input";
+import { m } from "../../../paraglide/messages";
 import { DownloadStepButton } from "../../download/components/download-step-button";
 
 interface UseMenuTitleProps extends Omit<MenuTitleProps, "name"> {
@@ -164,7 +165,12 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
                     />
                 </Stack>
             </AppModalTop>
-            <AppModalBody>{parameters}</AppModalBody>
+            <AppModalBody>
+                {parameters}
+                <ParameterGrid>
+                    <FastenSection insertable={insertable} />
+                </ParameterGrid>
+            </AppModalBody>
             <InsertMenuFooter
                 insertable={insertable}
                 favorite={favorite}
@@ -315,8 +321,7 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
         insertable.microversionId
     );
 
-    const canFasten =
-        insertable.supportsFasten && targetElementType === ElementType.ASSEMBLY;
+    const canFasten = useCanFasten(insertable);
 
     const handleClick = useCallback(() => {
         insertMutation.mutate(canFasten && fasten);
@@ -341,16 +346,8 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
 
     return (
         <Group gap="sm" align="center">
-            <InsertLocationStatus />
-            {canFasten && fasten && <FastenCircularEdgesStatus />}
-            {canFasten && (
-                <InfoCheckbox
-                    label="Fasten"
-                    info="Also create a fasten mate which references the inserted part."
-                    checked={fasten}
-                    onChange={(checked) => updateUiState({ fasten: checked })}
-                />
-            )}
+            {/* Fastened, the part lands on its mate. */}
+            {!(canFasten && fasten) && <InsertLocationStatus />}
             <Button
                 // Light would put green on pale green.
                 variant="filled"
@@ -359,8 +356,8 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
                 onClick={handleClick}
             >
                 {targetElementType === ElementType.ASSEMBLY
-                    ? "Insert"
-                    : "Derive"}
+                    ? m.insertMenuInsert()
+                    : m.insertMenuDerive()}
             </Button>
         </Group>
     );

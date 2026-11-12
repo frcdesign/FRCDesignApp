@@ -47,7 +47,10 @@ import { useAutoAssemblyStore } from "../store";
 import { FastenerOptionsForm, FormInputRow } from "./fastener-options-form";
 import { LastRunCallout } from "./last-run-callout";
 import { m } from "../../../paraglide/messages";
-import { FullWidthRow, ParameterGroup } from "./parameter-group";
+import {
+    FullWidthRow,
+    ParameterGroup
+} from "../../../components/parameter-group";
 
 interface AutoAssemblyPanelProps {
     assembly: ElementPath;

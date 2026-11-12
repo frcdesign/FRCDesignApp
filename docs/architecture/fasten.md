@@ -80,15 +80,19 @@ interface FastenPicksState {
 }
 ```
 
-`src/frontend/features/insert/components/fasten-circular-edges-status.tsx`,
+`src/frontend/features/insert/components/fasten-section.tsx`,
+`src/frontend/components/context-bar.tsx`,
 `src/frontend/features/insert/queries.ts` and
 `src/frontend/features/insert/insert-tips.ts`
 
 ```ts
-// The icon, its card, the mode and the query lists, in the insert menu.
-function FastenCircularEdgesStatus(): ReactNode;
-// The same in the navbar, for an assembly, signed in, while no insert menu is open.
-function NavbarFastenStatus(): ReactNode;
+// The insert menu's Fasten accordion: its checkbox, over the picks.
+function FastenSection(props: FastenSectionProps): ReactNode;
+// Select by and the query lists, in the menu and under the context bar.
+function FastenPicks(): ReactNode;
+// The header's last row: Preselection and Add insert location on a library
+// page, and which list limits picks on any other.
+function ContextBar(props: ContextBarProps): ReactNode;
 // Sends the picks with a fasten, a quick insert's included.
 function useInsertMutation(
     insertable: InsertableOut,
@@ -297,23 +301,27 @@ enum MateLocation {
 1. Once the app sends `applicationInit`, Onshape sends the window's whole
    selection each time it changes, and `useOnshapeSelection` hands the focused
    `QueryList` what was added and deselected, as in Auto Assembly.
-2. In an assembly, signed in, the navbar of a library page shows the cursor
-   icon beside the insert location's (`NavbarFastenStatus`): a red stop sign
-   with nothing picked, a check with something. So does the insert menu, with
-   **Fasten** ticked (`FastenCircularEdgesStatus`). The navbar hides its own
-   while an insert menu is open (`openInsertableId`), since two lists of one id
-   would both take picks; both read `useFastenPicks`, so what was picked from
-   the navbar is in the menu's list, and the other way round.
-3. The card holds the mode (**Circular edges** or planar **Faces**), the targets'
-   query list, and in faces mode **Edges to exclude**. It stays mounted while
-   hidden (`keepMounted`), so its lists take picks with the card closed, and
-   the icon turns the primary colour while one of them is focused. The targets'
-   list is `autoFocus`: it is focused on mount, and again whenever the focused
-   list unmounts, so one list always takes picks. Both lists are passive
-   (`isPassive`): they take what's selected in the Onshape window, but don't
-   limit picks, prompt for them, or light them up on their own. Clicking one
-   starts selecting with it, as in Auto Assembly, until **Finish selecting**.
-   Hovering a row lights its entity up.
+2. In an assembly, signed in, a library page's header ends in the context bar
+   (`ContextBar`). Its **Preselection** button counts the picks held.
+   **Add insert location** shows beside it while the assembly has none.
+3. **Preselection** opens `FastenPicks` under the bar and starts selecting
+   with the targets' list. `FastenPicks` holds **Select by** (**Circular
+   edges** or planar **Faces**), the targets' query list, and in faces mode
+   **Edges to exclude**. **Done** stops selecting and keeps the picks;
+   **Cancel** also clears them.
+    - The lists stay mounted while the bar is closed, hidden by `display`
+      alone, so they take picks then too.
+    - The targets' list is `autoFocus`, so one list always takes picks.
+    - Both lists are passive (`isPassive`): they take what's selected, without
+      limiting or prompting, until one is clicked or **Preselection** opens.
+    - Hovering a row lights its entity up.
+    - The insert menu shows the same picks in its **Fasten** accordion
+      (`FastenSection`), a `ParameterGroup` whose checkbox is `fasten`. Folded
+      from its title, its lists still take picks. While a menu is open
+      (`openInsertableId`) the bar unmounts its own lists, since two lists of
+      one id would both take picks. Both read `useFastenPicks`.
+    - The insert menu's footer shows the insert location's icon only when the
+      insert won't fasten.
 4. Changing the mode clears the picks.
 5. A moment after the picks change, they're checked in the background with
    Auto Assembly's `POST /api/auto-assembly/check`, without options: a pick
@@ -361,7 +369,7 @@ In [strings/fasten.md](../strings/fasten.md).
 - Each picked or found edge gets its own instance and mate.
 - While an assembly's library page is open, exactly one query list of the
   fasten picks is mounted: the insert menu's when one is open, else the
-  navbar's.
+  context bar's.
 - Mates and inserts are added one at a time: Onshape rejects a feature-list edit
   that races another.
 
@@ -389,9 +397,12 @@ In [strings/fasten.md](../strings/fasten.md).
   inserting, needs no click in the panel. A list takes what's added to the
   selection after it's focused, so what was picked before the app opened isn't
   taken.
-- **Preselection lives in the navbar.** Quick insert opens no menu, so the
-  picks it fastens to are made beside the insert location, which a quick
-  insert also uses; the insert menu shows the same picks rather than its own.
+- **Preselection lives in the context bar.** Quick insert opens no menu, so
+  its picks are made from the header. A button that opens the lists under
+  the bar keeps them on screen while picking; a hover card closed as the
+  pointer left for the Onshape window.
+- **The menu's picks are a section, not a card.** The Fasten accordion sits
+  under the parameters, so the footer holds only what acts on the part.
 - **No Replicate.** Onshape accepts a Replicate added through the API (200,
   `featureStatus` OK, listed by the features endpoint) but makes no copies,
   and the assembly shows nothing for it. Each edge gets its own instance and

@@ -56,8 +56,8 @@ import { getLibraryVersionQuery } from "../features/library/queries";
 import { LibraryId } from "@backend/features/library/library-id";
 import { AppColor, getLibraryColor, toShade } from "../theme";
 import { queryClient } from "../lib/query-client";
+import { ContextBar } from "./context-bar";
 import { InsertLocationStatus } from "../features/insert-location/components/insert-location-status";
-import { NavbarFastenStatus } from "../features/insert/components/fasten-circular-edges-status";
 import { useIsVersionManager } from "../features/version-manager/navigation";
 import { useTargetElement, useTargetWorkspace } from "../lib/onshape-params";
 import {
@@ -94,7 +94,7 @@ export function NavbarRow(props: PropsWithChildren): ReactNode {
     );
 }
 
-/** The page picker with the brand and settings, over search and its filters. */
+/** The page picker with the brand and settings, over search and its filters, then the context bar. */
 export function AppNavbar(): ReactNode {
     // Search and its filters belong to a library, and neither utility is
     // one; their pages fill the room they leave.
@@ -107,9 +107,8 @@ export function AppNavbar(): ReactNode {
             <NavbarRow>
                 <PagePicker />
                 <Group gap="xs" ml="auto" className={styles.noShrink}>
-                    {/* Inserting is the library's; the version manager inserts nothing. */}
+                    {/* Inserting is the library's; a utility inserts nothing from a row. */}
                     {!isUtility && <InsertLocationStatus />}
-                    {!isUtility && <NavbarFastenStatus />}
                     <SignInButton />
                     {isVersionManager && <VersionManagerRefreshButton />}
                     <SettingsControls />
@@ -121,6 +120,7 @@ export function AppNavbar(): ReactNode {
                     <VendorMenu />
                 </Group>
             )}
+            <ContextBar isLibrary={!isUtility} />
         </Stack>
     );
 }

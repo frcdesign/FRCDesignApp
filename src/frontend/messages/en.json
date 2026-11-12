@@ -690,36 +690,6 @@
     "autoAssemblyDetails": "Details",
     "autoAssemblyNoRecentRun": "No recent run",
     "autoAssemblyStoppedEarly": "Stopped early.",
-    "fastenCircularEdgesSelected": [
-        {
-            "declarations": [
-                "input count",
-                "local countPlural = count: plural",
-                "local countFormatted = count: number"
-            ],
-            "selectors": ["countPlural"],
-            "match": {
-                "countPlural=one": "1 circular edge selected",
-                "countPlural=other": "{countFormatted} circular edges selected"
-            }
-        }
-    ],
-    "fastenFacesSelected": [
-        {
-            "declarations": [
-                "input count",
-                "local countPlural = count: plural",
-                "local countFormatted = count: number"
-            ],
-            "selectors": ["countPlural"],
-            "match": {
-                "countPlural=one": "1 face selected",
-                "countPlural=other": "{countFormatted} faces selected"
-            }
-        }
-    ],
-    "fastenNoCircularEdgesSelected": "No circular edges selected",
-    "fastenNoFacesSelected": "No faces selected",
     "fastenCircularEdgesNone": "Select edges to automatically fasten inserted parts to.",
     "fastenCircularEdgesOne": "The part will be fastened to the selected edge.",
     "fastenCircularEdgesMany": "A part will be inserted and fastened to each selected edge.",
@@ -755,6 +725,14 @@
     "autoAssemblyWashersAvailable": "Washers are also available via Auto Assembly.",
     "autoAssemblyNutsAvailable": "Nuts are also available via Auto Assembly.",
     "autoAssemblyOpen": "Auto Assembly",
-    "selectionBarFiltered": "Selections are filtered.",
-    "selectionBarFinish": "Finish selecting"
+    "contextBarSelecting": "Selecting: {label}",
+    "contextBarFinish": "Finish selecting",
+    "contextBarPreselection": "Preselection",
+    "contextBarAddInsertLocation": "Add insert location",
+    "contextBarCancel": "Cancel",
+    "contextBarDone": "Done",
+    "placementFasten": "Fasten",
+    "placementSelectBy": "Select by",
+    "insertMenuInsert": "Insert",
+    "insertMenuDerive": "Derive"
 }

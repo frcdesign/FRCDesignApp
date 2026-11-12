@@ -12,7 +12,7 @@ import {
 } from "../lib/selection";
 import { Status } from "../lib/status";
 import { QueryList } from "./query-list";
-import { SelectionBar } from "./selection-bar";
+import { ContextBar } from "./context-bar";
 
 const PROMPT = "Select edges.";
 
@@ -388,12 +388,12 @@ describe("QueryList", () => {
                         filter={CIRCULAR_EDGES}
                         autoFocus
                     />
-                    <SelectionBar />
+                    <ContextBar isLibrary={false} />
                 </>
             );
         };
         renderWithProviders(<AutoFocused />);
-        expect(screen.getByText("Selections are filtered.")).toBeTruthy();
+        expect(screen.getByText("Selecting: Holes")).toBeTruthy();
 
         messages = [];
         await userEvent.click(
@@ -402,14 +402,14 @@ describe("QueryList", () => {
         expect(messages).toEqual([
             expect.objectContaining({ messageName: "stopRequest" })
         ]);
-        expect(screen.queryByText("Selections are filtered.")).toBeNull();
+        expect(screen.queryByText("Selecting: Holes")).toBeNull();
         // The first list stays unfocused, so picks go nowhere
         expect(useOnshapeSelection.getState().focused).toBeUndefined();
         select(edge("A"));
         expect(screen.queryByText("Edge 1")).toBeNull();
 
         await userEvent.click(screen.getByText("Holes"));
-        expect(screen.getByText("Selections are filtered.")).toBeTruthy();
+        expect(screen.getByText("Selecting: Holes")).toBeTruthy();
     });
 
     it("takes picks passively until clicked, and listens again once selecting finishes", async () => {
@@ -428,7 +428,7 @@ describe("QueryList", () => {
                         autoFocus
                         isPassive
                     />
-                    <SelectionBar />
+                    <ContextBar isLibrary={false} />
                 </>
             );
         };
@@ -443,7 +443,7 @@ describe("QueryList", () => {
         expect(messages).not.toContainEqual(
             expect.objectContaining({ messageName: "showMessageBubble" })
         );
-        expect(screen.queryByText("Selections are filtered.")).toBeNull();
+        expect(screen.queryByText("Selecting: Holes")).toBeNull();
 
         await userEvent.click(screen.getByText("Holes"));
         expect(messages).toContainEqual(
@@ -452,12 +452,12 @@ describe("QueryList", () => {
                 message: PROMPT
             })
         );
-        expect(screen.getByText("Selections are filtered.")).toBeTruthy();
+        expect(screen.getByText("Selecting: Holes")).toBeTruthy();
 
         await userEvent.click(
             screen.getByRole("button", { name: "Finish selecting" })
         );
-        expect(screen.queryByText("Selections are filtered.")).toBeNull();
+        expect(screen.queryByText("Selecting: Holes")).toBeNull();
         // Listening again: the request it stops cleared the window
         act(() => useOnshapeSelection.getState().receive([]));
         select(edge("B"));

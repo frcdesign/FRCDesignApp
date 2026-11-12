@@ -33,7 +33,10 @@ import {
     SIZING_PARAMETER
 } from "../parameters";
 import { useAutoAssemblyStore } from "../store";
-import { FullWidthRow, ParameterGroup } from "./parameter-group";
+import {
+    FullWidthRow,
+    ParameterGroup
+} from "../../../components/parameter-group";
 import { m } from "../../../paraglide/messages";
 
 interface FormInputRowProps {

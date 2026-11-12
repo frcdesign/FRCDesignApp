@@ -1,29 +1,33 @@
 # Insert and fasten: strings
 
-What [fasten.md](../architecture/fasten.md) shows a person. The card's, the
+What [fasten.md](../architecture/fasten.md) shows a person. The picking, the
 toasts' and the tip's strings are messages in `src/frontend/messages/en.json`,
-keyed `fasten…` (an insert's own toasts, `insert…`). The errors are written by
+keyed `fasten…`, `placement…` and `contextBar…` (an insert's own toasts, `insert…`). The errors are written by
 the backend (`library/insertables/routes.ts`, and the check route Auto
 Assembly shares), and the app shows them as they come.
 
-## The card
+## Picking
 
-The cursor icon's card, in the navbar and the insert menu.
+In the insert menu's Fasten accordion, and under the context bar's
+Preselection button.
 
-| String                                                                       | Kind             | Where                    | When                                               | Review                             |
-| ---------------------------------------------------------------------------- | ---------------- | ------------------------ | -------------------------------------------------- | ---------------------------------- |
-| "{n} circular edge(s) selected" / "{n} face(s) selected"                     | Card title       | Top                      | Something picked                                   |                                    |
-| "No circular edges selected" / "No faces selected"                           | Card title       | Top                      | Nothing picked                                     |                                    |
-| "Select edges to automatically fasten inserted parts to."                    | Card description | Under the title          | Circular edges, nothing picked                     |                                    |
-| "The part will be fastened to the selected edge."                            | Card description | Under the title          | One edge picked                                    |                                    |
-| "A part will be inserted and fastened to each selected edge."                | Card description | Under the title          | Several edges picked                               |                                    |
-| "Select faces to automatically fasten inserted parts to every hole in them." | Card description | Under the title          | Faces, nothing picked                              |                                    |
-| "A part will be inserted and fastened to every hole in the selected faces."  | Card description | Under the title          | Faces picked                                       |                                    |
-| "Circular edges" / "Faces"                                                   | Mode, list label | The switch, first list   | Always                                             |                                    |
-| "Edges to exclude"                                                           | Query list label | Second list              | Faces                                              | **⚑** Was "Holes to skip"          |
-| "Select circular edges to fasten parts to."                                  | Prompt           | Onshape's message bubble | Circular edges focused, or something else picked   |                                    |
-| "Select faces to fasten parts to every hole in."                             | Prompt           | Onshape's message bubble | Faces focused, or something else picked            |                                    |
-| "Select circular edges to exclude."                                          | Prompt           | Onshape's message bubble | Edges to exclude focused, or something else picked | **⚑** Reworded, as Auto Assembly's |
+| String                                                                       | Kind               | Where                            | When                                                       | Review    |
+| ---------------------------------------------------------------------------- | ------------------ | -------------------------------- | ---------------------------------------------------------- | --------- |
+| "Fasten"                                                                     | Accordion title    | The insert menu, with a checkbox | A part that can fasten, in an assembly                     | **⚑** New |
+| "Preselection"                                                               | Button             | The context bar                  | A library page in an assembly, signed in; counts the picks | **⚑** New |
+| "Add insert location"                                                        | Button             | The context bar                  | The assembly has none                                      | **⚑** New |
+| "Cancel" / "Done"                                                            | Buttons            | Under the bar's lists            | Preselection open: Cancel also clears the picks            | **⚑** New |
+| "Select by"                                                                  | Input label        | Over the lists                   | Always                                                     | **⚑** New |
+| "Select edges to automatically fasten inserted parts to."                    | Description        | Under the lists                  | Circular edges, nothing picked                             |           |
+| "The part will be fastened to the selected edge."                            | Description        | Under the lists                  | One edge picked                                            |           |
+| "A part will be inserted and fastened to each selected edge."                | Description        | Under the lists                  | Several edges picked                                       |           |
+| "Select faces to automatically fasten inserted parts to every hole in them." | Description        | Under the lists                  | Faces, nothing picked                                      |           |
+| "A part will be inserted and fastened to every hole in the selected faces."  | Description        | Under the lists                  | Faces picked                                               |           |
+| "Circular edges" / "Faces"                                                   | Option, list label | Select by, first list            | Always                                                     |           |
+| "Edges to exclude"                                                           | Query list label   | Second list                      | Faces                                                      |           |
+| "Select circular edges to fasten parts to."                                  | Prompt             | Onshape's message bubble         | Circular edges focused, or something else picked           |           |
+| "Select faces to fasten parts to every hole in."                             | Prompt             | Onshape's message bubble         | Faces focused, or something else picked                    |           |
+| "Select circular edges to exclude."                                          | Prompt             | Onshape's message bubble         | Edges to exclude focused, or something else picked         |           |
 
 A row's problem under it is the check's, listed in
 [auto-assembly.md](./auto-assembly.md#a-picks-problem).

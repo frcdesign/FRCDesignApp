@@ -178,7 +178,7 @@ enum Part {
 
 `src/frontend/features/auto-assembly/components/auto-assembly-panel.tsx`,
 `src/frontend/features/auto-assembly/components/fastener-options-form.tsx`,
-`src/frontend/features/auto-assembly/components/parameter-group.tsx` and
+`src/frontend/components/parameter-group.tsx` and
 `src/frontend/components/parameter-input.tsx`
 
 ```ts
@@ -186,7 +186,7 @@ enum Part {
 function AutoAssemblyPanel(props: AutoAssemblyPanelProps): ReactNode;
 // The Fastener group, a group per washer and the nut, and the stop condition.
 function FastenerOptionsForm(props: FastenerOptionsFormProps): ReactNode;
-// Onshape's parameter groups, opened or driven by a checkbox.
+// Onshape's parameter groups: plain, or an accordion its checkbox opens.
 function ParameterGroup(props: ParameterGroupProps): ReactNode;
 
 interface AutoAssemblyPanelProps {
@@ -994,8 +994,8 @@ closes the menu and switches to the page.
    `stopRequest`. Every stop names the request it ends by its `messageId`,
    which Onshape answers as `stoppedRequestId`.
 
-    While a request is live (`filtering`), a bar along the bottom of the panel
-    says selections are filtered (`SelectionBar`). Its **Finish selecting**
+    While a request is live (`filtering`), the header's context bar names the
+    list limiting picks (`ContextBar`, `listLabel`). Its **Finish selecting**
     button unfocuses the list (`finishSelecting`), which stops the request.
 
 4. Hovering a row, in any list, lights its entity up alone
@@ -1029,8 +1029,8 @@ The panel is a `ParameterGrid` of the configuration dialog's own inputs
    with _Max length_; or **Face** with _Face to stop at_, a query list of one
    planar face, where a new pick takes the old one's place), then _Max thread
    depth_.
-2. **Add screw washer**, **Add nut** and **Add nut washer**, each a group its
-   checkbox shows: the washer or nut studio's parameters but its Size, which is
+2. **Add screw washer**, **Add nut** and **Add nut washer**, each an accordion its
+   checkbox opens: the washer or nut studio's parameters but its Size, which is
    the screw's. A washer's Vendor offers those making it in that size, and is
    left out under a Generic screw, whose washers are Generic; a nut has none,
    since one vendor makes them all. Like every studio input, a washer's Type and
