@@ -84,9 +84,6 @@ describe("FeatureScriptMenu", () => {
         // No example: the generic hero, and nothing to open.
         expect(screen.getByText("No example yet")).toBeTruthy();
         expect(
-            screen.getByText("Add it to a Part Studio to see what it builds.")
-        ).toBeTruthy();
-        expect(
             screen.queryByRole("button", { name: "Open example" })
         ).toBeNull();
         expect(

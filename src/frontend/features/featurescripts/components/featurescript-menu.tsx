@@ -40,7 +40,6 @@ function FeatureScriptHero(props: FeatureScriptHeroProps): ReactNode {
                     />
                 }
                 title={m.featureScriptsNoExample()}
-                description={m.featureScriptsNoExampleDescription()}
             />
         );
     }

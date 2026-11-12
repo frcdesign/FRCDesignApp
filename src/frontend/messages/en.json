@@ -575,7 +575,6 @@
     "featureScriptsAddFailed": "Failed to add {name}.",
     "featureScriptsOpenExample": "Open example",
     "featureScriptsNoExample": "No example yet",
-    "featureScriptsNoExampleDescription": "Add it to a Part Studio to see what it builds.",
     "featureScriptsProblemNoExample": "No example",
     "featureScriptsProblemNoExampleTip": "Name a Part Studio \"{name} example\" in the frontend document.",
     "featureScriptsProblemNoIcon": "No icon",
