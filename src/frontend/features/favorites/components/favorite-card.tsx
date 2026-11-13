@@ -12,7 +12,6 @@ import {
     type RowMatch
 } from "../../../components/item-row";
 import { OpenDocumentItems } from "../../../components/open-document-items";
-import { QuickInsertItems } from "../../insert/components/quick-insert-items";
 import { QuickInsertButton } from "../../insert/components/quick-insert-button";
 import { ConfigurationHoverCard } from "../../insert/components/configuration-hover-card";
 import { useIsInsertableHidden } from "../../library/visibility";
@@ -20,7 +19,6 @@ import { CardThumbnail } from "../../thumbnails/components/thumbnail";
 import { useIsAssemblyInPartStudio } from "../../insert/insert-hooks";
 import { ChangeOrderItems } from "../../../components/change-order";
 import { MenuSection } from "../../../components/app-menu";
-import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 import {
     openCannotDeriveAssemblyAlert,
     openCannotReorderAlert
@@ -136,7 +134,6 @@ function FavoriteMenuItems(props: FavoriteMenuItemsProps): ReactNode {
     const { insertable, favorite } = props;
 
     const vendorFilters = useVendorFilters();
-    const isConnected = useIsConnectedToOnshape();
 
     const setFavoriteOrderMutation = useSetFavoriteOrderMutation();
     const favoritesQuery = useFavoritesQuery();
@@ -144,16 +141,6 @@ function FavoriteMenuItems(props: FavoriteMenuItemsProps): ReactNode {
 
     return (
         <>
-            {isConnected && (
-                <MenuSection label={m.libraryMenuInsert()}>
-                    <QuickInsertItems
-                        insertable={insertable}
-                        selection={favorite.defaultSelection}
-                        isFavorite
-                        source={UseSource.FAVORITES}
-                    />
-                </MenuSection>
-            )}
             <MenuSection label={m.libraryMenuFavorites()}>
                 <ChangeOrderItems
                     id={favorite.id}

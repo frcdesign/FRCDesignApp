@@ -158,7 +158,8 @@ interface RunMenuSectionProps {
     disabled: boolean;
     /** @default disabled */
     updateDisabled?: boolean;
-    onQuick: () => void;
+    /** The section's quick run of every link; a row's is its own button. */
+    onQuick?: () => void;
     onQuickRecursive: () => void;
     onUpdate: () => void;
 }
@@ -185,13 +186,15 @@ function RunMenuSection(props: RunMenuSectionProps): ReactNode {
                     : m.versionManagerMenuPull()
             }
         >
-            <Menu.Item
-                leftSection={<DirectionIcon direction={direction} />}
-                disabled={disabled}
-                onClick={onQuick}
-            >
-                {copy.quickAction}
-            </Menu.Item>
+            {onQuick && (
+                <Menu.Item
+                    leftSection={<DirectionIcon direction={direction} />}
+                    disabled={disabled}
+                    onClick={onQuick}
+                >
+                    {copy.quickAction}
+                </Menu.Item>
+            )}
             <Menu.Item
                 leftSection={<TreeStructureIcon size={IconSize.MEDIUM} />}
                 disabled={disabled}
@@ -300,7 +303,6 @@ function LinkedWorkspaceRow(props: LinkedWorkspaceRowProps): ReactNode {
                     direction={direction}
                     linked={linked}
                     disabled={running !== undefined}
-                    onQuick={() => actions.quickOne(linked, false)}
                     onQuickRecursive={() => actions.quickOne(linked, true)}
                     onUpdate={() => actions.updateOne(linked)}
                 />

@@ -81,8 +81,8 @@ A row opens the insert menu on the stored selection, with
 configuration's render (see [thumbnails.md](./thumbnails.md)), and the icon
 beside its title lists that configuration on hover (see
 [configurations.md](./configurations.md)). The row's **Insert** (or
-**Derive**) button and its menu insert with that selection, and its heart and
-menu favorite it; a recent can't be
+**Derive**) button inserts with that selection, and its heart and menu
+favorite it; a recent can't be
 removed by hand, since later inserts push it out.
 
 ## Invariants

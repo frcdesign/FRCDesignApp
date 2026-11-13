@@ -473,11 +473,12 @@ In [strings/version-manager.md](../strings/version-manager.md).
   the opt-in, not the default.
 - **The row is the form; its button is the quick run.** Each row the caller
   can open carries an outlined **Push** or **Pull** (`RowActionButton`), which
-  runs under the form's defaults as the menu's quick push or pull does, and
-  waits, disabled with why, while a run is going. Outlined, it reads as
-  secondary to the name; the library's rows and FeatureScripts carry the same
-  button, so one click does the common thing everywhere. Clicking the row opens
-  the form, and the menu holds the rest of the runs.
+  runs under the form's defaults, and waits, disabled with why, while a run is
+  going. Outlined, it reads as secondary to the name; the library's rows and
+  FeatureScripts carry the same button, so one click does the common thing
+  everywhere. Clicking the row opens the form, and the row's menu holds only
+  the runs no button does — the recursive one and updating references. The
+  section's menu keeps its quick run of every link, which no button does.
 - **Always a new version; updating is its own action.** A push or pull that
   sometimes versions and sometimes does not reads oddly, most of all a pull that
   versions nothing. Moving references without versioning is asked for by name

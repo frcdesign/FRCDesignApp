@@ -5,7 +5,6 @@ import { type InsertableOut } from "@backend/features/library/contract";
 import { UseSource } from "@backend/features/analytics/usage";
 import { ElementType } from "@backend/lib/onshape/element-type";
 import { RowActionButton } from "../../../components/row-action-button";
-import { useUiState } from "../../../lib/ui-state";
 import { m } from "../../../paraglide/messages";
 import {
     useIsAssemblyInPartStudio,
@@ -22,8 +21,9 @@ interface QuickInsertButtonProps {
 }
 
 /**
- * A row's insert, as the insert menu's own button would make it, fastening
- * where that would. Nothing standalone, where there is nothing to insert into.
+ * A row's one-click insert, which fastens wherever the part can be, whatever
+ * the insert menu's Fasten is set to. Nothing standalone, where there is
+ * nothing to insert into.
  */
 export function QuickInsertButton(props: QuickInsertButtonProps): ReactNode {
     const { insertable, selection, isFavorite, source } = props;
@@ -31,7 +31,6 @@ export function QuickInsertButton(props: QuickInsertButtonProps): ReactNode {
     const isAssemblyInPartStudio = useIsAssemblyInPartStudio(
         insertable.elementType
     );
-    const fasten = useUiState((state) => state.fasten);
     const insertMutation = useInsertMutation(insertable, selection, {
         isFavorite,
         isQuickInsert: true,
@@ -53,9 +52,7 @@ export function QuickInsertButton(props: QuickInsertButtonProps): ReactNode {
                     : undefined
             }
             onClick={() =>
-                insertMutation.mutate(
-                    isAssembly && insertable.supportsFasten && fasten
-                )
+                insertMutation.mutate(isAssembly && insertable.supportsFasten)
             }
         />
     );

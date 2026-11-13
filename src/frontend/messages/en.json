@@ -480,7 +480,6 @@
     "versionManagerSuggestionsTooltip": "Suggested: this document references it.",
     "versionManagerSuggestionsLinkOther": "Link a different document",
     "versionManagerSuggestionsShow": "Back to suggested links",
-    "libraryMenuInsert": "Insert",
     "libraryMenuConfiguration": "Configuration",
     "libraryMenuFavorites": "Favorites",
     "libraryMenuDocument": "Document",
@@ -623,5 +622,10 @@
     "featureScriptsUsage": "Usage",
     "featureScriptsAdds": "Adds",
     "featureScriptsUsers": "Users",
-    "featureScriptsFavoritesCount": "Favorites"
+    "featureScriptsFavoritesCount": "Favorites",
+    "insertQuickInsertTip": "Tip: the Insert button on a part's row inserts it without opening the insert menu.",
+    "insertQuickDeriveTip": "Tip: the Derive button on a part's row derives it without opening the insert menu.",
+    "insertThumbnailWaitTip": "Tip: you can insert a part even while the part's thumbnail is still generating.",
+    "insertSignInPreviewTip": "Sign in to Onshape to see a preview of your selection.",
+    "insertSignIn": "Sign in"
 }

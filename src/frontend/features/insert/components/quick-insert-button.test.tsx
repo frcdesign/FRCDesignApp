@@ -74,13 +74,21 @@ describe("QuickInsertButton", () => {
         expect(mutate).toHaveBeenCalledWith(false);
     });
 
-    it("inserts into an assembly, fastening as the insert menu would", async () => {
+    it("inserts into an assembly and fastens, whatever the insert menu's Fasten says", async () => {
         launchIn(ElementType.ASSEMBLY);
-        updateUiState({ fasten: true });
+        updateUiState({ fasten: false });
         renderButton();
 
         await userEvent.click(screen.getByRole("button", { name: "Insert" }));
         expect(mutate).toHaveBeenCalledWith(true);
+    });
+
+    it("inserts without fastening a part with nothing to fasten to", async () => {
+        launchIn(ElementType.ASSEMBLY);
+        renderButton({ ...SHAFT, supportsFasten: false });
+
+        await userEvent.click(screen.getByRole("button", { name: "Insert" }));
+        expect(mutate).toHaveBeenCalledWith(false);
     });
 
     it("holds an assembly back from a Part Studio, saying why", async () => {

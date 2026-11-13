@@ -213,6 +213,22 @@ describe("a linked document's row", () => {
         ).toBeTruthy();
     });
 
+    it("leaves the quick push to the row's button, keeping the recursive one in its menu", async () => {
+        renderChildren([GEARBOX]);
+
+        await userEvent.click(
+            screen.getAllByRole("button", { name: "View options" }).at(-1)!
+        );
+        expect(
+            await screen.findByRole("menuitem", {
+                name: "Quick recursive push"
+            })
+        ).toBeTruthy();
+        expect(
+            screen.queryByRole("menuitem", { name: "Quick push" })
+        ).toBeNull();
+    });
+
     it("offers no push on a document the caller can't open", () => {
         renderChildren([{ ...GEARBOX, isOpenable: false }]);
 

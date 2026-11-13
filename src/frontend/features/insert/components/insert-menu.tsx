@@ -253,7 +253,6 @@ function InsertMenuFooter(props: InsertMenuFooterProps): ReactNode {
                         report={report}
                         selection={selection}
                         configurationKey={configurationKey}
-                        source={source}
                     />
                 </MenuButton>
             </Group>
@@ -312,11 +311,19 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
 
     const handleClick = useCallback(() => {
         insertMutation.mutate(canFasten && fasten);
-        if (canShowQuickInsertTip) {
-            showQuickInsertTip();
+        // The button renders only with a target, so it is always set here.
+        if (canShowQuickInsertTip && targetElementType) {
+            showQuickInsertTip(targetElementType);
         }
         onInsert();
-    }, [insertMutation, onInsert, canFasten, fasten, canShowQuickInsertTip]);
+    }, [
+        insertMutation,
+        onInsert,
+        canFasten,
+        fasten,
+        canShowQuickInsertTip,
+        targetElementType
+    ]);
 
     if (!targetElementType) {
         return null;

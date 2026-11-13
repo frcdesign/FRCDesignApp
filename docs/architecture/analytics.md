@@ -499,7 +499,7 @@ interface DailyMetricPoint {
 interface UseSourceUsage {
     source: UseSource;
     count: number;
-    /** How many of those were quick inserts: a row's insert button, or its menu's. */
+    /** How many of those were quick inserts, from a row's own Insert or Derive button. */
     quickInsertCount: number;
 }
 

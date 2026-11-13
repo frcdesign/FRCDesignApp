@@ -17,14 +17,12 @@ import {
     type RowMatch
 } from "../../../components/item-row";
 import { OpenDocumentItems } from "../../../components/open-document-items";
-import { QuickInsertItems } from "../../insert/components/quick-insert-items";
 import { QuickInsertButton } from "../../insert/components/quick-insert-button";
 import { ConfigurationHoverCard } from "../../insert/components/configuration-hover-card";
 import { useIsInsertableHidden } from "../../library/visibility";
 import { CardThumbnail } from "../../thumbnails/components/thumbnail";
 import { useIsAssemblyInPartStudio } from "../../insert/insert-hooks";
 import { MenuSection } from "../../../components/app-menu";
-import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 import { openCannotDeriveAssemblyAlert } from "../../../components/alerts";
 import { type SearchHit } from "../../search/search";
 
@@ -134,20 +132,9 @@ function RecentMenuItems(props: RecentMenuItemsProps): ReactNode {
     const { insertable, recent } = props;
 
     const favorite = useFavorite(insertable.id);
-    const isConnected = useIsConnectedToOnshape();
 
     return (
         <>
-            {isConnected && (
-                <MenuSection label={m.libraryMenuInsert()}>
-                    <QuickInsertItems
-                        insertable={insertable}
-                        selection={recent.selection}
-                        isFavorite={favorite !== undefined}
-                        source={UseSource.RECENTS}
-                    />
-                </MenuSection>
-            )}
             <MenuSection label={m.libraryMenuFavorites()}>
                 <FavoriteInsertableItem
                     favorite={favorite}

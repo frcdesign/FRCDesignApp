@@ -26,7 +26,6 @@ import { AdminMenuSection, MenuSection } from "../../../components/app-menu";
 import { ReloadThumbnailMenuItem } from "./reload-thumbnail-item";
 import { UpdateReferencesMenuItem } from "./update-references-item";
 import { InsertableChangesBadge } from "./changes-badges";
-import { QuickInsertItems } from "../../insert/components/quick-insert-items";
 import { QuickInsertButton } from "../../insert/components/quick-insert-button";
 import { ConfigurationHoverCard } from "../../insert/components/configuration-hover-card";
 import { openCannotDeriveAssemblyAlert } from "../../../components/alerts";
@@ -34,7 +33,6 @@ import { useIsAssemblyInPartStudio } from "../../insert/insert-hooks";
 import { openInsertMenu } from "../../insert/open-insert-menu";
 import { useFavorite } from "../../favorites/queries";
 import { RequireSignIn } from "../../auth/components/require-access";
-import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 import { UseSource } from "@backend/features/analytics/usage";
 import { Hint } from "@backend/features/hints/contract";
 import { ReportIssueItem } from "../../feedback/components/report-issue-item";
@@ -162,7 +160,6 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
                     favorite={favorite}
                     insertable={insertable}
                     selection={hitSelection}
-                    source={source}
                 />
             }
         />
@@ -177,7 +174,6 @@ interface InsertableMenuItemsProps {
     selection?: PartialSelection;
     /** That selection's key, so favoriting can name its thumbnail. */
     configurationKey?: ConfigurationKey;
-    source: UseSource;
     /** Inside the insert menu: the configuration on screen, which a favorite can open with. */
     report?: SelectionReport;
 }
@@ -191,23 +187,11 @@ export function InsertableMenuItems(
         inInsertMenu,
         selection,
         configurationKey,
-        source,
         report
     } = props;
-    const isConnected = useIsConnectedToOnshape();
 
     return (
         <>
-            {!inInsertMenu && isConnected && (
-                <MenuSection label={m.libraryMenuInsert()}>
-                    <QuickInsertItems
-                        insertable={insertable}
-                        selection={selection}
-                        isFavorite={favorite !== undefined}
-                        source={source}
-                    />
-                </MenuSection>
-            )}
             <RequireSignIn>
                 {favorite && report && (
                     <MenuSection label={m.libraryMenuConfiguration()}>
