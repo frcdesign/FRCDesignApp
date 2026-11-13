@@ -1,4 +1,5 @@
 import type { AppContext } from "./context";
+import { describeError } from "./error-text";
 
 /**
  * Runs `work` after the response, for what the caller need not wait on. Its
@@ -10,7 +11,10 @@ export async function runInBackground(
     work: () => Promise<void>
 ): Promise<void> {
     const guarded = work().catch((error: unknown) => {
-        console.error(`Failed to ${description}`, error);
+        console.error(
+            `Failed to ${description}: ${describeError(error)}`,
+            error
+        );
     });
     try {
         c.executionCtx.waitUntil(guarded);

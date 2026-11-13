@@ -16,6 +16,7 @@ their Onshape calls and link here for how those calls behave.
 | `src/backend/lib/onshape/endpoints/`              | One wrapper per Onshape endpoint, grouped by Onshape's API category                                      |
 | `src/backend/lib/api-error.ts`                    | `ApiError` and its four kinds; the body every failed `/api` response carries                             |
 | `src/backend/lib/errors.ts`                       | `errorHandler`: turns any thrown error into that body and a status                                       |
+| `src/backend/lib/error-text.ts`                   | `describeError`: an error's message and its causes', as one line for a log                               |
 | `src/backend/features/load/steps.ts`              | Workflow retry policies for Onshape and thumbnail steps                                                  |
 | `src/backend/features/load/context.ts`            | The load's limiters                                                                                      |
 | `src/backend/lib/cache.ts`                        | `CachePolicy`, `cacheMiddleware`, `setCache`                                                             |
@@ -75,8 +76,17 @@ A route throws; `errorHandler` answers with `{ kind, message }` and a status:
 
 A logged error's body also carries an `errorId`: the request's Ray ID (`cf-ray`),
 or a random id where there is none, as in tests and local dev. It is logged as
-`Server error <errorId>` beside the error and its stack, so a report quoting it
-([feedback.md](./feedback.md)) finds the stack in Workers Logs.
+`Server error <errorId>: <describeError(error)>` beside the error itself, so a
+report quoting it ([feedback.md](./feedback.md)) finds the message, its causes
+and the stack in Workers Logs. The message is spelled into the line because
+Workers Logs keeps an `Error` argument's stack frames and drops its
+`Name: message` line, and never shows its `cause`: a failed query is a Drizzle
+error whose cause is D1's. `runInBackground` and `retryInsert` log the same
+way.
+
+An Onshape refusal the user is told about in our own words (401, 403, 429) is
+logged as a warning, `Onshape refused <method> <path>: <Onshape's message>`,
+since Onshape's reason appears nowhere else.
 
 On the client, `apiGet`/`apiPost`/`apiDelete` throw an `AppError` holding that
 body and the request that failed (`FailedRequest`: method, path without the
@@ -108,7 +118,9 @@ crash page.
 | Load thumbnail steps            | `THUMBNAIL_RETRIES`                | 3 retries after 10, 20, 40 s; a 429 as above                                               |
 | Configuration renders           | `RENDER_RETRIES`                   | 30 retries every 2 s; a 429 waits its `Retry-After` plus jitter                            |
 | A reload waiting its turn       | `TURN_INTERVAL`                    | Checks the library again every 30 s                                                        |
-| Client queries                  | `queryClient` default              | 2 retries, none for an `AppError` that isn't `internal`                                    |
+| Client queries                  | `queryClient` default              | 2 retries after 1 and 2 s, none for an `AppError` that isn't `internal`                    |
+| A library's cache version       | `LIBRARY_VERSION_RETRIES`          | 5 retries after 1, 2, 4, 8 and 16 s, none for an `AppError` that isn't `internal`          |
+| D1 reads                        | D1's own                           | D1 retries a read-only query twice on a retryable error; the app adds none                 |
 | Stored thumbnails on the client | `STORED_RETRIES`                   | 1 retry                                                                                    |
 | Waiting on a render             | `RENDER_TIMEOUT_MS`                | Gives up after 60 s without the image                                                      |
 | Push socket                     | `FIRST_RETRY_MS` → `LAST_RETRY_MS` | Reconnects after 1 s, doubling to 30 s                                                     |
@@ -197,6 +209,13 @@ that reconnects refreshes the library, since pushes during the outage are lost.
   queries and the version itself; a versioned query's old url is left alone,
   since refetching it would restore the old state.
 
+## Failure and recovery
+
+| Failure                               | Result                                                                                     | Recovery                                                |
+| ------------------------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------- |
+| D1 reads failing for under 30 s       | The library route waits on its cache version's retries; other queries show their own error | The version's retries outlast it, and the library loads |
+| D1 reads failing for longer than that | The library route's loader throws, and the root error component shows the crash page       | Reloading the panel once D1 answers                     |
+
 ## Invariants
 
 - The Onshape client never retries on its own; the caller's policy decides.
@@ -217,6 +236,12 @@ that reconnects refreshes the library, since pushes during the outage are lost.
   off about 1% of assembly inserts that would have succeeded (see
   [ONSHAPE.md](../ONSHAPE.md#calling-the-api)), where 5 s would cut off one in
   eight.
+- **The cache version retries for half a minute; D1 reads aren't retried on
+  the server.** The library route awaits the version, so its failure is the
+  crash page, where any other query's is one section's error. D1 already
+  retries a read twice, so a read that still fails is an outage longer than a
+  request should wait: the client's backoff spans it without holding a Worker
+  open.
 - **One push hub.** Pushes are few and small; one instance keeps fan-out simple.
 - **Errors by kind, not status.** The client decides wording from `kind`, so a
   status can change without changing what the user reads.

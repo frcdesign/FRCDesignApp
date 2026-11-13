@@ -69,7 +69,9 @@ describe("api error responses", () => {
         const logged = vi
             .spyOn(console, "error")
             .mockImplementation(() => undefined);
-        const error = new Error("D1_ERROR: no such table: favorites");
+        const error = new Error("Failed query: select 1", {
+            cause: new Error("D1_ERROR: no such table: favorites")
+        });
         const app = createTestApp();
         app.post("/api/test-crash", () => {
             throw error;
@@ -87,7 +89,11 @@ describe("api error responses", () => {
             message: "Internal Server Error",
             errorId: "8f00ba11-IAD"
         });
-        expect(logged).toHaveBeenCalledWith("Server error 8f00ba11-IAD", error);
+        // The message and its cause are spelled out: Workers Logs drops them from the stack.
+        expect(logged).toHaveBeenCalledWith(
+            "Server error 8f00ba11-IAD: Error: Failed query: select 1 <- Error: D1_ERROR: no such table: favorites",
+            error
+        );
     });
 
     it("marks an unknown library as internal rather than explaining it", async () => {
