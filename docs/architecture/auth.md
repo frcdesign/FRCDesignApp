@@ -25,6 +25,7 @@ team, plus one owner set by configuration.
 | `src/backend/features/hints/store.ts`                       | Which features' dots a user has seen, carried by `/api/access-data`                |
 | `src/backend/features/hints/routes.ts`                      | `POST /api/seen-hints`, sent by `useMarkHintSeen` once a feature is opened         |
 | `src/backend/features/admin-team/`                          | The owner sets a library's admin team; members are synced from Onshape             |
+| `src/backend/features/admin-team/store.ts`                  | `getAdminTeam`, `saveAdminTeam`: the members, in D1 and copied to KV               |
 | `src/backend/features/entry/routes.ts`                      | `/init`, where Onshape launches the app                                            |
 | `src/backend/features/entry/document-access.ts`             | `findAccessProblem`: whether the grant can edit the document, and why not          |
 | `src/frontend/routes/_pages/document-access.tsx`            | `/document-access`: what to do about a grant that can't                            |
@@ -47,6 +48,9 @@ team, plus one owner set by configuration.
   admin team member (admins and editors), by user id, plus one reserved id for
   the dev override's user.
   chose and its synced members (`isTeamAdmin` per member).
+- **KV** `admin-team:` — by library id, a copy of `libraries.adminTeam` for one
+  hour. `saveAdminTeam` writes it with every sync, and `getAdminTeam` refills
+  it from D1 on a miss.
 - **KV** `seen-hints:` — by user id, the features (`Hint`) whose blue dot and
   **New** badge the user no longer needs, recorded by `POST /api/seen-hints`
   once the feature has been opened: the version manager's page on showing, the
@@ -172,6 +176,9 @@ query to that library, so naming your own library with another's element finds
 nothing. The owner's level is the same everywhere, so the owner check always
 asks about the default library.
 
+A level is read from the admin team in KV (`getAdminTeam`), so an access check
+makes no D1 read while the copy is there, and still answers when D1 doesn't.
+
 Whenever the owner's or an admin team member's level is checked, their session
 id is saved under `background-session:` so background work can borrow it (see
 [loading.md](./loading.md)).
@@ -209,6 +216,8 @@ declared in `wrangler.jsonc` per environment and typed in `AppBindings`. Run
   sends an older one first and `getCookie` reads the first, so one would hide
   the session: the caller signs in and still reads as signed out.
 - A session is only created by a completed sign-in, with a fresh id.
+- `libraries.adminTeam` is written only by `saveAdminTeam`, which writes the KV
+  copy with it.
 - Access is decided on the server per library; the client's viewed level only
   hides UI and can never exceed the server's.
 - Every elevated route checks the library the resource belongs to, not one the
@@ -241,6 +250,11 @@ missing.
 
 ## Decisions
 
+- **Access reads the admin team from KV, not D1.** Every `/api/access-data` and
+  every guard asks for it, and D1 failing made each of them fail with it. KV
+  lags a write by up to a minute, so someone removed from a team keeps their
+  level that long after the sync; the hour's expiry bounds a copy that a write
+  missed.
 - **Sign in as the session's enterprise.** OAuth's `company_id` takes an
   enterprise's id alone, and the session company is exactly that: Onshape
   fills it in for an enterprise and sends `cad` everywhere else. Asking for the

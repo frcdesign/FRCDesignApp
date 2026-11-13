@@ -204,7 +204,12 @@ that reconnects refreshes the library, since pushes during the outage are lost.
   Only a success is cached; an error answers `private, no-store`.
 - **Stored thumbnails** are immutable by their url (`v` is the microversion); a
   miss is `no-store`.
-- **Everything else** is `private, no-store`.
+- **Everything else** from `/api` is `private, no-store`.
+- **The bundle.** Vite names every file under `/assets/` by a hash of its
+  contents, and `public/_headers` answers those
+  `public, max-age=31536000, immutable`, so a second visit asks for none of
+  them. `index.html`, which names them, keeps Cloudflare's default
+  `max-age=0, must-revalidate`, so a deploy is picked up on the next load.
 - On the client, `useRefreshLibrary` invalidates the library's unversioned
   queries and the version itself; a versioned query's old url is left alone,
   since refetching it would restore the old state.
@@ -242,6 +247,11 @@ that reconnects refreshes the library, since pushes during the outage are lost.
   retries a read twice, so a read that still fails is an outage longer than a
   request should wait: the client's backoff spans it without holding a Worker
   open.
+- **Hashed bundle files are cached for a year.** A file's name changes with
+  its contents, so a cached one is never out of date. Caching is separate from
+  a deploy removing the last build's files: a tab that already holds a chunk
+  keeps using it, and one that asks for a removed chunk is reloaded by
+  `reloadOnStaleBuild`.
 - **One push hub.** Pushes are few and small; one instance keeps fan-out simple.
 - **Errors by kind, not status.** The client decides wording from `kind`, so a
   status can change without changing what the user reads.
