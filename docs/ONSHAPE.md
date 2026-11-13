@@ -140,6 +140,23 @@ problem planted, whose answers are kept, cut down, in
   _documented_ in the API guide, not the OpenAPI spec, and _observed_. An
   occurrence's `fixed`, and a pattern's `seedToPatternInstances` and
   `suppressed`, are _observed_.
+- **A mate whose instance is suppressed** is grayed out, its tooltip
+  "Inactive: One or more instances is suppressed", and its feature state is
+  `featureStatus: "ERROR"` with `inactive: true` — _observed_.
+- **Replicate and Mirror copies** are listed in the definition's
+  `rootAssembly.parametricInstances`, each feature with its `children`'s
+  `seedOccurrence` and `instanceIds` — _documented_ — and `type` "Replicate"
+  or "Mirror" — _observed_. They aren't in `patterns`, and no mate or group
+  names the copies — _observed_.
+- **A derived mirror of a Part Studio** is a tab whose one feature has
+  `featureType: "derivedMirror"`, and whose parts take their seeds' materials
+  — _observed_.
+- **A derived mirror** (an Assembly tab made by mirroring another) is listed
+  there too, as `type` "Derived Assembly Mirror" with no `children` — _observed_.
+  Nothing names the copies it made: its feature's `actionTypeArray` has one
+  item per copy, each naming the seed's instance (`seedInstanceKey`), and the
+  copies have no mates. An instance's `featureId`, in the spec, wasn't sent —
+  _observed_.
 - **An instance of a deleted part** keeps `type: "Part"`, with `partId: ""`,
   and Onshape draws it red — _observed_.
 - **An instance whose tab was deleted** is drawn red, and comes back with only

@@ -328,6 +328,13 @@ export interface OnshapeAssemblyDefinition {
             suppressed?: boolean;
             seedToPatternInstances?: Record<string, string[]>;
         }[];
+        /** Each Replicate's, Mirror's or derived mirror's copies, which follow their seed. */
+        parametricInstances?: {
+            /** "Replicate", "Mirror" or "Derived Assembly Mirror", which lists no children. */
+            type?: string;
+            suppressed?: boolean;
+            children?: { seedOccurrence?: string; instanceIds?: string[] }[];
+        }[];
     };
     parts: OnshapeAssemblyPart[];
     subAssemblies: OnshapeSubAssembly[];
@@ -424,6 +431,8 @@ type OnshapeFeatureStatus = "OK" | "INFO" | "WARNING" | "ERROR" | "UNKNOWN";
 /** Whether a feature regenerated. */
 interface OnshapeFeatureState {
     featureStatus?: OnshapeFeatureStatus;
+    /** A mate whose instance is suppressed, which Onshape grays out though its status is ERROR. */
+    inactive?: boolean;
 }
 
 /** GET /partstudios/d/{did}/{wvm}/{wvmid}/e/{eid}/features (the subset we read). */

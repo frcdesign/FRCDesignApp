@@ -684,6 +684,8 @@
     "designCheckFeatureWarningHelp": "Open it to see what Onshape is warning about.",
     "designCheckFeatureSuppressed": "Suppressed feature",
     "designCheckFeatureSuppressedHelp": "Delete it if it's no longer needed.",
+    "designCheckFeatureInactive": "Inactive feature",
+    "designCheckFeatureInactiveHelp": "Something it needs is suppressed, so it does nothing. Delete it if it's no longer needed.",
     "designCheckRollbackNotAtEnd": "Rollback bar isn't at the end",
     "designCheckRollbackNotAtEndHelp": [
         {
