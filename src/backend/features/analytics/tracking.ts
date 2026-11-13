@@ -8,6 +8,7 @@ import {
     NOT_A_USE,
     NOT_A_REPORT,
     NOT_A_VERSION_RUN,
+    NOT_A_DESIGN_CHECK,
     type ElementColumns,
     type EventCore
 } from "./logged-event";
@@ -31,6 +32,11 @@ import {
 } from "../configurations/contract";
 import { canonicalValues } from "../configurations/selection";
 import { toDayKey } from "./day";
+import {
+    countDesignIssues,
+    type DesignIssue,
+    type DesignIssueType
+} from "../design-check/contract";
 import type {
     FeedbackCategory,
     FeedbackSource,
@@ -96,6 +102,7 @@ function trackUse(
                 ...eventCore(type, event.libraryId, await c.var.getUserId()),
                 ...NOT_A_VERSION_RUN,
                 ...NOT_A_REPORT,
+                ...NOT_A_DESIGN_CHECK,
                 ...event.path,
                 insertableId: event.insertableId,
                 selection: appliedSelection(event.selection, event.parameters),
@@ -118,7 +125,8 @@ export function trackAppOpen(c: AppContext): Promise<void> {
                 ...NO_ELEMENT,
                 ...NOT_A_USE,
                 ...NOT_A_VERSION_RUN,
-                ...NOT_A_REPORT
+                ...NOT_A_REPORT,
+                ...NOT_A_DESIGN_CHECK
             },
             []
         )
@@ -175,6 +183,7 @@ export async function trackVersionRun(
             ...NO_ELEMENT,
             ...NOT_A_USE,
             ...NOT_A_REPORT,
+            ...NOT_A_DESIGN_CHECK,
             versionKind: event.kind,
             versionScope: event.scope,
             versionUpdateOnly: status.updateOnly ?? false,
@@ -225,10 +234,68 @@ export function trackReport(c: AppContext, event: ReportEvent): Promise<void> {
                 ...element,
                 ...NOT_A_USE,
                 ...NOT_A_VERSION_RUN,
+                ...NOT_A_DESIGN_CHECK,
                 reportTopic: event.topic,
                 reportCategory: event.category,
                 reportSource: event.source,
                 reportTeamNumber: event.teamNumber ?? null
+            },
+            []
+        )
+    );
+}
+
+/** A finished check of the caller's own tab; see `features/design-check`. */
+export interface DesignCheckEvent {
+    elementType: ElementType;
+    issues: DesignIssue[];
+}
+
+/** As `trackInsert`: the check has answered, whatever happens to its record. */
+export function trackDesignCheck(
+    c: AppContext,
+    event: DesignCheckEvent
+): Promise<void> {
+    return runInBackground(c, "record a design check", async () =>
+        record(
+            getDb(c.env.DB),
+            {
+                ...eventCore(
+                    EventType.DESIGN_CHECK,
+                    null,
+                    await c.var.getUserId()
+                ),
+                // Someone's own document, not a library's part.
+                ...NO_ELEMENT,
+                ...NOT_A_USE,
+                ...NOT_A_VERSION_RUN,
+                ...NOT_A_REPORT,
+                checkedElementType: event.elementType,
+                designIssueCounts: countDesignIssues(event.issues),
+                designIssueType: null
+            },
+            []
+        )
+    );
+}
+
+/** As `trackDesignCheck`, once a fix is made or an issue dismissed. */
+export function trackDesignAction(
+    c: AppContext,
+    type: EventType.DESIGN_FIX | EventType.DESIGN_DISMISS,
+    issueType: DesignIssueType
+): Promise<void> {
+    return runInBackground(c, `record a ${type}`, async () =>
+        record(
+            getDb(c.env.DB),
+            {
+                ...eventCore(type, null, await c.var.getUserId()),
+                ...NO_ELEMENT,
+                ...NOT_A_USE,
+                ...NOT_A_VERSION_RUN,
+                ...NOT_A_REPORT,
+                ...NOT_A_DESIGN_CHECK,
+                designIssueType: issueType
             },
             []
         )

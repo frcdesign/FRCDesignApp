@@ -58,3 +58,39 @@ export function fastenMate(name: string, queries: Iterable<object>): object {
         ]
     };
 }
+
+/** What a mate's queries call the implicit connector it owns; Onshape gives it its own id. */
+const IMPLICIT_CONNECTOR_ID = "0".repeat(17);
+
+/**
+ * Fastens `query`'s connector to the assembly origin, as a fasten made by hand
+ * does: to an implicit connector the mate owns, on the origin's Z axis.
+ */
+export function fastenMateToOrigin(name: string, query: object): object {
+    return {
+        ...fastenMate(name, [
+            query,
+            featureOccurrenceQuery(IMPLICIT_CONNECTOR_ID)
+        ]),
+        mateConnectors: [
+            {
+                btType: "BTMMateConnector-66",
+                featureType: "mateConnector",
+                featureId: IMPLICIT_CONNECTOR_ID,
+                name: "Mate connector",
+                implicit: true,
+                parameters: [
+                    {
+                        btType: "BTMParameterEnum-145",
+                        parameterId: "originType",
+                        value: "ON_ENTITY",
+                        enumName: "Origin type"
+                    },
+                    queryParameter("originQuery", [
+                        featureOccurrenceQuery("Origin", [], "ORIGIN_Z")
+                    ])
+                ]
+            }
+        ]
+    };
+}

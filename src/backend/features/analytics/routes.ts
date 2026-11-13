@@ -16,7 +16,8 @@ import type {
     ReportSummary,
     UnusedOptionOut,
     UseSourceUsage,
-    VersionManagerTotals
+    VersionManagerTotals,
+    DesignCheckTotals
 } from "./contract";
 import { ParameterType } from "../configurations/contract";
 import { usesPerMonth } from "./measures";
@@ -44,6 +45,7 @@ import {
     getSources,
     getTotals,
     getVersionManagerTotals,
+    getDesignCheckTotals,
     toTargets
 } from "./metric-queries";
 import { getReportedParts, getReportSummary } from "./report-queries";
@@ -119,6 +121,17 @@ analyticsRoutes.get(
         const db = getDb(c.env.DB);
         const totals = await getVersionManagerTotals(db, c.req.valid("query"));
         return c.json(totals satisfies VersionManagerTotals);
+    }
+);
+
+/** GET /api/analytics/overview/design-check */
+analyticsRoutes.get(
+    "/analytics/overview/design-check",
+    validate("query", rangeQuery),
+    async (c) => {
+        const db = getDb(c.env.DB);
+        const totals = await getDesignCheckTotals(db, c.req.valid("query"));
+        return c.json(totals satisfies DesignCheckTotals);
     }
 );
 

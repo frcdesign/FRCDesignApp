@@ -10,7 +10,8 @@ import type {
     ReportSummary,
     UnusedOptionOut,
     UseSourceUsage,
-    VersionManagerTotals
+    VersionManagerTotals,
+    DesignCheckTotals
 } from "@backend/features/analytics/contract";
 import { LibraryId } from "@backend/features/library/library-id";
 import { type DayRange } from "@backend/features/analytics/day";
@@ -41,6 +42,10 @@ export function getOverviewSourcesQuery(range: DayRange) {
 
 export function getVersionManagerQuery(range: DayRange) {
     return overviewQuery<VersionManagerTotals>("version-manager", range);
+}
+
+export function getDesignCheckQuery(range: DayRange) {
+    return overviewQuery<DesignCheckTotals>("design-check", range);
 }
 
 export function getOverviewReportsQuery(range: DayRange) {

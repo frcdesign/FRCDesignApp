@@ -84,13 +84,34 @@ export async function canRead(
     client: OnshapeApi,
     document: DocumentPath
 ): Promise<boolean> {
+    return (await cachedPermissions(c, client, document)).includes(
+        OnshapePermission.READ
+    );
+}
+
+/** Whether the caller may edit the document, on the same cached answer as {@link canRead}. */
+export async function canWrite(
+    c: AppContext,
+    client: OnshapeApi,
+    document: DocumentPath
+): Promise<boolean> {
+    return (await cachedPermissions(c, client, document)).includes(
+        OnshapePermission.WRITE
+    );
+}
+
+async function cachedPermissions(
+    c: AppContext,
+    client: OnshapeApi,
+    document: DocumentPath
+): Promise<OnshapePermission[]> {
     const id = `${document.documentId}:${await c.var.getUserId()}`;
     let permissions = await permissionSets.get(c.env.KV, id);
     if (!permissions) {
         permissions = await getPermissions(client, document);
         await permissionSets.put(c.env.KV, id, permissions);
     }
-    return permissions.includes(OnshapePermission.READ);
+    return permissions;
 }
 
 /** Every caller's cached permissions on the document. */

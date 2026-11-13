@@ -6,15 +6,16 @@ shows a user that are worth a reviewer's read: titles, labels, descriptions,
 placeholders, prompts sent to Onshape, toasts, tips, and errors written for the
 user.
 
-| File                                       | Area                                                    |
-| ------------------------------------------ | ------------------------------------------------------- |
-| [build-issues.md](./build-issues.md)       | Build issues, the admin card, and the Admin settings    |
-| [library.md](./library.md)                 | The library pages: the group page, change badges        |
-| [feedback.md](./feedback.md)               | Reports, the access page, and the dashboard's counts    |
-| [download.md](./download.md)               | STEP downloads from the standalone app                  |
-| [version-manager.md](./version-manager.md) | The version manager's page, welcome and suggested links |
-| [analytics.md](./analytics.md)             | The dashboard's usage numbers, charts and tables        |
-| [testbench.md](./testbench.md)             | The owner's testbench page                              |
+| File                                       | Area                                                         |
+| ------------------------------------------ | ------------------------------------------------------------ |
+| [build-issues.md](./build-issues.md)       | Build issues, the admin card, and the Admin settings         |
+| [library.md](./library.md)                 | The library pages: the group page, change badges, the navbar |
+| [feedback.md](./feedback.md)               | Reports, the access page, and the dashboard's counts         |
+| [download.md](./download.md)               | STEP downloads from the standalone app                       |
+| [version-manager.md](./version-manager.md) | The version manager's page, welcome and suggested links      |
+| [design-check.md](./design-check.md)       | The design check's page and the checks it lists              |
+| [analytics.md](./analytics.md)             | The dashboard's usage numbers, charts and tables             |
+| [testbench.md](./testbench.md)             | The owner's testbench page                                   |
 
 ## Shape of a file
 

@@ -14,7 +14,13 @@ export enum EventType {
     /** One finished push or pull; see `features/version-manager`. */
     VERSION_RUN = "version_run",
     /** One report posted to Discord; see `features/feedback`. */
-    REPORT = "report"
+    REPORT = "report",
+    /** One tab checked afresh, a Part Studio or Assembly; see `features/design-check`. */
+    DESIGN_CHECK = "design_check",
+    /** One fix the design check made in someone's document. */
+    DESIGN_FIX = "design_fix",
+    /** One design issue dismissed as meant; putting one back isn't recorded. */
+    DESIGN_DISMISS = "design_dismiss"
 }
 
 /** A use is an insert or a download: each counts toward a part's usage. */

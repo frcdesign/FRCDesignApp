@@ -11,6 +11,7 @@ import {
     getOverviewUsageQuery,
     getPartsQuery,
     getVersionManagerQuery,
+    getDesignCheckQuery,
     firstPending
 } from "../../features/dashboard/dashboard-queries";
 import { DashboardState } from "../../features/dashboard/dashboard-state";
@@ -26,6 +27,7 @@ import { METRICS } from "../../features/dashboard/metrics";
 import { Section } from "../../components/section";
 import { UsageTreemap } from "../../features/dashboard/usage-treemap";
 import { VersionManagerTiles } from "../../features/dashboard/version-manager-tiles";
+import { DesignCheckTiles } from "../../features/dashboard/design-check-tiles";
 import { TrendTile } from "../../features/dashboard/trend-tile";
 import { OverviewReports } from "../../features/dashboard/report-summary";
 import { m } from "../../paraglide/messages";
@@ -50,6 +52,7 @@ function DashboardOverview(): ReactNode {
     const series = useQuery(getOverviewSeriesQuery(range));
     const sources = useQuery(getOverviewSourcesQuery(range));
     const versionManager = useQuery(getVersionManagerQuery(range));
+    const designCheck = useQuery(getDesignCheckQuery(range));
     const reports = useQuery(getOverviewReportsQuery(range));
     const allParts = useAllParts(range);
     const pendingParts = firstPending(allParts);
@@ -93,6 +96,16 @@ function DashboardOverview(): ReactNode {
                     query={versionManager}
                     loading={m.dashboardLoadingVersionManager()}
                     title={m.dashboardVersionManager()}
+                />
+            )}
+
+            {designCheck.data ? (
+                <DesignCheckTiles totals={designCheck.data} />
+            ) : (
+                <DashboardState
+                    query={designCheck}
+                    loading={m.dashboardLoadingDesignCheck()}
+                    title={m.dashboardDesignCheck()}
                 />
             )}
 

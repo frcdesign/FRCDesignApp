@@ -66,6 +66,20 @@ On the overview.
 | "{n} with failures"                                    | Tile caption  | Under Runs  | Always |        |
 | "Right now"                                            | Tile caption  | Under Links | Always |        |
 
+## Design Check
+
+On the overview. An issue type's name is the one the Design Check page uses;
+see [design-check.md](./design-check.md).
+
+| String                                                | Kind          | Where                   | When                                             | Review    |
+| ----------------------------------------------------- | ------------- | ----------------------- | ------------------------------------------------ | --------- |
+| "Design Check"                                        | Section title |                         | Always                                           | **⚑** New |
+| "Checks" / "Came back clean" / "Fixed" / "Dismissed"  | Tile labels   |                         | Always                                           | **⚑** New |
+| "{n} in Part Studios, {n} in assemblies"              | Tile caption  | Under Checks            | Always                                           | **⚑** New |
+| "Issue" / "Checks finding it" / "Fixed" / "Dismissed" | Column titles | The issue types' table  | Any issue found, fixed or dismissed in the range | **⚑** New |
+| "No issues found, fixed or dismissed in this range."  | Empty notice  | In place of the table   | None in the range                                | **⚑** New |
+| "Loading design checks..."                            | Loading       | In place of the section | Its query is loading                             | **⚑** New |
+
 ## Low usage
 
 | String                                                        | Kind                     | Where                         | When                                 | Review |

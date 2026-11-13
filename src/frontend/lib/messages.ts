@@ -20,6 +20,10 @@ export function useMessageListener() {
             if (server !== event.origin) {
                 return;
             }
+            if (import.meta.env.DEV) {
+                // Onshape documents no answer to most messages; this is how to see them.
+                console.debug("Received from Onshape", event.data);
+            }
             const { messageName } = event.data as Partial<Message>;
             if (!messageName) {
                 return;
@@ -47,8 +51,54 @@ export function sendOpenFeatureMessage(
     });
 }
 
+/** Shows another tab of the workspace in the Onshape window. */
+export function sendSwitchTabMessage(
+    elementPath: ElementPath,
+    elementId: string
+) {
+    sendMessage(elementPath, {
+        messageName: MessageType.SWITCH_TAB,
+        anotherElementId: elementId
+    });
+}
+
+let highlights = 0;
+
+/**
+ * Selects a part in the Onshape window. In an assembly, `occurrencePath` says
+ * which instance, and Onshape still needs the part's id to select anything in it.
+ */
+export function sendSelectPartMessage(
+    elementPath: ElementPath,
+    partId: string,
+    occurrencePath?: string[]
+) {
+    sendHighlight(elementPath, [
+        {
+            selectionType: "ENTITY",
+            entityType: "BODY",
+            selectionId: partId,
+            ...(occurrencePath && { occurrencePath })
+        }
+    ]);
+}
+
+/** Leaves nothing selected in the Onshape window; a `stopRequest` doesn't. */
+export function sendClearSelectionMessage(elementPath: ElementPath) {
+    sendHighlight(elementPath, []);
+}
+
+function sendHighlight(elementPath: ElementPath, selections: object[]) {
+    sendMessage(elementPath, {
+        messageName: MessageType.REQUEST_HIGHLIGHT_SELECTION,
+        // Onshape wants each request named uniquely.
+        messageId: `highlight-${++highlights}`,
+        selections
+    });
+}
+
 /*
- * Highlighting the insert location was tried and dropped:
+ * The insert location isn't highlighted: for its mate connector,
  * `requestSelectionHighlight` answered SUCCESS and painted nothing. Undocumented
  * findings from that:
  *

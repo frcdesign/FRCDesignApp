@@ -1,6 +1,7 @@
 import { LibraryId } from "../library/library-id";
 import type { ElementPath } from "../../lib/onshape/path";
 import { UseSource, UseTarget } from "./usage";
+import type { DesignIssueType } from "../design-check/contract";
 import type {
     FeedbackCategory,
     FeedbackSource,
@@ -137,6 +138,32 @@ export interface VersionManagerTotals {
     createdVersions: number;
     /** Current, not over the range: a link is state, not an event. */
     links: number;
+}
+
+/** What design checks have found, over the range. */
+export interface DesignCheckTotals {
+    /** Part studios and assemblies together. */
+    checks: number;
+    /** Checks that found nothing. */
+    cleanChecks: number;
+    partStudioChecks: number;
+    assemblyChecks: number;
+    /** Fixes made from the page. */
+    fixes: number;
+    dismissals: number;
+    /** Each type found, fixed or dismissed at least once, in the most checks first. */
+    issueTypes: DesignIssueTypeCount[];
+}
+
+/** One type of design issue, over the range. */
+export interface DesignIssueTypeCount {
+    type: DesignIssueType;
+    /** Checks that found it. */
+    checks: number;
+    /** How many were found, across those checks. */
+    issues: number;
+    fixed: number;
+    dismissed: number;
 }
 
 /** Reports of one kind about one topic, over the range. */

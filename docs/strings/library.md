@@ -2,7 +2,7 @@
 
 The library's pages, which have no architecture document of their own; how a
 document loads is in [loading.md](../architecture/loading.md). Messages are
-keyed `groupPage…`, `changesBadge…` and `library…` in
+keyed `groupPage…`, `changesBadge…`, `library…` and `navbar…` in
 `src/frontend/messages/en.json`. Only what has moved into the catalog is
 listed so far: the rest join as their strings move there.
 
@@ -38,3 +38,13 @@ manager; see [version-manager.md](../architecture/version-manager.md).
 | "1 change" / "{count} changes"                                                 | Badge   | Beside a group's or parent's name | Its document's workspace has edits its last version doesn't carry |           |
 | "1 change since the last version." / "{count} changes since the last version." | Tooltip | On that badge                     | Hovering it                                                       |           |
 | "Changed"                                                                      | Badge   | Beside a part's name              | Its tab changed since the version the library holds               | **⚑** New |
+
+## The navbar
+
+| String                     | Kind         | Where                                                 | When                           | Review                     |
+| -------------------------- | ------------ | ----------------------------------------------------- | ------------------------------ | -------------------------- |
+| "Utilities"                | Menu section | The page picker, over the pages that aren't a library | A utility page can open        | **⚑** Moved to the catalog |
+| "Sign in"                  | Button       | The navbar's end                                      | Signed out                     | **⚑** Moved to the catalog |
+| "Light mode" / "Dark mode" | Tooltip      | The theme button                                      | Hovered, in dark mode or light | **⚑** Moved to the catalog |
+| "Settings"                 | Tooltip      | The settings button                                   | Hovered                        | **⚑** Moved to the catalog |
+| "Refresh"                  | Tooltip      | A page's refresh button that names nothing else       | Hovered                        | **⚑** Moved to the catalog |

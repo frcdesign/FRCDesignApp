@@ -82,7 +82,8 @@ which a library group's change count is read from, for a week.
 
 **KV** `document-permissions:{documentId}:{userId}` — a caller's Onshape
 permission set on a document (`canRead`), for a day. It guards what the routes
-answer from our own storage; see **Decisions**.
+answer from our own storage; see **Decisions**. The design check reads the same
+answer for edit access (`canWrite`, [design-check.md](./design-check.md)).
 
 All but the default workspace are dropped by the workspace's webhook when it changes —
 permissions for every caller of that document — and by

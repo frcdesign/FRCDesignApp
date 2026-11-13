@@ -86,6 +86,137 @@ them and the urls they become.
 - A part studio's thumbnail is rendered when it is saved, and can still be
   being written out just after — _observed_.
 
+## Features, sketches and assembly definitions
+
+What the design check ([design-check.md](./architecture/design-check.md))
+reads. _Observed_ here means seen on 2026-11-10 in a test document with each
+problem planted, whose answers are kept, cut down, in
+`src/__test_utils__/design-check-captures.ts`.
+
+- **A feature list** (`GET /partstudios/…/features`, `GET /assemblies/…/features`)
+  carries each feature's `featureStatus` in `featureStates`, keyed by feature
+  id: `OK`, `INFO`, `WARNING` (yellow), `ERROR` (red) or `UNKNOWN` —
+  _documented_, and _observed_. Asked with `includeGeometryIds=false`, a Part
+  Studio's comes back `{}`, every feature's status left out, with sketches
+  included or not — _observed_.
+- **`rollbackIndex`**, on a Part Studio's list, is the index of the first
+  feature below the rollback bar: 10 of 12 features with the bar above the last
+  two, and 12 with it at the end — _observed_. The spec's -1 for the end was
+  not seen.
+- **A custom feature's `namespace`** names its Feature Studio as
+  `d{documentId}::v{versionId}::e{elementId}::m{microversionId}`; the Origin
+  Cube's starts `d321c197a842fc5f1a29e6621` — _observed_.
+- **A feature that names itself from a template** comes back with the template
+  unfilled: the Origin Cube's `name` is `#_name` — _observed_. Its
+  `featureType` is the generic `myFeature`, so it says nothing either.
+- **The Origin Cube refuses to build anywhere but first.** Second in the list
+  it was `WARNING`, its tooltip reading "Origin Cube should be the first feature
+  in your part studio to function correctly" — _observed_. The API's answer
+  doesn't carry a feature's message.
+- **A missing selection doesn't show in `featureStatus`**: an extrude Onshape
+  drew with a warning, its tooltip "1 missing selection", was `OK` — _observed_.
+  It shows in the pick: with geometry ids, each pick in a selection box
+  (`BTMIndividualQuery-138` in a `BTMParameterQueryList-148`) carries
+  `deterministicIds`, what it resolves to, and the lost face's was `[]` beside
+  the remaining face's `["JlC"]`. A sketch plane on Top resolved to `[]` too,
+  while Top picked in a Midplane's box resolved to `["JDC"]` beside a face's
+  `["JoK"]`; without geometry ids every pick is `[]` — _observed_.
+- **A fasten to the origin** is drawn with a warning while the assembly also
+  has a fixed instance — "Fastened to origin even though Assembly has fixed
+  part(s)" — and its `featureStatus` is `OK` — _observed_.
+- **A sketch's definition** (`GET /partstudios/…/sketches`) is
+  `sketchSolveStatus`: `UNDERDEFINED`, `WELL_DEFINED`, `OVERDEFINED` or
+  `UNKNOWN` — the values _documented_ in Onshape's changelog (rel-1.183), the
+  key _observed_. A suppressed sketch, and one below the rollback bar, isn't
+  listed — _observed_.
+- **An over-defined sketch is also yellow** (`WARNING`); an under-defined one is
+  `OK` — _observed_.
+- **A part's unset part number or description** is `null`; with no material,
+  `material` is left out — _observed_. The Origin Cube's part is named "Origin
+  Cube", with the material "Origin Cube Material" — _observed_.
+- **An assembly definition** with `includeMateFeatures=true` lists each mate's
+  two ends as `featureData.matedEntities[].matedOccurrence`, empty for the
+  assembly origin, and each group's members as `featureData.occurrences` —
+  _documented_ in the API guide, not the OpenAPI spec, and _observed_. An
+  occurrence's `fixed`, and a pattern's `seedToPatternInstances` and
+  `suppressed`, are _observed_.
+- **A mate whose instance is suppressed** is grayed out, its tooltip
+  "Inactive: One or more instances is suppressed", and its feature state is
+  `featureStatus: "ERROR"` with `inactive: true` — _observed_.
+- **Replicate and Mirror copies** are listed in the definition's
+  `rootAssembly.parametricInstances`, each feature with its `children`'s
+  `seedOccurrence` and `instanceIds` — _documented_ — and `type` "Replicate"
+  or "Mirror" — _observed_. They aren't in `patterns`, and no mate or group
+  names the copies — _observed_.
+- **A derived mirror of a Part Studio** is a tab whose one feature has
+  `featureType: "derivedMirror"`, and whose parts take their seeds' materials
+  — _observed_.
+- **A derived mirror** (an Assembly tab made by mirroring another) is listed
+  there too, as `type` "Derived Assembly Mirror" with no `children` — _observed_.
+  Nothing names the copies it made: its feature's `actionTypeArray` has one
+  item per copy, each naming the seed's instance (`seedInstanceKey`), and the
+  copies have no mates. An instance's `featureId`, in the spec, wasn't sent —
+  _observed_.
+- **An instance of a deleted part** keeps `type: "Part"`, with `partId: ""`,
+  and Onshape draws it red — _observed_.
+- **An instance whose tab was deleted** is drawn red, and comes back with only
+  its `id` and `name`, no `type` or `partId` — _observed_. The spec's
+  `status: "DeletedElement"` and `errorStatus` were on no instance, healthy or
+  broken.
+- **An instance's source**: a top-level instance names the tab it came from,
+  `documentId` and `elementId`, with `documentMicroversion` for a tab of the
+  same document — _observed_. That one from another document carries
+  `documentVersion` instead is _unverified_.
+- **The Origin Cube's mate connector**, as a fasten made by hand to the origin
+  names it, is `BTMPartStudioMateConnectorQuery-1324` with `featureId`
+  `{Origin Cube feature id}.mateConnector1` and the instance as its `path`,
+  beside an implicit mate connector the mate owns, `ON_ENTITY` with its
+  `originQuery` the origin's `featureId` `Origin` and `queryData`
+  `ORIGIN_Z` — _observed_. A fasten naming the cube's mate connector alone,
+  added through the API, is red — _observed_. One built the way a fasten made
+  by hand is, its implicit connector given a placeholder id that its second
+  query names, builds and puts the cube on the origin — _observed_.
+- **A mate's `mateType`** in the assembly definition's `featureData` is
+  `FASTENED` for a fasten — _observed_.
+- **A change made through the API** isn't undone by undo (Ctrl+Z) in the
+  Onshape window: a fasten the design check added stayed — _observed_.
+- **Deleting an instance** is `DELETE /assemblies/.../instance/nodeid/{nid}`,
+  `nid` being the instance's `id` from the definition — _documented_ (the
+  OpenAPI spec; the API guide's example shows POST), and _observed_.
+- **Deleting an Assembly's feature**, such as a mate, is
+  `DELETE /assemblies/.../features/featureid/{fid}` — _documented_ (the
+  OpenAPI spec).
+- **Moving the rollback bar** is `POST /partstudios/.../features/rollback` with
+  `{ "rollbackIndex": -1 }` to put it at the end — _documented_, and
+  _observed_.
+- **An inserted sketch** is left out of the assembly definition with
+  `includeNonSolids=false`, which `getAssembly` sends by default — _observed_.
+- **`openAnotherElementInCurrentWorkspace`**, a client message, shows another
+  tab of the workspace, named by `anotherElementId` — _documented_. Onshape
+  then loads the app's panel afresh for the new tab, from its extension's
+  action url (`/init`), so nothing in the page's memory survives the switch —
+  _observed_.
+- **`stopRequest`**, a client message, ends the request its `messageId` names
+  — _documented_. It leaves what a `requestSelectionHighlight` selected
+  selected — _observed_. A highlight of no `selections` clears the window's
+  selection — _observed_.
+- **`openFeatureDialog`**, a client message, opens a feature's dialog in a
+  workspace's Part Studio — _documented_ — and a mate's in an Assembly,
+  suppressed or not — _observed_. A suppressed Part Studio feature doesn't
+  open: the message does nothing, and Onshape's own list offers no **Edit** for
+  it — _observed_.
+- **`requestSelectionHighlight`**, a client message, selects the entities in
+  its `selections` in the window. Onshape's example is a Part Studio face,
+  `selectionType: "ENTITY"` with its `entityType` and its `selectionId`, the id
+  `getPartStudioBodyDetails` gives — _documented_. In an Assembly, an entity
+  also takes the `occurrencePath` of the instance it's in, and still needs the
+  part's `selectionId`: the path only says which instance to look in. A
+  top-level part instance's `entityType: "BODY"`, with the instance's `partId`
+  as its `selectionId` and `[instanceId]` as its path, selects that instance,
+  in the window and in the instance list — _observed_. In a Part Studio, a
+  part's `partId` as a `BODY` entity's `selectionId`, with no path, selects the
+  part — _observed_.
+
 ## Configurations
 
 A part studio or assembly declares **configuration parameters**
@@ -151,7 +282,11 @@ the app makes of them.
   is in: an enterprise's id, and `cad` everywhere else. Onshape sends
   `sessionCompanyId` only when the extension's action url names
   `{$sessionCompanyId}` — _observed_. [auth.md](./architecture/auth.md) covers
-  sign-in.
+  sign-in. A newly made OAuth app's extension, on 2026-11-10, got the
+  placeholder back unfilled, with Onshape's own `sessionCompanyId=cad` added
+  after `companyId`; sign-in sent the placeholder as `company_id`, and Onshape
+  answered with a JSON error in place of its sign-in page — _observed_ once.
+  Why that app's isn't filled is _unverified_.
 - **OAuth's `company_id`** takes an enterprise's id and nothing else: a
   classroom's id is refused as "Invalid company ID", and `cad` is rejected.
   Without one, Onshape asks the caller which account to use — _observed_.

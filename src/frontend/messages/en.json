@@ -382,10 +382,20 @@
     "dashboardVersionLinks": "Links",
     "dashboardVersionRightNow": "Right now",
     "dashboardVersionRunsWithFailures": "{count: number} with failures",
+    "dashboardDesignCheck": "Design Check",
+    "dashboardDesignCheckChecks": "Checks",
+    "dashboardDesignCheckByElementType": "{partStudios: number} in Part Studios, {assemblies: number} in assemblies",
+    "dashboardDesignCheckClean": "Came back clean",
+    "dashboardDesignCheckFixed": "Fixed",
+    "dashboardDesignCheckDismissed": "Dismissed",
+    "dashboardDesignCheckIssue": "Issue",
+    "dashboardDesignCheckFoundBy": "Checks finding it",
+    "dashboardDesignCheckEmpty": "No issues found, fixed or dismissed in this range.",
     "dashboardLoadingUsage": "Loading usage...",
     "dashboardLoadingUsesOverTime": "Loading uses over time...",
     "dashboardLoadingSources": "Loading where uses started...",
     "dashboardLoadingVersionManager": "Loading version manager runs...",
+    "dashboardLoadingDesignCheck": "Loading design checks...",
     "dashboardLoadingReports": "Loading reports...",
     "dashboardLoadingParts": "Loading parts...",
     "dashboardLoadingLibrary": "Loading library usage...",
@@ -562,5 +572,141 @@
     "testbenchNoLimitHeaders": "No rate-limit headers; every header",
     "testbenchPartStudioUrl": "Part Studio",
     "testbenchAssemblyUrl": "Assembly",
-    "testbenchOnshapeAnswer": "Onshape's answer"
+    "testbenchOnshapeAnswer": "Onshape's answer",
+    "designCheckTabName": "Design Check",
+    "versionManagerTabName": "Version Manager",
+    "navbarUtilities": "Utilities",
+    "navbarSignIn": "Sign in",
+    "navbarRefresh": "Refresh",
+    "navbarSettings": "Settings",
+    "navbarLightMode": "Light mode",
+    "navbarDarkMode": "Dark mode",
+    "designCheckSignInTitle": "Sign in to check this document",
+    "designCheckSignInDescription": "The design check reads it from your Onshape account.",
+    "designCheckSignIn": "Sign in",
+    "designCheckChecking": "Checking this document...",
+    "designCheckFailed": "Failed to check this document.",
+    "designCheckAgain": "Check again",
+    "designCheckAgainFailed": "Failed to check this document again. These are the last results.",
+    "designCheckCheckedAt": [
+        {
+            "declarations": [
+                "input checkedAt",
+                "local time = checkedAt: datetime timeStyle=short"
+            ],
+            "selectors": [],
+            "match": {
+                "": "Checked at {time}"
+            }
+        }
+    ],
+    "designCheckCleanTitle": "No issues found",
+    "designCheckCleanDocument": "Every Part Studio and Assembly in this document follows every practice the design check looks for.",
+    "designCheckThisTab": "This tab",
+    "designCheckSwitchTab": "Switch to this tab",
+    "designCheckStatusOpen": "Open Design Check",
+    "designCheckStatusCount": "{count: number}",
+    "designCheckTabClean": "Nothing to fix in this tab.",
+    "designCheckTabFailed": "Failed to check this tab.",
+    "designCheckTabNotChecked": "Not checked",
+    "designCheckSketchStatusUnknown": "Onshape didn't say which sketches are fully defined, so under-defined sketches weren't checked. Over-defined sketches still show as features with errors or warnings.",
+    "designCheckOpenFeature": "Open in Onshape",
+    "designCheckSelectPart": "Select in Onshape",
+    "designCheckFixRollbackLabel": "Move to the end",
+    "designCheckFixDeleteLabel": "Delete",
+    "designCheckFixFastenLabel": "Fasten to origin",
+    "designCheckFixRollback": "Move the rollback bar to the end",
+    "designCheckFixDelete": "Delete {subject}",
+    "designCheckFixFasten": "Fasten {subject} to the origin",
+    "designCheckFixAll": "Fix all",
+    "designCheckFixTitle": "Make these fixes?",
+    "designCheckFixDescription": "Each one changes the document in Onshape, and Ctrl+Z can't undo it. Uncheck any you'd rather leave.",
+    "designCheckFixCancel": "Cancel",
+    "designCheckFixFailed": "Failed to make a fix. Checking again shows what changed.",
+    "designCheckDismiss": "Dismiss",
+    "designCheckPutBack": "Put back",
+    "designCheckDismissFailed": "Failed to save the change. It's back as it was.",
+    "designCheckShowDismissed": [
+        {
+            "declarations": [
+                "input count",
+                "local countPlural = count: plural",
+                "local formatted = count: number"
+            ],
+            "selectors": ["countPlural"],
+            "match": {
+                "countPlural=one": "Show {formatted} dismissed issue",
+                "countPlural=other": "Show {formatted} dismissed issues"
+            }
+        }
+    ],
+    "designCheckHideDismissed": "Hide dismissed issues",
+    "designCheckFixConfirm": [
+        {
+            "declarations": [
+                "input count",
+                "local countPlural = count: plural",
+                "local formatted = count: number"
+            ],
+            "selectors": ["countPlural"],
+            "match": {
+                "countPlural=one": "Make {formatted} fix",
+                "countPlural=other": "Make {formatted} fixes"
+            }
+        }
+    ],
+    "designCheckSketchUnderdefined": "Under-defined sketch",
+    "designCheckSketchUnderdefinedHelp": "Add constraints or dimensions until every line is black.",
+    "designCheckSketchOverdefined": "Over-defined sketch",
+    "designCheckSketchOverdefinedHelp": "Remove the constraint or dimension that conflicts.",
+    "designCheckOriginCubeMissing": "No Origin Cube",
+    "designCheckOriginCubeMissingHelp": "Insert the Origin Cube as the first feature, so assemblies have something to fasten to.",
+    "designCheckOriginCubeNotFirst": "Origin Cube isn't first",
+    "designCheckOriginCubeNotFirstHelp": [
+        {
+            "declarations": [
+                "input position",
+                "local formatted = position: number"
+            ],
+            "selectors": [],
+            "match": {
+                "": "It's feature {formatted}. Drag it to the top of the list."
+            }
+        }
+    ],
+    "designCheckOriginCubeSuppressed": "Origin Cube is suppressed",
+    "designCheckOriginCubeSuppressedHelp": "Unsuppress it: assemblies fasten to it.",
+    "designCheckOriginCubeNotFastened": "Origin Cube isn't fastened to the origin",
+    "designCheckOriginCubeNotFastenedHelp": "Fasten it to the assembly origin, so everything else can fasten to it.",
+    "designCheckFeatureError": "Feature with an error",
+    "designCheckFeatureErrorHelp": "Open it to see what failed.",
+    "designCheckFeatureWarning": "Feature with a warning",
+    "designCheckFeatureWarningHelp": "Open it to see what Onshape is warning about.",
+    "designCheckFeatureSuppressed": "Suppressed feature",
+    "designCheckFeatureSuppressedHelp": "Delete it if it's no longer needed.",
+    "designCheckFeatureInactive": "Inactive feature",
+    "designCheckFeatureInactiveHelp": "Something it needs is suppressed, so it does nothing. Delete it if it's no longer needed.",
+    "designCheckRollbackNotAtEnd": "Rollback bar isn't at the end",
+    "designCheckRollbackNotAtEndHelp": [
+        {
+            "declarations": [
+                "input count",
+                "local countPlural = count: plural",
+                "local formatted = count: number"
+            ],
+            "selectors": ["countPlural"],
+            "match": {
+                "countPlural=one": "It leaves a feature out of the model. Drag it to the bottom of the list.",
+                "countPlural=other": "It leaves {formatted} features out of the model. Drag it to the bottom of the list."
+            }
+        }
+    ],
+    "designCheckPartNoMaterial": "Part with no material",
+    "designCheckPartNoMaterialHelp": "Without one, its mass is wrong.",
+    "designCheckInstanceFixed": "Fixed instance",
+    "designCheckInstanceFixedHelp": "Fasten the Origin Cube to the assembly origin instead of fixing parts.",
+    "designCheckInstanceFloating": "Floating instance",
+    "designCheckInstanceFloatingHelp": "Mate or group it, so it can't drift.",
+    "designCheckInstanceBroken": "Broken instance",
+    "designCheckInstanceBrokenHelp": "What it was inserted from is gone or failing. Replace it or delete it."
 }

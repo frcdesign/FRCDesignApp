@@ -2,6 +2,7 @@ import { analyticsRoutes } from "./features/analytics/routes";
 import { accessRoutes, authRoutes } from "./features/auth/routes";
 import { buildStatusRoutes } from "./features/build-checker/routes";
 import { configurationRoutes } from "./features/configurations/routes";
+import { designCheckRoutes } from "./features/design-check/routes";
 import { appOpenRoutes, entryRoutes } from "./features/entry/routes";
 import { favoriteRoutes } from "./features/favorites/routes";
 import { recentRoutes } from "./features/recents/routes";
@@ -45,6 +46,7 @@ const apiRoutes = [
     adminTeamRoutes,
     loadRoutes,
     versionManagerRoutes,
+    designCheckRoutes,
     hintRoutes,
     feedbackRoutes,
     downloadRoutes

@@ -8,6 +8,7 @@ import {
     OnshapeAssemblyDefinition,
     OnshapeBoundingBox,
     OnshapeCreatedFeature,
+    OnshapeFeatureListResponse,
     OnshapeInsertInstancesResponse
 } from "../types";
 
@@ -32,6 +33,26 @@ export function getAssembly(
             )
         })
     });
+}
+
+/** Its mates, groups and other features, and whether each regenerated. */
+export function getAssemblyFeatures(
+    client: OnshapeApi,
+    assemblyPath: ElementPath
+): Promise<OnshapeFeatureListResponse> {
+    return client.get(`/assemblies${toElementApiPath(assemblyPath)}/features`);
+}
+
+/** `DELETE /assemblies/.../instance/nodeid/{nid}`, `nid` being the instance's id. */
+export function deleteInstance(
+    client: OnshapeApi,
+    assemblyPath: ElementPath,
+    instanceId: string
+): Promise<void> {
+    assertWorkspace(assemblyPath);
+    return client.deleteNone(
+        `/assemblies${toElementApiPath(assemblyPath)}/instance/nodeid/${instanceId}`
+    );
 }
 
 /** For a part studio, `options.partTypes` defaults to PARTS and COMPOSITE_PARTS. */

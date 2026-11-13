@@ -5,6 +5,8 @@ import { configurations } from "../../db/schema";
 import {
     dailyAppOpens,
     dailyConfigurationMetrics,
+    dailyDesignCheckMetrics,
+    dailyDesignIssueMetrics,
     dailyVersionMetrics,
     dailyInsertableMetrics,
     dailyInsertableUsers,
@@ -29,6 +31,8 @@ import { getDb } from "../../db/client";
 import { type AppContext } from "../../lib/context";
 import {
     trackAppOpen,
+    trackDesignAction,
+    trackDesignCheck,
     trackDownload,
     trackInsert,
     trackVersionRun,
@@ -57,6 +61,7 @@ import {
     VersionTaskState,
     type VersionJobStatus
 } from "../version-manager/contract";
+import { DesignIssueType } from "../design-check/contract";
 
 const db = getDb(env.DB);
 
@@ -678,6 +683,181 @@ describe("tracking", () => {
                 failedSteps: 0
             });
             expect(await db.select().from(dailyUserActivity).all()).toEqual([]);
+        });
+    });
+
+    describe("trackDesignCheck", () => {
+        const sketchIssues = [
+            { type: DesignIssueType.SKETCH_UNDERDEFINED, subject: "Sketch 1" },
+            { type: DesignIssueType.SKETCH_UNDERDEFINED, subject: "Sketch 2" },
+            { type: DesignIssueType.PART_NO_MATERIAL, subject: "Plate" }
+        ];
+
+        it("records what it found under no library, and no element", async () => {
+            await trackDesignCheck(fakeContext(), {
+                elementType: ElementType.PART_STUDIO,
+                issues: sketchIssues
+            });
+
+            expect(await db.select().from(events).get()).toMatchObject({
+                type: EventType.DESIGN_CHECK,
+                userId: TEST_USER_ID,
+                libraryId: null,
+                documentId: null,
+                elementId: null,
+                checkedElementType: ElementType.PART_STUDIO,
+                designIssueCounts: {
+                    [DesignIssueType.SKETCH_UNDERDEFINED]: 2,
+                    [DesignIssueType.PART_NO_MATERIAL]: 1
+                }
+            });
+        });
+
+        it("counts checks by tab, and the ones that found nothing", async () => {
+            await trackDesignCheck(fakeContext(), {
+                elementType: ElementType.PART_STUDIO,
+                issues: sketchIssues
+            });
+            await trackDesignCheck(fakeContext(), {
+                elementType: ElementType.PART_STUDIO,
+                issues: []
+            });
+            await trackDesignCheck(fakeContext(), {
+                elementType: ElementType.ASSEMBLY,
+                issues: []
+            });
+
+            const rows = await db
+                .select()
+                .from(dailyDesignCheckMetrics)
+                .orderBy(dailyDesignCheckMetrics.elementType)
+                .all();
+            expect(rows).toEqual([
+                {
+                    day: toDayKey(Date.now()),
+                    elementType: ElementType.ASSEMBLY,
+                    checks: 1,
+                    cleanChecks: 1
+                },
+                {
+                    day: toDayKey(Date.now()),
+                    elementType: ElementType.PART_STUDIO,
+                    checks: 2,
+                    cleanChecks: 1
+                }
+            ]);
+        });
+
+        it("counts each type once per check, beside how many were found", async () => {
+            await trackDesignCheck(fakeContext(), {
+                elementType: ElementType.PART_STUDIO,
+                issues: sketchIssues
+            });
+            await trackDesignCheck(fakeContext(), {
+                elementType: ElementType.PART_STUDIO,
+                issues: [sketchIssues[0]]
+            });
+
+            const rows = await db
+                .select()
+                .from(dailyDesignIssueMetrics)
+                .orderBy(dailyDesignIssueMetrics.issueType)
+                .all();
+            expect(rows).toMatchObject([
+                {
+                    issueType: DesignIssueType.PART_NO_MATERIAL,
+                    checks: 1,
+                    issues: 1
+                },
+                {
+                    issueType: DesignIssueType.SKETCH_UNDERDEFINED,
+                    checks: 2,
+                    issues: 3
+                }
+            ]);
+        });
+
+        it("is no one's activity, and writes none of the library rollups", async () => {
+            await trackDesignCheck(fakeContext(), {
+                elementType: ElementType.ASSEMBLY,
+                issues: []
+            });
+
+            expect(await db.select().from(dailyUserActivity).all()).toEqual([]);
+            expect(await db.select().from(dailyMetrics).all()).toEqual([]);
+            expect(await db.select().from(userStats).all()).toEqual([]);
+            expect(await db.select().from(dailyAppOpens).all()).toEqual([]);
+        });
+    });
+
+    describe("trackDesignAction", () => {
+        it("records the issue's type under no library, and no element", async () => {
+            await trackDesignAction(
+                fakeContext(),
+                EventType.DESIGN_FIX,
+                DesignIssueType.INSTANCE_BROKEN
+            );
+
+            expect(await db.select().from(events).get()).toMatchObject({
+                type: EventType.DESIGN_FIX,
+                userId: TEST_USER_ID,
+                libraryId: null,
+                documentId: null,
+                elementId: null,
+                checkedElementType: null,
+                designIssueCounts: null,
+                designIssueType: DesignIssueType.INSTANCE_BROKEN
+            });
+        });
+
+        it("counts fixes and dismissals beside the checks that found the type", async () => {
+            await trackDesignCheck(fakeContext(), {
+                elementType: ElementType.PART_STUDIO,
+                issues: [
+                    { type: DesignIssueType.ROLLBACK_NOT_AT_END, count: 1 }
+                ]
+            });
+            await trackDesignAction(
+                fakeContext(),
+                EventType.DESIGN_FIX,
+                DesignIssueType.ROLLBACK_NOT_AT_END
+            );
+            await trackDesignAction(
+                fakeContext(),
+                EventType.DESIGN_DISMISS,
+                DesignIssueType.ROLLBACK_NOT_AT_END
+            );
+            await trackDesignAction(
+                fakeContext(),
+                EventType.DESIGN_DISMISS,
+                DesignIssueType.PART_NO_MATERIAL
+            );
+
+            const rows = await db
+                .select()
+                .from(dailyDesignIssueMetrics)
+                .orderBy(dailyDesignIssueMetrics.issueType)
+                .all();
+            expect(rows).toMatchObject([
+                {
+                    issueType: DesignIssueType.PART_NO_MATERIAL,
+                    checks: 0,
+                    issues: 0,
+                    fixed: 0,
+                    dismissed: 1
+                },
+                {
+                    issueType: DesignIssueType.ROLLBACK_NOT_AT_END,
+                    checks: 1,
+                    issues: 1,
+                    fixed: 1,
+                    dismissed: 1
+                }
+            ]);
+            expect(await db.select().from(dailyUserActivity).all()).toEqual([]);
+            expect(
+                await db.select().from(dailyDesignCheckMetrics).all()
+            ).toEqual([expect.objectContaining({ checks: 1 })]);
         });
     });
 

@@ -20,6 +20,8 @@ import {
     dailyTargetMetrics,
     dailyUserActivity,
     dailyVersionMetrics,
+    dailyDesignCheckMetrics,
+    dailyDesignIssueMetrics,
     userStats
 } from "./schema";
 import { workspaceLinks } from "../version-manager/schema";
@@ -32,8 +34,10 @@ import {
     type DailyUsePoint,
     type DailyMetricPoint,
     type UseSourceUsage,
-    type VersionManagerTotals
+    type VersionManagerTotals,
+    type DesignCheckTotals
 } from "./contract";
+import { ElementType } from "../../lib/onshape/element-type";
 import { type DayRange } from "./day";
 import { eachDay } from "./range";
 
@@ -457,5 +461,77 @@ export async function getVersionManagerTotals(
         createdVersions: Number(totals?.createdVersions ?? 0),
         updatedElements: Number(totals?.updatedElements ?? 0),
         links: links?.value ?? 0
+    };
+}
+
+/** Design checks over a range, by the kind of tab checked and by what they found. */
+export async function getDesignCheckTotals(
+    db: Db,
+    range: DayRange
+): Promise<DesignCheckTotals> {
+    const [byElementType, byIssueType] = await Promise.all([
+        db
+            .select({
+                elementType: dailyDesignCheckMetrics.elementType,
+                checks: sum(dailyDesignCheckMetrics.checks),
+                cleanChecks: sum(dailyDesignCheckMetrics.cleanChecks)
+            })
+            .from(dailyDesignCheckMetrics)
+            .where(
+                and(
+                    gte(dailyDesignCheckMetrics.day, range.from),
+                    lte(dailyDesignCheckMetrics.day, range.to)
+                )
+            )
+            .groupBy(dailyDesignCheckMetrics.elementType),
+        db
+            .select({
+                type: dailyDesignIssueMetrics.issueType,
+                checks: sum(dailyDesignIssueMetrics.checks),
+                issues: sum(dailyDesignIssueMetrics.issues),
+                fixed: sum(dailyDesignIssueMetrics.fixed),
+                dismissed: sum(dailyDesignIssueMetrics.dismissed)
+            })
+            .from(dailyDesignIssueMetrics)
+            .where(
+                and(
+                    gte(dailyDesignIssueMetrics.day, range.from),
+                    lte(dailyDesignIssueMetrics.day, range.to)
+                )
+            )
+            .groupBy(dailyDesignIssueMetrics.issueType)
+    ]);
+
+    const checksOf = (elementType: ElementType) =>
+        Number(
+            byElementType.find((row) => row.elementType === elementType)
+                ?.checks ?? 0
+        );
+    const issueTypes = byIssueType
+        .map((row) => ({
+            type: row.type,
+            checks: Number(row.checks ?? 0),
+            issues: Number(row.issues ?? 0),
+            fixed: Number(row.fixed ?? 0),
+            dismissed: Number(row.dismissed ?? 0)
+        }))
+        .sort((a, b) => b.checks - a.checks || b.issues - a.issues);
+    const totalOf = (count: "fixed" | "dismissed") =>
+        issueTypes.reduce((total, row) => total + row[count], 0);
+
+    return {
+        checks: byElementType.reduce(
+            (total, row) => total + Number(row.checks ?? 0),
+            0
+        ),
+        cleanChecks: byElementType.reduce(
+            (total, row) => total + Number(row.cleanChecks ?? 0),
+            0
+        ),
+        partStudioChecks: checksOf(ElementType.PART_STUDIO),
+        assemblyChecks: checksOf(ElementType.ASSEMBLY),
+        fixes: totalOf("fixed"),
+        dismissals: totalOf("dismissed"),
+        issueTypes
     };
 }

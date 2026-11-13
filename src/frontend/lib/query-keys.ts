@@ -138,3 +138,8 @@ export function versionJobQueryKey(workspace: InstancePath | undefined) {
 export function nextVersionNameQueryKey(workspace: InstancePath | undefined) {
     return ["next-version-name", workspace];
 }
+
+/** Per workspace, which the check covers whole, whichever tab launched it. */
+export function designCheckQueryKey(workspace: InstancePath) {
+    return ["design-check", workspace.documentId, workspace.instanceId];
+}
