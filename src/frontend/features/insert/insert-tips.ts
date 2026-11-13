@@ -6,23 +6,9 @@ import { useIsConnectedToOnshape } from "../../lib/onshape-params";
 import { useAccessData } from "../auth/access-level";
 import { startSignIn } from "../auth/sign-in";
 import { m } from "../../paraglide/messages";
-import { ElementType } from "@backend/lib/onshape/element-type";
-
-/** An insert this soon after opening didn't need anything from the menu. */
-export const QUICK_INSERT_WINDOW_MS = 1500;
 
 /** Half the preview's timeout, to catch someone mid-spinner. */
 const THUMBNAIL_WAIT_MS = 15000;
-
-/** Points out that the row's own button would have done it; the menu decides when. */
-export function showQuickInsertTip(targetElementType: ElementType): void {
-    showTipToast(
-        targetElementType === ElementType.ASSEMBLY
-            ? m.insertQuickInsertTip()
-            : m.insertQuickDeriveTip(),
-        "quick-insert-tip"
-    );
-}
 
 /**
  * Tells someone waiting that inserting doesn't need the render. On a timer,

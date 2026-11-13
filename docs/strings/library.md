@@ -24,16 +24,15 @@ outlined button, before its heart and ⋯; the button is
 `src/frontend/features/insert/components/quick-insert-button.tsx`. It is the
 only quick insert: the menus offer none. In an assembly it fastens wherever
 the part has a mate connector, whatever the insert menu's **Fasten** is set to.
-The insert menu's tips (`src/frontend/features/insert/insert-tips.ts`) point at
-it.
+The insert menu's remaining tips are in
+`src/frontend/features/insert/insert-tips.ts`.
 
-| String                                                                                                                                                                      | Kind              | Where                  | When                                                                                 | Review                         |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- | ---------------------- | ------------------------------------------------------------------------------------ | ------------------------------ |
-| "Insert" / "Derive"                                                                                                                                                         | Outlined button   | Each part row          | In an assembly / a Part Studio; none standalone                                      | **⚑** New                      |
-| "Assemblies can't be derived into a Part Studio."                                                                                                                           | Tooltip           | On the disabled button | An assembly's row, in a Part Studio                                                  | **⚑** New                      |
-| "Tip: the Insert button on a part's row inserts it without opening the insert menu." / "Tip: the Derive button on a part's row derives it without opening the insert menu." | Tip toast         |                        | An insert from the insert menu soon after opening it, in an assembly / a Part Studio | **⚑** Was "right-click a part" |
-| "Tip: you can insert a part even while the part's thumbnail is still generating."                                                                                           | Tip toast         |                        | The insert menu's preview is still rendering                                         |                                |
-| "Sign in to Onshape to see a preview of your selection." / "Sign in"                                                                                                        | Tip toast, button |                        | Signed out, after changing the configuration                                         |                                |
+| String                                                                            | Kind              | Where                  | When                                            | Review    |
+| --------------------------------------------------------------------------------- | ----------------- | ---------------------- | ----------------------------------------------- | --------- |
+| "Insert" / "Derive"                                                               | Outlined button   | Each part row          | In an assembly / a Part Studio; none standalone | **⚑** New |
+| "Assemblies can't be derived into a Part Studio."                                 | Tooltip           | On the disabled button | An assembly's row, in a Part Studio             | **⚑** New |
+| "Tip: you can insert a part even while the part's thumbnail is still generating." | Tip toast         |                        | The insert menu's preview is still rendering    |           |
+| "Sign in to Onshape to see a preview of your selection." / "Sign in"              | Tip toast, button |                        | Signed out, after changing the configuration    |           |
 
 ## Group page
 

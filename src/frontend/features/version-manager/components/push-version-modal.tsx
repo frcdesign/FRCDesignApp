@@ -1,6 +1,7 @@
 import { ArrowLineUpIcon } from "@phosphor-icons/react";
 import { useState, type ReactNode } from "react";
 import {
+    LinkDirection,
     PushScopeKind,
     type LinkedWorkspace,
     type WorkspacePath
@@ -10,13 +11,15 @@ import { useAppModal } from "../../../components/open-app-modal";
 import { IconSize } from "../../../lib/style-constants";
 import { useIsVersionJobRunning, usePushVersionMutation } from "../queries";
 import { VersionForm, type VersionFields } from "./version-form";
+import { showQuickRecursiveTip } from "../tips";
+import { m } from "../../../paraglide/messages";
 
 interface PushVersionFormProps {
     workspace: WorkspacePath;
     target: LinkedWorkspace;
 }
 
-/** A modified click on the row runs this under the defaults it shows. */
+/** A click on a child's row opens this; its button and menu run under the defaults it shows. */
 export function PushVersionForm(props: PushVersionFormProps): ReactNode {
     const { workspace, target } = props;
     const modal = useAppModal();
@@ -36,7 +39,10 @@ export function PushVersionForm(props: PushVersionFormProps): ReactNode {
                 }
             },
             {
-                onSuccess: () => modal.close()
+                onSuccess: () => {
+                    modal.close();
+                    if (recursive) showQuickRecursiveTip(LinkDirection.CHILD);
+                }
             }
         );
     };
@@ -44,15 +50,15 @@ export function PushVersionForm(props: PushVersionFormProps): ReactNode {
     return (
         <VersionForm
             versioned={workspace}
-            submitLabel="Push"
+            submitLabel={m.versionManagerFormPush()}
             submitIcon={<ArrowLineUpIcon size={IconSize.SMALL} />}
             isPending={push.isPending}
             disabled={isRunning}
             onSubmit={submit}
             options={
                 <InfoCheckbox
-                    label="Recursive"
-                    info="Recursively push changes across multiple links."
+                    label={m.versionManagerFormRecursive()}
+                    info={m.versionManagerFormRecursivePushInfo()}
                     checked={recursive}
                     onChange={setRecursive}
                 />

@@ -623,9 +623,14 @@
     "featureScriptsAdds": "Adds",
     "featureScriptsUsers": "Users",
     "featureScriptsFavoritesCount": "Favorites",
-    "insertQuickInsertTip": "Tip: the Insert button on a part's row inserts it without opening the insert menu.",
-    "insertQuickDeriveTip": "Tip: the Derive button on a part's row derives it without opening the insert menu.",
     "insertThumbnailWaitTip": "Tip: you can insert a part even while the part's thumbnail is still generating.",
     "insertSignInPreviewTip": "Sign in to Onshape to see a preview of your selection.",
-    "insertSignIn": "Sign in"
+    "insertSignIn": "Sign in",
+    "versionManagerFormPush": "Push",
+    "versionManagerFormPull": "Pull",
+    "versionManagerFormRecursive": "Recursive",
+    "versionManagerFormRecursivePushInfo": "Recursively push changes across multiple links.",
+    "versionManagerFormRecursivePullInfo": "Also pulls into the parent from the documents linked above it first, saving a new version of each one along the way so the next can use it. Each is numbered from its own versions unless you name them above.",
+    "versionManagerQuickRecursivePushTip": "Tip: Quick recursive push in a link's ⋯ menu does this in one click, without opening the form.",
+    "versionManagerQuickRecursivePullTip": "Tip: Quick recursive pull in a link's ⋯ menu does this in one click, without opening the form."
 }
