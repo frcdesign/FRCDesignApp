@@ -187,7 +187,8 @@ the app makes of them.
 - **Onshape drops a webhook without saying so.** A registration whose
   `webhook.register` ping fails is cancelled, and one whose deliveries error or
   stall is deactivated. Asking for it then answers 404 — _observed_. So
-  deliveries are answered with a 200 at once, and the work done after.
+  deliveries are answered with a 200 at once, and the work done after. That a
+  delivery answered 410 deactivates it, as an error does, is _unverified_.
 - **Deliveries are not signed** — _observed_. The url carries a token, and
   a forged delivery can at most cause a refetch.
 - **Events the app relies on** — names _documented_, behavior _observed_:
@@ -203,6 +204,9 @@ the app makes of them.
       webhook itself.
 - `options.collapseEvents` merges a burst of the same event into fewer
   deliveries — _documented_ as a field, its effect _observed_.
+- **Each webhook delivers on its own.** Several registered on one workspace
+  with the same url each deliver every event, within milliseconds of each
+  other — _observed_ (2026-11-13, dozens on one workspace).
 
 ## Calling the API
 

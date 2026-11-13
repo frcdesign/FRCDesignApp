@@ -14,13 +14,18 @@ import {
     WebhookEvent
 } from "./registration";
 import { runInBackground } from "../../lib/background";
+import { HttpStatus } from "http-status-ts";
 import {
     LINKED_WORKSPACE_WEBHOOK_ROUTE,
+    readWatchId,
     readWorkspaceDelivery,
     UNITS_WEBHOOK_ROUTE
 } from "./transient";
 import { forgetUnitInfo } from "../configurations/units";
-import { forgetWorkspace } from "../version-manager/workspace-cache";
+import {
+    forgetOnEvent,
+    isCurrentWatch
+} from "../version-manager/workspace-cache";
 import { syncTeamLibraries } from "../admin-team/sync";
 
 export const webhookRoutes = getApp();
@@ -95,8 +100,25 @@ function forgetOnChange(
 /** POST /api/webhooks/units?documentId=&workspaceId= */
 webhookRoutes.post(UNITS_WEBHOOK_ROUTE, forgetOnChange(forgetUnitInfo));
 
-/** POST /api/webhooks/linked-workspace?documentId=&workspaceId= */
-webhookRoutes.post(
-    LINKED_WORKSPACE_WEBHOOK_ROUTE,
-    forgetOnChange(forgetWorkspace)
-);
+/**
+ * POST /api/webhooks/linked-workspace?documentId=&workspaceId=&watch=. A
+ * delivery through any registration but the workspace's current one is
+ * answered 410, so Onshape deactivates the duplicate.
+ */
+webhookRoutes.post(LINKED_WORKSPACE_WEBHOOK_ROUTE, async (c) => {
+    const query = c.req.query();
+    const workspace = readWorkspaceDelivery(query);
+    if (!workspace) {
+        throw forbiddenError("Unrecognized webhook");
+    }
+    if (!(await isCurrentWatch(c.env.KV, workspace, readWatchId(query)))) {
+        return c.body(null, HttpStatus.GONE);
+    }
+    const { event } = await c.req.json<WebhookNotification>();
+    if (!event.startsWith("webhook.")) {
+        await runInBackground(c, `handle ${event}`, () =>
+            forgetOnEvent(c.env.KV, workspace, event)
+        );
+    }
+    return c.json({});
+});

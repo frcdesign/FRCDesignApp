@@ -60,6 +60,24 @@ jobs:
               env:
                   CLOUDFLARE_ENV: cert
 
+            # Cloudflare's advice for version skew: a tab open on the last
+            # release still finds the chunks it lazy-loads.
+            - name: Keep this release's assets apart
+              run: cp -R dist/client/assets .own-assets
+
+            - name: Restore the previous release's assets
+              uses: actions/cache/restore@v4
+              with:
+                  path: .release-assets
+                  key: release-assets-cert-${{ github.sha }}
+                  restore-keys: release-assets-cert-
+
+            - name: Ship the previous release's assets beside this one's
+              run: |
+                  if [ -d .release-assets ]; then
+                      cp -Rn .release-assets/. dist/client/assets/
+                  fi
+
             - name: Apply migrations & deploy (cert)
               uses: cloudflare/wrangler-action@v3
               with:
@@ -67,6 +85,14 @@ jobs:
                   accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
                   preCommands: wrangler d1 migrations apply DB --remote --env cert
                   command: deploy
+
+            - name: Remember this release's assets for the next deploy
+              run: rm -rf .release-assets && mv .own-assets .release-assets
+
+            - uses: actions/cache/save@v4
+              with:
+                  path: .release-assets
+                  key: release-assets-cert-${{ github.sha }}
 
     # Dormant until a `main` branch exists (the `if` never matches otherwise).
     # Runs in a protected `production` GitHub Environment (add a required reviewer).
@@ -91,6 +117,24 @@ jobs:
               env:
                   CLOUDFLARE_ENV: production
 
+            # Cloudflare's advice for version skew: a tab open on the last
+            # release still finds the chunks it lazy-loads.
+            - name: Keep this release's assets apart
+              run: cp -R dist/client/assets .own-assets
+
+            - name: Restore the previous release's assets
+              uses: actions/cache/restore@v4
+              with:
+                  path: .release-assets
+                  key: release-assets-production-${{ github.sha }}
+                  restore-keys: release-assets-production-
+
+            - name: Ship the previous release's assets beside this one's
+              run: |
+                  if [ -d .release-assets ]; then
+                      cp -Rn .release-assets/. dist/client/assets/
+                  fi
+
             - name: Apply migrations & deploy (production)
               uses: cloudflare/wrangler-action@v3
               with:
@@ -98,3 +142,11 @@ jobs:
                   accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
                   preCommands: wrangler d1 migrations apply DB --remote --env production
                   command: deploy
+
+            - name: Remember this release's assets for the next deploy
+              run: rm -rf .release-assets && mv .own-assets .release-assets
+
+            - uses: actions/cache/save@v4
+              with:
+                  path: .release-assets
+                  key: release-assets-production-${{ github.sha }}

@@ -101,8 +101,8 @@ the error behind it, `internal` message included; a failed load shown as
 beside **Send a report**. See [feedback.md](./feedback.md). Images use
 `loadImage`, which throws `ImageLoadError` with only the status.
 
-A tab opened before a deploy fails its next lazy import, since the deploy
-removed the old build's chunks. Vite reports that as `vite:preloadError`, and
+A tab opened two deploys back fails its next lazy import, since only the
+previous release's chunks are kept. Vite reports that as `vite:preloadError`, and
 `reloadOnStaleBuild` reloads the tab to fetch the new build, at most once in
 10 s (`sessionStorage`), so a chunk still missing after the reload reaches the
 crash page.
@@ -210,6 +210,8 @@ that reconnects refreshes the library, since pushes during the outage are lost.
   `public, max-age=31536000, immutable`, so a second visit asks for none of
   them. `index.html`, which names them, keeps Cloudflare's default
   `max-age=0, must-revalidate`, so a deploy is picked up on the next load.
+  Each deploy also carries the previous release's `/assets/` files; see
+  **Decisions**.
 - On the client, `useRefreshLibrary` invalidates the library's unversioned
   queries and the version itself; a versioned query's old url is left alone,
   since refetching it would restore the old state.
@@ -247,11 +249,15 @@ that reconnects refreshes the library, since pushes during the outage are lost.
   retries a read twice, so a read that still fails is an outage longer than a
   request should wait: the client's backoff spans it without holding a Worker
   open.
-- **Hashed bundle files are cached for a year.** A file's name changes with
-  its contents, so a cached one is never out of date. Caching is separate from
-  a deploy removing the last build's files: a tab that already holds a chunk
-  keeps using it, and one that asks for a removed chunk is reloaded by
-  `reloadOnStaleBuild`.
+- **Hashed bundle files are cached for a year, and a deploy keeps the last
+  release's.** A file's name changes with its contents, so a cached one is
+  never out of date. A tab opened before a deploy still lazy-loads the old
+  build's chunks, so `.github/workflows/deploy.yml` ships the previous
+  release's `/assets/` beside the new ones, as Cloudflare advises for version
+  skew; it carries them in the Actions cache, saved only after a deploy
+  succeeds. A tab two releases old, or one whose release's cache GitHub has
+  evicted (seven days unused), still misses, and `reloadOnStaleBuild` reloads
+  it.
 - **One push hub.** Pushes are few and small; one instance keeps fan-out simple.
 - **Errors by kind, not status.** The client decides wording from `kind`, so a
   status can change without changing what the user reads.

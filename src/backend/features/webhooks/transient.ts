@@ -22,12 +22,15 @@ const UPDATE_WORKSPACE_UNITS = "onshape.model.lifecycle.updateworkspaceunits";
  * version (`changed`, and `createversion`, which resets the count), and who may
  * read it (`shared`, sent for sharing and unsharing alike).
  */
-const LINKED_WORKSPACE_EVENTS = [
-    "onshape.model.lifecycle.changed",
-    "onshape.model.lifecycle.metadata",
-    "onshape.model.lifecycle.createversion",
-    "onshape.document.lifecycle.shared"
-];
+export enum LinkedWorkspaceEvent {
+    CHANGED = "onshape.model.lifecycle.changed",
+    METADATA = "onshape.model.lifecycle.metadata",
+    CREATE_VERSION = "onshape.model.lifecycle.createversion",
+    SHARED = "onshape.document.lifecycle.shared"
+}
+
+/** The search param naming which registration a delivery came through. */
+const WATCH_PARAM = "watch";
 
 interface TransientWebhook {
     route: string;
@@ -42,13 +45,18 @@ async function watchWorkspace(
     onshapeApi: OnshapeApi,
     workspace: InstancePath,
     appUrl: string,
-    webhook: TransientWebhook
+    webhook: TransientWebhook,
+    watchId?: string
 ): Promise<void> {
+    const url = new URL(toWorkspaceUrl(webhook.route, workspace, appUrl));
+    if (watchId) {
+        url.searchParams.set(WATCH_PARAM, watchId);
+    }
     await createWebhook(onshapeApi, {
         documentId: workspace.documentId,
         workspaceId: workspace.instanceId,
         events: webhook.events,
-        url: toWorkspaceUrl(webhook.route, workspace, appUrl),
+        url: url.href,
         name: webhook.name,
         description: webhook.description,
         options: { collapseEvents: true },
@@ -70,19 +78,26 @@ export function watchWorkspaceUnits(
     });
 }
 
-/** Tells the version manager's caches when a linked workspace changes. */
+/** Tells the version manager's caches when a linked workspace changes; `watchId` names this registration. */
 export function watchLinkedWorkspace(
     onshapeApi: OnshapeApi,
     workspace: InstancePath,
-    appUrl: string
+    appUrl: string,
+    watchId: string
 ): Promise<void> {
-    return watchWorkspace(onshapeApi, workspace, appUrl, {
-        route: LINKED_WORKSPACE_WEBHOOK_ROUTE,
-        events: LINKED_WORKSPACE_EVENTS,
-        name: "FRCDesignApp version manager",
-        description:
-            "Keeps the FRCDesignApp's copy of this workspace's name and pending changes current."
-    });
+    return watchWorkspace(
+        onshapeApi,
+        workspace,
+        appUrl,
+        {
+            route: LINKED_WORKSPACE_WEBHOOK_ROUTE,
+            events: Object.values(LinkedWorkspaceEvent),
+            name: "FRCDesignApp version manager",
+            description:
+                "Keeps the FRCDesignApp's copy of this workspace's name and pending changes current."
+        },
+        watchId
+    );
 }
 
 /** Where a delivery about `workspace` is sent, carrying it in the url. */
@@ -95,6 +110,13 @@ function toWorkspaceUrl(
     url.searchParams.set("documentId", workspace.documentId);
     url.searchParams.set("workspaceId", workspace.instanceId);
     return url.href;
+}
+
+/** Which registration a linked workspace's delivery came through; undefined for one registered without an id. */
+export function readWatchId(
+    query: Record<string, string | undefined>
+): string | undefined {
+    return query[WATCH_PARAM] || undefined;
 }
 
 /** The workspace a delivery names, for either of the routes above. */

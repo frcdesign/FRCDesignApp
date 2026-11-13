@@ -22,8 +22,8 @@ whose parameter ids are exactly the ones its selections name.
 - 20 old tabs pair with one new tab each: 7,335 uses. Two of them are S -
   Channel (GB), whose tab was replaced on 2026-11-02.
 - 1 old tab (`2d996271…`, 137 uses) has a single parameter that both
-  S - Threaded L Bracket (GB) and Angled brackets carry. It is commented out in
-  the file until someone says which it was.
+  S - Threaded L Bracket (GB) and Angled brackets carry. The owner judged it
+  the Threaded L Bracket.
 - 7 old tabs (76 uses, six of them last used in September, one in October)
   match no new tab: they were removed before the copy. Their history stays
   under the old ids.

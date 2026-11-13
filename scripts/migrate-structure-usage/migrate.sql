@@ -28,10 +28,9 @@ INSERT INTO _structure_element_map (old_element_id, new_element_id) VALUES
     ('b52222932799a279ba4b3ffe', '49a5e4d1bc98602c7f27bd83'), -- C - Hinge Assembly (GB)
     ('fa32f4d8f04e7951ddae0396', '0cdfd97b9a645ffb6d4620bf'), -- S - Hub-Mount Control Arms (GB)
     ('20c9961caaf816f4bb97604e', 'aeba2092c24a076a5acf1ed1'), -- S - Aluminum Baseplate (GB)
-    ('267bf315d1232606842ce999', '824c0e30b308491b11b24364'); -- S - Disks (GB)
-    -- Undecided, 137 uses: its one parameter is on both copies below.
-    -- ('2d996271889c7348287d5782', '445dc4cebedffdf4b7a2f6fb'), -- S - Threaded L Bracket (GB)
-    -- ('2d996271889c7348287d5782', 'd9f28dec86dd92d40bb0bbd2'), -- Angled brackets
+    ('267bf315d1232606842ce999', '824c0e30b308491b11b24364'), -- S - Disks (GB)
+    -- Its one parameter is on Angled brackets too; the owner chose this one.
+    ('2d996271889c7348287d5782', '445dc4cebedffdf4b7a2f6fb'); -- S - Threaded L Bracket (GB)
 
 -- The log first: every rollup below can be rebuilt from it.
 UPDATE events

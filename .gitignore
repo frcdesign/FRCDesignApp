@@ -48,3 +48,7 @@ __pycache__/
 src/frontend/paraglide/
 project.inlang/*
 !project.inlang/settings.json
+
+# Carried between deploys by deploy.yml
+.own-assets/
+.release-assets/

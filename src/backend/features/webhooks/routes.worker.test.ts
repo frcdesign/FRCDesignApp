@@ -73,7 +73,7 @@ describe("receiving a webhook", () => {
                 .mockImplementation(() => undefined);
 
             const res = await createTestApp().request(
-                `http://localhost/api/webhooks/${route}?documentId=d&workspaceId=w`,
+                `http://localhost/api/webhooks/${route}?documentId=d&workspaceId=w&watch=w1`,
                 jsonRequest("POST", {
                     event: "onshape.model.lifecycle.changed"
                 }),
@@ -84,6 +84,44 @@ describe("receiving a webhook", () => {
             expect(logged).toHaveBeenCalled();
         }
     );
+
+    it.each([
+        ["one registered before watch ids", ""],
+        ["a duplicate", "&watch=older"]
+    ])(
+        "turns away a linked workspace's delivery through %s, so Onshape retires it",
+        async (_name, watch) => {
+            await env.KV.put(
+                "linked-workspace-watch:d|w",
+                JSON.stringify({ watchId: "current" })
+            );
+
+            const res = await createTestApp().request(
+                `http://localhost/api/webhooks/linked-workspace?documentId=d&workspaceId=w${watch}`,
+                jsonRequest("POST", {
+                    event: "onshape.model.lifecycle.changed"
+                }),
+                env
+            );
+
+            expect(res.status).toBe(410);
+        }
+    );
+
+    it("keeps a linked workspace's names through an edit", async () => {
+        await env.KV.put("linked-workspace:d|w", JSON.stringify({}));
+        await env.KV.put("linked-workspace-changes:d|w", "{}");
+
+        const res = await createTestApp().request(
+            "http://localhost/api/webhooks/linked-workspace?documentId=d&workspaceId=w&watch=w1",
+            jsonRequest("POST", { event: "onshape.model.lifecycle.changed" }),
+            env
+        );
+
+        expect(res.status).toBe(200);
+        expect(await env.KV.get("linked-workspace:d|w")).not.toBeNull();
+        expect(await env.KV.get("linked-workspace-changes:d|w")).toBeNull();
+    });
 
     // Registration fails unless Onshape's own check is answered.
     it("answers Onshape's registration check", async () => {

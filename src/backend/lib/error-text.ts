@@ -9,7 +9,7 @@ export function describeError(error: unknown): string {
     let current = error;
     while (current !== undefined && parts.length < MAX_CAUSES) {
         if (!(current instanceof Error)) {
-            parts.push(String(current));
+            parts.push(JSON.stringify(current) ?? typeof current);
             break;
         }
         parts.push(`${current.name}: ${current.message}`);
