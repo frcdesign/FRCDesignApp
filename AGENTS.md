@@ -71,6 +71,11 @@ handling for their own sake; the app runs in Onshape's mouse-driven panel.
 is no shared directory: the backend owns the contract, and the frontend imports
 it through the `@backend/*` alias. Imports within a side stay relative.
 
+`src/extension/` is the browser extension that draws previews in Onshape's
+graphics window. It is built on its own (`npm run build:extension`, into
+`dist-extension/`) and imports nothing from either side; `protocol.ts` is its
+contract with the app's panel.
+
 Both sides are organized the same way:
 
 - `features/<feature>/` — everything one feature owns. Backend features hold

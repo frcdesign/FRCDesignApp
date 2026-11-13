@@ -262,6 +262,35 @@ What the panel's window messages say about what's picked, in `SELECTION` and
 - A highlight of a whole instance, as an `OCCURRENCE` selection with its
   `occurrencePath` alone, lights that instance up. _Unverified._
 
+## The web client's viewer
+
+What the preview extension (`src/extension/`) reaches inside Onshape's own page
+to draw in the graphics window. None of it is an API. All of it is
+_unverified_: read from the web client's code (1.223) and from another
+extension that relies on it, and seen working only against a stand-in for the
+viewer, not in Onshape. Any release can rename any of it, so the extension
+looks each thing up and does without when it isn't there.
+
+- The page's AngularJS injector (`angular.element(document).injector()`) hands
+  out `CompatibilityChecksService`, whose `viewer` is the open tab's viewer.
+- `viewer.gl` is its WebGL2 context, on the main thread.
+- `viewer.getCamera()` carries `viewMatrix` and `projectionMatrix`, 16 numbers
+  each, column-major. Model coordinates are metres.
+- `viewer.mainDrawPass.childPasses` are the passes of a frame, in order. A
+  pass's `draw` calls its own `preDraw` first. One pass's `preDraw` clears the
+  depth buffer and nothing else, before what Onshape draws on top of the model;
+  until it runs, the depth buffer holds the model.
+- Onshape tracks WebGL state itself, so anything drawn in its context has to
+  leave every setting as it found it.
+- `viewer.forceRequestDraw()` draws a frame; Onshape draws none on its own
+  while nothing changes.
+- `viewer.printingInProgress` is true while it renders for print.
+- The client messages `startAssemblyAnimation`, `updateAssemblyAnimation` and
+  `stopAssemblyAnimation` move instances on screen without changing the
+  document, but only for an account with the `WEB.ASSEMBLY_MESSAGE_ANIMATION`
+  capability, which `GET /api/capabilities/check/web/assembly_message_animation`
+  answers. It is off for the owner's account — _observed_ (2026-11-12).
+
 ## Custom toolbar
 
 What Onshape's web client sends to change someone's custom toolbar, captured

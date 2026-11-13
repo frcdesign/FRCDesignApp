@@ -11,6 +11,9 @@
             "path": "./tsconfig.backend.json"
         },
         {
+            "path": "./tsconfig.extension.json"
+        },
+        {
             "path": "./tsconfig.test.json"
         }
     ]

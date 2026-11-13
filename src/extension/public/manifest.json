@@ -1,0 +1,15 @@
+{
+    "manifest_version": 3,
+    "name": "FRCDesign Preview",
+    "description": "Shows the parts FRCDesignApp is about to insert, in Onshape's graphics window.",
+    "version": "0.1.0",
+    "minimum_chrome_version": "111",
+    "content_scripts": [
+        {
+            "matches": ["https://*.onshape.com/*"],
+            "js": ["main.js"],
+            "run_at": "document_idle",
+            "world": "MAIN"
+        }
+    ]
+}

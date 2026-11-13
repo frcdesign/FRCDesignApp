@@ -20,6 +20,7 @@
     },
     "include": [
         "vite.config.ts",
+        "vite.extension.config.ts",
         "vitest.config.ts",
         "drizzle.config.ts",
         "openapi-ts.config.ts",

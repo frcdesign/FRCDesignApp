@@ -15,6 +15,7 @@
         "pretsc": "npm run messages",
         "tsc": "tsc -b",
         "build": "npm run messages && tsc -b && vite build",
+        "build:extension": "vite build --config vite.extension.config.ts",
         "lint": "eslint .",
         "preview": "npm run build && vite preview",
         "typegen": "wrangler types",
