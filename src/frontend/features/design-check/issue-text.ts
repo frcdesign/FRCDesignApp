@@ -25,6 +25,8 @@ export function getDesignIssueName(type: DesignIssueType): string {
             return m.designCheckFeatureWarning();
         case DesignIssueType.FEATURE_SUPPRESSED:
             return m.designCheckFeatureSuppressed();
+        case DesignIssueType.FEATURE_INACTIVE:
+            return m.designCheckFeatureInactive();
         case DesignIssueType.ROLLBACK_NOT_AT_END:
             return m.designCheckRollbackNotAtEnd();
         case DesignIssueType.PART_NO_MATERIAL:
@@ -60,6 +62,8 @@ export function getDesignIssueHelp(issue: DesignIssue): string {
             return m.designCheckFeatureWarningHelp();
         case DesignIssueType.FEATURE_SUPPRESSED:
             return m.designCheckFeatureSuppressedHelp();
+        case DesignIssueType.FEATURE_INACTIVE:
+            return m.designCheckFeatureInactiveHelp();
         case DesignIssueType.ROLLBACK_NOT_AT_END:
             return m.designCheckRollbackNotAtEndHelp({ count });
         case DesignIssueType.PART_NO_MATERIAL:

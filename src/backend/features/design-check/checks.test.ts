@@ -463,6 +463,23 @@ describe("a Part Studio", () => {
         ]);
     });
 
+    it("leaves a derived mirror's Origin Cube to its seed's tab, and still wants materials", () => {
+        const mirror = extrude("DM", { featureType: "derivedMirror" });
+        const snapshot = partStudio({
+            features: [mirror],
+            parts: [part("JHD", { material: undefined })]
+        });
+
+        expect(types(snapshot)).toEqual([DesignIssueType.PART_NO_MATERIAL]);
+
+        mirror.suppressed = true;
+        expect(types(snapshot)).toEqual([
+            DesignIssueType.ORIGIN_CUBE_MISSING,
+            DesignIssueType.PART_NO_MATERIAL,
+            DesignIssueType.FEATURE_SUPPRESSED
+        ]);
+    });
+
     it("flags a part with no material, and nothing about its part number or description", () => {
         const snapshot = partStudio({
             features: [originCube()],
@@ -555,6 +572,58 @@ describe("an Assembly", () => {
         ];
 
         expect(types(snapshot)).toEqual([DesignIssueType.INSTANCE_FLOATING]);
+    });
+
+    it("counts a Replicate's and a Mirror's copies as held, unless it is suppressed", () => {
+        const snapshot = assembly({
+            instances: [
+                instance("seed"),
+                instance("replica"),
+                instance("mirrored"),
+                instance("suppressed-copy")
+            ],
+            mates: [fasten("M1", [], ["seed"])]
+        });
+        snapshot.definition.rootAssembly.parametricInstances = [
+            {
+                type: "Replicate",
+                children: [{ seedOccurrence: "seed", instanceIds: ["replica"] }]
+            },
+            {
+                type: "Mirror",
+                children: [
+                    { seedOccurrence: "seed", instanceIds: ["mirrored"] }
+                ]
+            },
+            {
+                type: "Mirror",
+                suppressed: true,
+                children: [
+                    {
+                        seedOccurrence: "seed",
+                        instanceIds: ["suppressed-copy"]
+                    }
+                ]
+            }
+        ];
+
+        expect(
+            checkDesign(snapshot).issues.map((issue) => [
+                issue.type,
+                issue.instanceId
+            ])
+        ).toEqual([[DesignIssueType.INSTANCE_FLOATING, "suppressed-copy"]]);
+    });
+
+    it("counts every instance of a derived mirror as held, since it names none", () => {
+        const snapshot = assembly({
+            instances: [instance("copy"), instance("other copy")]
+        });
+        snapshot.definition.rootAssembly.parametricInstances = [
+            { type: "Derived Assembly Mirror", children: [] }
+        ];
+
+        expect(types(snapshot)).toEqual([]);
     });
 
     it("names the part an instance shows, unless the part is gone", () => {
@@ -735,5 +804,17 @@ describe("an Assembly", () => {
         });
 
         expect(types(snapshot)).toEqual([DesignIssueType.FEATURE_ERROR]);
+    });
+
+    it("reports a mate Onshape grays out as inactive, not as red", () => {
+        const snapshot = assembly({
+            instances: [instance("a"), instance("b")],
+            mates: [fasten("M1", ["a"], ["b"])]
+        });
+        snapshot.features.featureStates = {
+            M1: { featureStatus: "ERROR", inactive: true }
+        };
+
+        expect(types(snapshot)).toEqual([DesignIssueType.FEATURE_INACTIVE]);
     });
 });

@@ -15,10 +15,12 @@ export enum DesignIssueType {
     /** A yellow feature or mate. */
     FEATURE_WARNING = "feature-warning",
     FEATURE_SUPPRESSED = "feature-suppressed",
+    /** Onshape grays it out: something it needs is suppressed. */
+    FEATURE_INACTIVE = "feature-inactive",
     ROLLBACK_NOT_AT_END = "rollback-not-at-end",
     PART_NO_MATERIAL = "part-no-material",
     INSTANCE_FIXED = "instance-fixed",
-    /** Not mated, grouped, fixed or patterned. */
+    /** Not mated, grouped, fixed, or copied by a pattern, Replicate or Mirror. */
     INSTANCE_FLOATING = "instance-floating",
     INSTANCE_BROKEN = "instance-broken"
 }
@@ -138,6 +140,7 @@ export function getDesignIssueSeverity(
         case DesignIssueType.INSTANCE_FLOATING:
             return BuildIssueSeverity.WARNING;
         case DesignIssueType.FEATURE_SUPPRESSED:
+        case DesignIssueType.FEATURE_INACTIVE:
             return BuildIssueSeverity.INFO;
     }
 }

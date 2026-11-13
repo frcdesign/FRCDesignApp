@@ -58,7 +58,10 @@ export function checkDesign(snapshot: DesignSnapshot): DesignCheckResult {
 function checkPartStudio(snapshot: PartStudioSnapshot): DesignCheckResult {
     const statuses = sketchStatuses(snapshot.sketches);
     const sketches = checkSketches(snapshot.features, statuses);
-    const originCube = checkOriginCube(snapshot.features);
+    // A mirror's Origin Cube is its seed's, checked in the seed's tab.
+    const originCube = isDerivedMirror(snapshot.features)
+        ? []
+        : checkOriginCube(snapshot.features);
     // Each is yellow too, and reported once, as itself: an over-defined sketch,
     // and the Origin Cube anywhere but first, which it refuses. Red still shows.
     const reported = new Set(
@@ -127,6 +130,14 @@ export function isOriginCube(feature: Feature): boolean {
     );
 }
 
+/** A tab made by mirroring another Part Studio. */
+function isDerivedMirror(response: OnshapeFeatureListResponse): boolean {
+    return response.features.some(
+        (feature) =>
+            feature.featureType === "derivedMirror" && !feature.suppressed
+    );
+}
+
 /** Every Part Studio starts with the Origin Cube, which is never suppressed. */
 function checkOriginCube(response: OnshapeFeatureListResponse): DesignIssue[] {
     const index = response.features.findIndex(isOriginCube);
@@ -191,7 +202,7 @@ function checkSketches(
     });
 }
 
-/** Red and yellow features or mates, and suppressed ones left in the list. */
+/** Red and yellow features or mates, and suppressed or inactive ones left in the list. */
 function checkFeatures(response: OnshapeFeatureListResponse): DesignIssue[] {
     return response.features.flatMap((feature): DesignIssue[] => {
         const target = {
@@ -204,7 +215,11 @@ function checkFeatures(response: OnshapeFeatureListResponse): DesignIssue[] {
                 ? []
                 : [{ type: DesignIssueType.FEATURE_SUPPRESSED, ...target }];
         }
-        switch (response.featureStates?.[feature.featureId]?.featureStatus) {
+        const state = response.featureStates?.[feature.featureId];
+        if (state?.inactive) {
+            return [{ type: DesignIssueType.FEATURE_INACTIVE, ...target }];
+        }
+        switch (state?.featureStatus) {
             case "ERROR":
                 return [{ type: DesignIssueType.FEATURE_ERROR, ...target }];
             case "WARNING":
@@ -348,7 +363,10 @@ function isBroken(instance: OnshapeAssemblyInstance): boolean {
     );
 }
 
-/** Top-level instances an unsuppressed mate or group holds, or a pattern copies. */
+/**
+ * Top-level instances an unsuppressed mate or group holds, or a pattern,
+ * Replicate, Mirror or derived mirror copies from a seed.
+ */
 function heldInstances(definition: OnshapeAssemblyDefinition): Set<string> {
     const root = definition.rootAssembly;
     const held = new Set<string>();
@@ -376,8 +394,23 @@ function heldInstances(definition: OnshapeAssemblyDefinition): Set<string> {
             for (const id of copies) held.add(id);
         }
     }
+    for (const parametric of root.parametricInstances ?? []) {
+        if (parametric.suppressed) {
+            continue;
+        }
+        // It names none of the copies it made, so every instance counts as one.
+        if (parametric.type === DERIVED_MIRROR) {
+            return new Set(root.instances.map((instance) => instance.id));
+        }
+        for (const child of parametric.children ?? []) {
+            for (const id of child.instanceIds ?? []) held.add(id);
+        }
+    }
     return held;
 }
+
+/** A tab made by mirroring another Assembly, whose copies follow their seeds. */
+const DERIVED_MIRROR = "Derived Assembly Mirror";
 
 /** FRCDesign fastens the Origin Cube to the assembly origin rather than fixing parts. */
 function checkInstances(snapshot: AssemblySnapshot): DesignIssue[] {

@@ -124,27 +124,30 @@ export function DesignCheckResults(props: DesignCheckResultsProps): ReactNode {
     return (
         <Stack gap="sm" p="sm">
             {failedNote}
-            <Group justify="space-between" wrap="nowrap">
-                <SeverityBadges
-                    severities={issues.map((issue) =>
-                        getDesignIssueSeverity(issue.type)
-                    )}
-                />
-                <Group gap="xs" wrap="nowrap">
-                    <Text size="xs" c="dimmed">
-                        {checkedAt}
-                    </Text>
-                    {fixes.length > 0 && (
-                        <Button
-                            size="compact-sm"
-                            variant="light"
-                            onClick={() => openFixDialog(target, fixes)}
-                        >
-                            {m.designCheckFixAll()}
-                        </Button>
-                    )}
+            <Stack gap={4}>
+                <Group justify="space-between" wrap="nowrap">
+                    <SeverityBadges
+                        severities={issues.map((issue) =>
+                            getDesignIssueSeverity(issue.type)
+                        )}
+                    />
+                    <Group gap="xs" wrap="nowrap">
+                        <Text size="xs" c="dimmed">
+                            {checkedAt}
+                        </Text>
+                        {fixes.length > 0 && (
+                            <Button
+                                size="compact-sm"
+                                variant="light"
+                                onClick={() => openFixDialog(target, fixes)}
+                            >
+                                {m.designCheckFixAll()}
+                            </Button>
+                        )}
+                    </Group>
                 </Group>
-            </Group>
+                {dismissedToggle}
+            </Stack>
             <Accordion multiple defaultValue={[target.elementId]}>
                 {(showDismissed ? result.tabs : live).map((tab) => (
                     <TabItem
@@ -155,7 +158,6 @@ export function DesignCheckResults(props: DesignCheckResultsProps): ReactNode {
                     />
                 ))}
             </Accordion>
-            {dismissedToggle}
         </Stack>
     );
 }
@@ -288,7 +290,7 @@ function IssueGroup(props: IssueGroupProps): ReactNode {
     const pointAt = tab.elementId === target.elementId ? target : undefined;
 
     const actions = (issue: DesignIssue) => (
-        <Group gap={4} wrap="nowrap" flex="none">
+        <Group gap={4} wrap="nowrap" flex="none" justify="flex-end">
             {!issue.dismissed && (
                 <FixButton target={target} tab={tab} issue={issue} />
             )}

@@ -150,10 +150,12 @@ enum DesignIssueType {
     /** A yellow feature or mate. */
     FEATURE_WARNING = "feature-warning",
     FEATURE_SUPPRESSED = "feature-suppressed",
+    /** Onshape grays it out: something it needs is suppressed. */
+    FEATURE_INACTIVE = "feature-inactive",
     ROLLBACK_NOT_AT_END = "rollback-not-at-end",
     PART_NO_MATERIAL = "part-no-material",
     INSTANCE_FIXED = "instance-fixed",
-    /** Not mated, grouped, fixed or patterned. */
+    /** Not mated, grouped, fixed, or copied by a pattern, Replicate or Mirror. */
     INSTANCE_FLOATING = "instance-floating",
     INSTANCE_BROKEN = "instance-broken"
 }
@@ -310,14 +312,15 @@ everyone.
 | Type                                                       | Severity               | Raised for                                                                                                                                                                                                                  |
 | ---------------------------------------------------------- | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `SKETCH_UNDERDEFINED` / `SKETCH_OVERDEFINED`               | Warning / Error        | An unsuppressed sketch Onshape reports so                                                                                                                                                                                   |
-| `ORIGIN_CUBE_MISSING` / `ORIGIN_CUBE_NOT_FIRST`            | Warning / Warning      | A Part Studio with no Origin Cube, or with it below the first feature                                                                                                                                                       |
+| `ORIGIN_CUBE_MISSING` / `ORIGIN_CUBE_NOT_FIRST`            | Warning / Warning      | A Part Studio with no Origin Cube, or with it below the first feature; never a derived mirror's                                                                                                                             |
 | `ORIGIN_CUBE_SUPPRESSED`                                   | Warning                | The Origin Cube suppressed                                                                                                                                                                                                  |
 | `ORIGIN_CUBE_NOT_FASTENED`                                 | Warning                | An Assembly's unsuppressed Origin Cube instance with no unsuppressed fasten to the origin alone; grouping or mating it to a part doesn't count                                                                              |
 | `FEATURE_ERROR` / `FEATURE_WARNING` / `FEATURE_SUPPRESSED` | Error / Warning / Info | A feature or mate Onshape marks red or yellow, or one left suppressed; never the Origin Cube for the last. A built Part Studio feature is also yellow when a selection box lost one pick beside another that still resolves |
+| `FEATURE_INACTIVE`                                         | Info                   | A mate Onshape grays out as inactive because an instance it needs is suppressed; Onshape sends it `ERROR` with `inactive`, and it isn't also an error                                                                       |
 | `ROLLBACK_NOT_AT_END`                                      | Warning                | A Part Studio's rollback bar above its last feature                                                                                                                                                                         |
 | `PART_NO_MATERIAL`                                         | Warning                | A solid part with none, the Origin Cube's own cube aside                                                                                                                                                                    |
 | `INSTANCE_FIXED`                                           | Warning                | An unsuppressed top-level instance that is fixed                                                                                                                                                                            |
-| `INSTANCE_FLOATING`                                        | Warning                | An unsuppressed top-level instance no unsuppressed mate or group holds and no pattern copies, broken ones and the Origin Cube's aside                                                                                       |
+| `INSTANCE_FLOATING`                                        | Warning                | An unsuppressed top-level instance no unsuppressed mate or group holds and no unsuppressed pattern, Replicate or Mirror copies, broken ones and the Origin Cube's aside; none in a tab with an unsuppressed derived mirror  |
 | `INSTANCE_BROKEN`                                          | Error                  | An unsuppressed instance Onshape sends with only its name and id, or a part instance with an empty part id                                                                                                                  |
 
 The assembly is read without non-solid instances, so an inserted sketch is
@@ -448,8 +451,9 @@ only with one (`canResume` in `src/frontend/routes/index.tsx`).
    (`useDismissMutation`). The route checks edit access again (`canWrite`),
    saves the dismissal (`setDismissed`), keyed by the tab and `getIssueKey`, and
    records it for analytics (`trackDesignAction`).
-3. **Show {n} dismissed issues**, under the list or in the notice, shows them
-   back in place, dimmed, each with a button that puts it back the same way.
+3. **Show {n} dismissed issues**, under the severity badges or in the notice,
+   shows them back in place, dimmed, each with a button that puts it back the
+   same way.
 4. Every check of the document marks the issue dismissed, for everyone, until
    someone puts it back.
 
@@ -551,7 +555,8 @@ In [strings/design-check.md](../strings/design-check.md).
   under-defined sketch is a warning, since loose geometry, such as a game piece
   in an intake sketch, is sometimes meant; so are a yellow feature, a part with
   no material, a fixed or floating instance, the Origin Cube's issues and a
-  rollback bar above the end. A suppressed feature is info.
+  rollback bar above the end. A suppressed feature is info, and so is an
+  inactive one, which Onshape grays out as it does a suppressed one.
 - **No part number or description check.** How a team numbers and describes its
   parts for a bill of materials is its own convention, and every part without
   one would be flagged.
@@ -587,6 +592,13 @@ In [strings/design-check.md](../strings/design-check.md).
   issue about the whole tab, such as the rollback bar, is one per tab.
 - **Shown at once, without checking again.** Checking again reads the whole
   document over; the change is already known.
+- **A derived mirror's Part Studio has no Origin Cube of its own.** The cube
+  is the seed's, checked in the seed's tab. Its parts are still checked for a
+  material: a mirrored part without one has the wrong mass too.
+- **A derived mirror's tab has no floating instances.** Onshape doesn't say
+  which instances it made ([ONSHAPE.md](../ONSHAPE.md)), and its copies follow
+  their seeds without mates, so every instance there counts as held; one added
+  by hand and left loose isn't flagged.
 - **Grouped by type.** A Part Studio of thirty parts with no material is one
   box listing thirty names, not thirty boxes.
 
