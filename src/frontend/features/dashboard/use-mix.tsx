@@ -27,6 +27,8 @@ function sourceLabel(source: UseSource): string {
             return m.dashboardAutoAssembly();
         case UseSource.UNKNOWN:
             return m.dashboardSourceUnknown();
+        case UseSource.EDIT:
+            return m.dashboardSourceEdit();
     }
 }
 

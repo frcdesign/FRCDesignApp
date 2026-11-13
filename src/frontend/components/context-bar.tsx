@@ -2,11 +2,14 @@ import { type ReactNode, useEffect, useState } from "react";
 import { Badge, Box, Button, Collapse, Group } from "@mantine/core";
 import {
     CheckIcon,
+    PencilSimpleIcon,
     PlugsConnectedIcon,
     PlusIcon,
     TargetIcon
 } from "@phosphor-icons/react";
+import { type ElementPath } from "@backend/lib/onshape/path";
 import { useIsSignedIn } from "../features/auth/access-level";
+import { openEditPartsDialog } from "../features/edit-parts/open-edit-parts-dialog";
 import {
     type InsertLocation,
     useAddInsertLocationMutation,
@@ -42,7 +45,7 @@ export function ContextBar(props: ContextBarProps): ReactNode {
     const assembly = useTargetAssembly();
     const isSignedIn = useIsSignedIn();
     return props.isLibrary && assembly && isSignedIn ? (
-        <LibraryActions />
+        <LibraryActions assembly={assembly} />
     ) : null;
 }
 
@@ -69,8 +72,13 @@ enum BarAction {
     PRESELECTION = "preselection"
 }
 
+interface LibraryActionsProps {
+    assembly: ElementPath;
+}
+
 /** The library's actions, and the one open under them. */
-function LibraryActions(): ReactNode {
+function LibraryActions(props: LibraryActionsProps): ReactNode {
+    const { assembly } = props;
     const [open, setOpen] = useState<BarAction>();
     const pickCount = useFastenPicks((state) => state.targets.length);
     const insertLocation = useInsertLocation();
@@ -130,6 +138,17 @@ function LibraryActions(): ReactNode {
                     onClick={togglePreselection}
                 >
                     {m.contextBarPreselection()}
+                </Button>
+                <Button
+                    size="compact-sm"
+                    variant="light"
+                    leftSection={<PencilSimpleIcon />}
+                    onClick={() => {
+                        stop();
+                        openEditPartsDialog(assembly);
+                    }}
+                >
+                    {m.editPartsButton()}
                 </Button>
                 {insertLocation &&
                     (isAdded || insertLocation.instanceId === undefined) && (

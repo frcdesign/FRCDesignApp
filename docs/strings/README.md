@@ -16,6 +16,7 @@ user.
 | [analytics.md](./analytics.md)             | The dashboard's usage numbers, charts and tables         |
 | [featurescripts.md](./featurescripts.md)   | The FeatureScripts tab, its cards and details (proposed) |
 | [testbench.md](./testbench.md)             | The owner's testbench page                               |
+| [edit-parts.md](./edit-parts.md)           | Edit parts: picking the parts, and the menu              |
 | [auto-assembly.md](./auto-assembly.md)     | Auto Assembly's page, its runs, and pick problems        |
 | [fasten.md](./fasten.md)                   | Insert and fasten's card, toasts and tip                 |
 

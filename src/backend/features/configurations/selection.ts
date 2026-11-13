@@ -395,3 +395,22 @@ function displayValue(parameter: ConfigurationParameter, value: string) {
     }
     return formatValue(parameter, value);
 }
+
+/**
+ * A selection with `changes` laid over it and settled, for editing a part
+ * that's already placed. Undefined when a change doesn't hold once settled:
+ * this selection's other values hide the parameter, or the option.
+ */
+export function applyChanges(
+    selection: Selection,
+    changes: PartialSelection,
+    parameters: ConfigurationParameter[]
+): Selection | undefined {
+    const changed = toSelection({ ...selection, ...changes }, parameters);
+    const settled = normalizeSelection(changed, parameters);
+    const applied = appliedValues(settled, parameters);
+    const holds = Object.keys(changes).every(
+        (id) => applied[id] !== undefined && applied[id] === changed[id]
+    );
+    return holds ? settled : undefined;
+}

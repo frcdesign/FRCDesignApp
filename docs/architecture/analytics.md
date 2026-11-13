@@ -64,7 +64,9 @@ enum UseSource {
     /** An Auto Assembly run, which inserts a part per fastener it places. */
     AUTO_ASSEMBLY = "auto_assembly",
     /** Imported from the legacy app's log, which never recorded where a use started. */
-    UNKNOWN = "unknown"
+    UNKNOWN = "unknown",
+    /** An edit, which inserts each copy it changes again; see `features/edit-parts`. */
+    EDIT = "edit"
 }
 
 /** What a client may send: the import is the only writer of `UNKNOWN`. */
@@ -900,7 +902,7 @@ no foreign key crosses between them):
   an insert also its target tab type and the quick-insert, fasten, fastenable
   (the part offered insert and fasten) and preselected (fastened to picks made
   beforehand) flags, which a download leaves null; an Auto Assembly run's
-  inserts have source `auto_assembly`; a version run adds its kind,
+  inserts have source `auto_assembly`, and an edit's `edit`; a version run adds its kind,
   scope, whether it was update-only, its outcome, and how many steps failed,
   versions it created and tabs it updated. A report adds its topic, category,
   source and the team number the reporter gave, a part report the element
@@ -969,7 +971,10 @@ no foreign key crosses between them):
    however it ended: each part it inserted is an insert from the library its
    studio is in, source `auto_assembly`, fastened if its mate was added, never
    favorited. The parts a run deletes to replace a screw aren't recorded;
-   their replacements are inserts like any other;
+   their replacements are inserts like any other. An edit
+   ([edit-parts.md](./edit-parts.md)) calls `recordInserts` with an insert per
+   copy it replaced, source `edit`, which the dashboard's source mix lists as
+   **Edit parts**;
    `POST /api/step-export` calls `trackDownload` once Onshape accepts the
    export (see [download.md](./download.md)); `/init`'s
    handoff calls `POST /api/app-open`, which calls `trackAppOpen`; the
