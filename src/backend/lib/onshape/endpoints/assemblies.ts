@@ -50,8 +50,21 @@ export function addElementToAssembly(
     } = {}
 ): Promise<OnshapeInsertInstancesResponse> {
     assertWorkspace(assemblyPath);
+    return insertInstance(
+        client,
+        assemblyPath,
+        elementInstance(elementPath, elementType, options),
+        options.transform
+    );
+}
 
-    const { configuration, partTypes, transform } = options;
+/** An element as an insert names it: a whole Part Studio, or an assembly. */
+export function elementInstance(
+    elementPath: ElementPath,
+    elementType: ElementType,
+    options: { configuration?: string; partTypes?: PartType[] } = {}
+): Record<string, unknown> {
+    const { configuration, partTypes } = options;
 
     const instance: Record<string, unknown> = {
         ...toElementApiObject(elementPath)
@@ -72,7 +85,7 @@ export function addElementToAssembly(
         instance.isWholePartStudio = true;
     }
 
-    return insertInstance(client, assemblyPath, instance, transform);
+    return instance;
 }
 
 /** In metres. Excludes sketches, so a marker doesn't widen it. */

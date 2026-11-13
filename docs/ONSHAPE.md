@@ -241,6 +241,10 @@ errors.
 - **Translations** (STEP export) run asynchronously and are polled. The file is
   kept as external data, and a translation can be read only by whoever started
   it — _observed_. [download.md](./architecture/download.md) covers the flow.
+- **An instance's configuration can't be changed** through the API. Its spec
+  offers inserting, deleting, transforming and suppressing instances, and
+  nothing that replaces one or re-points a mate — _documented_ (by omission).
+  [edit-parts.md](./architecture/edit-parts.md) inserts and deletes instead.
 - **A fasten mate** between two instances, neither of them fixed, tends to
   move the first onto the second — _observed_.
 

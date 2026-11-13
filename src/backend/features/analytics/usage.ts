@@ -41,5 +41,7 @@ export enum UseSource {
     FAVORITES = "favorites",
     RECENTS = "recents",
     /** An Auto Assembly run, which inserts a part per fastener it places. */
-    AUTO_ASSEMBLY = "auto_assembly"
+    AUTO_ASSEMBLY = "auto_assembly",
+    /** An edit, which inserts each copy it changes again; see `features/edit-parts`. */
+    EDIT = "edit"
 }

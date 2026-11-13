@@ -1,6 +1,14 @@
 import { type ReactNode, useState } from "react";
 import { Badge, Box, Button, Collapse, Group, Text } from "@mantine/core";
-import { CursorClickIcon, PlusIcon, TargetIcon } from "@phosphor-icons/react";
+import {
+    CursorClickIcon,
+    PencilSimpleIcon,
+    PlusIcon,
+    TargetIcon
+} from "@phosphor-icons/react";
+import { type ElementPath } from "@backend/lib/onshape/path";
+import { EditPartsPicker } from "../features/edit-parts/components/edit-parts-picker";
+import { EDIT_PARTS_LIST } from "../features/edit-parts/edit-picks";
 import { useIsSignedIn } from "../features/auth/access-level";
 import {
     type InsertLocation,
@@ -42,7 +50,11 @@ export function ContextBar(props: ContextBarProps): ReactNode {
 function LibraryBar(): ReactNode {
     const assembly = useTargetAssembly();
     const isSignedIn = useIsSignedIn();
-    return assembly && isSignedIn ? <ActionBar /> : <SelectingBar />;
+    return assembly && isSignedIn ? (
+        <ActionBar assembly={assembly} />
+    ) : (
+        <SelectingBar />
+    );
 }
 
 /** Only while a query list limits picks. */
@@ -97,11 +109,17 @@ function BarRow(props: BarRowProps): ReactNode {
 
 /** What the bar has open under it. */
 enum BarAction {
-    PRESELECTION = "preselection"
+    PRESELECTION = "preselection",
+    EDIT = "edit"
+}
+
+interface ActionBarProps {
+    assembly: ElementPath;
 }
 
 /** The library's actions, and the one open under them. */
-function ActionBar(): ReactNode {
+function ActionBar(props: ActionBarProps): ReactNode {
+    const { assembly } = props;
     const [open, setOpen] = useState<BarAction>();
     const pickCount = useFastenPicks((state) => state.targets.length);
     const insertLocation = useInsertLocation();
@@ -109,20 +127,21 @@ function ActionBar(): ReactNode {
         (state) => state.openInsertableId !== undefined
     );
     const isPreselecting = open === BarAction.PRESELECTION;
+    const isEditing = open === BarAction.EDIT;
 
     const stop = () => {
         useOnshapeSelection.getState().finishSelecting();
         setOpen(undefined);
     };
 
-    const togglePreselection = () => {
-        if (isPreselecting) {
+    const toggle = (action: BarAction, listId: string) => {
+        if (open === action) {
             stop();
             return;
         }
-        setOpen(BarAction.PRESELECTION);
+        setOpen(action);
         // Clicked, as its list would be: Onshape limits picks to what it takes.
-        useOnshapeSelection.getState().activate(FASTEN_TARGETS_LIST);
+        useOnshapeSelection.getState().activate(listId);
     };
 
     return (
@@ -139,14 +158,30 @@ function ActionBar(): ReactNode {
                             </Badge>
                         )
                     }
-                    onClick={togglePreselection}
+                    onClick={() =>
+                        toggle(BarAction.PRESELECTION, FASTEN_TARGETS_LIST)
+                    }
                 >
                     {m.contextBarPreselection()}
+                </Button>
+                <Button
+                    size="compact-sm"
+                    variant={isEditing ? "filled" : undefined}
+                    leftSection={<PencilSimpleIcon />}
+                    onClick={() => toggle(BarAction.EDIT, EDIT_PARTS_LIST)}
+                >
+                    {m.editPartsButton()}
                 </Button>
                 {insertLocation && insertLocation.instanceId === undefined && (
                     <AddInsertLocationButton insertLocation={insertLocation} />
                 )}
             </BarRow>
+            {/* Mounted only while open: nothing is picked to edit in passing. */}
+            {isEditing && (
+                <Box p="sm" className={styles.frame}>
+                    <EditPartsPicker assembly={assembly} onClose={stop} />
+                </Box>
+            )}
             {/* Two lists of the same id would both take picks, so the insert menu's replace these while it's open. */}
             {!isMenuOpen && (
                 // Hidden by display alone: its lists take picks while closed, which needs their effects.

@@ -354,6 +354,7 @@
     "dashboardSourceBrowse": "Browsing a group",
     "dashboardSourceFavorites": "Favorites list",
     "dashboardSourceRecents": "Recently used list",
+    "dashboardSourceEdit": "Edit parts",
     "dashboardSourcesEmpty": "No uses recorded yet.",
     "dashboardAutoAssembly": "Auto Assembly",
     "dashboardSharesEmpty": "None recorded yet.",
@@ -731,6 +732,56 @@
     "contextBarAddInsertLocation": "Add insert location",
     "contextBarCancel": "Cancel",
     "contextBarDone": "Done",
+    "editPartsButton": "Edit parts",
+    "editPartsList": "Parts to edit",
+    "editPartsPrompt": "Select library parts to edit.",
+    "editPartsRow": "Part {index}",
+    "editPartsEdit": "Edit",
+    "editPartsOtherLibrary": "Open this part's library to edit it.",
+    "editPartsApplyToAll": [
+        {
+            "declarations": [
+                "input count",
+                "local countPlural = count: plural",
+                "local countFormatted = count: number"
+            ],
+            "selectors": ["countPlural"],
+            "match": {
+                "countPlural=one": "Apply to the 1 with the same configuration",
+                "countPlural=other": "Apply to all {countFormatted} with the same configuration"
+            }
+        }
+    ],
+    "editPartsMatesWarning": "Mates to these parts are deleted. Fasten them again by hand.",
+    "editPartsCannotChange": [
+        {
+            "declarations": [
+                "input count",
+                "local countPlural = count: plural"
+            ],
+            "selectors": ["countPlural"],
+            "match": {
+                "countPlural=one": "1 pick can't take this change and is left alone.",
+                "countPlural=other": "{count} picks can't take this change and are left alone."
+            }
+        }
+    ],
+    "editPartsUpdate": "Update",
+    "editPartsUpdating": "Updating {name}...",
+    "editPartsUpdated": [
+        {
+            "declarations": [
+                "input count",
+                "local countPlural = count: plural"
+            ],
+            "selectors": ["countPlural"],
+            "match": {
+                "countPlural=one": "Updated 1 part.",
+                "countPlural=other": "Updated {count} parts."
+            }
+        }
+    ],
+    "editPartsFailed": "Unexpectedly failed to update {name}.",
     "placementFasten": "Fasten",
     "placementSelectBy": "Select by",
     "insertMenuInsert": "Insert",

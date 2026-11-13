@@ -160,6 +160,8 @@ record for a selection, since records name only what enumeration varied.
 
 ## Invariants
 
+- An edit of a placed part lays its changes over the part's own selection
+  with `applyChanges`, in `selection.ts`.
 - `selection.ts` is the only place a `Selection` or `ConfigurationKey` is built,
   and there are only these two forms.
 - A selection is never replaced by its key in storage, and a key is never sent

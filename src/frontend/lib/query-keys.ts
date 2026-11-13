@@ -1,3 +1,4 @@
+import { type EditCheckIn } from "@backend/features/edit-parts/contract";
 /** Library-scoped keys hang off {@link libraryQueryKey}, so a refresh invalidates one prefix. */
 import { LibraryId } from "@backend/features/library/library-id";
 import {
@@ -149,6 +150,10 @@ export const FASTENER_SET_QUERY_KEY = ["fastener-set"];
 /** The whole body, so a pick or an option changed is a new check. */
 export function pickCheckQueryKey(body: PickCheckIn | undefined) {
     return ["pick-check", body];
+}
+
+export function editCheckQueryKey(body: EditCheckIn | undefined) {
+    return ["edit-check", body];
 }
 
 export function assemblyJobQueryKey(assembly: ElementPath | undefined) {
