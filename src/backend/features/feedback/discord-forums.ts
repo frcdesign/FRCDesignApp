@@ -83,11 +83,16 @@ export const DISCORD_FORUMS: Record<DiscordForum, ForumSettings> = {
             [FeedbackCategory.OTHER]: "1566637169806807151"
         }
     },
-    /** One topic, so no topic tag: its threads are told apart by type alone. */
+    /** One topic, so no topic tag, and no Error report tag: an error report there is told apart by type alone. */
     [DiscordForum.FEATURESCRIPTS]: {
         channel: "featurescript-feedback",
-        // Its invite and tag ids are filled in once the forum exists.
-        tags: {}
+        invite: "https://discord.gg/eTmuXfYaaE",
+        tags: {
+            [FeedbackCategory.BUG]: "1571019714602209462",
+            [FeedbackCategory.FEATURE_REQUEST]: "1571024959013388308",
+            [FeedbackCategory.KUDOS]: "1571024979552895056",
+            [FeedbackCategory.OTHER]: "1571024994593669170"
+        }
     }
 };
 

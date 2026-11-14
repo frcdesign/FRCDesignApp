@@ -90,7 +90,8 @@ The keys are the topic values (`app`, `version-manager`, `frc-design-lib`,
 `part-request`, `organization`, `metadata`, `incorrect-geometry`,
 `broken-configuration`, `kudos`, `other`) and
 `error-report`. A forum holding one topic, ConfigLib's or FeatureScripts',
-has no topic tag. A key with no id is left untagged. A tag id the forum doesn't
+has no topic tag, and FeatureScripts' has no **Error report** tag. A key
+with no id is left untagged. A tag id the forum doesn't
 have makes Discord refuse the post, which then goes again untagged.
 
 ### Where a report starts
