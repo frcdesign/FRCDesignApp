@@ -90,9 +90,10 @@ interface LoadParams {
 function findManifestTab(contents: DocumentContents): Tab | undefined;
 // Refuses a file of another schema version, or one that doesn't parse.
 function parseManifest(json: unknown): FeatureScriptsManifest;
-// The Part Studio named "<Feature Type Name> example", in any case, outside a deprecated folder.
+// The feature's example Part Studio: see "Finding the example".
 function findExample(
     contents: DocumentContents,
+    studioElementId: string,
     featureName: string
 ): Tab | undefined;
 // The outermost folder holding a tab; undefined at the top level.
@@ -280,7 +281,7 @@ them, and they hold no foreign key into the rest; added to
 | `description`             | From the manifest, its credit already cut by robot-code                                |
 | `release_version`         | From the manifest, e.g. `1.3.0`; shown to the owner alone                              |
 | `source_url`              | From the manifest: the released file on GitHub at its release's tag                    |
-| `example_element_id`      | The Part Studio named `<Feature Type Name> example` in the version; null without one   |
+| `example_element_id`      | The feature's example Part Studio in the version (`findExample`); null without one     |
 | `example_microversion_id` | Its microversion, which names its thumbnail; null with it                              |
 | `icon_element_id`         | The icon tab the manifest names; null when it names none                               |
 | `icon_microversion_id`    | Its microversion, which names its R2 object; null with it                              |
@@ -326,10 +327,11 @@ reads one file for every feature:
 1. `fs check` requires a released feature's Feature Type Name to be the name
    `feature_name_for` makes of its tab (`robotFrame.fs` → `Robot frame`), so
    the version names and the example's name agree with the feature's.
-2. After pushing the frontend studio, the release looks for a Part Studio
-   named `<Feature Type Name> example` in the frontend workspace, and creates
-   an empty one beside the studio if there is none, saying so: "Created Robot
-   frame example; model an example in it before publishing."
+2. After pushing the frontend studio, the release looks for the feature's
+   example in the frontend workspace as the app does
+   ([Finding the example](#finding-the-example)), and creates an empty Part
+   Studio named `<Feature Type Name>` if there is none, saying so: "Created
+   Robot frame; model an example in it before publishing."
 3. `--publish` refuses while that example was created by this same release,
    so an empty example is never published. `fs sync-versions` publishes it
    once it's modeled.
@@ -343,9 +345,10 @@ reads one file for every feature:
    or adding one — and writes it back, creating the tab on the first release.
    The entry's icon is the tab step 4 found or made, and its version the one
    this release is cutting, so the frontend version holds the manifest that
-   describes it. The example isn't in it: the app finds it by name, so a Part
-   Studio renamed by hand to `<Feature Type Name> example` is the example.
-6. `fs deprecate` renames the example `DEPRECATED <Feature Type Name> example`
+   describes it. The example isn't in it: the app finds it by name and place,
+   so a Part Studio renamed or moved by hand is found where it now is.
+6. `fs deprecate` renames the example `DEPRECATED <Feature Type Name>` when it
+   is named for the feature and no other released feature's example is it,
    and the icon `DEPRECATED <Feature Type Name> icon.svg` alongside its
    studio, and removes its entry from the manifest.
 
@@ -353,11 +356,29 @@ The API can't make or move folders, so a first release lands its studio at the
 top level, under **Other**, until the owner files it into its category's
 folder by hand, once.
 
+### Finding the example
+
+`findExample` reads the version's contents, whose folder tree is in tab-bar
+order, and skips any Part Studio named or foldered `DEPRECATED`:
+
+1. A Part Studio named the feature's Feature Type Name, in any case
+   ("Multi extrude" for Multi extrude). With more than one, the first after
+   the Feature Studio in its folder, else the first in tab order.
+2. Otherwise, the first Part Studio after the Feature Studio in its folder:
+   features sharing one example sit before it, as Multi extrude and Multi
+   revolve before "Multi extrude". The folder is the tab's own, and the top
+   level counts as one.
+3. Otherwise, none: `NO_EXAMPLE`.
+
+A Feature Studio missing from the tree (see `docs/ONSHAPE.md`, Contents) has no
+place, so only step 1 can find its example.
+
 ### The manifest
 
 `featurescripts.json`, at the top level of the frontend document, is the whole
 contract between robot-code and the app: everything the app shows of a feature
-but its category (a folder) and its example (a Part Studio found by name).
+but its category (a folder) and its example (a Part Studio found by name and
+place).
 Written only
 by `fs release` and `fs deprecate`; the app only reads it.
 
@@ -408,8 +429,9 @@ version loads at once, with no approval.
 5. `manifest`: `findManifestTab`, then `GET /blobelements/d/{did}/v/{vid}/e/{eid}`,
    then `parseManifest`. A version without one, or with one that doesn't
    parse, fails the load and changes nothing.
-6. Pairs each entry with its example: `findExample`, the Part Studio named
-   `<Feature Type Name> example`, in any case, in this version.
+6. Pairs each entry with its example: `findExample`
+   ([Finding the example](#finding-the-example)). Features sharing an example
+   share its thumbnail, rendered once.
 7. Selects the entries that are new, whose studio's, example's or icon's
    microversion changed, whose example appeared or went, or that failed last
    time; every one when forced. An entry is the list: a Feature Studio the
@@ -591,8 +613,8 @@ short has little use for them.
 - The manifest is the list: a feature is shown only when the loaded version's
   manifest names it, with the name, type, description, version, source and
   icon it gives. The app never writes the manifest.
-- An example is the Part Studio named `<Feature Type Name> example` in the
-  **same version** as the Feature Studio, and an icon the tab the manifest
+- An example is a Part Studio in the **same version** as the Feature Studio,
+  found by `findExample` alone, and an icon the tab the manifest
   names there.
 - The credit line is never shown: robot-code cuts it before writing the
   description.
@@ -616,17 +638,17 @@ short has little use for them.
 
 ## Failure and recovery
 
-| What goes wrong                                    | What happens                                    | What puts it right                                    |
-| -------------------------------------------------- | ----------------------------------------------- | ----------------------------------------------------- |
-| An example is renamed or deleted                   | `NO_EXAMPLE`; the popup shows the generic image | Name one `<Feature Type Name> example`, cut a version |
-| An example is published empty                      | A blank thumbnail                               | Model it, cut a version                               |
-| A release before icons has none in the frontend    | `NO_ICON`; the generic icon                     | Its next release writes it                            |
-| A thumbnail or an icon fails past its retries      | `LOAD_FAILED` on that feature; the rest save    | **Reload**                                            |
-| A version has no manifest, or one that won't parse | The load fails; the last version stays shown    | Release again; **Reload**                             |
-| An entry names a tab the version lacks             | `LOAD_FAILED` on that feature                   | Release it again                                      |
-| Onshape cancels or deactivates the webhook         | New versions don't load                         | The next **Reload** registers it                      |
-| No owner session to borrow                         | A webhook's load fails                          | The owner opens the app                               |
-| Onshape refuses the feature at its defaults        | The add fails, toasted                          | Unverified; see the open questions                    |
+| What goes wrong                                    | What happens                                        | What puts it right                                          |
+| -------------------------------------------------- | --------------------------------------------------- | ----------------------------------------------------------- |
+| An example is renamed, moved or deleted            | `NO_EXAMPLE`, or the next Part Studio in its folder | Name it for the feature, or move it after it; cut a version |
+| An example is published empty                      | A blank thumbnail                                   | Model it, cut a version                                     |
+| A release before icons has none in the frontend    | `NO_ICON`; the generic icon                         | Its next release writes it                                  |
+| A thumbnail or an icon fails past its retries      | `LOAD_FAILED` on that feature; the rest save        | **Reload**                                                  |
+| A version has no manifest, or one that won't parse | The load fails; the last version stays shown        | Release again; **Reload**                                   |
+| An entry names a tab the version lacks             | `LOAD_FAILED` on that feature                       | Release it again                                            |
+| Onshape cancels or deactivates the webhook         | New versions don't load                             | The next **Reload** registers it                            |
+| No owner session to borrow                         | A webhook's load fails                              | The owner opens the app                                     |
+| Onshape refuses the feature at its defaults        | The add fails, toasted                              | Unverified; see the open questions                          |
 
 ## Decisions
 
@@ -645,11 +667,10 @@ short has little use for them.
   where reading each studio's featurespecs and parsing versions from version
   names would take a call per feature. It lives in the document rather than
   on GitHub, so a version and the file describing it can't disagree.
-- **Examples by name, not in the manifest.** The examples already modeled in
-  the frontend document are kept by renaming them `<Feature Type Name>
-example`; with an id in the manifest, each would need a release to record
-  it, and a remade or swapped example another. A name is the one thing the
-  owner sets by hand in Onshape, so it is what pairs them.
+- **Examples by name and place, not in the manifest.** An example is named for
+  its feature, and one shared by several sits after them in their folder; the
+  owner sets both by hand in Onshape. With an id in the manifest, each example
+  would need a release to record it, and a remade or swapped example another.
 - **The version to the owner alone.** The panel shows users what a feature
   does, not which release is loaded; the owner checks it in the card.
 - **The description, for now, without the credit, in the popup.** `"Feature

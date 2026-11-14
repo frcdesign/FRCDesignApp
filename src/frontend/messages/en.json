@@ -581,7 +581,7 @@
     "featureScriptsOpenExample": "Open example",
     "featureScriptsNoExample": "No example yet",
     "featureScriptsProblemNoExample": "No example",
-    "featureScriptsProblemNoExampleTip": "Name a Part Studio \"{name} example\" in the frontend document.",
+    "featureScriptsProblemNoExampleTip": "Name a Part Studio \"{name}\", or put one after it in its folder.",
     "featureScriptsProblemNoIcon": "No icon",
     "featureScriptsProblemNoIconTip": "Release it again to write \"{name} icon.svg\".",
     "featureScriptsProblemLoadFailed": "Failed to load",

@@ -40,24 +40,24 @@ messages.
 A status icon beside each row's name and in the popup's footer, opening a hover
 card with a part's admin card's sections. The owner's alone.
 
-| String                                                            | Kind            | Where                     | When                                       | Review    |
-| ----------------------------------------------------------------- | --------------- | ------------------------- | ------------------------------------------ | --------- |
-| "{name}"                                                          | Card title      | Beside the feature's icon | Always                                     |           |
-| "Build checks"                                                    | Section title   | The card                  | It has a problem                           | **⚑** New |
-| "No example"                                                      | Callout         | In it                     | `NO_EXAMPLE`                               | **⚑** New |
-| "Name a Part Studio \"{name} example\" in the frontend document." | Callout tooltip | On it                     | Same                                       | **⚑** New |
-| "No icon"                                                         | Callout         | In it                     | `NO_ICON`                                  | **⚑** New |
-| "Release it again to write \"{name} icon.svg\"."                  | Callout tooltip | On it                     | Same                                       | **⚑** New |
-| "Failed to load"                                                  | Callout         | In it                     | `LOAD_FAILED`                              | **⚑** New |
-| "The last load of this feature failed. Reload to try again."      | Callout tooltip | On it                     | Same                                       | **⚑** New |
-| "Settings"                                                        | Section title   | The card                  | Always                                     | **⚑** New |
-| "Visible to users"                                                | Switch row      | In it                     | Always                                     | **⚑** New |
-| "Version"                                                         | Row label       | In it                     | Always                                     | **⚑** New |
-| "v{version}" / "Unknown"                                          | Row value       | Beside it                 | The manifest gave one / didn't             | **⚑** New |
-| "Usage"                                                           | Section title   | The card                  | Always                                     | **⚑** New |
-| "Adds" / "Users" / "Favorites"                                    | Stat labels     | In it, under each number  | Always, all time                           | **⚑** New |
-| "Failed to hide {name}." / "Failed to show {name}."               | Error toast     |                           | The switch failed, without a worded reason | **⚑** New |
-| "Reload" / "Reloading FeatureScripts..."                          | Button, toast   | The tab's header          | Proposed                                   | **⚑** New |
+| String                                                              | Kind            | Where                     | When                                       | Review    |
+| ------------------------------------------------------------------- | --------------- | ------------------------- | ------------------------------------------ | --------- |
+| "{name}"                                                            | Card title      | Beside the feature's icon | Always                                     |           |
+| "Build checks"                                                      | Section title   | The card                  | It has a problem                           | **⚑** New |
+| "No example"                                                        | Callout         | In it                     | `NO_EXAMPLE`                               | **⚑** New |
+| "Name a Part Studio \"{name}\", or put one after it in its folder." | Callout tooltip | On it                     | Same                                       | **⚑** New |
+| "No icon"                                                           | Callout         | In it                     | `NO_ICON`                                  | **⚑** New |
+| "Release it again to write \"{name} icon.svg\"."                    | Callout tooltip | On it                     | Same                                       | **⚑** New |
+| "Failed to load"                                                    | Callout         | In it                     | `LOAD_FAILED`                              | **⚑** New |
+| "The last load of this feature failed. Reload to try again."        | Callout tooltip | On it                     | Same                                       | **⚑** New |
+| "Settings"                                                          | Section title   | The card                  | Always                                     | **⚑** New |
+| "Visible to users"                                                  | Switch row      | In it                     | Always                                     | **⚑** New |
+| "Version"                                                           | Row label       | In it                     | Always                                     | **⚑** New |
+| "v{version}" / "Unknown"                                            | Row value       | Beside it                 | The manifest gave one / didn't             | **⚑** New |
+| "Usage"                                                             | Section title   | The card                  | Always                                     | **⚑** New |
+| "Adds" / "Users" / "Favorites"                                      | Stat labels     | In it, under each number  | Always, all time                           | **⚑** New |
+| "Failed to hide {name}." / "Failed to show {name}."                 | Error toast     |                           | The switch failed, without a worded reason | **⚑** New |
+| "Reload" / "Reloading FeatureScripts..."                            | Button, toast   | The tab's header          | Proposed                                   | **⚑** New |
 
 ## Feedback
 
