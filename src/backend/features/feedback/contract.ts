@@ -142,8 +142,17 @@ export enum FeedbackArea {
     FEATURESCRIPTS = "featurescripts"
 }
 
-/** In the order the form lists them. */
-export const FEEDBACK_AREAS = Object.values(FeedbackArea);
+/**
+ * The areas a report may be about, in the order the form lists them. An error
+ * is the app's, adding a FeatureScript included, so it is never about the
+ * FeatureScripts.
+ */
+export function feedbackAreas(source: FeedbackSource): FeedbackArea[] {
+    const areas = Object.values(FeedbackArea);
+    return source === FeedbackSource.ERROR
+        ? areas.filter((area) => area !== FeedbackArea.FEATURESCRIPTS)
+        : areas;
+}
 
 export function topicArea(topic: FeedbackTopic): FeedbackArea {
     switch (topic) {
@@ -280,6 +289,10 @@ export const feedbackBody = z
             body.source !== FeedbackSource.FEATURESCRIPT ||
             body.topic === FeedbackTopic.FEATURESCRIPTS,
         "A FeatureScript's report is about FeatureScripts."
+    )
+    .refine(
+        (body) => feedbackAreas(body.source).includes(topicArea(body.topic)),
+        "An error report is about the app or a library."
     )
     .refine(
         (body) =>

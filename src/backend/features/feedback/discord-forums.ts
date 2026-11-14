@@ -83,7 +83,7 @@ export const DISCORD_FORUMS: Record<DiscordForum, ForumSettings> = {
             [FeedbackCategory.OTHER]: "1566637169806807151"
         }
     },
-    /** One topic, so no topic tag, and no Error report tag: an error report there is told apart by type alone. */
+    /** One topic and no errors, so its tags are the types alone. */
     [DiscordForum.FEATURESCRIPTS]: {
         channel: "featurescript-feedback",
         invite: "https://discord.gg/eTmuXfYaaE",

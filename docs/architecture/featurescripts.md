@@ -525,8 +525,9 @@ A FeatureScript report is a source of the one feedback form
    **FeatureScript** under it, for a report about one feature or none.
 5. The post goes to `DiscordForum.FEATURESCRIPTS`, whose webhook secret is
    `DISCORD_FEATURESCRIPTS_WEBHOOK_URL`; unset, the topic refuses reports as
-   any other does. The forum holds one topic and has no **Error report** tag,
-   so a thread's one tag is its type's.
+   any other does. The forum holds one topic and takes no errors, so a
+   thread's one tag is its type's. A failed add's **Report** goes to the
+   app's forum, as any error's does.
 
 ## Analytics
 

@@ -462,7 +462,11 @@ describe("POST /api/feedback about a FeatureScript", () => {
             "names a feature under another topic",
             { topic: FeedbackTopic.APP, source: FeedbackSource.GENERAL }
         ],
-        ["comes from a menu but names none", { featureScript: undefined }]
+        ["comes from a menu but names none", { featureScript: undefined }],
+        [
+            "is an error, which is the app's",
+            { source: FeedbackSource.ERROR, featureScript: undefined }
+        ]
     ])("refuses a report that %s", async (_, overrides) => {
         const res = await send(featureReport(overrides));
         expect(res.status).toBe(400);

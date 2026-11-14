@@ -68,7 +68,7 @@ FeatureScript report adds to it.
 | --------------------------------------------- | ------------------- | -------------------------------------------------------------- | ---------------------------------------------------------- | --------- |
 | "Report an issue"                             | Menu item           | A row's ⋯ and right-click menu; the popup's ⋯, after a divider | Always                                                     |           |
 | "Report issue with {name}"                    | Form title          | The feedback form                                              | Opened from a feature                                      | **⚑** New |
-| "FeatureScripts"                              | Area option         | The form's About                                               | Opened from settings or `/feedback`                        | **⚑** New |
+| "FeatureScripts"                              | Area option         | The form's About                                               | Opened from settings or `/feedback`, never from an error   | **⚑** New |
 | "FeatureScript" / "None in particular"        | Select, placeholder | Under it                                                       | FeatureScripts is chosen                                   | **⚑** New |
 | "Bug" / "Feature request" / "Kudos" / "Other" | Type options        | The form                                                       | A FeatureScript report, or the FeatureScripts area         |           |
 | "{type}: {name}"                              | Suggested title     | The form's title field                                         | From a feature's menu, until the reporter writes their own |           |

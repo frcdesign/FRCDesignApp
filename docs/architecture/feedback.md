@@ -90,8 +90,8 @@ The keys are the topic values (`app`, `version-manager`, `frc-design-lib`,
 `part-request`, `organization`, `metadata`, `incorrect-geometry`,
 `broken-configuration`, `kudos`, `other`) and
 `error-report`. A forum holding one topic, ConfigLib's or FeatureScripts',
-has no topic tag, and FeatureScripts' has no **Error report** tag. A key
-with no id is left untagged. A tag id the forum doesn't
+has no topic tag; FeatureScripts' takes no errors, so has no **Error
+report** tag either. A key with no id is left untagged. A tag id the forum doesn't
 have makes Discord refuse the post, which then goes again untagged.
 
 ### Where a report starts
@@ -129,7 +129,9 @@ The source decides what the form offers and what the report carries
   the configuration it was inserted in (`handleAppError`'s `part`), with
   **Include configuration** as in the insert menu, so the post links to that
   configuration in Onshape: a configuration that can't build reads apart from
-  Onshape failing. The topic stays the app's, and isn't offered.
+  Onshape failing. The topic stays the app's, and isn't offered. An error
+  is never about the FeatureScripts (`feedbackAreas`): a failed add is the
+  app's, so its About leaves them out and the server refuses one.
 - **Crash** — **Send report** on a crash page: `RootCrash`, when the root
   itself fails (the dashboard's pages have no boundary of their own), and
   `RootAppError` under `/app`. One click sends it, with no form, since the root's
@@ -219,6 +221,7 @@ parts still in the library, each opening the part's page.
   reports name one.
 - A report names a FeatureScript only under the FeatureScripts topic, and only
   one that is loaded, looked up on the server.
+- An error report is never under the FeatureScripts topic.
 - A post never gathers the reporter's own documents: no document, workspace,
   element, company or company domain from the launch. An error's detail is
   sent as it came, since what Onshape said is what the team needs, ids and
@@ -255,6 +258,10 @@ parts still in the library, each opening the part's page.
 - **`/feedback` in the app, behind a redirect.** feedback.frcdesign.org is a
   Cloudflare redirect rule to app.frcdesign.org/feedback, so the page is the
   same form and Worker as the panel's, with nothing to deploy apart.
+  setup.frcdesign.org redirects to `/setup` the same way.
+- **FeatureScript errors are the app's.** A FeatureScript that fails to add
+  is the app failing to add it, so its report goes to the app's forum, and
+  the FeatureScripts forum holds bugs, requests and kudos about the features.
 - **Signed out may report, rate-limited by address.** A sign-in that fails is
   exactly when a report is wanted; the limit bounds what an open endpoint can
   post. KV's lag lets two reports at the same moment both pass, which is fine

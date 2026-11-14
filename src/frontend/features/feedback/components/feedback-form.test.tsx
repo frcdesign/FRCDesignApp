@@ -296,6 +296,12 @@ describe("FeedbackForm", () => {
             />
         );
         expect(screen.getByText(/Failed to insert\./)).toBeTruthy();
+        // An error is the app's, adding a FeatureScript included.
+        await user.click(screen.getByRole("combobox", { name: "About" }));
+        expect(
+            screen.queryByRole("option", { name: "FeatureScripts" })
+        ).toBeNull();
+        await user.click(screen.getByRole("option", { name: "FRCDesignApp" }));
 
         await user.click(screen.getByRole("button", { name: "Send" }));
 

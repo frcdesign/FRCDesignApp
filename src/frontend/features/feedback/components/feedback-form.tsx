@@ -11,7 +11,7 @@ import { ReportSent } from "./report-sent";
 import { type ReactNode, useState } from "react";
 import {
     areaTopics,
-    FEEDBACK_AREAS,
+    feedbackAreas,
     FeedbackArea,
     type FeedbackOut,
     feedbackCategories,
@@ -160,7 +160,7 @@ export function FeedbackForm(props: FeedbackFormProps): ReactNode {
                 {picksAbout && (
                     <Select
                         label={m.feedbackTopicLabel()}
-                        data={FEEDBACK_AREAS.map((value) => ({
+                        data={feedbackAreas(source).map((value) => ({
                             value,
                             label: areaLabel(value)
                         }))}
