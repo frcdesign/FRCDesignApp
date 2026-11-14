@@ -6,8 +6,12 @@ able to re-read, and so the import can be rebuilt from the archive. [analytics.m
 describes the imported rows under **Imported history**.
 
 ```sh
-GCP_ACCESS_TOKEN=$(gcloud auth print-access-token) \
-    python3 scripts/migrate-analytics/export.py out/legacy-events.jsonl
+mkdir -p out/gcp-log-bucket
+for m in 2025-11 2025-12 2026-01 2026-02 2026-03 2026-04 2026-05 2026-06 2026-07 2026-08 2026-09; do
+    npx wrangler r2 object get --remote --file=out/gcp-log-bucket/$m.jsonl.gz \
+        frc-design-app-archive/gcp-frc-design-lib-2026-11-14/gcp-log-bucket/$m.jsonl.gz
+done
+python3 scripts/migrate-analytics/export.py --archive out/gcp-log-bucket out/legacy-events.jsonl
 npx tsx scripts/migrate-analytics/build-sql.ts \
     --events out/legacy-events.jsonl --env production --out out/analytics
 for f in out/analytics/*.sql; do
@@ -20,11 +24,14 @@ The export holds every user's Onshape id: keep it out of the repository.
 ## The archive
 
 GCP is not needed again. The private R2 bucket `frc-design-app-archive` holds,
-under `gcp-frc-design-lib-2026-11-14/`, every entry of the log bucket by month,
-this script's export of it (`legacy-events-export.jsonl.gz`, which
-`build-sql.ts` takes as `--events`), the BigQuery summary tables, and the legacy
-Firestore database without its sessions. Its `README.md` lists the files,
-their row counts and checksums.
+under `gcp-frc-design-lib-2026-11-14/`, the raw data alone: every entry of the
+log bucket by month, whole, and the legacy Firestore database without its
+sessions. Its `README.md` lists the files, their row counts and checksums.
+
+`export.py --archive` reads the monthly files in place of BigQuery and writes
+the same rows the query does: on this archive, the same 2,222,481 rows field
+for field. Without `--archive` it queries BigQuery, which needs a
+`GCP_ACCESS_TOKEN` and the project.
 
 ## Where the data was
 
