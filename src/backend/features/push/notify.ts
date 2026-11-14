@@ -46,6 +46,11 @@ export function pushFeatureScriptsChanged(env: AppBindings): Promise<void> {
     return broadcast(env, { type: PushType.FEATURESCRIPTS });
 }
 
+/** Tells every client the last FeatureScripts load's status moved. */
+export function pushFeatureScriptsLoad(env: AppBindings): Promise<void> {
+    return broadcast(env, { type: PushType.FEATURESCRIPTS_LOAD });
+}
+
 export function pushThumbnailRendered(
     env: AppBindings,
     thumbnail: Omit<ThumbnailPush, "type">

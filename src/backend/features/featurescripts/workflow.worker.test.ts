@@ -18,7 +18,8 @@ import {
 import * as BackgroundSessions from "../auth/background-sessions";
 import * as ThumbnailStore from "../thumbnails/store";
 import * as Registration from "../webhooks/registration";
-import { FeatureScriptProblem } from "./contract";
+import { FeatureScriptProblem, FeatureScriptsLoadState } from "./contract";
+import { getLoadStatus } from "./load-status";
 import type { LoadFeatureScriptsParams } from "./load-claim";
 import { MANIFEST_TAB_NAME } from "./manifest";
 import { featureScripts, featureScriptsDocument } from "./schema";
@@ -188,6 +189,12 @@ describe("LoadFeatureScriptsWorkflow", () => {
     it("loads what the manifest lists, with examples by name and place, and icons", async () => {
         await runLoad("first");
 
+        expect(await getLoadStatus(env)).toMatchObject({
+            state: FeatureScriptsLoadState.LOADED,
+            versionName: "v-1",
+            featureCount: 3,
+            failedCount: 0
+        });
         const rows = await readRows();
         expect(
             rows.map((row) => ({
@@ -277,6 +284,11 @@ describe("LoadFeatureScriptsWorkflow", () => {
         await runLoad("again");
 
         expect(thumbnailUploads).toEqual([]);
+        expect(await getLoadStatus(env)).toMatchObject({
+            state: FeatureScriptsLoadState.UP_TO_DATE,
+            versionName: "v-1",
+            featureCount: 3
+        });
         expect(
             (await db.select().from(featureScriptsDocument).get())?.cacheVersion
         ).toBe(1);
@@ -311,6 +323,11 @@ describe("LoadFeatureScriptsWorkflow", () => {
         await runLoad("broken", { force: false }, "errored");
 
         expect(await readRows()).toEqual([]);
+        expect(await getLoadStatus(env)).toMatchObject({
+            state: FeatureScriptsLoadState.FAILED,
+            versionName: "v-1",
+            error: "Version v-1 of the frontend document has no featurescripts.json"
+        });
         expect(
             await db.select().from(featureScriptsDocument).get()
         ).toBeUndefined();

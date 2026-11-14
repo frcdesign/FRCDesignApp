@@ -49,6 +49,7 @@ DELETE /api/featurescripts/:featureId/favorite
 POST   /api/featurescripts/:featureId/visibility    owner: shows or hides it, bumping the cache version
 POST   /api/featurescripts/:featureId/add    adds it to the Part Studio in the body
 GET    /api/featurescripts/stats             owner: each feature's adds, users and favorites, all time
+GET    /api/featurescripts/load-status       owner: how the last load is going or went
 POST   /api/featurescripts/reload            owner: loads the latest version now, as the owner
 ```
 
@@ -87,6 +88,20 @@ function requestFeatureScriptsLoad(
 // KV's `featurescripts-load`: the run holding the load; false while a live one does.
 function claimLoad(env: AppBindings, instanceId: string): Promise<boolean>;
 function releaseLoad(env: AppBindings, instanceId: string): Promise<void>;
+```
+
+`src/backend/features/featurescripts/load-status.ts`
+
+```ts
+// KV's `featurescripts-load-status`: the last load's FeatureScriptsLoadStatus.
+function getLoadStatus(
+    env: AppBindings
+): Promise<FeatureScriptsLoadStatus | undefined>;
+// Replaces it and pushes `featurescripts-load` to every client.
+function reportLoadStatus(
+    env: AppBindings,
+    status: FeatureScriptsLoadStatus
+): Promise<void>;
 ```
 
 `src/backend/features/featurescripts/manifest.ts`
@@ -264,6 +279,12 @@ Under `src/frontend/features/featurescripts/components/`:
   else.
 - `featurescript-icon.tsx` — the icon as an `<img>`, or the generic puzzle
   piece.
+- `featurescripts-reload-button.tsx` and `featurescripts-load-callout.tsx` —
+  the owner's **Reload** and, above it, the last load as a `Callout`, both in
+  the settings menu's admin settings under FRCDesignApp. The callout spins
+  while a load runs; says the version and how many features it kept, or that
+  the version was already loaded; warns when some features failed; and on a
+  failure offers **Details**: the version, the times and the error.
 
 The tab is `UtilityTab.FEATURESCRIPTS`: `src/frontend/routes/app/featurescripts/route.tsx`
 loads the version and the list, and `index.tsx` under it shows
@@ -312,8 +333,13 @@ them, and they hold no foreign key into the rest; added to
 - the icon, `featurescript-icons/{elementId}/{microversionId}.svg`, written by
   the load that finds it and deleted by the load that orphans it.
 
-**KV**: `featurescripts-load` — the run holding the load, a day as a backstop,
-as `library-reload:` is for a library.
+**KV**:
+
+- `featurescripts-load` — the run holding the load, a day as a backstop, as
+  `library-reload:` is for a library.
+- `featurescripts-load-status` — the last load's `FeatureScriptsLoadStatus`,
+  for the owner's callout, kept 30 days. Diagnostic only: nothing reads it to
+  decide what to load.
 
 **Onshape**: the manifest, `featurescripts.json`, an image-and-file (blob)
 tab at the top level of the frontend document, written by robot-code's release
@@ -471,6 +497,14 @@ approval. Nothing loads while `FEATURESCRIPTS_DOCUMENT_ID` is unset.
     `WebhookSubject.FEATURESCRIPTS`. Never fatal.
 13. `release`: always, so the next load can start.
 
+The run reports its status as it goes (`reportLoadStatus`), each report a
+step: `report-running` once it holds the load; `report-done` after step 12,
+`loaded` with the features kept and how many failed, or `up-to-date` when
+step 3 ended it; and `report-failed` when anything above throws, with the
+version once step 2 read it and the error's message, before the run fails.
+With `FEATURESCRIPTS_DOCUMENT_ID` unset, `report-unset` records that failure
+and the run ends.
+
 Onshape steps retry as a library's do (`ONSHAPE_STEP_RETRIES`, and
 `uploadThumbnailsStep`'s own). It reads Onshape as the owner when the owner
 asked, and otherwise with `getBackgroundOnshapeApi` for no library, which is
@@ -608,18 +642,18 @@ library's uses, users or part counts. It is its own event,
 
 What this area reuses, and what each needed to stop assuming a library.
 
-| Piece                                                             | What it does for FeatureScripts                                                             |
-| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| `ensureWebhook`, the delivery route                               | A `FEATURESCRIPTS` subject, registered like a document's; its `createversion` starts a load |
-| `getBackgroundOnshapeApi`                                         | Called with no libraries, so only the owner's session lends itself                          |
-| `ONSHAPE_STEP_RETRIES`, `uploadThumbnailsStep`, `prefixSteps`     | Used as they are; `uploadThumbnailsStep` takes only a step and a limiter                    |
-| The claim                                                         | The area's own, `load-claim.ts`: one run, no groups to queue or report                      |
-| `thumbnailKey`, `putThumbnail`, `uploadThumbnails`, serving       | Used as they are, keyed by element and microversion                                         |
-| `deleteStaleThumbnails`                                           | Takes `alsoLive`, the subjects its caller points at beyond the libraries' rows              |
-| `retryInsert`, `addPartStudioFeature`, `finishEvenIfDisconnected` | Used as they are                                                                            |
-| `ClientRelay`                                                     | One more message, `PushType.FEATURESCRIPTS`, sent to every client                           |
-| `record` in analytics                                             | `FEATURE_ADD`, with its own columns and rollups                                             |
-| The feedback form, `POST /api/feedback`                           | A `FEATURESCRIPT` source, topic and forum, and `featureScript` beside `part` in the body    |
+| Piece                                                             | What it does for FeatureScripts                                                              |
+| ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `ensureWebhook`, the delivery route                               | A `FEATURESCRIPTS` subject, registered like a document's; its `createversion` starts a load  |
+| `getBackgroundOnshapeApi`                                         | Called with no libraries, so only the owner's session lends itself                           |
+| `ONSHAPE_STEP_RETRIES`, `uploadThumbnailsStep`, `prefixSteps`     | Used as they are; `uploadThumbnailsStep` takes only a step and a limiter                     |
+| The claim                                                         | The area's own, `load-claim.ts`: one run, no groups to queue or report                       |
+| `thumbnailKey`, `putThumbnail`, `uploadThumbnails`, serving       | Used as they are, keyed by element and microversion                                          |
+| `deleteStaleThumbnails`                                           | Takes `alsoLive`, the subjects its caller points at beyond the libraries' rows               |
+| `retryInsert`, `addPartStudioFeature`, `finishEvenIfDisconnected` | Used as they are                                                                             |
+| `ClientRelay`                                                     | Two more messages, `PushType.FEATURESCRIPTS` and `FEATURESCRIPTS_LOAD`, sent to every client |
+| `record` in analytics                                             | `FEATURE_ADD`, with its own columns and rollups                                              |
+| The feedback form, `POST /api/feedback`                           | A `FEATURESCRIPT` source, topic and forum, and `featureScript` beside `part` in the body     |
 
 Favorites are the area's own, since a library's reference insertables and
 carry a configuration a feature doesn't have; they reuse the library's heart
@@ -665,6 +699,7 @@ short has little use for them.
 | A release before icons has none in the frontend    | `NO_ICON`; the generic icon                         | Its next release writes it                                  |
 | A thumbnail or an icon fails past its retries      | `LOAD_FAILED` on that feature; the rest save        | **Reload**                                                  |
 | A version has no manifest, or one that won't parse | The load fails; the last version stays shown        | Release again; **Reload**                                   |
+| Any load fails                                     | `report-failed` keeps its error for the owner       | The FRCDesignApp settings' callout; **Details** shows it    |
 | An entry names a tab the version lacks             | `LOAD_FAILED` on that feature                       | Release it again                                            |
 | Onshape cancels or deactivates the webhook         | New versions don't load                             | The next **Reload** registers it                            |
 | No owner session to borrow                         | A webhook's load fails                              | The owner opens the app                                     |

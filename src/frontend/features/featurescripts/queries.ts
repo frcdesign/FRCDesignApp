@@ -13,6 +13,7 @@ import {
     type FeatureScriptFavoritesOut,
     type FeatureScriptOut,
     type FeatureScriptsOut,
+    type FeatureScriptsLoadStatusOut,
     type FeatureScriptStatsOut,
     type FeatureScriptsVersionOut
 } from "@backend/features/featurescripts/contract";
@@ -30,6 +31,7 @@ import { useOnshapeOrigin, useTargetElement } from "../../lib/onshape-params";
 import { makeUrl } from "../../lib/url";
 import {
     featureScriptFavoritesQueryKey,
+    featureScriptsLoadStatusQueryKey,
     featureScriptStatsQueryKey,
     featureScriptsQueryKey,
     featureScriptsVersionQueryKey
@@ -235,6 +237,14 @@ export function useReloadFeatureScriptsMutation() {
         onSuccess: () => {
             showInfoToast(m.featureScriptsReloadStarted());
         }
+    });
+}
+
+/** The owner's: how the last load is going or went. A push refetches it as the load moves. */
+export function useFeatureScriptsLoadStatusQuery() {
+    return useQuery<FeatureScriptsLoadStatusOut>({
+        queryKey: featureScriptsLoadStatusQueryKey(),
+        queryFn: () => apiGet("/featurescripts/load-status")
     });
 }
 

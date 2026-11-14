@@ -638,6 +638,51 @@
     "featureScriptsGet": "Get FeatureScript",
     "featureScriptsViewCode": "View code",
     "featureScriptsReload": "Reload",
+    "featureScriptsLastLoadRunning": "Loading FeatureScripts...",
+    "featureScriptsLastLoadLoaded": [
+        {
+            "declarations": [
+                "input version",
+                "input when",
+                "input count",
+                "local countPlural = count: plural",
+                "local formatted = count: number"
+            ],
+            "selectors": ["countPlural"],
+            "match": {
+                "countPlural=one": "Loaded {version} {when}: 1 feature.",
+                "countPlural=other": "Loaded {version} {when}: {formatted} features."
+            }
+        }
+    ],
+    "featureScriptsLastLoadLoadedWithFailures": [
+        {
+            "declarations": [
+                "input version",
+                "input when",
+                "input failed",
+                "input count",
+                "local countPlural = count: plural",
+                "local formatted = count: number",
+                "local failedFormatted = failed: number"
+            ],
+            "selectors": ["countPlural"],
+            "match": {
+                "countPlural=one": "Loaded {version} {when}, but its 1 feature failed to load.",
+                "countPlural=other": "Loaded {version} {when}, but {failedFormatted} of {formatted} features failed to load."
+            }
+        }
+    ],
+    "featureScriptsLastLoadUpToDate": "{version} is loaded; checked {when}.",
+    "featureScriptsLastLoadFailed": "The load of {version} failed {when}.",
+    "featureScriptsLastLoadFailedEarly": "The last load failed {when}, before it read a version.",
+    "featureScriptsLastLoadNone": "No load on record. Reload to start one.",
+    "featureScriptsLastLoadDetails": "Details",
+    "featureScriptsLastLoadDetailsTitle": "Last FeatureScripts load",
+    "featureScriptsLastLoadDetailsVersion": "Version",
+    "featureScriptsLastLoadDetailsStarted": "Started",
+    "featureScriptsLastLoadDetailsFinished": "Finished",
+    "featureScriptsLastLoadDetailsError": "Error",
     "featureScriptsReloadStarted": "Reloading FeatureScripts. The list updates when the load finishes.",
     "featureScriptsReloadFailed": "Failed to reload FeatureScripts.",
     "featureScriptsBuildChecks": "Build checks",

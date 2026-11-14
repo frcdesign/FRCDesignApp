@@ -8,7 +8,8 @@ export enum PushType {
     LIBRARY = "library",
     THUMBNAIL = "thumbnail",
     VERSION_JOB = "version-job",
-    FEATURESCRIPTS = "featurescripts"
+    FEATURESCRIPTS = "featurescripts",
+    FEATURESCRIPTS_LOAD = "featurescripts-load"
 }
 
 /** A library's load jobs started or finished. */
@@ -43,8 +44,14 @@ export interface FeatureScriptsPush {
     type: PushType.FEATURESCRIPTS;
 }
 
+/** A load of the FeatureScripts started or ended. */
+export interface FeatureScriptsLoadPush {
+    type: PushType.FEATURESCRIPTS_LOAD;
+}
+
 export type PushMessage =
     | FeatureScriptsPush
+    | FeatureScriptsLoadPush
     | JobsPush
     | LibraryPush
     | ThumbnailPush

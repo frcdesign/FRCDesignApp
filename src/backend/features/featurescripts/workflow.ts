@@ -31,7 +31,12 @@ import type { ThumbnailUrls } from "../thumbnails/contract";
 import { deleteStaleThumbnails } from "../thumbnails/reconcile";
 import { uploadThumbnails } from "../thumbnails/store";
 import { ensureWebhook } from "../webhooks/registration";
-import { FeatureScriptProblem } from "./contract";
+import {
+    FeatureScriptProblem,
+    FeatureScriptsLoadState,
+    type FeatureScriptsLoadStatus
+} from "./contract";
+import { reportLoadStatus } from "./load-status";
 import {
     claimLoad,
     LOAD_TURN_INTERVAL,
@@ -66,6 +71,18 @@ interface FeatureScriptsLoadContext {
     limit: Limiter;
     thumbnailLimit: Limiter;
     api?: Promise<OAuthApi>;
+    /** Set once read, so a failure after it can name the version. */
+    versionName?: string;
+}
+
+/** How a load that didn't throw ended. */
+type LoadOutcome = Pick<
+    FeatureScriptsLoadStatus,
+    "state" | "versionName" | "featureCount" | "failedCount"
+>;
+
+function describeError(error: unknown): string {
+    return error instanceof Error ? error.message : String(error);
 }
 
 /** The requester's session while it works, else the owner's; never a library team's. */
@@ -107,6 +124,15 @@ export class LoadFeatureScriptsWorkflow extends WorkflowEntrypoint<
             console.warn(
                 "FEATURESCRIPTS_DOCUMENT_ID is unset; nothing to load"
             );
+            await step.do("report-unset", () => {
+                const now = Date.now();
+                return reportLoadStatus(this.env, {
+                    state: FeatureScriptsLoadState.FAILED,
+                    startedAt: now,
+                    finishedAt: now,
+                    error: "FEATURESCRIPTS_DOCUMENT_ID is unset, so there is nothing to load."
+                });
+            });
             return;
         }
         const { instanceId } = event;
@@ -129,8 +155,38 @@ export class LoadFeatureScriptsWorkflow extends WorkflowEntrypoint<
             limit: createLimiter(LOAD_CONCURRENCY),
             thumbnailLimit: createLimiter(LOAD_CONCURRENCY)
         };
+        const startedAt = await step.do("report-running", async () => {
+            const now = Date.now();
+            await reportLoadStatus(this.env, {
+                state: FeatureScriptsLoadState.RUNNING,
+                startedAt: now
+            });
+            return now;
+        });
         try {
-            await loadFeatureScripts(ctx, documentId, event.payload.force);
+            const outcome = await loadFeatureScripts(
+                ctx,
+                documentId,
+                event.payload.force
+            );
+            await step.do("report-done", () =>
+                reportLoadStatus(this.env, {
+                    ...outcome,
+                    startedAt,
+                    finishedAt: Date.now()
+                })
+            );
+        } catch (error) {
+            await step.do("report-failed", () =>
+                reportLoadStatus(this.env, {
+                    state: FeatureScriptsLoadState.FAILED,
+                    startedAt,
+                    finishedAt: Date.now(),
+                    versionName: ctx.versionName,
+                    error: describeError(error)
+                })
+            );
+            throw error;
         } finally {
             await step.do("release", () => releaseLoad(this.env, instanceId));
         }
@@ -153,7 +209,7 @@ async function loadFeatureScripts(
     ctx: FeatureScriptsLoadContext,
     documentId: string,
     force: boolean
-): Promise<void> {
+): Promise<LoadOutcome> {
     const { env, step } = ctx;
     const db = getDb(env.DB);
 
@@ -167,6 +223,7 @@ async function loadFeatureScripts(
         { retries: ONSHAPE_STEP_RETRIES },
         async () => getLatestVersion(await getApi(ctx), { documentId })
     );
+    ctx.versionName = version.name;
     const workspacePath = toDefaultWorkspacePath(document);
     if (!workspacePath) {
         throw new Error(`Document ${documentId} reports no default workspace`);
@@ -187,7 +244,12 @@ async function loadFeatureScripts(
     );
     if (stored.versionId === version.id && !force && !failedBefore) {
         await registerWebhook(ctx, documentId);
-        return;
+        return {
+            state: FeatureScriptsLoadState.UP_TO_DATE,
+            versionName: version.name,
+            featureCount: stored.rows.length,
+            failedCount: 0
+        };
     }
 
     const contents = await step.do(
@@ -350,6 +412,14 @@ async function loadFeatureScripts(
         console.error("Failed to delete stale FeatureScripts files", error);
     }
     await registerWebhook(ctx, documentId);
+    return {
+        state: FeatureScriptsLoadState.LOADED,
+        versionName: version.name,
+        featureCount: values.length,
+        failedCount: values.filter((value) =>
+            value.problems.includes(FeatureScriptProblem.LOAD_FAILED)
+        ).length
+    };
 }
 
 /** Each manifest entry whose Feature Studio is in the version, with its tabs. */

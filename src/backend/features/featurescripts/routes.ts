@@ -19,6 +19,7 @@ import {
     type AddFeatureScriptOut,
     addFeatureScriptBody,
     type FeatureScriptFavoritesOut,
+    type FeatureScriptsLoadStatusOut,
     type FeatureScriptStatsOut,
     featureScriptVisibilityBody,
     reloadFeatureScriptsBody,
@@ -33,6 +34,7 @@ import { getCacheVersion, getFeatureScriptsOut, iconKey } from "./store";
 import { trackFeatureAdd } from "../analytics/tracking";
 import { getSessionId } from "../auth/session";
 import { requestFeatureScriptsLoad } from "./load-claim";
+import { getLoadStatus } from "./load-status";
 import {
     dailyFeatureScriptMetrics,
     dailyFeatureScriptUsers
@@ -263,6 +265,17 @@ featureScriptRoutes.post(
         });
         return c.json({ success: true });
     }
+);
+
+/** GET /api/featurescripts/load-status — the owner's: how the last load is going or went. */
+featureScriptRoutes.get(
+    "/featurescripts/load-status",
+    requireOwnerMiddleware,
+    cacheMiddleware(),
+    async (c) =>
+        c.json({
+            status: await getLoadStatus(c.env)
+        } satisfies FeatureScriptsLoadStatusOut)
 );
 
 /** GET /api/featurescripts/stats — the owner's card's Usage, all time. */

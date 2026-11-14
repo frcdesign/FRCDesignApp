@@ -13,12 +13,15 @@ import {
     type AddFeatureScriptOut,
     type FeatureScriptFavoritesOut,
     FeatureScriptProblem,
+    FeatureScriptsLoadState,
+    type FeatureScriptsLoadStatusOut,
     type FeatureScriptStatsOut,
     type FeatureScriptsOut
 } from "./contract";
 import { featureScripts, featureScriptsDocument } from "./schema";
 import { iconKey } from "./store";
 import * as LoadClaim from "./load-claim";
+import { reportLoadStatus } from "./load-status";
 import { AccessLevel } from "../auth/access-level";
 import { events } from "../analytics/schema";
 import { EventType } from "../analytics/usage";
@@ -374,6 +377,28 @@ describe("featurescripts routes", () => {
             frame: { adds: 3, users: 2, favorites: 0 },
             belt: { adds: 0, users: 0, favorites: 1 }
         } satisfies FeatureScriptStatsOut);
+    });
+
+    it("tells the owner alone how the last load went", async () => {
+        const status = {
+            state: FeatureScriptsLoadState.FAILED,
+            startedAt: 1,
+            finishedAt: 2,
+            error: "No owner session to load FeatureScripts with"
+        };
+        await reportLoadStatus(env, status);
+        const read = (accessLevel: AccessLevel) =>
+            createTestApp({ accessLevel }).request(
+                "/api/featurescripts/load-status",
+                {},
+                env
+            );
+
+        expect((await read(AccessLevel.ADMIN)).status).toBe(403);
+        const res = await read(AccessLevel.OWNER);
+        expect(await res.json<FeatureScriptsLoadStatusOut>()).toEqual({
+            status
+        });
     });
 
     it("keeps the stats from anyone but the owner", async () => {

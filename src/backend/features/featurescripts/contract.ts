@@ -59,6 +59,35 @@ export interface FeatureScriptsVersionOut {
     version: number;
 }
 
+export enum FeatureScriptsLoadState {
+    RUNNING = "running",
+    /** Wrote the version's features. */
+    LOADED = "loaded",
+    /** The version was the one loaded, so nothing was written. */
+    UP_TO_DATE = "up-to-date",
+    FAILED = "failed"
+}
+
+/** The last load: what it is doing, or how it ended. Times are epoch milliseconds. */
+export interface FeatureScriptsLoadStatus {
+    state: FeatureScriptsLoadState;
+    startedAt: number;
+    finishedAt?: number;
+    /** The frontend version's name, once the load has read it. */
+    versionName?: string;
+    /** The features the load kept, once it finished. */
+    featureCount?: number;
+    /** Of those, the ones whose example or icon failed to load. */
+    failedCount?: number;
+    /** Why it failed, as the error said it. */
+    error?: string;
+}
+
+/** The owner's; no status is a load not run since it expired. */
+export interface FeatureScriptsLoadStatusOut {
+    status?: FeatureScriptsLoadStatus;
+}
+
 /** Left out of everyone's list but the owner's. */
 export function isHidden(feature: FeatureScriptOut): boolean {
     return !feature.isVisible;

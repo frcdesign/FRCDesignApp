@@ -61,6 +61,25 @@ card with a part's admin card's sections. The owner's alone.
 | "Reloading FeatureScripts. The list updates when the load finishes." | Info toast      |                              | The load started                           | **⚑** New                        |
 | "Failed to reload FeatureScripts."                                   | Error toast     |                              | The load couldn't start                    | **⚑** New                        |
 
+## Load status
+
+The owner's callout above **Reload** in the admin settings, under
+FRCDesignApp. `{version}` is the frontend version's name and `{when}` the
+time it ended, "5 minutes ago".
+
+| String                                                                                                                 | Kind            | Where            | When                                          | Review    |
+| ---------------------------------------------------------------------------------------------------------------------- | --------------- | ---------------- | --------------------------------------------- | --------- |
+| "Loading FeatureScripts..."                                                                                            | Callout         | Above **Reload** | A load is running                             | **⚑** New |
+| "Loaded {version} {when}: 1 feature." / "...: {count} features."                                                       | Callout         | Same             | The last load wrote                           | **⚑** New |
+| "Loaded {version} {when}, but its 1 feature failed to load." / "..., but {failed} of {count} features failed to load." | Warning callout | Same             | It wrote, and some features are `LOAD_FAILED` | **⚑** New |
+| "{version} is loaded; checked {when}."                                                                                 | Callout         | Same             | The version was already loaded                | **⚑** New |
+| "The load of {version} failed {when}."                                                                                 | Error callout   | Same             | It failed after reading the version           | **⚑** New |
+| "The last load failed {when}, before it read a version."                                                               | Error callout   | Same             | It failed before                              | **⚑** New |
+| "No load on record. Reload to start one."                                                                              | Callout         | Same             | None in the last 30 days                      | **⚑** New |
+| "Details"                                                                                                              | Callout button  | In a failure's   | Always                                        | **⚑** New |
+| "Last FeatureScripts load"                                                                                             | Modal title     | **Details**      | Always                                        | **⚑** New |
+| "Version" / "Started" / "Finished" / "Error"                                                                           | Labels          | In it            | Version and Finished once known               | **⚑** New |
+
 ## Feedback
 
 The form itself is [feedback.md](./feedback.md)'s; these are what a

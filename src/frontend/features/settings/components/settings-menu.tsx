@@ -51,6 +51,7 @@ import {
 import { RefreshAdminTeamButton } from "../../admin-team/components/refresh-admin-team-button";
 import { AdminTeamSetting } from "../../admin-team/components/admin-team-setting";
 import { FeatureScriptsReloadButton } from "../../featurescripts/components/featurescripts-reload-button";
+import { FeatureScriptsLoadCallout } from "../../featurescripts/components/featurescripts-load-callout";
 
 /** The usage dashboard, served standalone and needing no sign-in. */
 const DASHBOARD_URL = "/dashboard";
@@ -320,6 +321,7 @@ function AdminSettings(): ReactNode {
 function AppAdminSettings(): ReactNode {
     return (
         <>
+            <FeatureScriptsLoadCallout />
             <InputRow label={m.settingsFeatureScripts()}>
                 <FeatureScriptsReloadButton />
             </InputRow>

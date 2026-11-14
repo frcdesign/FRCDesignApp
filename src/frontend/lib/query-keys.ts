@@ -153,6 +153,11 @@ export function featureScriptFavoritesQueryKey() {
     return ["featurescripts", "favorites"];
 }
 
+/** Kept current by pushes; only the owner asks. */
+export function featureScriptsLoadStatusQueryKey() {
+    return ["featurescripts", "load-status"];
+}
+
 export function featureScriptStatsQueryKey() {
     return ["featurescripts", "stats"];
 }

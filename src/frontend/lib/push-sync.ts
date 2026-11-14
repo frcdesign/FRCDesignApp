@@ -14,6 +14,7 @@ import {
 import { useTargetWorkspace } from "./onshape-params";
 import { queryClient } from "./query-client";
 import {
+    featureScriptsLoadStatusQueryKey,
     featureScriptsVersionQueryKey,
     jobStatusQueryKey,
     versionJobQueryKey
@@ -66,6 +67,11 @@ export function usePushSync(): void {
                         queryKey: featureScriptsVersionQueryKey()
                     });
                     break;
+                case PushType.FEATURESCRIPTS_LOAD:
+                    void queryClient.invalidateQueries({
+                        queryKey: featureScriptsLoadStatusQueryKey()
+                    });
+                    break;
                 case PushType.THUMBNAIL:
                     // Rows that took a miss; anything waiting on the render hears the push itself.
                     void queryClient.refetchQueries({
@@ -94,6 +100,9 @@ export function usePushSync(): void {
                 }
                 if (hasConnected.current) {
                     void refreshLibrary();
+                    void queryClient.invalidateQueries({
+                        queryKey: featureScriptsLoadStatusQueryKey()
+                    });
                     if (workspace) {
                         void queryClient.invalidateQueries({
                             queryKey: versionJobQueryKey(workspace)

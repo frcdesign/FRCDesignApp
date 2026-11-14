@@ -8,6 +8,11 @@ import {
 } from "@backend/features/auth/access-level";
 import type { AdminTeamOut } from "@backend/features/admin-team/contract";
 import {
+    FeatureScriptsLoadState,
+    type FeatureScriptsLoadStatusOut
+} from "@backend/features/featurescripts/contract";
+import type { QueryClient } from "@tanstack/react-query";
+import {
     DEFAULT_LIBRARY,
     LibraryId
 } from "@backend/features/library/library-id";
@@ -15,7 +20,11 @@ import {
     createTestQueryClient,
     renderWithProviders
 } from "../../../../__test_utils__/render";
-import { accessDataQueryKey, adminTeamQueryKey } from "../../../lib/query-keys";
+import {
+    accessDataQueryKey,
+    adminTeamQueryKey,
+    featureScriptsLoadStatusQueryKey
+} from "../../../lib/query-keys";
 import { updateUiState } from "../../../lib/ui-state";
 
 const mocks = vi.hoisted(() => ({
@@ -51,7 +60,8 @@ const { SettingsMenuContent } = await import("./settings-menu");
 
 function renderSettings(
     access: Partial<Record<LibraryId, AccessLevel>>,
-    viewedAs: AccessLevel
+    viewedAs: AccessLevel,
+    seed?: (queryClient: QueryClient) => void
 ) {
     updateUiState({ accessLevel: viewedAs });
     const queryClient = createTestQueryClient();
@@ -70,6 +80,7 @@ function renderSettings(
         adminTeamQueryKey(LibraryId.CONFIG_LIB),
         { teamId: "config-team", memberCount: 2 }
     );
+    seed?.(queryClient);
     renderWithProviders(<SettingsMenuContent />, queryClient);
 }
 
@@ -122,6 +133,41 @@ describe("the admin settings", () => {
         expect(mocks.apiPost).toHaveBeenCalledWith("/featurescripts/reload", {
             body: { force: false }
         });
+    });
+
+    it("show the owner why the last FeatureScripts load failed", () => {
+        renderSettings(OWNER_EVERYWHERE, AccessLevel.OWNER, (queryClient) =>
+            queryClient.setQueryData<FeatureScriptsLoadStatusOut>(
+                featureScriptsLoadStatusQueryKey(),
+                {
+                    status: {
+                        state: FeatureScriptsLoadState.FAILED,
+                        startedAt: Date.now(),
+                        finishedAt: Date.now(),
+                        versionName: "V3",
+                        error: "Version V3 of the frontend document has no featurescripts.json"
+                    }
+                }
+            )
+        );
+
+        expect(
+            screen.getByText("The load of V3 failed just now.")
+        ).toBeTruthy();
+        expect(screen.getByRole("button", { name: "Details" })).toBeTruthy();
+    });
+
+    it("say when no FeatureScripts load is on record", () => {
+        renderSettings(OWNER_EVERYWHERE, AccessLevel.OWNER, (queryClient) =>
+            queryClient.setQueryData<FeatureScriptsLoadStatusOut>(
+                featureScriptsLoadStatusQueryKey(),
+                {}
+            )
+        );
+
+        expect(
+            screen.getByText("No load on record. Reload to start one.")
+        ).toBeTruthy();
     });
 
     it("open on the app's own settings away from a library", () => {
