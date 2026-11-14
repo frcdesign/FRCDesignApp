@@ -126,4 +126,13 @@ export.
 
 ## The production run
 
-Filled in once the files are applied.
+Applied on 2026-11-14, after a dry run on cert, right after the deploy that
+added `UseSource.UNKNOWN`. The build read production's 2,670 insertables and
+gave the local build's counts, apart from 176 more values of options since
+removed. 24 files, each 12–20 s; the database grew from 287 MB to 1.25 GB.
+Wrangler reported three finished imports as failed ("Not currently importing
+anything"); `apply.sh` found each landed and went on.
+
+Every legacy day's inserts and opens matched BigQuery, as on cert. A minute
+after the last file the dashboard's overview answered 500 once, then served
+normally.
