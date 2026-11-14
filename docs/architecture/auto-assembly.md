@@ -731,6 +731,8 @@ interface FastenerStudio {
     location: StudioLocation;
     /** What a fasten mate names its mate connector by, as the studio's load found it. */
     mateConnectorId?: string;
+    /** What a fasten mate names the connector on its top by, where a screw or nut sits on a washer. */
+    topMateConnectorId?: string;
 }
 
 interface CatalogVendor {
@@ -852,18 +854,13 @@ function insertGroups(
     set: FastenerSet,
     parts: PartPlacement[]
 ): { instances: object[]; transform: number[] }[];
-async function washerTopEdges(
-    client: OnshapeApi,
-    kv: KVNamespace,
-    set: FastenerSet,
-    parts: PartPlacement[]
-): Promise<Record<number, string>>;
+// On a hole's edge, or a washer's top connector.
 function partMate(
     part: PartPlacement,
     path: string[],
     connectorId: string,
     paths: (string[] | undefined)[],
-    washerEdges: Record<number, string>
+    washerTopConnectorId: string
 ): object | undefined;
 
 interface PartPlacement {
@@ -1246,18 +1243,15 @@ recorded with why, and the steps after it are skipped.
    answers it, then, once fastening ends, whether it was mated.
 4. **Fasten parts**:
     1. Takes each studio's mate connector id from its load
-       (`FastenerStudio.mateConnectorId`, the insertable's fasten info); with
-       one missing, the step fails.
-    2. Scans the washer studio in each configuration placed, for its top edge
-       (`washerTopEdge`): its hole's circular edge farthest up its Z axis
-       (`washer-edges`).
-    3. Adds one fasten mate per part, one at a time (`mate-{n}`): its mate
-       connector to an implicit connector at the center of what it sits on
-       (`fastenMateToCircularEdge`, as insert and fasten mates). A washer is
-       fastened to its stack's hole edge, and the screw or nut on it to the
-       washer's top edge; without a washer, the screw or nut is fastened to the
-       hole edge itself.
-    4. With fewer parts fastened than inserted, the step finishes with a
+       (`FastenerStudio.mateConnectorId`, the insertable's fasten info), and
+       the washer's top connector (`topMateConnectorId`, from the manifest).
+       With one missing, the step fails.
+    2. Adds one fasten mate per part, one at a time (`mate-{n}`). A washer,
+       or a screw or nut on no washer, is fastened to an implicit connector at
+       the center of its hole's edge (`fastenMateToCircularEdge`, as insert and
+       fasten mates). A screw or nut on a washer is fastened to the washer's
+       top connector, connector to connector.
+    3. With fewer parts fastened than inserted, the step finishes with a
        warning saying how many sit unmated.
 5. **Record inserts** (`record-inserts`), once fastening has ended however it
    ended: each part inserted is recorded as an insert from its studio's
@@ -1310,8 +1304,8 @@ In [strings/auto-assembly.md](../strings/auto-assembly.md).
   its vendor makes.
 - A hole's parts are two stacks, each held together by its own mates: a washer
   is fastened to its stack's hole edge, the screw or nut on it to the washer's
-  top edge, and without a washer the screw or nut to the hole edge. No mate has
-  an offset, and any washer fits. The studios have no Washer input.
+  top connector, and without a washer the screw or nut to the hole edge. No mate
+  has an offset, and any washer fits. The studios have no Washer input.
 - Every ready hole gets its own parts and mates, a hole with a warning
   included; a hole with an error gets none.
 - A pick's problem in a run is the one the check marks it with: both come from
@@ -1359,6 +1353,10 @@ In [strings/auto-assembly.md](../strings/auto-assembly.md).
   highlighted, which would empty the focused list. Taking a change that
   removes more than one entity at once as that click is a stopgap until
   Onshape offers a way to resume one.
+- **A washer's top is a mate connector.** The washer's feature makes one on
+  its top face, which the manifest names. A screw or nut fastens to it
+  directly, so nothing has to find the washer's top edge by scanning its Part
+  Studio, which broke mates and cost an Onshape call per configuration.
 - **A hole with a screw already is a warning, not an error.** The run leaves
   it alone and fastens the rest of the face, so there's nothing to fix.
 - **Picks are checked as they're made, in Onshape.** Whether an edge is a

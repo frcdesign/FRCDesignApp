@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { FastenerKind } from "./studios";
 import { FASTENER_SET } from "../../../__test_utils__/fastener-set";
 import { HoleEnd, HoleStatus } from "./contract";
-import { partMate, placements, washerTopEdge } from "./insert";
+import { partMate, placements } from "./insert";
 import { type HolePlan } from "./planner";
 
 const INCH = 0.0254;
@@ -102,41 +102,39 @@ describe("partMate", () => {
     const parts = placements(FASTENER_SET, [PLAN]);
     const paths = [["w1"], ["s1"], ["w2"], ["n1"]];
 
-    it("fastens a part on a washer to the washer's top edge", () => {
+    it("fastens a part on a washer to the washer's top connector", () => {
         const mate = JSON.stringify(
-            partMate(parts[1], ["s1"], "screwMC", paths, { 0: "TOP" })
+            partMate(
+                parts[1],
+                ["s1"],
+                "screwMC",
+                paths,
+                "washer.topMateConnector"
+            )
         );
-        expect(mate).toContain('"featureId":"screwMC"');
-        expect(mate).toContain('"deterministicIds":["TOP"],"path":["w1"]');
+        expect(mate).toContain('"featureId":"screwMC","path":["s1"]');
+        expect(mate).toContain(
+            '"featureId":"washer.topMateConnector","path":["w1"]'
+        );
+        expect(mate).not.toContain('"mateConnectors":');
     });
 
-    it("fastens nothing it can't find the washer's edge for", () => {
+    it("fastens a washer, or a part on no washer, to its hole's edge", () => {
+        const mate = JSON.stringify(
+            partMate(parts[0], ["w1"], "washerMC", paths, "washer.top")
+        );
+        expect(mate).toContain('"deterministicIds":["E"],"path":["plate"]');
+    });
+
+    it("fastens nothing on a washer that wasn't inserted", () => {
         expect(
-            partMate(parts[1], ["s1"], "screwMC", paths, {})
+            partMate(
+                parts[1],
+                ["s1"],
+                "screwMC",
+                [undefined, ["s1"]],
+                "washer.top"
+            )
         ).toBeUndefined();
-    });
-});
-
-describe("washerTopEdge", () => {
-    it("is the edge farthest up the washer's Z axis, whichever way its hole points", () => {
-        const hole = (direction: [number, number, number], start: number) => ({
-            faceId: "F",
-            origin: [0, 0, start] as [number, number, number],
-            direction,
-            radius: 0.002,
-            start: 0,
-            end: 0.001,
-            closedAtStart: false,
-            closedAtEnd: false,
-            threaded: false,
-            edges: [
-                { id: "A", at: 0 },
-                { id: "B", at: 0.001 }
-            ]
-        });
-        expect(washerTopEdge({ W: { holes: [hole([0, 0, 1], 0)] } })).toBe("B");
-        expect(washerTopEdge({ W: { holes: [hole([0, 0, -1], 0.001)] } })).toBe(
-            "A"
-        );
     });
 });

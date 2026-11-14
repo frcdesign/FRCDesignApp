@@ -24,7 +24,10 @@ function studio(kind: FastenerKind): FastenerStudio {
             btType: "BTConfigurationResponse-2019"
         }),
         location: { ...FASTENERS_VERSION, elementId: `${kind}Studio` },
-        mateConnectorId: `${kind}MC`
+        mateConnectorId: `${kind}MC`,
+        ...(kind === FastenerKind.WASHER
+            ? { topMateConnectorId: "washerTopMC" }
+            : {})
     };
 }
 

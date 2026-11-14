@@ -44,7 +44,8 @@ Each release writes the manifest into the library document as a file tab named
 
 - its tab (`elementId`);
 - its feature;
-- the id the feature gives its mate connector (`mateConnector`);
+- the id the feature gives its mate connector (`mateConnector`), and a
+  second on its top where it has one (`topMateConnector`, a washer's);
 - its records.
 
 The rest of the manifest is the set's catalog, which Auto Assembly reads.
@@ -63,7 +64,7 @@ can't store on the set's insertables:
 - `catalog`: the manifest less its studios. Auto Assembly sizes fasteners by
   it (screw lengths, nut heights, washer thicknesses), checked against its
   `catalogSchema`.
-- `features`: each studio's tab, feature type and mate connector id, by its key
+- `features`: each studio's tab, feature type and mate connector ids, by its key
   (`GeneratedFeature`). Auto Assembly finds each kind's insertable by its tab,
   and insert and fasten finds the mate connector in any Part Studio using the
   feature.

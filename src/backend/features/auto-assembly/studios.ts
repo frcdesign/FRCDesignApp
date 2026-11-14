@@ -41,6 +41,8 @@ export interface FastenerStudio {
     location: StudioLocation;
     /** What a fasten mate names its mate connector by, as the studio's load found it. */
     mateConnectorId?: string;
+    /** What a fasten mate names the connector on its top by, where a screw or nut sits on a washer. */
+    topMateConnectorId?: string;
 }
 
 /** The fasteners a library loaded: its manifest's catalog, and each kind's studio. */
