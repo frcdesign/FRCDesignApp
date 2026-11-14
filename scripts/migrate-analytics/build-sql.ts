@@ -13,12 +13,14 @@
  */
 import { execFileSync } from "node:child_process";
 import {
+    closeSync,
     createReadStream,
     mkdirSync,
+    openSync,
     readdirSync,
     readFileSync,
     rmSync,
-    writeFileSync
+    writeSync
 } from "node:fs";
 import { join } from "node:path";
 import { createInterface } from "node:readline";
@@ -119,6 +121,8 @@ interface LegacyRow {
     user_id: string | null;
     library: string | null;
     element_id: string | null;
+    /** The part's name when it was inserted. */
+    name: string | null;
     version_id: string | null;
     target: string | null;
     is_favorite: string | null;
@@ -138,6 +142,7 @@ interface Insertable {
     id: string;
     libraryId: LibraryId;
     elementId: string;
+    name: string;
     documentId: string;
     parameters: ConfigurationParameter[];
 }
@@ -158,11 +163,12 @@ const readInsertables = (args: Args): Insertables => {
             id: string;
             library_id: LibraryId;
             element_id: string;
+            name: string;
             document_id: string;
             parameters: string | null;
         }>(
             args,
-            `SELECT i.id, i.library_id, i.element_id, i.document_id, c.parameters
+            `SELECT i.id, i.library_id, i.element_id, i.name, i.document_id, c.parameters
              FROM insertables i LEFT JOIN configurations c ON c.insertable_id = i.id
              WHERE i.id > '${after}' ORDER BY i.id LIMIT ${INSERTABLE_PAGE}`
         );
@@ -171,6 +177,7 @@ const readInsertables = (args: Args): Insertables => {
                 id: row.id,
                 libraryId: row.library_id,
                 elementId: row.element_id,
+                name: row.name,
                 documentId: row.document_id,
                 parameters: row.parameters
                     ? (JSON.parse(row.parameters) as ConfigurationParameter[])
@@ -212,7 +219,8 @@ const counts = {
     unknownParameter: 0,
     unknownOption: 0,
     unconfiguredPart: 0,
-    removedPart: 0
+    removedPart: 0,
+    creditedByName: 0
 };
 
 const skip = (reason: string): undefined => {
@@ -259,6 +267,40 @@ const legacySelection = (
     return canonicalValues(values, parameters);
 };
 
+/** Every name each element was inserted under, lowercased, from the planning pass. */
+type LoggedNames = Map<string, Set<string>>;
+
+const nameKey = (name: string) => name.trim().toLowerCase();
+
+const resolved = new Map<string, Insertable | undefined>();
+
+/**
+ * The part a logged element is now. A tab re-created since has a new element
+ * id, so an element the library no longer holds is credited to the one part
+ * there with a name it was inserted under, when exactly one has.
+ */
+const currentPart = (
+    libraryId: LibraryId,
+    elementId: string,
+    insertables: Insertables,
+    loggedNames: LoggedNames
+): Insertable | undefined => {
+    const key = insertableKey(libraryId, elementId);
+    if (resolved.has(key)) return resolved.get(key);
+    let part = insertables.get(key);
+    if (!part) {
+        const names = loggedNames.get(elementId) ?? new Set();
+        const matches = [...insertables.values()].filter(
+            (candidate) =>
+                candidate.libraryId === libraryId &&
+                names.has(nameKey(candidate.name))
+        );
+        part = matches.length === 1 ? matches[0] : undefined;
+    }
+    resolved.set(key, part);
+    return part;
+};
+
 const TARGETS = new Set<string>([
     ElementType.PART_STUDIO,
     ElementType.ASSEMBLY
@@ -267,7 +309,8 @@ const TARGETS = new Set<string>([
 /** A row as `trackInsert` or `trackAppOpen` would have logged it, with what its rollups need. */
 const toEvent = (
     row: LegacyRow,
-    insertables: Insertables
+    insertables: Insertables,
+    loggedNames: LoggedNames
 ): { event: LoggedEvent; parameters: ConfigurationParameter[] } | undefined => {
     if (!row.user_id) return skip("no user id");
     const createdAt = Number(row.created_at);
@@ -297,10 +340,17 @@ const toEvent = (
     const libraryId = libraryOf(row, insertables);
     if (!libraryId) return skip(`insert from unknown library ${row.library}`);
 
-    const insertable = insertables.get(
-        insertableKey(libraryId, row.element_id)
+    const insertable = currentPart(
+        libraryId,
+        row.element_id,
+        insertables,
+        loggedNames
     );
+    // The logged version belongs to the old element, so a credited use has none.
+    const credited =
+        insertable !== undefined && insertable.elementId !== row.element_id;
     if (!insertable) counts.removedPart++;
+    if (credited) counts.creditedByName++;
     const parameters = insertable?.parameters ?? [];
     const logged = row.configuration
         ? (JSON.parse(row.configuration) as LoggedValue[])
@@ -311,10 +361,10 @@ const toEvent = (
         ...core,
         type: EventType.INSERT,
         libraryId,
-        elementId: row.element_id,
+        elementId: insertable?.elementId ?? row.element_id,
         documentId: insertable?.documentId ?? null,
-        instanceId: row.version_id,
-        instanceType: row.version_id ? "v" : null,
+        instanceId: credited ? null : row.version_id,
+        instanceType: !credited && row.version_id ? "v" : null,
         insertableId: insertable?.id ?? null,
         targetElementType: row.target as ElementType,
         selection: legacySelection(logged, parameters),
@@ -478,14 +528,24 @@ const readLines = (path: string) =>
     });
 
 /** Days packed in order into files of at most `max` events; a busy day is never split. */
-const planChunks = async (
+/** One pass over the log: how to cut it into files, and each element's names. */
+const survey = async (
     args: Args
-): Promise<{ from: string; to: string }[]> => {
+): Promise<{
+    days: { from: string; to: string }[];
+    loggedNames: LoggedNames;
+}> => {
     const perDay = new Map<string, number>();
+    const loggedNames: LoggedNames = new Map();
     for await (const line of readLines(args.events)) {
         const row = JSON.parse(line) as LegacyRow;
         const day = toDayKey(Number(row.created_at));
         perDay.set(day, (perDay.get(day) ?? 0) + 1);
+        if (row.element_id && row.name) {
+            const names = loggedNames.get(row.element_id) ?? new Set<string>();
+            names.add(nameKey(row.name));
+            loggedNames.set(row.element_id, names);
+        }
     }
     const chunks: { from: string; to: string }[] = [];
     let size = 0;
@@ -500,7 +560,7 @@ const planChunks = async (
             size = count;
         }
     }
-    return chunks;
+    return { days: chunks, loggedNames };
 };
 
 /** D1 caps a statement at 100 KB. https://developers.cloudflare.com/d1/platform/limits/ */
@@ -515,14 +575,14 @@ const sqlLiteral = (value: SQLOutputValue): string => {
 };
 
 const writeChunk = (chunk: Chunk, plan: TableDump[], path: string) => {
-    const out: string[] = [];
+    const out = openSync(path, "w");
     for (const table of plan) {
         const head = `INSERT INTO "${table.name}" (${table.columns.map((c) => `"${c}"`).join(", ")}) VALUES `;
         let rows: string[] = [];
         let bytes = 0;
         const flush = () => {
             if (rows.length > 0)
-                out.push(head + rows.join(",") + table.suffix + ";");
+                writeSync(out, head + rows.join(",") + table.suffix + ";\n");
             rows = [];
             bytes = 0;
         };
@@ -543,7 +603,7 @@ const writeChunk = (chunk: Chunk, plan: TableDump[], path: string) => {
         }
         flush();
     }
-    writeFileSync(path, out.join("\n") + "\n");
+    closeSync(out);
 };
 
 const main = async () => {
@@ -562,7 +622,7 @@ const main = async () => {
     const insertables = readInsertables(args);
     console.error(`${insertables.size} insertables in the target`);
 
-    const days = await planChunks(args);
+    const { days, loggedNames } = await survey(args);
     mkdirSync(args.out, { recursive: true });
     const chunks: Chunk[] = days.map((range, i) => ({
         ...range,
@@ -574,7 +634,11 @@ const main = async () => {
 
     let converted = 0;
     for await (const line of readLines(args.events)) {
-        const result = toEvent(JSON.parse(line) as LegacyRow, insertables);
+        const result = toEvent(
+            JSON.parse(line) as LegacyRow,
+            insertables,
+            loggedNames
+        );
         if (!result) continue;
         const chunk = chunkOf(result.event.day);
         run(chunk, builder.insert(events).values(result.event));
@@ -609,6 +673,7 @@ const main = async () => {
             {
                 converted,
                 skipped: Object.fromEntries(counts.skipped),
+                insertsCreditedByName: counts.creditedByName,
                 insertsOfRemovedParts: counts.removedPart,
                 insertsOfPartsNowUnconfigured: counts.unconfiguredPart,
                 loggedValues: counts.values,

@@ -39,7 +39,7 @@ there could hold only counts.
 
 ## What the mapping is not
 
-A legacy row is close to a `LoggedEvent`, but four things don't copy across:
+A legacy row is close to a `LoggedEvent`, but five things don't copy across:
 
 - **There is no source.** The legacy app never recorded where an insert
   started, so every imported use is `UseSource.UNKNOWN`, which the dashboard
@@ -53,6 +53,12 @@ A legacy row is close to a `LoggedEvent`, but four things don't copy across:
 - **There is no document id.** It and the insertable id come from the part as
   it is now, and are null for a part since removed; the element id and the
   version inserted from are the row's own.
+- **Some element ids are gone.** Tabs re-created since the log was written,
+  among them the most used parts, have new element ids. An element the library
+  no longer holds is credited to the one part in that library with a name it was
+  inserted under (any of them, case-insensitively), taking that part's element,
+  document and parameters, and no version, since the logged one was the old
+  tab's. With no such part, or several, it keeps its own id.
 
 Nothing is cut at the switch to the Worker. Both backends served for two weeks
 of September 2026 while DNS moved, but each request reached one of them, so the

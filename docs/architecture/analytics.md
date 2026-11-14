@@ -833,7 +833,8 @@ no foreign key crosses between them):
   `schema_version` 0 (`LEGACY_SCHEMA_VERSION`), an id of `legacy-` and the
   Cloud Logging entry's `insert_id`, and `source` `unknown`. Their `instance_id`
   is the version inserted from; `document_id` and `insertable_id` are filled
-  from the part as it is now, and null for a part since removed.
+  from the part as it is now, and null for a part since removed. A use credited
+  to a re-created part carries that part's element id and no version.
 - `library_id` is null for an event that belongs to no library: an app open,
   which is the app being opened rather than the page it resumes into, a
   version run, which acts on the Onshape document the app was launched from,
@@ -914,6 +915,12 @@ matched back to an id against the part's parameters as they are now; a value
 they can no longer place is left out of the selection, and the use still
 counts. Its first weeks named no library; an element held by exactly one library
 says which, and the rest are `frc-design-lib`, the only library then.
+
+Some of the most used parts were re-created as new tabs after the log was
+written, so their logged element ids no longer exist. A logged element the
+library no longer holds is credited to the one part in that library with a
+name it was inserted under, compared case-insensitively; with no such part, or
+more than one, it keeps its own id and counts only in the totals.
 
 `scripts/migrate-analytics/README.md` has the run's numbers.
 
@@ -1071,6 +1078,12 @@ only on **All time**, its own window being a season rather than the picked one.
   dashboard read a small indexed query.
 - **Keyed by element, not insertable.** An insertable row is replaced when a tab
   is removed and re-added; its element id is not.
+- **Imported history is credited to re-created parts by name.** The exception
+  to keying by element: a fifth of the legacy log's uses are of tabs since
+  re-created under new element ids, among them the most used parts. Left on
+  their old ids those parts' pages would start in September 2026. The name is
+  matched only within a library and only when one part has it, so a guess is
+  never between parts.
 - **Public aggregates.** The numbers are useful to the community, and nothing
   per-user is exposed.
 - **The module isn't called `events.ts`.** Ad blockers match an `events-<hash>.js`

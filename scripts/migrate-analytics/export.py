@@ -28,6 +28,7 @@ SELECT
   JSON_VALUE(json_payload, '$.userId') AS user_id,
   JSON_VALUE(json_payload, '$.library') AS library,
   JSON_VALUE(json_payload, '$.elementId') AS element_id,
+  JSON_VALUE(json_payload, '$.name') AS name,
   JSON_VALUE(json_payload, '$.version.id') AS version_id,
   JSON_VALUE(json_payload, '$.targetElementType') AS target,
   JSON_VALUE(json_payload, '$.isFavorite') AS is_favorite,
