@@ -69,6 +69,11 @@
             "name": "version-manager-workflow",
             "binding": "VERSION_MANAGER_WORKFLOW",
             "class_name": "VersionManagerWorkflow"
+        },
+        {
+            "name": "load-featurescripts-workflow",
+            "binding": "LOAD_FEATURESCRIPTS_WORKFLOW",
+            "class_name": "LoadFeatureScriptsWorkflow"
         }
     ],
     // Inherited by every environment. v2 swaps the thumbnail render queue,
@@ -104,7 +109,9 @@
         "NODE_ENV": "development",
         // Where the app is served: OAuth's redirect and every webhook point here.
         // The dev tunnel's; a developer on their own tunnel overrides it in `.env`.
-        "APP_URL": "https://dev.frcdesign.org"
+        "APP_URL": "https://dev.frcdesign.org",
+        // robot-code's [tool.fs] frontend, which the FeatureScripts tab loads.
+        "FEATURESCRIPTS_DOCUMENT_ID": "9cffa92db8b62219498f89af"
     },
     /**
      * Service Bindings (communicate between multiple Workers)
@@ -156,6 +163,11 @@
                     "name": "version-manager-workflow-cert",
                     "binding": "VERSION_MANAGER_WORKFLOW",
                     "class_name": "VersionManagerWorkflow"
+                },
+                {
+                    "name": "load-featurescripts-workflow-cert",
+                    "binding": "LOAD_FEATURESCRIPTS_WORKFLOW",
+                    "class_name": "LoadFeatureScriptsWorkflow"
                 }
             ],
             "durable_objects": {
@@ -169,7 +181,8 @@
                 // FORCE_SIGNED_IN and VITE_ACCESS_LEVEL_OVERRIDE are gated on
                 // this alone: anything but "production" leaves them armed.
                 "NODE_ENV": "production",
-                "APP_URL": "https://frc-design-app-cert.frcdesign-org.workers.dev"
+                "APP_URL": "https://frc-design-app-cert.frcdesign-org.workers.dev",
+                "FEATURESCRIPTS_DOCUMENT_ID": "9cffa92db8b62219498f89af"
             },
             "limits": {
                 "subrequests": 1000
@@ -216,6 +229,11 @@
                     "name": "version-manager-workflow-prod",
                     "binding": "VERSION_MANAGER_WORKFLOW",
                     "class_name": "VersionManagerWorkflow"
+                },
+                {
+                    "name": "load-featurescripts-workflow-prod",
+                    "binding": "LOAD_FEATURESCRIPTS_WORKFLOW",
+                    "class_name": "LoadFeatureScriptsWorkflow"
                 }
             ],
             "durable_objects": {
@@ -226,7 +244,8 @@
             "vars": {
                 "OWNER_USER_ID": "5eace32713a966103efd2a9c",
                 "NODE_ENV": "production",
-                "APP_URL": "https://app.frcdesign.org"
+                "APP_URL": "https://app.frcdesign.org",
+                "FEATURESCRIPTS_DOCUMENT_ID": "9cffa92db8b62219498f89af"
             },
             "limits": {
                 "subrequests": 100000

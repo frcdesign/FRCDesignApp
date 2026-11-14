@@ -9,6 +9,7 @@ import {
     FeedbackTopic,
     libraryTopic
 } from "@backend/features/feedback/contract";
+import { type FeatureScriptOut } from "@backend/features/featurescripts/contract";
 import { type LibraryId } from "@backend/features/library/library-id";
 import { openAppModal } from "../../components/open-app-modal";
 import { AppTitle } from "../../components/app-title";
@@ -61,6 +62,28 @@ export function openPartReport(
                 initialTopic={libraryTopic(libraryId)}
                 source={FeedbackSource.PART}
                 part={part}
+            />
+        )
+    });
+}
+
+/** From a FeatureScript's menu: about that feature. */
+export function openFeatureScriptReport(feature: FeatureScriptOut): void {
+    openAppModal({
+        title: (
+            <AppTitle
+                title={m.feedbackFeatureScriptReportTitle({
+                    name: feature.name
+                })}
+                icon={<FlagIcon size={IconSize.MEDIUM} />}
+            />
+        ),
+        size: REPORT_MODAL_SIZE,
+        children: (
+            <FeedbackForm
+                initialTopic={FeedbackTopic.FEATURESCRIPTS}
+                source={FeedbackSource.FEATURESCRIPT}
+                featureScript={feature}
             />
         )
     });

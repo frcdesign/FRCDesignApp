@@ -1,3 +1,5 @@
+import { Group } from "@mantine/core";
+import { m } from "../../../paraglide/messages";
 import { DEFAULT_CONFIGURATION_KEY } from "@backend/features/configurations/contract";
 import { ReactNode } from "react";
 import { Favorite } from "@backend/features/favorites/contract";
@@ -10,14 +12,13 @@ import {
     type RowMatch
 } from "../../../components/item-row";
 import { OpenDocumentItems } from "../../../components/open-document-items";
-import { QuickInsertItems } from "../../insert/components/quick-insert-items";
+import { QuickInsertButton } from "../../insert/components/quick-insert-button";
 import { ConfigurationHoverCard } from "../../insert/components/configuration-hover-card";
 import { useIsInsertableHidden } from "../../library/visibility";
 import { CardThumbnail } from "../../thumbnails/components/thumbnail";
 import { useIsAssemblyInPartStudio } from "../../insert/insert-hooks";
 import { ChangeOrderItems } from "../../../components/change-order";
 import { MenuSection } from "../../../components/app-menu";
-import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 import {
     openCannotDeriveAssemblyAlert,
     openCannotReorderAlert
@@ -100,8 +101,19 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
                     match={rowMatch}
                 />
             }
-            rightSection={
-                <FavoriteButton favorite={favorite} insertable={insertable} />
+            actions={
+                <Group gap={4} wrap="nowrap">
+                    <QuickInsertButton
+                        insertable={insertable}
+                        selection={favorite.defaultSelection}
+                        isFavorite
+                        source={UseSource.FAVORITES}
+                    />
+                    <FavoriteButton
+                        favorite={favorite}
+                        insertable={insertable}
+                    />
+                </Group>
             }
             menuItems={
                 <FavoriteMenuItems
@@ -122,7 +134,6 @@ function FavoriteMenuItems(props: FavoriteMenuItemsProps): ReactNode {
     const { insertable, favorite } = props;
 
     const vendorFilters = useVendorFilters();
-    const isConnected = useIsConnectedToOnshape();
 
     const setFavoriteOrderMutation = useSetFavoriteOrderMutation();
     const favoritesQuery = useFavoritesQuery();
@@ -130,17 +141,7 @@ function FavoriteMenuItems(props: FavoriteMenuItemsProps): ReactNode {
 
     return (
         <>
-            {isConnected && (
-                <MenuSection label="Insert">
-                    <QuickInsertItems
-                        insertable={insertable}
-                        selection={favorite.defaultSelection}
-                        isFavorite
-                        source={UseSource.FAVORITES}
-                    />
-                </MenuSection>
-            )}
-            <MenuSection label="Favorites">
+            <MenuSection label={m.libraryMenuFavorites()}>
                 <ChangeOrderItems
                     id={favorite.id}
                     order={favoriteOrder}
@@ -157,7 +158,7 @@ function FavoriteMenuItems(props: FavoriteMenuItemsProps): ReactNode {
                     insertable={insertable}
                 />
             </MenuSection>
-            <MenuSection label="Document">
+            <MenuSection label={m.libraryMenuDocument()}>
                 <OpenDocumentItems
                     path={insertable.path}
                     selection={favorite.defaultSelection}

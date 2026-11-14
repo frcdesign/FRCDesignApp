@@ -46,6 +46,8 @@ export class ClientRelay extends DurableObject<AppBindings> {
 function toTag(message: PushMessage): string | undefined {
     switch (message.type) {
         case PushType.THUMBNAIL:
+        case PushType.FEATURESCRIPTS:
+        case PushType.FEATURESCRIPTS_LOAD:
             return undefined;
         case PushType.VERSION_JOB:
             return message.workspaceKey;

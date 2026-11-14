@@ -33,7 +33,9 @@ enum EventType {
     /** One finished push or pull; see `features/version-manager`. */
     VERSION_RUN = "version_run",
     /** One report posted to Discord; see `features/feedback`. */
-    REPORT = "report"
+    REPORT = "report",
+    /** One FeatureScript added to a Part Studio; see `features/featurescripts`. Not a use. */
+    FEATURE_ADD = "feature_add"
 }
 
 /** A use is an insert or a download: each counts toward a part's usage. */
@@ -196,6 +198,7 @@ which columns each kind of event sets
 ```ts
 // Each narrows a row to its kind; undefined for any other.
 function asUse(event: LoggedEvent): LoggedUse | undefined;
+function asFeatureAdd(event: LoggedEvent): LoggedFeatureAdd | undefined;
 function asVersionRun(event: LoggedEvent): LoggedVersionRun | undefined;
 function asReport(event: LoggedEvent): LoggedReport | undefined;
 
@@ -250,6 +253,7 @@ const NOT_A_USE: UseColumns;
 const NO_ELEMENT: ElementColumns;
 const NOT_A_VERSION_RUN: VersionRunColumns;
 const NOT_A_REPORT: ReportColumns;
+const NOT_A_FEATURE_ADD: FeatureAddColumns;
 
 /** A logged insert or download, whose own columns a reader can then count on. */
 type LoggedUse = LoggedEvent & {
@@ -503,7 +507,7 @@ interface DailyMetricPoint {
 interface UseSourceUsage {
     source: UseSource;
     count: number;
-    /** How many of those used the context-menu quick insert. */
+    /** How many of those were quick inserts, from a row's own Insert or Derive button. */
     quickInsertCount: number;
 }
 
@@ -825,8 +829,11 @@ no foreign key crosses between them):
   which a download leaves null; a version run adds its kind,
   scope, whether it was update-only, its outcome, and how many steps failed,
   versions it created and tabs it updated. A report adds its topic, category,
-  source and the team number the reporter gave, and a part report the element
-  path and insertable. Keyed on
+  source and the team number the reporter gave, a part report the element
+  path and insertable, and a report naming a FeatureScript its constant in
+  `feature_type`. A FeatureScript add has its feature's constant in
+  `feature_type`, and its Feature Studio's path in the loaded version in the
+  element columns. Keyed on
   Onshape's element id with no foreign keys, so history survives a reload or a
   re-added tab.
 - Rows imported from the legacy app (see Imported history) have
@@ -838,13 +845,14 @@ no foreign key crosses between them):
 - `library_id` is null for an event that belongs to no library: an app open,
   which is the app being opened rather than the page it resumes into, a
   version run, which acts on the Onshape document the app was launched from,
-  and a report about the app itself. A report from somebody signed out has
+  a FeatureScript add, and a report about the app itself or the FeatureScripts. A report from somebody signed out has
   `user_id` `signed-out` (`SIGNED_OUT_USER_ID`).
 - Rollups, each derived from the log alone: `daily_metrics`,
   `daily_target_metrics`, `daily_source_metrics`, `insertable_stats`,
   `daily_insertable_metrics`, `daily_insertable_users`,
   `daily_configuration_metrics`, `daily_user_activity`, `user_stats`,
-  `daily_app_opens`, `daily_version_metrics`, `daily_report_metrics`.
+  `daily_app_opens`, `daily_version_metrics`, `daily_report_metrics`,
+  `daily_featurescript_metrics`, `daily_featurescript_users`.
 - A use writes every library rollup, an insert and a download alike.
   `daily_metrics` keeps a row per event type, so the uses are the sum of the
   `insert` and `download` rows and either can be read alone.
@@ -857,6 +865,10 @@ no foreign key crosses between them):
 - `daily_version_metrics` is keyed by day: runs, update-only runs, runs that
   partially failed and runs that failed outright, versions created and tabs
   updated.
+- `daily_featurescript_metrics` is keyed by day and feature type: the count of
+  adds. `daily_featurescript_users` holds who added each feature on a day, so
+  distinct users come from rollups. Keyed by the feature's constant, which
+  never changes once released, rather than its row.
 - `daily_report_metrics` is keyed by day, topic, category, source and element
   (empty for a report that names no part): the count of reports. By topic
   rather than library, since the app's topics belong to none.
@@ -881,8 +893,10 @@ no foreign key crosses between them):
    once its run has finished, so a run that failed halfway still records what
    it managed; `POST /api/update-references` records one in the background once
    it has updated a library document's references; `POST /api/feedback` calls `trackReport` once the report is
-   posted to Discord (see [feedback.md](./feedback.md)).
-2. A use, an open and a report are recorded in the background (`runInBackground`),
+   posted to Discord (see [feedback.md](./feedback.md));
+   `POST /api/featurescripts/:featureId/add` calls `trackFeatureAdd` once
+   Onshape accepted the feature (see [featurescripts.md](./featurescripts.md)).
+2. A use, an open, a FeatureScript add and a report are recorded in the background (`runInBackground`),
    after the response; a version run's step swallows a failure to record. So
    tracking never slows or fails what the user asked for.
 3. The selection is stored canonically (`canonicalValues`), so `5 in` and
@@ -978,7 +992,9 @@ only on **All time**, its own window being a season rather than the picked one.
 - Every rollup is derivable from `events` alone, so the rollups can be rebuilt by
   replaying the log.
 - An event without a library writes one rollup and no other:
-  `daily_app_opens` for an open, `daily_version_metrics` for a version run.
+  `daily_app_opens` for an open, `daily_version_metrics` for a version run,
+  and a FeatureScript add its two, `daily_featurescript_metrics` and
+  `daily_featurescript_users`.
   A report writes `daily_report_metrics` alone, with a library or without.
   Every other rollup is keyed by library.
 - An event's columns are decided in `logged-event.ts`; a new column fails to
@@ -1023,6 +1039,11 @@ only on **All time**, its own window being a season rather than the picked one.
   launched the app from. Attributing it to the library the person happened to
   have open would say more about their last tab than about anything real, so
   `library_id` is null and the run rolls up into a table of its own.
+- **A FeatureScript add is not a use.** A feature is no library's part, so
+  it counts toward no library's uses, users or parts, and rolls up into tables
+  of its own; the owner reads them in each feature's card
+  (`GET /api/featurescripts/stats`), and the dashboard's section is still to
+  come.
 - **Reports are not activity.** Reporting a library's part is not using it, so
   a report writes no row to `daily_metrics`, `daily_user_activity` or
   `user_stats`, even when it names a library.

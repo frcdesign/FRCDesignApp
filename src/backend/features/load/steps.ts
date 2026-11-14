@@ -67,7 +67,7 @@ const THUMBNAIL_RETRIES = {
  * is taken outside the step so waiting for it doesn't count against its timeout.
  */
 export async function uploadThumbnailsStep(
-    ctx: LoadContext,
+    ctx: Pick<LoadContext, "step" | "thumbnailLimit">,
     name: string,
     upload: () => Promise<ThumbnailUrls>
 ): Promise<ThumbnailUrls | null> {

@@ -1,3 +1,4 @@
+import { Group } from "@mantine/core";
 import { PropsWithChildren, ReactNode } from "react";
 import { Favorite } from "@backend/features/favorites/contract";
 import { InsertableOut } from "@backend/features/library/contract";
@@ -25,7 +26,7 @@ import { AdminMenuSection, MenuSection } from "../../../components/app-menu";
 import { ReloadThumbnailMenuItem } from "./reload-thumbnail-item";
 import { UpdateReferencesMenuItem } from "./update-references-item";
 import { InsertableChangesBadge } from "./changes-badges";
-import { QuickInsertItems } from "../../insert/components/quick-insert-items";
+import { QuickInsertButton } from "../../insert/components/quick-insert-button";
 import { DownloadStepMenuSection } from "../../download/components/download-step-menu-section";
 import { ConfigurationHoverCard } from "../../insert/components/configuration-hover-card";
 import { openCannotDeriveAssemblyAlert } from "../../../components/alerts";
@@ -33,7 +34,6 @@ import { useIsAssemblyInPartStudio } from "../../insert/insert-hooks";
 import { openInsertMenu } from "../../insert/open-insert-menu";
 import { useFavorite } from "../../favorites/queries";
 import { RequireSignIn } from "../../auth/components/require-access";
-import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 import { UseSource } from "@backend/features/analytics/usage";
 import { Hint } from "@backend/features/hints/contract";
 import { ReportIssueItem } from "../../feedback/components/report-issue-item";
@@ -121,12 +121,12 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
                             selection={hitSelection}
                         />
                     )}
-                    <InsertableChangesBadge insertable={insertable} />
                     <InsertableStatusBadge
                         insertableId={insertable.id}
                         groupId={insertable.groupId}
                         name={insertable.name}
                     />
+                    <InsertableChangesBadge insertable={insertable} />
                 </>
             }
         />
@@ -138,15 +138,23 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
             left={title}
             isNew={!hasOpenedReport}
             onMenuClose={markReportOpened}
-            rightSection={
-                <RequireSignIn>
-                    <FavoriteButton
-                        favorite={favorite}
+            actions={
+                <Group gap={4} wrap="nowrap">
+                    <QuickInsertButton
                         insertable={insertable}
                         selection={hitSelection}
-                        configurationKey={match?.configurationKey}
+                        isFavorite={favorite !== undefined}
+                        source={source}
                     />
-                </RequireSignIn>
+                    <RequireSignIn>
+                        <FavoriteButton
+                            favorite={favorite}
+                            insertable={insertable}
+                            selection={hitSelection}
+                            configurationKey={match?.configurationKey}
+                        />
+                    </RequireSignIn>
+                </Group>
             }
             menuItems={
                 <InsertableMenuItems
@@ -185,20 +193,9 @@ export function InsertableMenuItems(
         source,
         report
     } = props;
-    const isConnected = useIsConnectedToOnshape();
 
     return (
         <>
-            {!inInsertMenu && isConnected && (
-                <MenuSection label={m.libraryMenuInsert()}>
-                    <QuickInsertItems
-                        insertable={insertable}
-                        selection={selection}
-                        isFavorite={favorite !== undefined}
-                        source={source}
-                    />
-                </MenuSection>
-            )}
             <DownloadStepMenuSection
                 insertable={insertable}
                 selection={selection}

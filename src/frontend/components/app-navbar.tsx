@@ -16,6 +16,7 @@ import {
     type Icon,
     MagnifyingGlassIcon,
     MoonIcon,
+    PuzzlePieceIcon,
     SunIcon
 } from "@phosphor-icons/react";
 import {
@@ -60,6 +61,8 @@ import {
     useIsVersionManager,
     useIsVersionManagerNew
 } from "../features/version-manager/navigation";
+import { useIsFeatureScripts } from "../features/featurescripts/navigation";
+import { FeatureScriptSearchBar } from "../features/featurescripts/components/featurescript-search-bar";
 import { useTargetWorkspace } from "../lib/onshape-params";
 import { type WorkspacePath } from "@backend/features/version-manager/contract";
 import { type AppTab, UtilityTab } from "../lib/app-tab";
@@ -94,9 +97,11 @@ export function NavbarRow(props: PropsWithChildren): ReactNode {
 
 /** The page picker with the brand and settings, over search and its filters. */
 export function AppNavbar(): ReactNode {
-    // Search and its filters belong to a library, and the version manager is
-    // not one; its page fills the room they leave.
+    // Search and its filters belong to a library; FeatureScripts has a search
+    // of its own there, and the version manager's page fills the room.
     const isVersionManager = useIsVersionManager();
+    const isFeatureScripts = useIsFeatureScripts();
+    const isLibrary = !isVersionManager && !isFeatureScripts;
     const workspace = useTargetWorkspace();
 
     return (
@@ -104,8 +109,8 @@ export function AppNavbar(): ReactNode {
             <NavbarRow>
                 <PagePicker />
                 <Group gap="xs" ml="auto" className={styles.noShrink}>
-                    {/* Inserting is the library's; the version manager inserts nothing. */}
-                    {!isVersionManager && <InsertLocationStatus />}
+                    {/* The insert location is where a library's parts land in an assembly. */}
+                    {isLibrary && <InsertLocationStatus />}
                     <SignInButton />
                     {isVersionManager && workspace && (
                         <VersionManagerRefreshButton workspace={workspace} />
@@ -113,10 +118,15 @@ export function AppNavbar(): ReactNode {
                     <SettingsControls />
                 </Group>
             </NavbarRow>
-            {!isVersionManager && (
+            {isLibrary && (
                 <Group gap="xs" px="sm" h={NAVBAR_ROW_HEIGHT}>
                     <SearchBar />
                     <VendorMenu />
+                </Group>
+            )}
+            {isFeatureScripts && (
+                <Group gap="xs" px="sm" h={NAVBAR_ROW_HEIGHT}>
+                    <FeatureScriptSearchBar />
                 </Group>
             )}
         </Stack>
@@ -168,8 +178,17 @@ function useAppPages(): AppPage[] {
         )
     }));
 
+    // Needs no document: browsing works anywhere, and adding says why it can't.
+    const featureScripts: AppPage = {
+        tab: UtilityTab.FEATURESCRIPTS,
+        group: UTILITIES_GROUP,
+        icon: PuzzlePieceIcon,
+        color: AppColor.FEATURESCRIPTS
+    };
+
     return [
         ...libraries,
+        featureScripts,
         {
             tab: UtilityTab.VERSION_MANAGER,
             group: UTILITIES_GROUP,
@@ -195,11 +214,14 @@ function PagePicker(): ReactNode {
     const pages = useAppPages();
     const currentLibraryId = useLibraryId();
     const isVersionManager = useIsVersionManager();
+    const isFeatureScripts = useIsFeatureScripts();
     const navigateToTab = useNavigateToTab();
 
     const current: AppTab = isVersionManager
         ? UtilityTab.VERSION_MANAGER
-        : currentLibraryId;
+        : isFeatureScripts
+          ? UtilityTab.FEATURESCRIPTS
+          : currentLibraryId;
     const currentPage = pages.find((page) => page.tab === current);
 
     // Warm the versions on hover, so picking one has nothing left to wait for.

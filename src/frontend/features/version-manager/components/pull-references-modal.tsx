@@ -1,6 +1,7 @@
 import { ArrowLineDownIcon } from "@phosphor-icons/react";
 import { useState, type ReactNode } from "react";
 import {
+    LinkDirection,
     PullScopeKind,
     type LinkedWorkspace,
     type WorkspacePath
@@ -10,6 +11,8 @@ import { useAppModal } from "../../../components/open-app-modal";
 import { IconSize } from "../../../lib/style-constants";
 import { useIsVersionJobRunning, usePullReferencesMutation } from "../queries";
 import { VersionForm, type VersionFields } from "./version-form";
+import { showQuickRecursiveTip } from "../tips";
+import { m } from "../../../paraglide/messages";
 
 interface PullReferencesFormProps {
     workspace: WorkspacePath;
@@ -17,7 +20,7 @@ interface PullReferencesFormProps {
     source: LinkedWorkspace;
 }
 
-/** A modified click on the row runs this under the defaults it shows. */
+/** A click on a parent's row opens this; its button and menu run under the defaults it shows. */
 export function PullReferencesForm(props: PullReferencesFormProps): ReactNode {
     const { workspace, source } = props;
     const modal = useAppModal();
@@ -37,7 +40,10 @@ export function PullReferencesForm(props: PullReferencesFormProps): ReactNode {
                 }
             },
             {
-                onSuccess: () => modal.close()
+                onSuccess: () => {
+                    modal.close();
+                    if (recursive) showQuickRecursiveTip(LinkDirection.PARENT);
+                }
             }
         );
     };
@@ -45,15 +51,15 @@ export function PullReferencesForm(props: PullReferencesFormProps): ReactNode {
     return (
         <VersionForm
             versioned={source.workspace}
-            submitLabel="Pull"
+            submitLabel={m.versionManagerFormPull()}
             submitIcon={<ArrowLineDownIcon size={IconSize.SMALL} />}
             isPending={pull.isPending}
             disabled={isRunning}
             onSubmit={submit}
             options={
                 <InfoCheckbox
-                    label="Recursive"
-                    info="Also pulls into the parent from the documents linked above it first, saving a new version of each one along the way so the next can use it. Each is numbered from its own versions unless you name them above."
+                    label={m.versionManagerFormRecursive()}
+                    info={m.versionManagerFormRecursivePullInfo()}
                     checked={recursive}
                     onChange={setRecursive}
                 />

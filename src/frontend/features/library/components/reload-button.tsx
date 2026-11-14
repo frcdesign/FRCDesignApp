@@ -5,6 +5,8 @@ import { ArrowsClockwiseIcon, WarningIcon } from "@phosphor-icons/react";
 import { AppIcon } from "../../../components/app-icon";
 import { AppTitle } from "../../../components/app-title";
 import { IconSize, StatusColor } from "../../../lib/style-constants";
+import { getLibraryName, useLibraryId } from "../../../lib/library";
+import { m } from "../../../paraglide/messages";
 import { ReactNode } from "react";
 
 interface ReloadButtonProps {
@@ -14,11 +16,14 @@ interface ReloadButtonProps {
 
 export function ReloadButton(props: ReloadButtonProps): ReactNode {
     const { all = false } = props;
+    const libraryId = useLibraryId();
+    const mutation = useReloadMutation(all);
     // Reloading everything spends the account's Onshape allocation.
     const color = all ? StatusColor.ERROR : StatusColor.INFO;
-    const mutation = useReloadMutation(all);
 
     const handleClick = () => {
+        // Named, since the admin settings can point at a library other than the one shown.
+        const library = getLibraryName(libraryId);
         modals.openConfirmModal({
             title: (
                 <AppTitle
@@ -31,19 +36,22 @@ export function ReloadButton(props: ReloadButtonProps): ReactNode {
                     }
                     title={
                         all
-                            ? "Reload all documents"
-                            : "Reload outdated documents"
+                            ? m.libraryReloadAllTitle()
+                            : m.libraryReloadOutdatedTitle()
                     }
                 />
             ),
             children: (
                 <Text>
                     {all
-                        ? "Are you sure you want to reload every document in this library? This is an expensive operation."
-                        : "Reload the documents in this library with a new version or a failed load?"}
+                        ? m.libraryReloadAllConfirm({ library })
+                        : m.libraryReloadOutdatedConfirm({ library })}
                 </Text>
             ),
-            labels: { confirm: "Reload documents", cancel: "Cancel" },
+            labels: {
+                confirm: m.libraryReloadConfirm(),
+                cancel: m.libraryReloadCancel()
+            },
             confirmProps: { color },
             onConfirm: () => mutation.mutate()
         });
@@ -56,7 +64,7 @@ export function ReloadButton(props: ReloadButtonProps): ReactNode {
             onClick={handleClick}
             loading={mutation.isPending}
         >
-            Reload
+            {m.libraryReload()}
         </Button>
     );
 }

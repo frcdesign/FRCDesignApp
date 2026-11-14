@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { queryOptions, useQuery } from "@tanstack/react-query";
+import { queryOptions, useQueries, useQuery } from "@tanstack/react-query";
 import {
     AccessLevel,
     type AccessData,
@@ -9,7 +9,7 @@ import {
 import { accessDataQueryKey } from "../../lib/query-keys";
 import { toLibraryPath } from "../../lib/api-paths";
 import { useLibraryId } from "../../lib/library";
-import type { LibraryId } from "@backend/features/library/library-id";
+import { LibraryId } from "@backend/features/library/library-id";
 import { apiGet } from "../../lib/api-client";
 import { useUiState } from "../../lib/ui-state";
 
@@ -40,21 +40,57 @@ interface ResolvedAccessData extends AccessData {
     isPending: boolean;
 }
 
+/** A stored choice can outlive the access that allowed it, so it is clamped to max. */
+function resolveAccessData(
+    serverData: AccessData,
+    chosenLevel: AccessLevel | undefined,
+    isPending: boolean
+): ResolvedAccessData {
+    const desired = chosenLevel ?? DEFAULT_ACCESS_LEVEL;
+    const currentAccessLevel = isWithinAccessLevel(
+        desired,
+        serverData.maxAccessLevel
+    )
+        ? desired
+        : serverData.maxAccessLevel;
+    return { ...serverData, currentAccessLevel, isPending };
+}
+
 /** The viewed level is a local choice, so it survives refetches. */
 export function useAccessData(): ResolvedAccessData {
     const libraryId = useLibraryId();
     const { data, isPending } = useQuery(getAccessDataQuery(libraryId));
-    const serverData = data ?? DEFAULT_ACCESS_DATA;
     const chosenLevel = useUiState((state) => state.accessLevel);
-    return useMemo(() => {
-        const desired = chosenLevel ?? DEFAULT_ACCESS_LEVEL;
-        let currentAccessLevel = desired;
-        if (!isWithinAccessLevel(desired, serverData.maxAccessLevel)) {
-            // A stored choice can outlive the access that allowed it; clamp to max.
-            currentAccessLevel = serverData.maxAccessLevel;
-        }
-        return { ...serverData, currentAccessLevel, isPending };
-    }, [serverData, chosenLevel, isPending]);
+    return useMemo(
+        () =>
+            resolveAccessData(
+                data ?? DEFAULT_ACCESS_DATA,
+                chosenLevel,
+                isPending
+            ),
+        [data, chosenLevel, isPending]
+    );
+}
+
+const LIBRARY_IDS = Object.values(LibraryId);
+
+/** As `useAccessData`, for every library at once. */
+export function useEveryLibraryAccess(): Record<LibraryId, ResolvedAccessData> {
+    const chosenLevel = useUiState((state) => state.accessLevel);
+    return useQueries({
+        queries: LIBRARY_IDS.map(getAccessDataQuery),
+        combine: (results) =>
+            Object.fromEntries(
+                results.map((result, index) => [
+                    LIBRARY_IDS[index],
+                    resolveAccessData(
+                        result.data ?? DEFAULT_ACCESS_DATA,
+                        chosenLevel,
+                        result.isPending
+                    )
+                ])
+            ) as Record<LibraryId, ResolvedAccessData>
+    });
 }
 
 /** Reads signed out while pending; see `isPending`. */

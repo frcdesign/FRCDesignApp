@@ -134,7 +134,9 @@ interface ItemRowProps {
     /** Menu items shown on right-click and (when shown) via the "more" button. */
     menuItems: ReactNode;
     onClick?: () => void;
-    /** Extra right-aligned controls (e.g. a favorite button or an arrow). */
+    /** The row's own controls, before its menu button: a quick action, a heart. */
+    actions?: ReactNode;
+    /** After the menu button, at the row's edge, e.g. an arrow. */
     rightSection?: ReactNode;
     /** Shows the explicit "..." button that opens the same menu. */
     moreButton?: boolean;
@@ -150,6 +152,7 @@ export function ItemRow(props: ItemRowProps): ReactNode {
         left,
         menuItems,
         onClick,
+        actions,
         rightSection,
         moreButton = true,
         isNew,
@@ -167,6 +170,7 @@ export function ItemRow(props: ItemRowProps): ReactNode {
                             justify="flex-end"
                             className={styles.noShrink}
                         >
+                            {actions}
                             {moreButton && (
                                 <MenuButton isNew={isNew} onClose={onMenuClose}>
                                     {menuItems}

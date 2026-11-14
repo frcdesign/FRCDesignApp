@@ -87,15 +87,18 @@ sits in an info tooltip at the callout's end.
 
 ## Settings menu
 
-| String                                  | Kind               | Where                                     | When                                         | Review    |
-| --------------------------------------- | ------------------ | ----------------------------------------- | -------------------------------------------- | --------- |
-| "Admin settings"                        | Section title      | Below the user settings, folding          | The user's highest access is editor or above |           |
-| "Open outside Onshape" / "Open app"     | Row label / button | User settings                             | Inside Onshape's panel                       |           |
-| "Usage dashboard" / "Open dashboard"    | Row label / button | User settings                             | Outside the dashboard                        |           |
-| "Main app" / "Open app"                 | Row label / button | User settings                             | On the dashboard                             |           |
-| "Get the FRCDesignApp" / "Instructions" | Row label / button | User settings                             | Standalone                                   |           |
-| "Onshape account" / "Sign out"          | Row label / button | User settings                             | Standalone and signed in                     |           |
-| "Access level"                          | Select label       | Admin settings                            | Always                                       |           |
-| "Outdated documents" / "All documents"  | Row labels         | Admin settings, beside the reload buttons | Editor or above / owner                      |           |
-| "Testbench" / "Open testbench"          | Row label / button | Admin settings                            | Owner; opens `/testbench`                    | **⚑** New |
-| "Admin team members"                    | Row label          | Admin settings                            | Admin or above                               |           |
+| String                                  | Kind               | Where                                  | When                                         | Review    |
+| --------------------------------------- | ------------------ | -------------------------------------- | -------------------------------------------- | --------- |
+| "Admin settings"                        | Section title      | Below the user settings, folding       | The user's highest access is editor or above |           |
+| "Open outside Onshape" / "Open app"     | Row label / button | User settings                          | Inside Onshape's panel                       |           |
+| "Usage dashboard" / "Open dashboard"    | Row label / button | User settings                          | Outside the dashboard                        |           |
+| "Main app" / "Open app"                 | Row label / button | User settings                          | On the dashboard                             |           |
+| "Get the FRCDesignApp" / "Instructions" | Row label / button | User settings                          | Standalone                                   |           |
+| "Onshape account" / "Sign out"          | Row label / button | User settings                          | Standalone and signed in                     |           |
+| "Access level"                          | Select label       | Admin settings                         | Always                                       |           |
+| "Settings for"                          | Select label       | Admin settings, under the access level | Editor or above in some library              | **⚑** New |
+| "FRCDesignApp"                          | Select option      | "Settings for", after the libraries    | Owner                                        | **⚑** New |
+| "Outdated documents" / "All documents"  | Row labels         | A library's admin settings             | Editor or above / owner                      |           |
+| "FeatureScripts"                        | Row label          | FRCDesignApp's admin settings          | Owner; beside **Reload**                     | **⚑** New |
+| "Testbench" / "Open testbench"          | Row label / button | FRCDesignApp's admin settings          | Owner; opens `/testbench`                    | **⚑** New |
+| "Admin team members"                    | Row label          | A library's admin settings             | Admin or above                               |           |

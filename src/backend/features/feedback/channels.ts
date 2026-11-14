@@ -12,7 +12,8 @@ import {
 const FORUM_WEBHOOKS = {
     [DiscordForum.APP]: "DISCORD_APP_WEBHOOK_URL",
     [DiscordForum.LIBRARY]: "DISCORD_FRC_DESIGN_LIB_WEBHOOK_URL",
-    [DiscordForum.CONFIG_LIB]: "DISCORD_CONFIG_LIB_WEBHOOK_URL"
+    [DiscordForum.CONFIG_LIB]: "DISCORD_CONFIG_LIB_WEBHOOK_URL",
+    [DiscordForum.FEATURESCRIPTS]: "DISCORD_FEATURESCRIPTS_WEBHOOK_URL"
 } as const satisfies Record<DiscordForum, keyof AppBindings>;
 
 /** Discord applies at most five tags to a thread. */

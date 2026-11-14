@@ -1,4 +1,5 @@
 import {
+    FeedbackArea,
     FeedbackCategory,
     FeedbackTopic,
     MAX_FEEDBACK_TITLE
@@ -17,6 +18,21 @@ export function topicLabel(topic: FeedbackTopic): string {
             return m.feedbackTopicMkcad();
         case FeedbackTopic.CONFIG_LIB:
             return m.feedbackTopicConfigLib();
+        case FeedbackTopic.FEATURESCRIPTS:
+            return m.feedbackTopicFeatureScripts();
+    }
+}
+
+export function areaLabel(area: FeedbackArea): string {
+    switch (area) {
+        case FeedbackArea.PART_LIBRARY:
+            return m.feedbackAreaPartLibrary();
+        case FeedbackArea.APP:
+            return m.feedbackAreaApp();
+        case FeedbackArea.VERSION_MANAGER:
+            return m.feedbackAreaVersionManager();
+        case FeedbackArea.FEATURESCRIPTS:
+            return m.feedbackAreaFeatureScripts();
     }
 }
 
@@ -68,22 +84,22 @@ export function descriptionPlaceholder(category: FeedbackCategory): string {
 
 interface TitleContext {
     category: FeedbackCategory;
-    /** The part a part report names. */
-    partName?: string;
+    /** The part or FeatureScript the report names. */
+    subject?: string;
     /** What an error report's user was shown. */
     errorShown?: string;
 }
 
 /** What the form fills the title in with until the reporter writes their own; none for general feedback. */
 export function suggestTitle(context: TitleContext): string | undefined {
-    const { category, partName, errorShown } = context;
+    const { category, subject, errorShown } = context;
     let title;
     if (errorShown) {
         title = errorShown.replace(/\.$/, "");
-    } else if (partName) {
+    } else if (subject) {
         title = m.feedbackSuggestedTitle({
             type: typeLabel(category),
-            about: partName
+            about: subject
         });
     } else {
         return undefined;
