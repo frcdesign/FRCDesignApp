@@ -623,6 +623,8 @@
     "featureScriptsVersionUnknown": "Unknown",
     "featureScriptsGet": "Get FeatureScript",
     "featureScriptsViewCode": "View code",
+    "featureScriptsReloadStarted": "Reloading FeatureScripts. The list updates when the load finishes.",
+    "featureScriptsReloadFailed": "Failed to reload FeatureScripts.",
     "featureScriptsBuildChecks": "Build checks",
     "featureScriptsSettings": "Settings",
     "featureScriptsUsage": "Usage",

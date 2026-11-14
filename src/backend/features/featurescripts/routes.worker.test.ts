@@ -18,6 +18,7 @@ import {
 } from "./contract";
 import { featureScripts, featureScriptsDocument } from "./schema";
 import { iconKey } from "./store";
+import * as LoadClaim from "./load-claim";
 import { AccessLevel } from "../auth/access-level";
 import { events } from "../analytics/schema";
 import { EventType } from "../analytics/usage";
@@ -286,6 +287,31 @@ describe("featurescripts routes", () => {
         expect(
             body.features.find((feature) => feature.id === "frame")
         ).toMatchObject({ isVisible: false });
+    });
+
+    it("lets the owner alone reload, as themselves", async () => {
+        const load = vi
+            .spyOn(LoadClaim, "requestFeatureScriptsLoad")
+            .mockResolvedValue();
+        const reload = (accessLevel: AccessLevel) => {
+            const init = jsonRequest("POST", {});
+            return createTestApp({ accessLevel }).request(
+                "/api/featurescripts/reload",
+                {
+                    ...init,
+                    headers: {
+                        ...init.headers,
+                        Cookie: "__Host-frc-design-app-session=s"
+                    }
+                },
+                env
+            );
+        };
+
+        expect((await reload(AccessLevel.ADMIN)).status).toBe(403);
+        expect(load).not.toHaveBeenCalled();
+        expect((await reload(AccessLevel.OWNER)).status).toBe(200);
+        expect(load.mock.calls[0][1]).toEqual({ sessionId: "s", force: false });
     });
 
     it("refuses visibility to anyone but the owner, and for a feature that isn't there", async () => {

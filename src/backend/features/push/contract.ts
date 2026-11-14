@@ -7,7 +7,8 @@ export enum PushType {
     JOBS = "jobs",
     LIBRARY = "library",
     THUMBNAIL = "thumbnail",
-    VERSION_JOB = "version-job"
+    VERSION_JOB = "version-job",
+    FEATURESCRIPTS = "featurescripts"
 }
 
 /** A library's load jobs started or finished. */
@@ -37,7 +38,13 @@ export interface VersionJobPush {
     workspaceKey: string;
 }
 
+/** A load of the FeatureScripts wrote, so their cache version moved. */
+export interface FeatureScriptsPush {
+    type: PushType.FEATURESCRIPTS;
+}
+
 export type PushMessage =
+    | FeatureScriptsPush
     | JobsPush
     | LibraryPush
     | ThumbnailPush

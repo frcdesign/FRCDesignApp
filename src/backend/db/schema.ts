@@ -245,7 +245,9 @@ export const recentInserts = sqliteTable(
 export enum WebhookSubject {
     DOCUMENT = "document",
     /** A library's admin team, heard about through its company. */
-    TEAM = "team"
+    TEAM = "team",
+    /** The FeatureScripts frontend document, for its new versions. */
+    FEATURESCRIPTS = "featurescripts"
 }
 
 /**

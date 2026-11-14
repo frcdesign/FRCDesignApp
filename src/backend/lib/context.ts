@@ -3,6 +3,7 @@ import type { ReloadParams } from "../features/load/jobs";
 import type { RenderThumbnailParams } from "../features/thumbnails/render-workflow";
 import type { ClientRelay } from "../features/push/client-relay";
 import type { VersionJobParams } from "../features/version-manager/workflow";
+import type { LoadFeatureScriptsParams } from "../features/featurescripts/load-claim";
 import { type AccessLevel } from "../features/auth/access-level";
 import type { LibraryId } from "../features/library/library-id";
 import { type OAuthApi } from "./onshape/client";
@@ -19,6 +20,9 @@ export interface AppBindings {
     RENDER_THUMBNAIL_WORKFLOW: Workflow<RenderThumbnailParams>;
     /** Pushes and pulls, which are chains of Onshape writes; see the workflow. */
     VERSION_MANAGER_WORKFLOW: Workflow<VersionJobParams>;
+    LOAD_FEATURESCRIPTS_WORKFLOW: Workflow<LoadFeatureScriptsParams>;
+    /** The frontend document the FeatureScripts tab loads; unset loads nothing. */
+    FEATURESCRIPTS_DOCUMENT_ID?: string;
     /** Relays pushes to open clients; see `features/push`. */
     CLIENT_RELAY: DurableObjectNamespace<ClientRelay>;
     /** Where the app is served, without a trailing slash; see `wrangler.jsonc`. */

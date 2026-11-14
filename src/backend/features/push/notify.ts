@@ -41,6 +41,11 @@ export function pushVersionJob(
     return broadcast(env, { type: PushType.VERSION_JOB, workspaceKey });
 }
 
+/** Tells every client the FeatureScripts' cache version moved. */
+export function pushFeatureScriptsChanged(env: AppBindings): Promise<void> {
+    return broadcast(env, { type: PushType.FEATURESCRIPTS });
+}
+
 export function pushThumbnailRendered(
     env: AppBindings,
     thumbnail: Omit<ThumbnailPush, "type">

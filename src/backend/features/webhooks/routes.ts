@@ -22,6 +22,7 @@ import {
 import { forgetUnitInfo } from "../configurations/units";
 import { forgetWorkspace } from "../version-manager/workspace-cache";
 import { syncTeamLibraries } from "../admin-team/sync";
+import { requestFeatureScriptsLoad } from "../featurescripts/load-claim";
 
 export const webhookRoutes = getApp();
 
@@ -51,6 +52,8 @@ webhookRoutes.post(WEBHOOK_ROUTE, async (c) => {
             case WebhookEvent.CREATE_VERSION:
                 if (subject === WebhookSubject.DOCUMENT) {
                     await receiveNewVersion(c.env, subjectId);
+                } else if (subject === WebhookSubject.FEATURESCRIPTS) {
+                    await requestFeatureScriptsLoad(c.env, { force: false });
                 }
                 break;
             case WebhookEvent.TEAM_ADD_MEMBER:

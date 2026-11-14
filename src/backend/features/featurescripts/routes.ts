@@ -21,6 +21,7 @@ import {
     type FeatureScriptFavoritesOut,
     type FeatureScriptStatsOut,
     featureScriptVisibilityBody,
+    reloadFeatureScriptsBody,
     type FeatureScriptsVersionOut
 } from "./contract";
 import {
@@ -30,6 +31,8 @@ import {
 } from "./schema";
 import { getCacheVersion, getFeatureScriptsOut, iconKey } from "./store";
 import { trackFeatureAdd } from "../analytics/tracking";
+import { getSessionId } from "../auth/session";
+import { requestFeatureScriptsLoad } from "./load-claim";
 import {
     dailyFeatureScriptMetrics,
     dailyFeatureScriptUsers
@@ -242,6 +245,21 @@ featureScriptRoutes.post(
         }
         await db.update(featureScriptsDocument).set({
             cacheVersion: sql`${featureScriptsDocument.cacheVersion} + 1`
+        });
+        return c.json({ success: true });
+    }
+);
+
+/** POST /api/featurescripts/reload — the owner's: loads the latest frontend version now, as the owner. */
+featureScriptRoutes.post(
+    "/featurescripts/reload",
+    requireOwnerMiddleware,
+    validate("json", reloadFeatureScriptsBody),
+    async (c) => {
+        const { force } = c.req.valid("json");
+        await requestFeatureScriptsLoad(c.env, {
+            sessionId: getSessionId(c),
+            force
         });
         return c.json({ success: true });
     }

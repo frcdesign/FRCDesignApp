@@ -13,7 +13,11 @@ import {
 } from "./push-socket";
 import { useTargetWorkspace } from "./onshape-params";
 import { queryClient } from "./query-client";
-import { jobStatusQueryKey, versionJobQueryKey } from "./query-keys";
+import {
+    featureScriptsVersionQueryKey,
+    jobStatusQueryKey,
+    versionJobQueryKey
+} from "./query-keys";
 import { useRefreshLibrary } from "./refresh";
 
 export function usePushSync(): void {
@@ -56,6 +60,11 @@ export function usePushSync(): void {
                             queryKey: versionJobQueryKey(workspace)
                         });
                     }
+                    break;
+                case PushType.FEATURESCRIPTS:
+                    void queryClient.invalidateQueries({
+                        queryKey: featureScriptsVersionQueryKey()
+                    });
                     break;
                 case PushType.THUMBNAIL:
                     // Rows that took a miss; anything waiting on the render hears the push itself.

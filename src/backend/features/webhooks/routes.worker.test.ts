@@ -12,6 +12,7 @@ import { groups, onshapeWebhooks, WebhookSubject } from "../../db/schema";
 import * as Jobs from "../load/jobs";
 import * as Holds from "../load/holds";
 import { WebhookEvent } from "./registration";
+import * as FeatureScriptsLoad from "../featurescripts/load-claim";
 
 const db = getDb(env.DB);
 const DOCUMENT = `doc-${TEST_GROUP_ID}`;
@@ -114,6 +115,22 @@ describe("receiving a webhook", () => {
             ])
         );
         expect(load).not.toHaveBeenCalled();
+    });
+
+    it("loads the FeatureScripts on a new version of their document", async () => {
+        const token = await registered(
+            WebhookSubject.FEATURESCRIPTS,
+            "frontend"
+        );
+        const load = vi
+            .spyOn(FeatureScriptsLoad, "requestFeatureScriptsLoad")
+            .mockResolvedValue();
+        const hold = vi.spyOn(Holds, "receiveNewVersion");
+
+        await deliver({ event: WebhookEvent.CREATE_VERSION }, token);
+
+        expect(load).toHaveBeenCalledWith(expect.anything(), { force: false });
+        expect(hold).not.toHaveBeenCalled();
     });
 
     // So the next load of the document registers a new one.

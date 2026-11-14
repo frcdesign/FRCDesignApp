@@ -68,6 +68,11 @@ export const featureScriptVisibilityBody = z.object({
     isVisible: z.boolean()
 });
 
+export const reloadFeatureScriptsBody = z.object({
+    /** Reloads every feature, unchanged or not. */
+    force: z.boolean().default(false)
+});
+
 export const addFeatureScriptBody = z.object({
     /** A Part Studio in a workspace. */
     targetPath: z.object({

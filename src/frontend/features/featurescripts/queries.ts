@@ -21,7 +21,11 @@ import { ElementType } from "@backend/lib/onshape/element-type";
 import { apiDelete, apiGet, apiPost } from "../../lib/api-client";
 import { handleAppError } from "../../lib/errors";
 import { sendOpenFeatureMessage } from "../../lib/messages";
-import { showLoadingToast, showSuccessToast } from "../../lib/notifications";
+import {
+    showInfoToast,
+    showLoadingToast,
+    showSuccessToast
+} from "../../lib/notifications";
 import { useOnshapeOrigin, useTargetElement } from "../../lib/onshape-params";
 import { makeUrl } from "../../lib/url";
 import {
@@ -217,6 +221,20 @@ export function useSetVisibilityMutation(feature: FeatureScriptOut) {
             queryClient.invalidateQueries({
                 queryKey: featureScriptsVersionQueryKey()
             })
+    });
+}
+
+/** The owner's reload; the list moves when the load's push arrives. */
+export function useReloadFeatureScriptsMutation() {
+    return useMutation({
+        mutationKey: ["reload-featurescripts"],
+        mutationFn: () =>
+            apiPost("/featurescripts/reload", { body: { force: false } }),
+        onError: (error) =>
+            handleAppError(error, m.featureScriptsReloadFailed()),
+        onSuccess: () => {
+            showInfoToast(m.featureScriptsReloadStarted());
+        }
     });
 }
 

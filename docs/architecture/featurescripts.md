@@ -1,12 +1,7 @@
 # FeatureScripts
 
-**Status: partly built.** The tables, the list, icon, add, favorite,
-visibility and stats routes, recording each add, the tab with its
-categories, favorites, row buttons, owner's card and popup, and feedback are
-built. The manifest, loading from it, the robot-code release changes and the
-dashboard's section are still the design below;
-names in the code map that don't exist yet are named from `src/backend/`
-without it.
+**Status: built, but for the dashboard's section**, which is still the design
+below.
 
 ## Purpose
 
@@ -54,7 +49,7 @@ DELETE /api/featurescripts/:featureId/favorite
 POST   /api/featurescripts/:featureId/visibility    owner: shows or hides it, bumping the cache version
 POST   /api/featurescripts/:featureId/add    adds it to the Part Studio in the body
 GET    /api/featurescripts/stats             owner: each feature's adds, users and favorites, all time
-POST   /api/featurescripts/reload            owner: loads the latest version now (not built)
+POST   /api/featurescripts/reload            owner: loads the latest version now, as the owner
 ```
 
 `src/backend/features/featurescripts/store.ts`
@@ -66,24 +61,35 @@ function iconKey(elementId: string, microversionId: string): string;
 function iconUrl(elementId: string, microversionId: string): string;
 ```
 
-`features/featurescripts/workflow.ts`
+`src/backend/features/featurescripts/workflow.ts`
 
 ```ts
-// Loads one version of the frontend document; one run at a time.
+// Loads the latest version of the frontend document; one run at a time.
 class LoadFeatureScriptsWorkflow extends WorkflowEntrypoint<
     AppBindings,
-    LoadParams
+    LoadFeatureScriptsParams
 > {}
+```
 
-interface LoadParams {
+`src/backend/features/featurescripts/load-claim.ts`
+
+```ts
+interface LoadFeatureScriptsParams {
     /** Absent for a webhook's run. */
     sessionId?: string;
     /** Reloads every feature, unchanged or not. */
     force: boolean;
 }
+function requestFeatureScriptsLoad(
+    env: AppBindings,
+    params: LoadFeatureScriptsParams
+): Promise<void>;
+// KV's `featurescripts-load`: the run holding the load; false while a live one does.
+function claimLoad(env: AppBindings, instanceId: string): Promise<boolean>;
+function releaseLoad(env: AppBindings, instanceId: string): Promise<void>;
 ```
 
-`features/featurescripts/manifest.ts`
+`src/backend/features/featurescripts/manifest.ts`
 
 ```ts
 // The manifest tab, "featurescripts.json" at the document's top level.
@@ -101,11 +107,13 @@ function categoryOf(
     contents: DocumentContents,
     elementId: string
 ): string | undefined;
+// Each tab's position in tab-bar order, which sorts the list.
+function tabOrder(contents: DocumentContents): Map<string, number>;
 ```
 
 The manifest's shape is in [The manifest](#the-manifest).
 
-`lib/onshape/endpoints/blobs.ts`
+`src/backend/lib/onshape/endpoints/blobs.ts`
 
 ```ts
 function downloadBlob(client: OnshapeApi, path: ElementPath): Promise<Response>;
@@ -417,43 +425,56 @@ the moment the release is.
 ### Loading — `LoadFeatureScriptsWorkflow`
 
 Started by the webhook for a new frontend version, and by the owner's
-**Reload**. A version is final once it's in the frontend document, so a new
-version loads at once, with no approval.
+**Reload** (the refresh button in the tab's header). A version is final once
+it's in the frontend document, so a new version loads at once, with no
+approval. Nothing loads while `FEATURESCRIPTS_DOCUMENT_ID` is unset.
 
-1. Claims the load, waiting while another run holds it, as a library reload
-   does.
-2. `document`, `version`: the document, and its latest version, the one to
-   load.
-3. Ends here when that version is the one loaded, unless forced.
-4. `contents`: the version's tabs, for each tab's microversion and folder.
+1. `claim-{turn}`: takes the load (`claimLoad`), waiting 30 seconds a turn
+   while a live run holds it, as a library reload does.
+2. `document`, `version`: the document, for its default workspace, and its
+   latest version, the one to load.
+3. `read-stored`: the loaded version and the rows. Ends here, registering
+   the webhook, when that version is the one loaded, unless forced or a
+   feature's last load failed.
+4. `contents`: the version's tabs, for each tab's microversion, folder and
+   place.
 5. `manifest`: `findManifestTab`, then `GET /blobelements/d/{did}/v/{vid}/e/{eid}`,
-   then `parseManifest`. A version without one, or with one that doesn't
-   parse, fails the load and changes nothing.
-6. Pairs each entry with its example: `findExample`
-   ([Finding the example](#finding-the-example)). Features sharing an example
-   share its thumbnail, rendered once.
-7. Selects the entries that are new, whose studio's, example's or icon's
-   microversion changed, whose example appeared or went, or that failed last
-   time; every one when forced. An entry is the list: a Feature Studio the
-   manifest doesn't name isn't shown.
-8. Per selected entry, under the shared limiter:
-    - `thumbnail-{element}`: the example's, stored by `uploadThumbnailsStep`
-      under the example's element and microversion. No example skips the step:
-      `NO_EXAMPLE`, and the popup shows the app's empty state in its place.
-    - `icon-{element}`: the icon tab's SVG, stored in R2. No icon skips the
-      step: `NO_ICON`, and the card shows the generic FeatureScript icon.
-    - An entry naming a tab the version doesn't have is `LOAD_FAILED`.
-9. `save`: every row in one batch — the loaded, the unchanged carried over
-   with the manifest's fields and each category rewritten, the removed deleted
-   — and the document row with its version and bumped `cache_version`. Then
-   pushes `featurescripts-changed` to open clients.
-10. `delete-stale-thumbnails`, and the icons no row names, never fatal.
-11. `register-webhook`: `ensureWebhook` for the document.
-12. Releases the load.
+   then `parseManifest`. A version without one fails the load; one that
+   doesn't parse fails it without retrying. Either changes nothing.
+6. Pairs each entry with its Feature Studio, its example (`findExample`,
+   deprecated tabs left out; see
+   [Finding the example](#finding-the-example)), its icon tab, its category
+   (`categoryOf`) and its place (`tabOrder`). An entry whose studio the
+   version doesn't have is logged and left out of the list.
+7. Selects the entries that are new, whose studio's, example's or icon's tab
+   or microversion changed, or that failed last time; every one when forced.
+8. Per selected entry, under the run's limiters:
+    - `thumbnail-{element}-{microversion}`: the example's, stored by
+      `uploadThumbnailsStep` under the example's element and microversion,
+      once for every feature sharing it. No example: `NO_EXAMPLE`, and the
+      popup shows the app's empty state in its place.
+    - `icon-{element}-{microversion}`: the icon tab's file, stored in R2 as
+      `image/svg+xml`. No icon named: `NO_ICON`, and the card shows the
+      generic FeatureScript icon.
+    - An icon the manifest names that the version doesn't have, or a
+      thumbnail or icon that failed, is `LOAD_FAILED`, which the next load
+      retries.
+9. `save`: one batch — the rows the manifest no longer lists deleted, every
+   listed row upserted by `element_id` (keeping its `id` and `is_visible`),
+   and the document row with its version and bumped `cache_version`.
+10. `push`: `featurescripts-changed` (`PushType.FEATURESCRIPTS`) to every
+    client, which refetches the cache version.
+11. `delete-stale`: thumbnails of examples no row names, through
+    `deleteStaleThumbnails` with the rows' examples as `alsoLive`, and icons
+    no row names, each past an hour's grace. Never fatal.
+12. `register-webhook`: `ensureWebhook` for the document, subject
+    `WebhookSubject.FEATURESCRIPTS`. Never fatal.
+13. `release`: always, so the next load can start.
 
-Steps retry as a library's do (`ONSHAPE_STEP_RETRIES`, `THUMBNAIL_RETRIES`). It
-reads Onshape as the owner when the owner asked, and otherwise borrows the
-owner's background session; no one else's.
+Onshape steps retry as a library's do (`ONSHAPE_STEP_RETRIES`, and
+`uploadThumbnailsStep`'s own). It reads Onshape as the owner when the owner
+asked, and otherwise with `getBackgroundOnshapeApi` for no library, which is
+the owner's session; never a library team's.
 
 ### Browsing
 
@@ -514,7 +535,7 @@ owner's background session; no one else's.
    `openFeatureDialog` client message for it (`sendOpenFeatureMessage`, as an
    insert does for its derive), so the feature's dialog opens for its
    selections, and toasts that it was added.
-5. In the background, records a `FEATURE_ADD` event (not built).
+5. In the background, records a `FEATURE_ADD` event.
 
 Standalone, where there is nothing to add to, no add is offered, as no insert
 is. In an assembly the row's **Add**, the popup's **Add to Part Studio** and the
@@ -585,21 +606,20 @@ library's uses, users or part counts. It is its own event,
 
 ## Shared infrastructure
 
-What this area reuses, and the change each needs to stop assuming a library.
-Each is a refactor that lands, with its tests, before the area does.
+What this area reuses, and what each needed to stop assuming a library.
 
-| Piece                                                             | Today                                                | Change                                                                                              |
-| ----------------------------------------------------------------- | ---------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `ensureWebhook`, the delivery route                               | Subjects `DOCUMENT` (a library's) and `TEAM`         | A `FEATURESCRIPTS` subject; the delivery's `switch` sends its `createversion` to the workflow       |
-| `LoadContext`, `getOnshapeApiFromContext`                         | Holds a `libraryId`, and borrows its team's sessions | Holds the libraries whose teams may lend a session; FeatureScripts passes none, so only the owner's |
-| `ONSHAPE_STEP_RETRIES`, `uploadThumbnailsStep`, `prefixSteps`     | Already generic                                      | None                                                                                                |
-| The library's claim in `jobs.ts`                                  | Keyed by library, in `library-reload:`               | The claim-and-wait loop moves to `lib/`, taking its `kvStore`; each area declares its own           |
-| `thumbnailKey`, `putThumbnail`, the serving route                 | Keyed by element and microversion                    | None                                                                                                |
-| `deleteStaleThumbnails`                                           | Reads what's live from `groups` and `insertables`    | Takes the live subjects from its caller, so each area says what it points at                        |
-| `retryInsert`, `addPartStudioFeature`, `finishEvenIfDisconnected` | Already generic                                      | None                                                                                                |
-| `ClientRelay`                                                     | Pushes job status, library versions, renders         | One more message, `featurescripts-changed`                                                          |
-| `record` in analytics                                             | Every event shape spelled out in `logged-event.ts`   | One more shape and its rollups, as the version manager's was added                                  |
-| The feedback form, `POST /api/feedback`                           | Sources general, part, error and crash               | A `FEATURESCRIPT` source, topic and forum, and `featureScript` beside `part` in the body            |
+| Piece                                                             | What it does for FeatureScripts                                                             |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `ensureWebhook`, the delivery route                               | A `FEATURESCRIPTS` subject, registered like a document's; its `createversion` starts a load |
+| `getBackgroundOnshapeApi`                                         | Called with no libraries, so only the owner's session lends itself                          |
+| `ONSHAPE_STEP_RETRIES`, `uploadThumbnailsStep`, `prefixSteps`     | Used as they are; `uploadThumbnailsStep` takes only a step and a limiter                    |
+| The claim                                                         | The area's own, `load-claim.ts`: one run, no groups to queue or report                      |
+| `thumbnailKey`, `putThumbnail`, `uploadThumbnails`, serving       | Used as they are, keyed by element and microversion                                         |
+| `deleteStaleThumbnails`                                           | Takes `alsoLive`, the subjects its caller points at beyond the libraries' rows              |
+| `retryInsert`, `addPartStudioFeature`, `finishEvenIfDisconnected` | Used as they are                                                                            |
+| `ClientRelay`                                                     | One more message, `PushType.FEATURESCRIPTS`, sent to every client                           |
+| `record` in analytics                                             | `FEATURE_ADD`, with its own columns and rollups                                             |
+| The feedback form, `POST /api/feedback`                           | A `FEATURESCRIPT` source, topic and forum, and `featureScript` beside `part` in the body    |
 
 Favorites are the area's own, since a library's reference insertables and
 carry a configuration a feature doesn't have; they reuse the library's heart
@@ -667,6 +687,10 @@ short has little use for them.
   where reading each studio's featurespecs and parsing versions from version
   names would take a call per feature. It lives in the document rather than
   on GitHub, so a version and the file describing it can't disagree.
+- **A claim of its own, not the library's moved to `lib/`.** A library's
+  claim queues groups and reports their progress to editors; this load has
+  one document and nothing to report, so a few lines of its own read more
+  plainly than a shared loop with options for both.
 - **Examples by name and place, not in the manifest.** An example is named for
   its feature, and one shared by several sits after them in their folder; the
   owner sets both by hand in Onshape. With an id in the manifest, each example
