@@ -134,6 +134,7 @@ interface LegacyRow {
 
 interface LoggedValue {
     id: string;
+    name: string | null;
     type: string;
     value: string | null;
 }
@@ -220,12 +221,34 @@ const counts = {
     unknownOption: 0,
     unconfiguredPart: 0,
     removedPart: 0,
-    creditedByName: 0
+    creditedByName: 0,
+    parameterByName: 0
 };
 
 const skip = (reason: string): undefined => {
     counts.skipped.set(reason, (counts.skipped.get(reason) ?? 0) + 1);
     return undefined;
+};
+
+const sameName = (a: string | null, b: string | null) =>
+    a !== null && b !== null && nameKey(a) === nameKey(b);
+
+/**
+ * A re-created tab can give a parameter a new id. Two conditional parameters
+ * can share a name, so the name places a value only when it is unambiguous on
+ * both sides.
+ */
+const byUniqueName = (
+    name: string | null,
+    logged: LoggedValue[],
+    parameters: ConfigurationParameter[]
+): ConfigurationParameter | undefined => {
+    const current = parameters.filter((p) => sameName(p.name, name));
+    const loggedTwice =
+        logged.filter((value) => sameName(value.name, name)).length > 1;
+    if (current.length !== 1 || loggedTwice) return undefined;
+    counts.parameterByName++;
+    return current[0];
 };
 
 /**
@@ -240,9 +263,11 @@ const legacySelection = (
 ): Selection | null => {
     if (parameters.length === 0 || logged.length === 0) return null;
     const values: Selection = {};
-    for (const { id, value } of logged) {
+    for (const { id, name, value } of logged) {
         counts.values++;
-        const parameter = parameters.find((candidate) => candidate.id === id);
+        const parameter =
+            parameters.find((candidate) => candidate.id === id) ??
+            byUniqueName(name, logged, parameters);
         if (!parameter || value === null) {
             counts.unknownParameter++;
             continue;
@@ -677,6 +702,7 @@ const main = async () => {
                 insertsOfRemovedParts: counts.removedPart,
                 insertsOfPartsNowUnconfigured: counts.unconfiguredPart,
                 loggedValues: counts.values,
+                valuesPlacedByParameterName: counts.parameterByName,
                 valuesOfUnknownParameters: counts.unknownParameter,
                 valuesOfUnknownOptions: counts.unknownOption
             },

@@ -37,6 +37,7 @@ SELECT
   TO_JSON_STRING(ARRAY(
     SELECT AS STRUCT
       JSON_VALUE(c, '$.id') AS id,
+      JSON_VALUE(c, '$.name') AS name,
       JSON_VALUE(c, '$.type') AS type,
       JSON_VALUE(c, '$.value') AS value
     FROM UNNEST(JSON_QUERY_ARRAY(json_payload, '$.configuration')) AS c

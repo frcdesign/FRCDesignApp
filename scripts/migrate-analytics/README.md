@@ -59,6 +59,10 @@ A legacy row is close to a `LoggedEvent`, but five things don't copy across:
   inserted under (any of them, case-insensitively), taking that part's element,
   document and parameters, and no version, since the logged one was the old
   tab's. With no such part, or several, it keeps its own id.
+  A re-created tab can also give a parameter a new id, so a logged value whose
+  id the part doesn't declare is placed by the parameter's name, when exactly
+  one parameter has it and the configuration logged it once; conditional
+  parameters can share a name.
 
 Nothing is cut at the switch to the Worker. Both backends served for two weeks
 of September 2026 while DNS moved, but each request reached one of them, so the
