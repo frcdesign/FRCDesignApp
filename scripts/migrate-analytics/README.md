@@ -1,9 +1,8 @@
 # Analytics migration
 
 One-shot tooling that moved the legacy app's usage log out of GCP and into the
-D1 analytics tables. Kept because BigQuery holds the only copy of that history
-and its retention may lapse, and because the run left decisions in it worth
-being able to re-read. [analytics.md](../../docs/architecture/analytics.md)
+D1 analytics tables. Kept because the run left decisions in it worth being
+able to re-read, and so the import can be rebuilt from the archive. [analytics.md](../../docs/architecture/analytics.md)
 describes the imported rows under **Imported history**.
 
 ```sh
@@ -17,6 +16,15 @@ done
 ```
 
 The export holds every user's Onshape id: keep it out of the repository.
+
+## The archive
+
+GCP is not needed again. The private R2 bucket `frc-design-app-archive` holds,
+under `gcp-frc-design-lib-2026-11-14/`, every entry of the log bucket by month,
+this script's export of it (`legacy-events-export.jsonl.gz`, which
+`build-sql.ts` takes as `--events`), the BigQuery summary tables, and the legacy
+Firestore database without its sessions. Its `README.md` lists the files,
+their row counts and checksums.
 
 ## Where the data was
 
@@ -88,6 +96,23 @@ since D1 runs one query at a time and the app's queries queue behind it.
 
 The build refuses a target that already holds imported events
 (`schema_version` 0, `LEGACY_SCHEMA_VERSION`).
+
+## The build
+
+From the 2,222,481 rows of the export, against production's 2,670
+insertables: 24 files, 785 MB, nothing skipped.
+
+- 153,270 inserts credited to a re-created part by name; 56,761 of parts
+  since removed, which count in the totals and are listed nowhere.
+- Of 3,556,414 logged values, 15,041 placed by parameter name, 39,726 left out
+  for a parameter the part no longer declares (most of them a re-created
+  spacer's dropped color parameters), and 49,553 for an option it no longer
+  offers.
+
+Applied in order to a local copy, the files gave exactly the tables a single
+unsplit build did, so each merge reproduces `rollupWrites`; every day's inserts,
+opens and distinct users, and every part's uses, matched BigQuery and the
+export.
 
 ## The production run
 
