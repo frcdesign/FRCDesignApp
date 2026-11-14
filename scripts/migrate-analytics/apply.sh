@@ -54,6 +54,12 @@ for file in "$dir"/*.sql; do
             sleep "$wait"
             continue
         fi
+        # Wrangler can lose track of an import that finished ("Not currently
+        # importing anything"), so the target says whether it landed.
+        if applied "$id"; then
+            echo "$name: applied, though wrangler reported a failure"
+            break
+        fi
         echo "$name: failed" >&2
         grep -E "ERROR|code:" "$log" >&2
         exit 1
