@@ -1,0 +1,84 @@
+# Analytics migration
+
+One-shot tooling that moved the legacy app's usage log out of GCP and into the
+D1 analytics tables. Kept because BigQuery holds the only copy of that history
+and its retention may lapse, and because the run left decisions in it worth
+being able to re-read. [analytics.md](../../docs/architecture/analytics.md)
+describes the imported rows under **Imported history**.
+
+```sh
+GCP_ACCESS_TOKEN=$(gcloud auth print-access-token) \
+    python3 scripts/migrate-analytics/export.py out/legacy-events.jsonl
+npx tsx scripts/migrate-analytics/build-sql.ts \
+    --events out/legacy-events.jsonl --env production --out out/analytics
+for f in out/analytics/*.sql; do
+    npx wrangler d1 execute DB --env production --remote --yes --file="$f" || break
+done
+```
+
+The export holds every user's Onshape id: keep it out of the repository.
+
+## Where the data was
+
+The Cloud Run app wrote two structured log entries through
+`google-cloud-logging`, each tagged `source: frc-design-app-data` so a sink
+could route them to their own log bucket:
+
+- **"App opened"** — `userId`, on every launch at `/`.
+- **"Part inserted"** — `userId`, `elementId`, `name`, `library`,
+  `version.id`, `targetElementType`, `quickInsert`, `isFavorite`, `fasten`,
+  `supportsFasten`, and `configuration`: every parameter as
+  `{ id, name, type, value }`, an enum's value being its option's _name_.
+
+BigQuery links that bucket as the dataset
+`frc-design-lib.frc_design_app_data`, whose `_AllLogs` view is what
+`export.py` reads. The bucket starts on 2025-11-14; nothing earlier survives.
+The `analytics` dataset beside it holds summary tables built from the same
+view. Cloud Monitoring was not read: the log has every event, and a metric
+there could hold only counts.
+
+## What the mapping is not
+
+A legacy row is close to a `LoggedEvent`, but four things don't copy across:
+
+- **There is no source.** The legacy app never recorded where an insert
+  started, so every imported use is `UseSource.UNKNOWN`, which the dashboard
+  shows as "Not recorded" rather than spreading over the real sources.
+- **An enum value is a name.** `build-sql.ts` matches it back to an option id
+  against the part's parameters as they are now, then runs the selection
+  through `canonicalValues` as `trackInsert` does. An option since renamed or
+  removed is left out of that use's selection; the use still counts.
+- **The first weeks name no library.** An element held by exactly one library
+  says which; the rest are `frc-design-lib`, the only library then.
+- **There is no document id.** It and the insertable id come from the part as
+  it is now, and are null for a part since removed; the element id and the
+  version inserted from are the row's own.
+
+Nothing is cut at the switch to the Worker. Both backends served for two weeks
+of September 2026 while DNS moved, but each request reached one of them, so the
+two logs hold different events and the overlap days add up.
+
+## How the SQL is built
+
+`build-sql.ts` doesn't reimplement the rollups. It runs each converted event
+through the real `rollupWrites`, executing the statements in a scratch SQLite
+database built from `drizzle/`, so the imported rollups are what the live write
+path would have written. It then dumps each scratch database as one SQL file:
+
+- the events, as plain `INSERT`s with ids of `legacy-<insert_id>`, so applying
+  a file a second time fails on its first row before anything is counted again;
+- every rollup row, as an upsert that merges into the target the way the
+  table's `onConflict` in `rollups.ts` does. `MERGES` names the merge for each
+  column, and a rollup column it doesn't name stops the build.
+
+A remote `wrangler d1 execute --file` is one import that D1 rolls back whole if
+it fails, so each file lands entirely or not at all. Files are runs of whole
+days, at most 100,000 events each (`--max-events`), to keep each import short,
+since D1 runs one query at a time and the app's queries queue behind it.
+
+The build refuses a target that already holds imported events
+(`schema_version` 0, `LEGACY_SCHEMA_VERSION`).
+
+## The production run
+
+Filled in once the files are applied.

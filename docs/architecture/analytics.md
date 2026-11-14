@@ -22,6 +22,9 @@ imports
 /** Bump when the columns' meaning changes. */
 const EVENT_SCHEMA_VERSION = 2;
 
+/** Rows imported from the legacy app's log; see Imported history. */
+const LEGACY_SCHEMA_VERSION = 0;
+
 enum EventType {
     INSERT = "insert",
     /** A part exported to a STEP file; see `features/download`. */
@@ -55,8 +58,13 @@ enum UseSource {
     /** The group's own list of parts. */
     BROWSE = "browse",
     FAVORITES = "favorites",
-    RECENTS = "recents"
+    RECENTS = "recents",
+    /** Imported from the legacy app's log, which never recorded where a use started. */
+    UNKNOWN = "unknown"
 }
+
+/** What a client may send: the import is the only writer of `UNKNOWN`. */
+const CLIENT_USE_SOURCES: readonly UseSource[];
 ```
 
 `src/backend/features/analytics/tracking.ts`, called by the routes and the
@@ -674,6 +682,14 @@ interface InsertableReportOut {
 }
 ```
 
+`scripts/migrate-analytics/`, run once: the legacy app's log, from BigQuery
+into `events` and the rollups; see Imported history
+
+```text
+export.py      BigQuery to JSONL, one row per logged insert or app open
+build-sql.ts   JSONL to SQL files, each a run of days applied as one import
+```
+
 `src/backend/features/download/routes.ts` and `src/backend/features/entry/routes.ts`,
 two of the routes that record
 
@@ -813,6 +829,11 @@ no foreign key crosses between them):
   path and insertable. Keyed on
   Onshape's element id with no foreign keys, so history survives a reload or a
   re-added tab.
+- Rows imported from the legacy app (see Imported history) have
+  `schema_version` 0 (`LEGACY_SCHEMA_VERSION`), an id of `legacy-` and the
+  Cloud Logging entry's `insert_id`, and `source` `unknown`. Their `instance_id`
+  is the version inserted from; `document_id` and `insertable_id` are filled
+  from the part as it is now, and null for a part since removed.
 - `library_id` is null for an event that belongs to no library: an app open,
   which is the app being opened rather than the page it resumes into, a
   version run, which acts on the Onshape document the app was launched from,
@@ -868,6 +889,34 @@ no foreign key crosses between them):
 4. `record` writes the event and its rollup rows in one D1 batch, so neither
    lands without the other.
 
+### Imported history
+
+Before the Worker, the Cloud Run app logged each insert and app open to Cloud
+Logging, tagged `source: frc-design-app-data` and routed to a log bucket that
+BigQuery links as `frc-design-lib.frc_design_app_data`. That log, 2025-11-14 to
+2026-09-23, was imported once by `scripts/migrate-analytics/`:
+
+1. `export.py` reads the inserts and app opens from BigQuery, deduplicated by
+   `insert_id`.
+2. `build-sql.ts` turns each into the `LoggedEvent` `trackInsert` or
+   `trackAppOpen` would have written, and runs it through `rollupWrites` into a
+   scratch SQLite database in the target's schema, so the rollups are the live
+   write path's own.
+3. It writes one SQL file per run of days: the events as plain inserts, then
+   each rollup row as an upsert that merges with what the target holds, as the
+   table's `onConflict` in `rollups.ts` would.
+4. Each file is applied with `wrangler d1 execute --file`, which D1 runs as one
+   import that lands whole or not at all.
+
+The legacy log never recorded where an insert started, so every imported use
+has `UseSource.UNKNOWN`. It logged an enum by its option's name, which is
+matched back to an id against the part's parameters as they are now; a value
+they can no longer place is left out of the selection, and the use still
+counts. Its first weeks named no library; an element held by exactly one library
+says which, and the rest are `frc-design-lib`, the only library then.
+
+`scripts/migrate-analytics/README.md` has the run's numbers.
+
 ### Days and seasons
 
 A day key is the date in `America/New_York`, since US teams work evenings that
@@ -884,7 +933,8 @@ panel. Its routes read only rollups and return only aggregates:
 - **Overview** — one route per area, each fetched by its own query, so every
   section shows as soon as its numbers arrive: **usage** (totals, the metric
   series behind the headline tiles and the trend tiles, growth), **series**
-  (uses per library per day), **sources**, the **version manager**'s totals,
+  (uses per library per day), **sources** (every source, with "Not recorded"
+  only when the range reaches imported history), the **version manager**'s totals,
   and **reports** by topic and type. Its usage breakdown reads each library's
   **Parts** report.
 - **Library** — its summary, health (build issues by severity, hidden elements
@@ -927,6 +977,8 @@ only on **All time**, its own window being a season rather than the picked one.
 - An event's columns are decided in `logged-event.ts`; a new column fails to
   compile until each kind of event says what it holds.
 - Values are compared and counted canonically, never by configuration key.
+- `UseSource.UNKNOWN` is written only by the import: a request's `source` is
+  one of `CLIENT_USE_SOURCES`.
 - Changing what a column means bumps `EVENT_SCHEMA_VERSION`.
 - A use is one of `USE_EVENT_TYPES`, and writes every rollup any use writes;
   only its `UseTarget` and the insert-only flags tell the kinds apart. A count
@@ -947,6 +999,8 @@ only on **All time**, its own window being a season rather than the picked one.
 | --------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------- |
 | The tracking write fails                      | That event is lost; what it records is unaffected            | None needed                                                         |
 | A rollup is wrong after a code change         | Dashboard numbers off                                        | Replay `events` through `rollupWrites`; no script does this         |
+| An import file fails part-way                 | D1 rolls the file back; the files before it stay applied     | Apply the same file again                                           |
+| An import file is applied twice               | Refused on its first event's id; nothing counted twice       | None needed                                                         |
 | A range starts before tracking began          | Clamped; growth withheld when its baseline predates tracking | Automatic                                                           |
 | D1 refuses a query, overloaded by queued ones | That section's zero state; the others still show             | Retried twice, then **Try again**; **Send a report** if it persists |
 
@@ -1001,6 +1055,18 @@ only on **All time**, its own window being a season rather than the picked one.
   `daily_app_opens_day_opens_idx` covers summing a range's opens, which the
   primary key's index can't. At a season's volume they take the overview
   page's reads from about 3 s to under 0.4 s.
+- **Imported history keeps its gaps.** The legacy log never said where a use
+  started, so its uses are `UNKNOWN` rather than spread over the sources in
+  today's proportions, which would put a guess beside measured numbers.
+  "Not recorded" shows only for a range that reaches them.
+- **The import has no cut-off date.** The two backends ran side by side for
+  two weeks of September 2026 while DNS moved, but each request reached one of
+  them, so their logs hold different events and the overlap days are summed.
+- **Imported options are matched against today's parameters.** The log kept an
+  option's name, not its id, and only the current parameters survive. A
+  renamed or removed option drops out of that use's selection rather than
+  stopping the import, so a part's total stays right and only that option's
+  tally misses it.
 - **A log plus rollups.** The log keeps everything for replay; rollups keep every
   dashboard read a small indexed query.
 - **Keyed by element, not insertable.** An insertable row is replaced when a tab

@@ -284,6 +284,24 @@ describe("insertable routes", () => {
         expect(event?.source).toBe(UseSource.GROUP_SEARCH);
     });
 
+    it("POST /add-to-part-studio refuses the source only imported history has", async () => {
+        await seedPartStudio(db);
+        const spy = vi.spyOn(PartStudioEndpoints, "addPartStudioFeature");
+
+        const res = await createTestApp().request(
+            `/api/add-to-part-studio/insertable/${TEST_PART_STUDIO_ID}`,
+            jsonRequest("POST", {
+                targetPath,
+                isFavorite: false,
+                isQuickInsert: false,
+                source: UseSource.UNKNOWN
+            }),
+            env
+        );
+        expect(res.status).toBe(400);
+        expect(spy).not.toHaveBeenCalled();
+    });
+
     it("POST /add-to-part-studio fills the selection it was not given", async () => {
         await seedPartStudio(db);
         await seedConfiguration(db);

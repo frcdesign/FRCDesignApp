@@ -18,6 +18,8 @@ function sourceLabel(source: UseSource): string {
             return m.dashboardSourceFavorites();
         case UseSource.RECENTS:
             return m.dashboardSourceRecents();
+        case UseSource.UNKNOWN:
+            return m.dashboardSourceUnknown();
     }
 }
 

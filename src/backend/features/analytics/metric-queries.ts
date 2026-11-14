@@ -375,12 +375,17 @@ export async function getSources(
     const rows = await countBySource(db, range, libraryId);
 
     const bySource = new Map(rows.map((row) => [row.source, row]));
-    // Every source is listed, so one nobody uses reads as a zero, not a gap.
-    return Object.values(UseSource).map((source) => ({
-        source,
-        count: Number(bySource.get(source)?.count ?? 0),
-        quickInsertCount: Number(bySource.get(source)?.quickInsertCount ?? 0)
-    }));
+    // Every source is listed, so one nobody uses reads as a zero, not a gap;
+    // `UNKNOWN` only when the range reaches the imported history.
+    return Object.values(UseSource)
+        .map((source) => ({
+            source,
+            count: Number(bySource.get(source)?.count ?? 0),
+            quickInsertCount: Number(
+                bySource.get(source)?.quickInsertCount ?? 0
+            )
+        }))
+        .filter((row) => row.source !== UseSource.UNKNOWN || row.count > 0);
 }
 
 function countUsesByLibraryDay(db: Db, range: DayRange, libraryId?: LibraryId) {

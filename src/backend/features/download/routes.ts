@@ -18,7 +18,7 @@ import { getInsertableParam, insertableRoute } from "../../lib/route-params";
 import { validate } from "../../lib/validate";
 import { requireSignInMiddleware } from "../auth/guards";
 import { trackDownload } from "../analytics/tracking";
-import { UseSource } from "../analytics/usage";
+import { CLIENT_USE_SOURCES, UseSource } from "../analytics/usage";
 import { onshapeOverrides } from "../configurations/selection";
 import { encodeConfiguration } from "../configurations/utils";
 import {
@@ -38,7 +38,7 @@ downloadRoutes.use("/step-export/*", cacheMiddleware());
 const stepExportBody = z.object({
     selection: selectionSchema,
     isFavorite: z.boolean().default(false),
-    source: z.enum(UseSource).default(UseSource.BROWSE)
+    source: z.enum(CLIENT_USE_SOURCES).default(UseSource.BROWSE)
 });
 
 /** POST /api/step-export/insertable/:insertableId */

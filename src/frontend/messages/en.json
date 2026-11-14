@@ -354,6 +354,7 @@
     "dashboardSourceBrowse": "Browsing a group",
     "dashboardSourceFavorites": "Favorites list",
     "dashboardSourceRecents": "Recently used list",
+    "dashboardSourceUnknown": "Not recorded (before September 2026)",
     "dashboardSourcesEmpty": "No uses recorded yet.",
     "dashboardTreemapTitle": "Usage breakdown",
     "dashboardTreemapEmpty": "Nothing was used in this range.",

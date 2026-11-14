@@ -511,6 +511,31 @@ describe("analytics routes", () => {
             expect(bySource[UseSource.RECENTS]).toMatchObject({
                 count: 0
             });
+            // Only imported history has it, so a range without any leaves it out.
+            expect(bySource[UseSource.UNKNOWN]).toBeUndefined();
+        });
+
+        it("lists imported uses with no recorded source when the range has them", async () => {
+            await db.insert(dailySourceMetrics).values({
+                day: "2026-03-01",
+                libraryId: TEST_LIBRARY_ID,
+                source: UseSource.UNKNOWN,
+                count: 4,
+                quickInsertCount: 1
+            });
+
+            const res = await anonymousGet(
+                "/api/analytics/overview/sources?from=2026-03-01&to=2026-03-31"
+            );
+            const body: UseSourceUsage[] = await res.json();
+
+            expect(
+                body.find((row) => row.source === UseSource.UNKNOWN)
+            ).toEqual({
+                source: UseSource.UNKNOWN,
+                count: 4,
+                quickInsertCount: 1
+            });
         });
 
         it("scopes the source breakdown to the range", async () => {

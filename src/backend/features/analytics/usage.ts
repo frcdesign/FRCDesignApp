@@ -6,6 +6,9 @@
 /** Bump when the columns' meaning changes. */
 export const EVENT_SCHEMA_VERSION = 2;
 
+/** Rows imported from the legacy app's log; see `scripts/migrate-analytics`. */
+export const LEGACY_SCHEMA_VERSION = 0;
+
 export enum EventType {
     INSERT = "insert",
     /** A part exported to a STEP file; see `features/download`. */
@@ -39,5 +42,16 @@ export enum UseSource {
     /** The group's own list of parts. */
     BROWSE = "browse",
     FAVORITES = "favorites",
-    RECENTS = "recents"
+    RECENTS = "recents",
+    /** Imported from the legacy app's log, which never recorded where a use started. */
+    UNKNOWN = "unknown"
 }
+
+/** What a client may send: the import is the only writer of `UNKNOWN`. */
+export const CLIENT_USE_SOURCES = [
+    UseSource.SEARCH,
+    UseSource.GROUP_SEARCH,
+    UseSource.BROWSE,
+    UseSource.FAVORITES,
+    UseSource.RECENTS
+] as const;
