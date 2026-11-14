@@ -96,22 +96,40 @@ const parseArgs = (argv: string[]): Args => {
     };
 };
 
+const READ_ATTEMPTS = 4;
+
+/** Retried, since every query here is a read. */
 const query = <T>(args: Args, sql: string): T[] => {
-    const out = execFileSync(
-        "npx",
-        [
-            "wrangler",
-            "d1",
-            "execute",
-            "DB",
-            ...args.target,
-            "--json",
-            "--command",
-            sql
-        ],
-        { encoding: "utf8", maxBuffer: 512 * 1024 * 1024 }
-    );
-    return (JSON.parse(out) as { results: T[] }[])[0].results;
+    for (let attempt = 1; ; attempt++) {
+        try {
+            const out = execFileSync(
+                "npx",
+                [
+                    "wrangler",
+                    "d1",
+                    "execute",
+                    "DB",
+                    ...args.target,
+                    "--json",
+                    "--command",
+                    sql
+                ],
+                { encoding: "utf8", maxBuffer: 512 * 1024 * 1024 }
+            );
+            return (JSON.parse(out) as { results: T[] }[])[0].results;
+        } catch (error) {
+            if (attempt === READ_ATTEMPTS) throw error;
+            // The API rate-limits bursts (code 971), so back off before trying again.
+            const seconds = 2 ** attempt;
+            console.error(`read failed, retrying in ${seconds} s`);
+            Atomics.wait(
+                new Int32Array(new SharedArrayBuffer(4)),
+                0,
+                0,
+                seconds * 1000
+            );
+        }
+    }
 };
 
 /** One line of `export.py`'s output; every value is BigQuery's string or null. */
