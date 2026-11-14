@@ -14,9 +14,7 @@ done
 python3 scripts/migrate-analytics/export.py --archive out/gcp-log-bucket out/legacy-events.jsonl
 npx tsx scripts/migrate-analytics/build-sql.ts \
     --events out/legacy-events.jsonl --env production --out out/analytics
-for f in out/analytics/*.sql; do
-    npx wrangler d1 execute DB --env production --remote --yes --file="$f" || break
-done
+scripts/migrate-analytics/apply.sh production out/analytics
 ```
 
 The export holds every user's Onshape id: keep it out of the repository.
@@ -100,6 +98,11 @@ A remote `wrangler d1 execute --file` is one import that D1 rolls back whole if
 it fails, so each file lands entirely or not at all. Files are runs of whole
 days, at most 100,000 events each (`--max-events`), to keep each import short,
 since D1 runs one query at a time and the app's queries queue behind it.
+
+`apply.sh` applies them in order. A file whose first event the target already
+holds landed whole and is skipped, so it can be run again after a failure. The
+Cloudflare API rate-limits imports (code 971), so it waits between files and
+retries a refused one. On cert, a file took about 10 s, 5 s of it in D1.
 
 The build refuses a target that already holds imported events
 (`schema_version` 0, `LEGACY_SCHEMA_VERSION`).
