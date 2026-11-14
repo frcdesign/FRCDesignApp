@@ -20,8 +20,6 @@ export enum FeedbackCategory {
     INCORRECT_GEOMETRY = "incorrect-geometry",
     BROKEN_CONFIGURATION = "broken-configuration",
     KUDOS = "kudos",
-    /** Answered only in the report's Discord thread, so the form says to follow up there. */
-    QUESTION = "question",
     OTHER = "other"
 }
 
@@ -58,7 +56,6 @@ export const FEEDBACK_CATEGORY_LABELS: Record<FeedbackCategory, string> = {
     [FeedbackCategory.INCORRECT_GEOMETRY]: "Incorrect geometry",
     [FeedbackCategory.BROKEN_CONFIGURATION]: "Broken configuration",
     [FeedbackCategory.KUDOS]: "Kudos",
-    [FeedbackCategory.QUESTION]: "Question",
     [FeedbackCategory.OTHER]: "Other"
 };
 
@@ -80,7 +77,6 @@ const APP_CATEGORIES = [
     FeedbackCategory.BUG,
     FeedbackCategory.FEATURE_REQUEST,
     FeedbackCategory.KUDOS,
-    FeedbackCategory.QUESTION,
     FeedbackCategory.OTHER
 ];
 
@@ -90,7 +86,6 @@ const LIBRARY_CATEGORIES = [
     FeedbackCategory.ORGANIZATION,
     FeedbackCategory.BUG,
     FeedbackCategory.KUDOS,
-    FeedbackCategory.QUESTION,
     FeedbackCategory.OTHER
 ];
 
@@ -100,7 +95,6 @@ const PART_CATEGORIES = [
     FeedbackCategory.INCORRECT_GEOMETRY,
     FeedbackCategory.BROKEN_CONFIGURATION,
     FeedbackCategory.BUG,
-    FeedbackCategory.QUESTION,
     FeedbackCategory.OTHER
 ];
 

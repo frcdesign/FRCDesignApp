@@ -12,7 +12,6 @@ import { type ReactNode, useState } from "react";
 import {
     FEEDBACK_TOPICS,
     type FeedbackOut,
-    FeedbackCategory,
     feedbackCategories,
     FeedbackSource,
     FeedbackTopic,
@@ -91,13 +90,7 @@ export function FeedbackForm(props: FeedbackFormProps): ReactNode {
 
     const sent: FeedbackOut | undefined = sendMutation.data;
     if (sent) {
-        return (
-            <ReportSent
-                topic={topic}
-                category={category}
-                onClose={modal.close}
-            />
-        );
+        return <ReportSent topic={topic} onClose={modal.close} />;
     }
 
     const send = () => {
@@ -162,9 +155,6 @@ export function FeedbackForm(props: FeedbackFormProps): ReactNode {
                         if (value) setChosenCategory(value);
                     }}
                 />
-                {category === FeedbackCategory.QUESTION && (
-                    <Callout text={m.feedbackQuestionCallout()} />
-                )}
                 <TextInput
                     label={m.feedbackTitleLabel()}
                     placeholder={m.feedbackTitlePlaceholder()}

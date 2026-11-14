@@ -64,13 +64,13 @@ card with a part's admin card's sections. The owner's alone.
 The form itself is [feedback.md](./feedback.md)'s; these are what a
 FeatureScript report adds to it.
 
-| String                                                     | Kind              | Where                           | When                                                | Review                                      |
-| ---------------------------------------------------------- | ----------------- | ------------------------------- | --------------------------------------------------- | ------------------------------------------- |
-| "Report an issue"                                          | Menu item, button | A card's ⋯ menu; the popup      | Always                                              | **⚑** New                                   |
-| "Report issue with {name}"                                 | Form title        | The feedback form               | Opened from a feature                               | **⚑** New                                   |
-| "FeatureScripts"                                           | Topic option      | General feedback's topic picker | Always                                              | **⚑** New                                   |
-| "Bug" / "Feature request" / "Kudos" / "Question" / "Other" | Type options      | The form                        | A FeatureScript report, or the FeatureScripts topic | Question as in [feedback.md](./feedback.md) |
-| "{category}: {name}"                                       | Suggested title   | The form's title field          | Until the reporter writes their own                 |                                             |
+| String                                        | Kind              | Where                           | When                                                | Review    |
+| --------------------------------------------- | ----------------- | ------------------------------- | --------------------------------------------------- | --------- |
+| "Report an issue"                             | Menu item, button | A card's ⋯ menu; the popup      | Always                                              | **⚑** New |
+| "Report issue with {name}"                    | Form title        | The feedback form               | Opened from a feature                               | **⚑** New |
+| "FeatureScripts"                              | Topic option      | General feedback's topic picker | Always                                              | **⚑** New |
+| "Bug" / "Feature request" / "Kudos" / "Other" | Type options      | The form                        | A FeatureScript report, or the FeatureScripts topic |           |
+| "{category}: {name}"                          | Suggested title   | The form's title field          | Until the reporter writes their own                 |           |
 
 ## The dashboard (proposed)
 

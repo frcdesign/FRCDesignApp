@@ -514,8 +514,8 @@ A FeatureScript report is a source of the one feedback form
    titled **Report issue with** the feature, with the topic
    `FeedbackTopic.FEATURESCRIPTS` fixed.
 2. It offers bug (a feature that won't add, or builds wrong, is one), feature
-   request, kudos, question and other, as the app's topics do, question
-   included ([feedback.md](./feedback.md)). `suggestTitle` fills the
+   request, kudos and other, as the app's topics do
+   ([feedback.md](./feedback.md)). `suggestTitle` fills the
    title as for a part: "Bug: Robot frame".
 3. The body carries `featureScript: { featureScriptId }`. The server reads the
    feature (`findReportedFeatureScript`) and the post names it and links to

@@ -38,8 +38,6 @@ export function typeLabel(category: FeedbackCategory): string {
             return m.feedbackTypeBrokenConfiguration();
         case FeedbackCategory.KUDOS:
             return m.feedbackTypeKudos();
-        case FeedbackCategory.QUESTION:
-            return m.feedbackTypeQuestion();
         case FeedbackCategory.OTHER:
             return m.feedbackTypeOther();
     }
@@ -62,8 +60,6 @@ export function descriptionPlaceholder(category: FeedbackCategory): string {
             return m.feedbackDescriptionBrokenConfiguration();
         case FeedbackCategory.KUDOS:
             return m.feedbackDescriptionKudos();
-        case FeedbackCategory.QUESTION:
-            return m.feedbackDescriptionQuestion();
         case FeedbackCategory.ORGANIZATION:
         case FeedbackCategory.OTHER:
             return m.feedbackDescriptionOther();

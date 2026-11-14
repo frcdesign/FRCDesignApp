@@ -10,9 +10,8 @@ the dashboard.
 
 It is not a support desk: nothing is kept about a report beyond its counts
 and a week in the Worker's logs, and replies happen only in the report's
-Discord thread, which the app points the reporter to once it is sent. So a
-question is a type like any other, and the form and the sent page both tell its
-asker the answer comes in that thread. It says whether the reporter was signed in, but never
+Discord thread, which the app points the reporter to once it is sent. So it asks no questions it can't answer: there
+is no "question" type. It says whether the reporter was signed in, but never
 who they are beyond what they typed, nor anything about their own documents.
 
 ## Code map
@@ -82,7 +81,7 @@ its topic's, its type's, and **Error report** when it started from an error.
 The keys are the topic values (`app`, `version-manager`, `frc-design-lib`,
 `mkcad`, `config-lib`), the category values (`bug`, `feature-request`,
 `part-request`, `organization`, `metadata`, `incorrect-geometry`,
-`broken-configuration`, `kudos`, `question`, `other`) and
+`broken-configuration`, `kudos`, `other`) and
 `error-report`. A key with no id is left untagged. A tag id the forum doesn't
 have makes Discord refuse the post, which then goes again untagged.
 
@@ -93,16 +92,16 @@ The source decides what the form offers and what the report carries
 
 - **General** — **Leave feedback** in settings, which is also the app's way
   into the Discord. The reporter picks the topic.
-  The app's topics offer bug, feature request, kudos, question and other; a
-  library's offer new part request, search or organization, bug, kudos,
-  question and other, the kinds its forum is tagged by, and the form says that
-  a problem with one part is reported from the insert menu.
+  The app's topics offer bug, feature request, kudos and other; a library's offer
+  new part request, search or organization, bug, kudos and other, the kinds its
+  forum is tagged by, and the form says that a problem with one part is
+  reported from the insert menu.
 - **Part** — **Report an issue** in a part's menu, on its card or in the
   insert menu. Until somebody has closed a menu offering it, the item and the
   ⋯ buttons opening it carry the blue dot (`Hint.OPENED_REPORT_ISSUE`). The
   form is titled **Report issue with** the part, and the topic is the part's
   library. It offers missing or incorrect metadata, incorrect geometry, broken
-  configuration, bug (a part that won't insert is one), question and other. From the insert
+  configuration, bug (a part that won't insert is one) and other. From the insert
   menu, **Include configuration** (on by default) sends the selection on
   screen; a card's menu has no configuration on screen, so it sends none.
 - **Error** — **Report** on an error toast, or **Send a report** under an
@@ -251,10 +250,6 @@ parts still in the library, each opening the part's page.
   one block rather than a grid of fields.
 - **Kudos.** Praise goes to the same forum as everything else, under its own
   tag, so the team sees what works as well as what breaks.
-- **Questions, answered in Discord.** People ask through the form whatever it
-  offers, so a question type files them under their own tag rather than as
-  "other". Choosing it shows a callout, and the sent page says to follow up in
-  the question's thread, since the app has nowhere to answer it.
 - **A week in Workers Logs, not a store of our own.** Each report and each
   server error is already in the Worker's logs, which keep 7 days and are
   queried by id from the dashboard or the Workers Observability API, so a
