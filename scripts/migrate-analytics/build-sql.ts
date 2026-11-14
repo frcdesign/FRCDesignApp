@@ -49,6 +49,7 @@ import {
 import { rollupWrites } from "../../src/backend/features/analytics/rollups";
 import {
     NO_ELEMENT,
+    NOT_A_FEATURE_ADD,
     NOT_A_REPORT,
     NOT_A_USE,
     NOT_A_VERSION_RUN
@@ -354,7 +355,8 @@ const toEvent = (
             ...NO_ELEMENT,
             ...NOT_A_USE,
             ...NOT_A_VERSION_RUN,
-            ...NOT_A_REPORT
+            ...NOT_A_REPORT,
+            ...NOT_A_FEATURE_ADD
         };
         return { event, parameters: [] };
     }
@@ -398,7 +400,8 @@ const toEvent = (
         source: UseSource.UNKNOWN,
         fasten: row.fasten === "true",
         ...NOT_A_VERSION_RUN,
-        ...NOT_A_REPORT
+        ...NOT_A_REPORT,
+        ...NOT_A_FEATURE_ADD
     };
     return { event, parameters };
 };
@@ -599,7 +602,28 @@ const sqlLiteral = (value: SQLOutputValue): string => {
     return `'${value.replaceAll("'", "''")}'`;
 };
 
+/** A rollup the plan doesn't dump would be dropped from the file without a word. */
+const assertDumped = (chunk: Chunk, plan: TableDump[]) => {
+    const dumped = new Set(plan.map((table) => table.name));
+    const tables = chunk.db
+        .prepare(
+            "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'"
+        )
+        .all() as { name: string }[];
+    for (const { name } of tables) {
+        const row = chunk.db
+            .prepare(`SELECT COUNT(*) AS n FROM "${name}"`)
+            .get() as { n: number };
+        if (row.n > 0 && !dumped.has(name)) {
+            throw new Error(
+                `${name} got rows the files would leave out; add it to MERGES`
+            );
+        }
+    }
+};
+
 const writeChunk = (chunk: Chunk, plan: TableDump[], path: string) => {
+    assertDumped(chunk, plan);
     const out = openSync(path, "w");
     for (const table of plan) {
         const head = `INSERT INTO "${table.name}" (${table.columns.map((c) => `"${c}"`).join(", ")}) VALUES `;
