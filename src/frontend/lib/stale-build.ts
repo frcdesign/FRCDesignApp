@@ -17,8 +17,8 @@ function takeReload(now: number): boolean {
 }
 
 /**
- * A deploy removes the last build's chunks, so a tab opened before it fails
- * its next lazy import. Vite reports that as `vite:preloadError`; reloading
+ * A deploy keeps only the previous release's chunks, so a tab two releases
+ * old fails its next lazy import. Vite reports that as `vite:preloadError`; reloading
  * fetches the new build.
  */
 export function reloadOnStaleBuild(

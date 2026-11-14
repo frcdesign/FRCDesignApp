@@ -23,7 +23,10 @@ import {
     getInsertables
 } from "../../lib/onshape/endpoints/documents";
 import { getWorkspaces } from "../../lib/onshape/endpoints/workspaces";
-import { watchLinkedWorkspace } from "../webhooks/transient";
+import {
+    LinkedWorkspaceEvent,
+    watchLinkedWorkspace
+} from "../webhooks/transient";
 import {
     toWorkspacePath,
     workspaceKey,
@@ -57,6 +60,15 @@ const elementMicroversions = kvStore<ElementMicroversions>(
     "workspace-elements",
     { ttlSeconds: CHANGES_TTL_SECONDS }
 );
+
+/**
+ * The registration a workspace's deliveries should come through, so it gets
+ * one webhook. Onshape deletes a quiet one unannounced, so this lapses and a
+ * later miss registers a fresh one, retiring the old.
+ */
+const watches = kvStore<{ watchId: string }>("linked-workspace-watch", {
+    ttlSeconds: DESCRIPTION_TTL_SECONDS
+});
 
 /** By document id. Onshape never moves a document's default workspace. */
 const defaultWorkspaces = kvStore<{ instanceId: string }>("default-workspace", {
@@ -102,7 +114,41 @@ export async function forgetPermissions(
     await Promise.all(ids.map((id) => permissionSets.delete(kv, id)));
 }
 
-/** A workspace's entries, and its document's permissions, dropped when its webhook says it changed. */
+/** What one delivery can have made wrong, and nothing more: two writes to a key within a second fail. */
+export async function forgetOnEvent(
+    kv: KVNamespace,
+    workspace: InstancePath,
+    event: string
+): Promise<void> {
+    switch (event as LinkedWorkspaceEvent) {
+        case LinkedWorkspaceEvent.CHANGED:
+        case LinkedWorkspaceEvent.CREATE_VERSION:
+            return forgetChanges(kv, workspace);
+        case LinkedWorkspaceEvent.METADATA:
+            return descriptions.delete(kv, workspaceKey(workspace));
+        case LinkedWorkspaceEvent.SHARED:
+            return forgetPermissions(kv, workspace);
+        default:
+            return forgetWorkspace(kv, workspace);
+    }
+}
+
+/**
+ * Whether a delivery came through the workspace's current registration. One
+ * with no id predates them; with no registration recorded, KV may not have
+ * the new one here yet, so it is taken.
+ */
+export async function isCurrentWatch(
+    kv: KVNamespace,
+    workspace: InstancePath,
+    watchId: string | undefined
+): Promise<boolean> {
+    if (!watchId) return false;
+    const current = await watches.get(kv, workspaceKey(workspace));
+    return !current || current.watchId === watchId;
+}
+
+/** A workspace's entries, and its document's permissions, for an explicit refresh. */
 export async function forgetWorkspace(
     kv: KVNamespace,
     workspace: InstancePath
@@ -128,15 +174,33 @@ export async function forgetChanges(
     ]);
 }
 
-/** Best effort: a webhook that can't be registered leaves the expiry. */
+/**
+ * Registers the workspace's webhook unless it has one. Recorded first, since
+ * Onshape checks a registration with a delivery before answering it. Best
+ * effort: a webhook that can't be registered leaves the expiry.
+ */
 function watch(
     c: AppContext,
     client: OnshapeApi,
     workspace: WorkspacePath
 ): Promise<void> {
-    return runInBackground(c, "watch a linked workspace", () =>
-        watchLinkedWorkspace(client, workspace, c.env.APP_URL)
-    );
+    return runInBackground(c, "watch a linked workspace", async () => {
+        const id = workspaceKey(workspace);
+        if (await watches.get(c.env.KV, id)) return;
+        const watchId = crypto.randomUUID();
+        await watches.put(c.env.KV, id, { watchId });
+        try {
+            await watchLinkedWorkspace(
+                client,
+                workspace,
+                c.env.APP_URL,
+                watchId
+            );
+        } catch (error) {
+            await watches.delete(c.env.KV, id);
+            throw error;
+        }
+    });
 }
 
 /** The document and workspace names, which is all the row shows. */
@@ -186,6 +250,8 @@ export async function getUnversionedChanges(
     }
 
     await changeCounts.put(c.env.KV, id, { changes });
+    // The count is what an edit changes, so this is where a lapsed webhook is noticed.
+    await watch(c, client, workspace);
     return changes;
 }
 

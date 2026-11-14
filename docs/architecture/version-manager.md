@@ -80,12 +80,18 @@ when a library part asks.
 **KV** `default-workspace:{documentId}` — the document's default workspace,
 which a library group's change count is read from, for a week.
 
+**KV** `linked-workspace-watch:{documentId}|{instanceId}` — the id of the
+workspace's one webhook registration, carried in its delivery url as `watch`,
+for a week.
+
 **KV** `document-permissions:{documentId}:{userId}` — a caller's Onshape
 permission set on a document (`canRead`), for a day. It guards what the routes
 answer from our own storage; see **Decisions**.
 
-All but the default workspace are dropped by the workspace's webhook when it changes —
-permissions for every caller of that document — and by
+The workspace's webhook drops what its event can have changed
+(`forgetOnEvent`): an edit or a new version the change count and tabs, a rename
+the names, a sharing change every caller's permissions on the document. All but
+the default workspace are dropped by
 `POST /api/workspace-links/refresh` — the navbar's refresh button, shown on this
 page alone — for every workspace linked to the caller's, and the caller's own
 document's permissions. A run drops the change
@@ -104,17 +110,20 @@ as a linked workspace is watched.
 
 ### Finding the page
 
-The page picker marks the version manager with a dot and a **New** badge for
-somebody who has a workspace to act on and has never opened the page
-(`useIsVersionManagerNew`). Opening it records `Hint.OPENED_VERSION_MANAGER`
+The page picker always lists the version manager. It marks it with a dot and a
+**New** badge for somebody signed in, with a workspace to act on, who has never
+opened the page (`useIsVersionManagerNew`). Opening it records `Hint.OPENED_VERSION_MANAGER`
 against the user in KV (`useMarkHintSeen`, see [auth.md](./auth.md)), so the
 dot stays gone on every computer they use.
 
 ### Showing the page
 
-The tab appears only when Onshape launched the app in a workspace
-(`useTargetWorkspace`); `beforeLoad` redirects anyone who reaches the url
-without one.
+The page acts on the workspace Onshape launched the app in
+(`useTargetWorkspace`). Without one it shows a notice instead: that the version
+manager is only available inside Onshape when the app is standalone, or that it
+only works in a workspace when Onshape launched it in a version. Entry does not
+resume into the page without a workspace (`canResume` in
+`src/frontend/routes/index.tsx`).
 
 `GET /api/workspace-links` answers `{ parents, children, documentName }` — the
 last being this workspace's own document, which the page's copy names, and
@@ -393,15 +402,23 @@ color and with its icon, for as long as the status is kept. It cannot be closed,
 
 ### Keeping a linked workspace current
 
-A cache miss on a linked workspace's names registers a transient webhook on it for
-`onshape.model.lifecycle.changed`, `.metadata` and `.createversion`, and
-`onshape.document.lifecycle.shared`, which Onshape sends for sharing and
-unsharing alike. A delivery is answered 200 at once, since Onshape deactivates
-a webhook whose deliveries error; after that it drops the workspace's cached
-entries and every caller's permissions on its document, so the next panel to
-open asks Onshape again. A drop that fails is logged, and the entry expires.
-Onshape
-deletes a transient webhook that goes quiet, so the entries expire as well.
+A cache miss on a linked workspace's names, change count or default workspace
+registers a transient webhook on it for `onshape.model.lifecycle.changed`,
+`.metadata` and `.createversion`, and `onshape.document.lifecycle.shared`, which
+Onshape sends for sharing and unsharing alike — unless
+`linked-workspace-watch:` records one. The record is written first, with a new
+`watch` id that goes in the delivery url, since Onshape checks a registration
+with a delivery before answering; a registration that fails deletes it.
+
+A delivery through any other `watch` id, or none, is answered 410, so Onshape
+deactivates that duplicate. With no record, as when KV has not yet carried a
+new one to the location a delivery reaches, it is taken. Any other delivery is
+answered 200 at once, since Onshape deactivates a webhook whose deliveries
+error; after that `forgetOnEvent` drops what the event can have changed, so the
+next panel to open asks Onshape again. A drop that fails is logged, and the
+entry expires. Onshape deletes a transient webhook that goes quiet, unannounced;
+the record lapses after a week, and the next miss registers a fresh webhook
+and retires the old one.
 
 ## User-facing strings
 
@@ -461,6 +478,13 @@ In [strings/version-manager.md](../strings/version-manager.md).
 
 ## Decisions
 
+- **One webhook per linked workspace, named in its url.** Registering on every
+  cache miss, with an edit dropping the names, added a webhook to a workspace
+  each time it was edited and viewed. Each one delivers every event, and the
+  dozens of deliveries arriving together each deleted the same KV keys, which
+  KV refuses past one write per key per second. Onshape gives no way to find a
+  workspace's webhooks by url, so the url carries the registration's id, and a
+  delivery through any other is refused until Onshape deactivates it.
 - **Its own table, no foreign keys.** A link is between two Onshape workspaces.
   Neither has to be in a library, so nothing in the rest of the schema can be
   pointed at.

@@ -15,11 +15,12 @@ import {
     signInRequiredError
 } from "./api-error";
 import type { AppContext, AppContextEnv } from "./context";
+import { describeError } from "./error-text";
 
 /** The Ray ID, which Workers Logs filters on, so a report quoting it finds the stack; tests and local dev have none. */
 function logServerError(c: AppContext, error: unknown): string {
     const errorId = c.req.header("cf-ray") ?? crypto.randomUUID();
-    console.error(`Server error ${errorId}`, error);
+    console.error(`Server error ${errorId}: ${describeError(error)}`, error);
     return errorId;
 }
 
@@ -54,6 +55,10 @@ export const errorHandler: ErrorHandler<AppContextEnv> = (err, c) => {
     if (err instanceof OnshapeApiError) {
         const apiError = fromOnshapeError(err);
         if (apiError.body.kind !== ApiErrorKind.INTERNAL) {
+            // The user reads our wording; Onshape's own reason is only here.
+            console.warn(
+                `Onshape refused ${c.req.method} ${c.req.path}: ${describeError(err)}`
+            );
             return c.json(apiError.body, apiError.status);
         }
         return c.json(

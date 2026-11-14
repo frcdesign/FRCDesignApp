@@ -19,6 +19,8 @@ import { useOnshapeLaunch } from "../../../lib/onshape-params";
 import { queryClient } from "../../../lib/query-client";
 import { accessDataQueryKey } from "../../../lib/query-keys";
 import { DownloadStepButton } from "./download-step-button";
+import { DownloadStepMenuSection } from "./download-step-menu-section";
+import { Menu } from "@mantine/core";
 
 vi.mock("../../../lib/library", () => ({
     useLibraryId: () => DEFAULT_LIBRARY
@@ -89,6 +91,30 @@ function renderButton() {
     );
 }
 
+function renderMenuSection() {
+    renderWithProviders(
+        <Menu opened>
+            <Menu.Dropdown>
+                <DownloadStepMenuSection
+                    insertable={INSERTABLE}
+                    selection={{ size: "2" }}
+                    isFavorite={false}
+                    source={UseSource.BROWSE}
+                />
+            </Menu.Dropdown>
+        </Menu>,
+        queryClient
+    );
+}
+
+function launchInOnshape() {
+    useOnshapeLaunch.setState({
+        ...PATH,
+        instanceType: "w",
+        elementType: ElementType.ASSEMBLY
+    });
+}
+
 describe("DownloadStepButton", () => {
     let savedFiles: string[];
 
@@ -112,11 +138,7 @@ describe("DownloadStepButton", () => {
     });
 
     it("isn't offered inside Onshape, where the part is inserted instead", () => {
-        useOnshapeLaunch.setState({
-            ...PATH,
-            instanceType: "w",
-            elementType: ElementType.ASSEMBLY
-        });
+        launchInOnshape();
         seedAccess(true);
         renderButton();
 
@@ -156,6 +178,39 @@ describe("DownloadStepButton", () => {
             }
         });
         expect(statusPolls()).toBe(2);
+    });
+
+    it("is a menu item inside Onshape instead", async () => {
+        vi.useFakeTimers({ shouldAdvanceTime: true });
+        const user = userEvent.setup({
+            advanceTimers: vi.advanceTimersByTime
+        });
+        vi.mocked(apiPost).mockResolvedValue({ translationId: "tr-1" });
+        mockExportStates(StepExportState.DONE);
+        launchInOnshape();
+        seedAccess(true);
+        renderMenuSection();
+
+        await user.click(screen.getByText("Download STEP"));
+        await vi.advanceTimersByTimeAsync(5000);
+
+        await waitFor(() =>
+            expect(savedFiles).toEqual([stepExportFilePath("tr-1")])
+        );
+        expect(apiPost).toHaveBeenCalledWith("/step-export/insertable/ins", {
+            body: {
+                selection: { size: "2" },
+                isFavorite: false,
+                source: UseSource.BROWSE
+            }
+        });
+    });
+
+    it("leaves the menu to the footer button outside Onshape", () => {
+        seedAccess(true);
+        renderMenuSection();
+
+        expect(screen.queryByText("Download STEP")).toBeNull();
     });
 
     it("saves nothing when Onshape fails the export", async () => {

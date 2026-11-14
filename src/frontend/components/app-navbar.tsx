@@ -64,6 +64,7 @@ import {
 import { useIsFeatureScripts } from "../features/featurescripts/navigation";
 import { FeatureScriptSearchBar } from "../features/featurescripts/components/featurescript-search-bar";
 import { useTargetWorkspace } from "../lib/onshape-params";
+import { type WorkspacePath } from "@backend/features/version-manager/contract";
 import { type AppTab, UtilityTab } from "../lib/app-tab";
 import { getTabName, useNavigateToTab } from "../lib/tabs";
 import { useRefreshVersionManagerMutation } from "../features/version-manager/queries";
@@ -105,6 +106,7 @@ export function AppNavbar(): ReactNode {
     const isVersionManager = useIsVersionManager();
     const isFeatureScripts = useIsFeatureScripts();
     const isLibrary = !isVersionManager && !isFeatureScripts;
+    const workspace = useTargetWorkspace();
 
     return (
         <Stack gap={0}>
@@ -114,7 +116,9 @@ export function AppNavbar(): ReactNode {
                     {/* The insert location is where a library's parts land in an assembly. */}
                     {isLibrary && <InsertLocationStatus />}
                     <SignInButton />
-                    {isVersionManager && <VersionManagerRefreshButton />}
+                    {isVersionManager && workspace && (
+                        <VersionManagerRefreshButton workspace={workspace} />
+                    )}
                     {isFeatureScripts && <FeatureScriptsReloadButton />}
                     <SettingsControls />
                 </Group>
@@ -164,8 +168,6 @@ interface AppPage {
 }
 
 function useAppPages(): AppPage[] {
-    const targetWorkspace = useTargetWorkspace();
-    const isVersionManager = useIsVersionManager();
     const isNew = useIsVersionManagerNew();
 
     const libraries = Object.values(LibraryId).map((libraryId) => ({
@@ -189,11 +191,6 @@ function useAppPages(): AppPage[] {
         color: AppColor.FEATURESCRIPTS
     };
 
-    // Listed while it is showing even without a workspace, so the picker never
-    // names a page it does not offer.
-    if (!targetWorkspace && !isVersionManager) {
-        return [...libraries, featureScripts];
-    }
     return [
         ...libraries,
         featureScripts,
@@ -331,9 +328,15 @@ function FeatureScriptsReloadButton(): ReactNode {
     );
 }
 
+interface VersionManagerRefreshButtonProps {
+    workspace: WorkspacePath;
+}
+
 /** Reads the linked documents again, past what the server cached of them. */
-function VersionManagerRefreshButton(): ReactNode {
-    const workspace = useTargetWorkspace();
+function VersionManagerRefreshButton(
+    props: VersionManagerRefreshButtonProps
+): ReactNode {
+    const { workspace } = props;
     const refresh = useRefreshVersionManagerMutation(workspace);
     return (
         <RefreshButton

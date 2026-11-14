@@ -233,6 +233,7 @@ function InsertMenuFooter(props: InsertMenuFooterProps): ReactNode {
                         report={report}
                         selection={selection}
                         configurationKey={configurationKey}
+                        source={source}
                     />
                 </MenuButton>
             </Group>

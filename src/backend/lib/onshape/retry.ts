@@ -1,4 +1,5 @@
 import { HttpStatus } from "http-status-ts";
+import { describeError } from "../error-text";
 import { OnshapeApiError, OnshapeTimeoutError } from "./client";
 
 export interface InsertRetry {
@@ -39,7 +40,7 @@ export async function retryInsert<T>(
             if (attempt >= policy.retries || !isWorthRetrying(error)) {
                 throw error;
             }
-            console.warn("Insert failed; retrying", error);
+            console.warn(`Insert failed; retrying: ${describeError(error)}`);
             await new Promise((resolve) => setTimeout(resolve, policy.delayMs));
         }
     }
