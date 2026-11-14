@@ -7,7 +7,7 @@ describe("suggestTitle", () => {
         expect(
             suggestTitle({
                 category: FeedbackCategory.BROKEN_CONFIGURATION,
-                partName: "Hex Shaft"
+                subject: "Hex Shaft"
             })
         ).toBe("Broken configuration: Hex Shaft");
     });

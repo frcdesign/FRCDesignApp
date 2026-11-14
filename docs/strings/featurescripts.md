@@ -2,7 +2,7 @@
 
 What [featurescripts.md](../architecture/featurescripts.md) shows a person.
 Each is a message in `src/frontend/messages/en.json`, keyed `featureScripts…`;
-the sections marked proposed aren't built yet. A feature's name and
+the section marked proposed isn't built yet. A feature's name and
 description come from the manifest robot-code writes and are parameters, not
 messages.
 
@@ -59,18 +59,19 @@ card with a part's admin card's sections. The owner's alone.
 | "Failed to hide {name}." / "Failed to show {name}."               | Error toast     |                           | The switch failed, without a worded reason | **⚑** New |
 | "Reload" / "Reloading FeatureScripts..."                          | Button, toast   | The tab's header          | Proposed                                   | **⚑** New |
 
-## Feedback (proposed)
+## Feedback
 
 The form itself is [feedback.md](./feedback.md)'s; these are what a
 FeatureScript report adds to it.
 
-| String                                        | Kind              | Where                           | When                                                | Review    |
-| --------------------------------------------- | ----------------- | ------------------------------- | --------------------------------------------------- | --------- |
-| "Report an issue"                             | Menu item, button | A card's ⋯ menu; the popup      | Always                                              | **⚑** New |
-| "Report issue with {name}"                    | Form title        | The feedback form               | Opened from a feature                               | **⚑** New |
-| "FeatureScripts"                              | Topic option      | General feedback's topic picker | Always                                              | **⚑** New |
-| "Bug" / "Feature request" / "Kudos" / "Other" | Type options      | The form                        | A FeatureScript report, or the FeatureScripts topic |           |
-| "{category}: {name}"                          | Suggested title   | The form's title field          | Until the reporter writes their own                 |           |
+| String                                        | Kind                | Where                                                          | When                                                       | Review    |
+| --------------------------------------------- | ------------------- | -------------------------------------------------------------- | ---------------------------------------------------------- | --------- |
+| "Report an issue"                             | Menu item           | A row's ⋯ and right-click menu; the popup's ⋯, after a divider | Always                                                     |           |
+| "Report issue with {name}"                    | Form title          | The feedback form                                              | Opened from a feature                                      | **⚑** New |
+| "FeatureScripts"                              | Area option         | The form's About                                               | Opened from settings or `/feedback`                        | **⚑** New |
+| "FeatureScript" / "None in particular"        | Select, placeholder | Under it                                                       | FeatureScripts is chosen                                   | **⚑** New |
+| "Bug" / "Feature request" / "Kudos" / "Other" | Type options        | The form                                                       | A FeatureScript report, or the FeatureScripts area         |           |
+| "{type}: {name}"                              | Suggested title     | The form's title field                                         | From a feature's menu, until the reporter writes their own |           |
 
 ## The dashboard (proposed)
 

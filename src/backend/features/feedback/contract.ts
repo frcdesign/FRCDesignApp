@@ -8,7 +8,8 @@ export enum FeedbackTopic {
     VERSION_MANAGER = "version-manager",
     FRC_DESIGN_LIB = "frc-design-lib",
     MKCAD = "mkcad",
-    CONFIG_LIB = "config-lib"
+    CONFIG_LIB = "config-lib",
+    FEATURESCRIPTS = "featurescripts"
 }
 
 export enum FeedbackCategory {
@@ -30,7 +31,9 @@ export enum FeedbackSource {
     /** A part's menu: the report names the part. */
     PART = "part",
     /** An error's Report button: the report carries the error. */
-    ERROR = "error"
+    ERROR = "error",
+    /** A FeatureScript's menu: the report names the feature. */
+    FEATURESCRIPT = "featurescript"
 }
 
 /** Whether the app was in Onshape's panel, read from its launch params. */
@@ -44,7 +47,8 @@ export const FEEDBACK_TOPIC_LABELS: Record<FeedbackTopic, string> = {
     [FeedbackTopic.VERSION_MANAGER]: "Version Manager",
     [FeedbackTopic.FRC_DESIGN_LIB]: "FRCDesignLib",
     [FeedbackTopic.MKCAD]: "MKCad",
-    [FeedbackTopic.CONFIG_LIB]: "ConfigLib"
+    [FeedbackTopic.CONFIG_LIB]: "ConfigLib",
+    [FeedbackTopic.FEATURESCRIPTS]: "FeatureScripts"
 };
 
 export const FEEDBACK_CATEGORY_LABELS: Record<FeedbackCategory, string> = {
@@ -62,7 +66,8 @@ export const FEEDBACK_CATEGORY_LABELS: Record<FeedbackCategory, string> = {
 export const FEEDBACK_SOURCE_LABELS: Record<FeedbackSource, string> = {
     [FeedbackSource.GENERAL]: "Feedback form",
     [FeedbackSource.PART]: "Part menu",
-    [FeedbackSource.ERROR]: "Error report"
+    [FeedbackSource.ERROR]: "Error report",
+    [FeedbackSource.FEATURESCRIPT]: "FeatureScript menu"
 };
 
 export const LAUNCH_CONTEXT_LABELS: Record<LaunchContext, string> = {
@@ -109,6 +114,7 @@ export function topicLibrary(topic: FeedbackTopic): LibraryId | undefined {
             return LibraryId.CONFIG_LIB;
         case FeedbackTopic.APP:
         case FeedbackTopic.VERSION_MANAGER:
+        case FeedbackTopic.FEATURESCRIPTS:
             return undefined;
     }
 }
@@ -122,6 +128,41 @@ export function libraryTopic(libraryId: LibraryId): FeedbackTopic {
         case LibraryId.CONFIG_LIB:
             return FeedbackTopic.CONFIG_LIB;
     }
+}
+
+/**
+ * The broad things a report can be about, which the form asks first: a part
+ * library, the app, the version manager, or a FeatureScript. People mistook
+ * the app for its libraries when the two were one list.
+ */
+export enum FeedbackArea {
+    PART_LIBRARY = "part-library",
+    APP = "app",
+    VERSION_MANAGER = "version-manager",
+    FEATURESCRIPTS = "featurescripts"
+}
+
+/** In the order the form lists them. */
+export const FEEDBACK_AREAS = Object.values(FeedbackArea);
+
+export function topicArea(topic: FeedbackTopic): FeedbackArea {
+    switch (topic) {
+        case FeedbackTopic.APP:
+            return FeedbackArea.APP;
+        case FeedbackTopic.VERSION_MANAGER:
+            return FeedbackArea.VERSION_MANAGER;
+        case FeedbackTopic.FEATURESCRIPTS:
+            return FeedbackArea.FEATURESCRIPTS;
+        case FeedbackTopic.FRC_DESIGN_LIB:
+        case FeedbackTopic.MKCAD:
+        case FeedbackTopic.CONFIG_LIB:
+            return FeedbackArea.PART_LIBRARY;
+    }
+}
+
+/** The topics an area holds: each library for the part libraries, else its own one. */
+export function areaTopics(area: FeedbackArea): FeedbackTopic[] {
+    return FEEDBACK_TOPICS.filter((topic) => topicArea(topic) === area);
 }
 
 /** The categories a report may take, in the order the form lists them. */
@@ -198,6 +239,10 @@ export const feedbackBody = z
         message: z.string().trim().max(MAX_FEEDBACK_MESSAGE),
         contact: z.string().trim().max(MAX_CONTACT).optional(),
         teamNumber: z.int().min(1).max(MAX_TEAM_NUMBER).optional(),
+        /** From a FeatureScript's menu, or one picked in the form under FeatureScripts. */
+        featureScript: z
+            .object({ featureScriptId: z.string().min(1).max(MAX_ID) })
+            .optional(),
         /** From a part's menu, or an error about one part, such as a failed insert. */
         part: z
             .object({
@@ -221,6 +266,20 @@ export const feedbackBody = z
                 ? !!body.part
                 : !body.part || body.source === FeedbackSource.ERROR,
         "Only a part or error report names a part, and a part report must."
+    )
+    .refine(
+        (body) =>
+            body.source === FeedbackSource.FEATURESCRIPT
+                ? !!body.featureScript
+                : !body.featureScript ||
+                  body.topic === FeedbackTopic.FEATURESCRIPTS,
+        "Only a FeatureScripts report names a FeatureScript, and one from its menu must."
+    )
+    .refine(
+        (body) =>
+            body.source !== FeedbackSource.FEATURESCRIPT ||
+            body.topic === FeedbackTopic.FEATURESCRIPTS,
+        "A FeatureScript's report is about FeatureScripts."
     )
     .refine(
         (body) =>

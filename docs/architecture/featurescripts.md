@@ -1,10 +1,10 @@
 # FeatureScripts
 
 **Status: partly built.** The tables, the list, icon, add, favorite,
-visibility and stats routes, recording each add, and the tab with its
-categories, favorites, row buttons, owner's card and popup are built. The
-manifest, loading from it, the robot-code release changes, the dashboard's
-section and feedback are still the design below;
+visibility and stats routes, recording each add, the tab with its
+categories, favorites, row buttons, owner's card and popup, and feedback are
+built. The manifest, loading from it, the robot-code release changes and the
+dashboard's section are still the design below;
 names in the code map that don't exist yet are named from `src/backend/`
 without it.
 
@@ -510,21 +510,23 @@ A FeatureScript report is a source of the one feedback form
 ([feedback.md](./feedback.md)), as a part report is, posted to Discord by
 `POST /api/feedback` with the same rate limit and diagnostics.
 
-1. **Report an issue**, in a card's ⋯ menu and in the popup, opens the form
-   titled **Report issue with** the feature, with the topic
-   `FeedbackTopic.FEATURESCRIPTS` fixed.
+1. **Report an issue**, last in a row's ⋯ and right-click menu and in the
+   popup's ⋯, opens the form (`openFeatureScriptReport`) titled **Report issue
+   with** the feature, with the topic `FeedbackTopic.FEATURESCRIPTS` fixed.
 2. It offers bug (a feature that won't add, or builds wrong, is one), feature
    request, kudos and other, as the app's topics do
    ([feedback.md](./feedback.md)). `suggestTitle` fills the
    title as for a part: "Bug: Robot frame".
 3. The body carries `featureScript: { featureScriptId }`. The server reads the
-   feature (`findReportedFeatureScript`) and the post names it and links to
-   its Feature Studio and its example in the loaded version.
-4. General feedback offers **FeatureScripts** among its topics too, for one
-   that isn't about any one feature.
+   feature (`findReportedFeatureScript`), refusing one that isn't loaded, and
+   the post names it with its version, links its Feature Studio in the loaded
+   version, and links its source.
+4. General feedback offers **FeatureScripts** as an area too, with an optional
+   **FeatureScript** under it, for a report about one feature or none.
 5. The post goes to `DiscordForum.FEATURESCRIPTS`, whose webhook secret is
    `DISCORD_FEATURESCRIPTS_WEBHOOK_URL`; unset, the topic refuses reports as
-   any other does. Its tags are the topic's and the category's.
+   any other does. The forum holds one topic, so its tags are the category's
+   and **Error report**.
 
 ## Analytics
 
@@ -536,7 +538,7 @@ library's uses, users or part counts. It is its own event,
   `featureType`, the feature's constant, and in the element columns its
   Feature Studio's path in the loaded version. `NOT_A_FEATURE_ADD` nulls
   `featureType` for every other event. `trackFeatureAdd` records one once
-  Onshape accepted the feature. A FeatureScript report will be a `REPORT`
+  Onshape accepted the feature. A report naming a FeatureScript is a `REPORT`
   event that sets `featureType` too, so reports can be counted per feature.
 - **Reports** roll up into `daily_report_metrics` as every report does, under
   the FeatureScripts topic.

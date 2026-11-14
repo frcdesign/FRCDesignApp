@@ -10,7 +10,9 @@ import { PaperPlaneTiltIcon } from "@phosphor-icons/react";
 import { ReportSent } from "./report-sent";
 import { type ReactNode, useState } from "react";
 import {
-    FEEDBACK_TOPICS,
+    areaTopics,
+    FEEDBACK_AREAS,
+    FeedbackArea,
     type FeedbackOut,
     feedbackCategories,
     FeedbackSource,
@@ -18,8 +20,9 @@ import {
     MAX_FEEDBACK_MESSAGE,
     MAX_FEEDBACK_TITLE,
     MAX_TEAM_NUMBER,
-    topicLibrary
+    topicArea
 } from "@backend/features/feedback/contract";
+import { type FeatureScriptOut } from "@backend/features/featurescripts/contract";
 import { type PartialSelection } from "@backend/features/configurations/contract";
 import { namedValues } from "@backend/features/configurations/selection";
 import { type InsertableOut } from "@backend/features/library/contract";
@@ -29,7 +32,9 @@ import { Callout } from "../../../components/callout";
 import { Status } from "../../../lib/status";
 import { collectDiagnostics, type ReportedError } from "../diagnostics";
 import { useSendFeedbackMutation } from "../queries";
+import { FeatureScriptPicker } from "./featurescript-picker";
 import {
+    areaLabel,
     descriptionPlaceholder,
     suggestTitle,
     topicLabel,
@@ -51,15 +56,35 @@ interface FeedbackFormProps {
     part?: ReportedPartChoice;
     /** Set for a report from an error. */
     error?: ReportedError;
+    /** Set for a report from a FeatureScript's menu. */
+    featureScript?: FeatureScriptOut;
+    /** On the feedback page rather than in a modal: no Cancel, and a sent report offers another. */
+    onPage?: boolean;
 }
 
 /** One form for every report; what it was opened from decides what it offers. */
 export function FeedbackForm(props: FeedbackFormProps): ReactNode {
-    const { source, part, error } = props;
+    const { source, part, error, featureScript, onPage = false } = props;
     const modal = useAppModal();
     const sendMutation = useSendFeedbackMutation();
 
-    const [topic, setTopic] = useState(props.initialTopic);
+    const [area, setArea] = useState(() => topicArea(props.initialTopic));
+    // Kept while another area is chosen, so coming back finds the same library.
+    const [library, setLibrary] = useState(() =>
+        topicArea(props.initialTopic) === FeedbackArea.PART_LIBRARY
+            ? props.initialTopic
+            : FeedbackTopic.FRC_DESIGN_LIB
+    );
+    const [pickedFeatureScriptId, setPickedFeatureScriptId] =
+        useState<string>();
+    const topic =
+        area === FeedbackArea.PART_LIBRARY ? library : areaTopics(area)[0];
+    const featureScriptId =
+        featureScript?.id ??
+        (area === FeedbackArea.FEATURESCRIPTS
+            ? pickedFeatureScriptId
+            : undefined);
+    const picksAbout = !part && !featureScript;
     const categories = feedbackCategories(topic, source);
     const [chosenCategory, setChosenCategory] = useState(categories[0]);
     // A topic change can leave the chosen category behind.
@@ -78,7 +103,7 @@ export function FeedbackForm(props: FeedbackFormProps): ReactNode {
         editedTitle ??
         suggestTitle({
             category,
-            partName: part?.insertable.name,
+            subject: part?.insertable.name ?? featureScript?.name,
             errorShown: error?.shown
         }) ??
         "";
@@ -90,7 +115,14 @@ export function FeedbackForm(props: FeedbackFormProps): ReactNode {
 
     const sent: FeedbackOut | undefined = sendMutation.data;
     if (sent) {
-        return <ReportSent topic={topic} onClose={modal.close} />;
+        return (
+            <ReportSent
+                topic={topic}
+                onPage={onPage}
+                onClose={modal.close}
+                onSendAnother={() => sendMutation.reset()}
+            />
+        );
     }
 
     const send = () => {
@@ -102,6 +134,7 @@ export function FeedbackForm(props: FeedbackFormProps): ReactNode {
             message: message.trim(),
             contact: contact.trim() || undefined,
             teamNumber: typeof teamNumber === "number" ? teamNumber : undefined,
+            featureScript: featureScriptId ? { featureScriptId } : undefined,
             part: part && {
                 insertableId: part.insertable.id,
                 selection:
@@ -124,23 +157,44 @@ export function FeedbackForm(props: FeedbackFormProps): ReactNode {
                         text={m.feedbackIncludesError({ error: error.shown })}
                     />
                 )}
-                {!part && (
+                {picksAbout && (
                     <Select
                         label={m.feedbackTopicLabel()}
-                        data={FEEDBACK_TOPICS.map((value) => ({
+                        data={FEEDBACK_AREAS.map((value) => ({
                             value,
-                            label: topicLabel(value)
+                            label: areaLabel(value)
                         }))}
-                        value={topic}
+                        value={area}
                         allowDeselect={false}
                         checkIconPosition="right"
                         onChange={(value) => {
-                            if (value) setTopic(value);
+                            if (value) setArea(value);
                         }}
                     />
                 )}
-                {!part && topicLibrary(topic) && (
-                    <Callout text={m.feedbackPartMenuCallout()} />
+                {picksAbout && area === FeedbackArea.PART_LIBRARY && (
+                    <>
+                        <Select
+                            label={m.feedbackLibraryLabel()}
+                            data={areaTopics(area).map((value) => ({
+                                value,
+                                label: topicLabel(value)
+                            }))}
+                            value={library}
+                            allowDeselect={false}
+                            checkIconPosition="right"
+                            onChange={(value) => {
+                                if (value) setLibrary(value);
+                            }}
+                        />
+                        <Callout text={m.feedbackPartMenuCallout()} />
+                    </>
+                )}
+                {picksAbout && area === FeedbackArea.FEATURESCRIPTS && (
+                    <FeatureScriptPicker
+                        value={pickedFeatureScriptId}
+                        onChange={setPickedFeatureScriptId}
+                    />
                 )}
                 <Select
                     label={m.feedbackTypeLabel()}
@@ -204,10 +258,13 @@ export function FeedbackForm(props: FeedbackFormProps): ReactNode {
                 />
             </AppModalBody>
             <AppModalFooter>
-                <Button variant="default" onClick={modal.close}>
-                    {m.feedbackCancel()}
-                </Button>
+                {!onPage && (
+                    <Button variant="default" onClick={modal.close}>
+                        {m.feedbackCancel()}
+                    </Button>
+                )}
                 <Button
+                    ml="auto"
                     leftSection={<PaperPlaneTiltIcon />}
                     disabled={!canSend}
                     loading={sendMutation.isPending}

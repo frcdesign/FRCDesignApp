@@ -12,7 +12,8 @@ export enum DiscordForum {
     APP = "app",
     /** FRCDesignLib and MKCad, which share a forum. */
     LIBRARY = "library",
-    CONFIG_LIB = "config-lib"
+    CONFIG_LIB = "config-lib",
+    FEATURESCRIPTS = "featurescripts"
 }
 
 /** The tag every report started from an error is filed under, beside its type's. */
@@ -81,6 +82,12 @@ export const DISCORD_FORUMS: Record<DiscordForum, ForumSettings> = {
             [FeedbackCategory.KUDOS]: "1567415082252509356",
             [FeedbackCategory.OTHER]: "1566637169806807151"
         }
+    },
+    /** One topic, so no topic tag: its threads are told apart by type alone. */
+    [DiscordForum.FEATURESCRIPTS]: {
+        channel: "featurescript-feedback",
+        // Its invite and tag ids are filled in once the forum exists.
+        tags: {}
     }
 };
 
@@ -89,7 +96,8 @@ export const TOPIC_FORUMS: Record<FeedbackTopic, DiscordForum> = {
     [FeedbackTopic.VERSION_MANAGER]: DiscordForum.APP,
     [FeedbackTopic.FRC_DESIGN_LIB]: DiscordForum.LIBRARY,
     [FeedbackTopic.MKCAD]: DiscordForum.LIBRARY,
-    [FeedbackTopic.CONFIG_LIB]: DiscordForum.CONFIG_LIB
+    [FeedbackTopic.CONFIG_LIB]: DiscordForum.CONFIG_LIB,
+    [FeedbackTopic.FEATURESCRIPTS]: DiscordForum.FEATURESCRIPTS
 };
 
 export function topicForum(topic: FeedbackTopic): ForumSettings {

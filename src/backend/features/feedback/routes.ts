@@ -17,6 +17,7 @@ import {
 import { getWebhookUrl, reportTagIds } from "./channels";
 import { buildReportMessage, postToDiscord, type Report } from "./discord";
 import { ANY_LIBRARY, findReportedPart } from "./reported-part";
+import { findReportedFeatureScript } from "./reported-featurescript";
 import { reporterKey, takeReportSlot } from "./rate-limit";
 
 export const feedbackRoutes = getApp();
@@ -85,6 +86,20 @@ feedbackRoutes.post("/feedback", validate("json", feedbackBody), async (c) => {
         }
     }
 
+    let featureScript;
+    if (body.featureScript) {
+        featureScript = await findReportedFeatureScript(
+            getDb(c.env.DB),
+            body.featureScript.featureScriptId
+        );
+        if (!featureScript) {
+            throw internalError(
+                "The reported FeatureScript isn't loaded",
+                HttpStatus.NOT_FOUND
+            );
+        }
+    }
+
     const reportId = crypto.randomUUID();
     const report: Report = {
         id: reportId,
@@ -101,6 +116,7 @@ feedbackRoutes.post("/feedback", validate("json", feedbackBody), async (c) => {
         accessLevels: await readAccessLevels(c),
         userAgent: c.req.header("User-Agent"),
         part,
+        featureScript,
         diagnostics: body.diagnostics,
         createdAt: new Date()
     };
@@ -116,7 +132,8 @@ feedbackRoutes.post("/feedback", validate("json", feedbackBody), async (c) => {
         category: body.category,
         source: body.source,
         teamNumber: body.teamNumber,
-        part
+        part,
+        featureType: featureScript?.featureType
     });
     return c.json({ reportId } satisfies FeedbackOut);
 });

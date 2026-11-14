@@ -2,11 +2,13 @@ import { Menu } from "@mantine/core";
 import {
     ArrowSquareOutIcon,
     CodeIcon,
+    FlagIcon,
     PuzzlePieceIcon
 } from "@phosphor-icons/react";
 import { type ReactNode } from "react";
 import { type FeatureScriptOut } from "@backend/features/featurescripts/contract";
 import { openUrlInNewTab } from "../../../lib/url";
+import { openFeatureScriptReport } from "../../feedback/open-feedback";
 import { m } from "../../../paraglide/messages";
 import { useFrontendTabUrl } from "../queries";
 
@@ -54,6 +56,13 @@ export function FeatureScriptMenuItems(
                     {m.featureScriptsViewCode()}
                 </Menu.Item>
             )}
+            <Menu.Divider />
+            <Menu.Item
+                leftSection={<FlagIcon />}
+                onClick={() => openFeatureScriptReport(feature)}
+            >
+                {m.feedbackReportIssue()}
+            </Menu.Item>
         </>
     );
 }

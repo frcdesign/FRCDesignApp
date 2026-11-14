@@ -9,8 +9,16 @@ import {
     FeedbackTopic
 } from "@backend/features/feedback/contract";
 import type { InsertableOut } from "@backend/features/library/contract";
+import type { FeatureScriptOut } from "@backend/features/featurescripts/contract";
 import { ElementType } from "@backend/lib/onshape/element-type";
-import { renderWithProviders } from "../../../../__test_utils__/render";
+import {
+    createTestQueryClient,
+    renderWithProviders
+} from "../../../../__test_utils__/render";
+import {
+    featureScriptsQueryKey,
+    featureScriptsVersionQueryKey
+} from "../../../lib/query-keys";
 import {
     DISCORD_FORUMS,
     DISCORD_INVITE_URL,
@@ -51,6 +59,15 @@ const INSERTABLE: InsertableOut = {
     elementType: ElementType.PART_STUDIO,
     isConfigurable: true,
     vendors: []
+};
+
+const FEATURE: FeatureScriptOut = {
+    id: "frame",
+    elementId: "e-frame",
+    name: "Robot frame",
+    description: "Add tube.",
+    isVisible: true,
+    problems: []
 };
 
 const PART_CALLOUT = /Report an issue button in the configuration menu/;
@@ -102,7 +119,15 @@ describe("FeedbackForm", () => {
         );
         expect(screen.queryByText(PART_CALLOUT)).toBeNull();
 
+        // The app and its libraries are separate choices, then the library.
         await user.click(screen.getByRole("combobox", { name: "About" }));
+        expect(screen.queryByRole("option", { name: "MKCad" })).toBeNull();
+        await user.click(screen.getByRole("option", { name: "Part library" }));
+        const library = screen.getByRole<HTMLInputElement>("combobox", {
+            name: "Library"
+        });
+        expect(library.value).toBe("FRCDesignLib");
+        await user.click(library);
         await user.click(screen.getByRole("option", { name: "MKCad" }));
 
         expect(screen.getByText(PART_CALLOUT)).toBeTruthy();
@@ -301,5 +326,96 @@ describe("FeedbackForm", () => {
             title: "Unexpectedly failed to insert Hex shaft",
             part: { insertableId: "ins", selection: { size: "1/2 in" } }
         });
+    });
+
+    it("sends a FeatureScript picked under FeatureScripts, or none", async () => {
+        const user = userEvent.setup();
+        const queryClient = createTestQueryClient();
+        queryClient.setQueryData(featureScriptsVersionQueryKey(), 3);
+        queryClient.setQueryData(featureScriptsQueryKey(3), {
+            features: [FEATURE]
+        });
+        renderWithProviders(
+            <FeedbackForm
+                initialTopic={FeedbackTopic.APP}
+                source={FeedbackSource.GENERAL}
+            />,
+            queryClient
+        );
+
+        await user.click(screen.getByRole("combobox", { name: "About" }));
+        await user.click(
+            screen.getByRole("option", { name: "FeatureScripts" })
+        );
+        await user.type(
+            screen.getByRole("textbox", { name: /Title/ }),
+            "Ideas"
+        );
+        await user.type(
+            screen.getByRole("textbox", { name: /Description/ }),
+            "More gussets."
+        );
+        await user.click(screen.getByRole("button", { name: "Send" }));
+        expect(sent()).toMatchObject({ topic: FeedbackTopic.FEATURESCRIPTS });
+        expect(sent().featureScript).toBeUndefined();
+
+        mutate.mockReset();
+        await user.click(
+            screen.getByRole("combobox", { name: "FeatureScript" })
+        );
+        await user.click(screen.getByRole("option", { name: "Robot frame" }));
+        await user.click(screen.getByRole("button", { name: "Send" }));
+        expect(sent().featureScript).toEqual({ featureScriptId: "frame" });
+
+        // Leaving the area drops the feature with it.
+        mutate.mockReset();
+        await user.click(screen.getByRole("combobox", { name: "About" }));
+        await user.click(screen.getByRole("option", { name: "FRCDesignApp" }));
+        await user.click(screen.getByRole("button", { name: "Send" }));
+        expect(sent().topic).toBe(FeedbackTopic.APP);
+        expect(sent().featureScript).toBeUndefined();
+    });
+
+    it("reports a FeatureScript from its menu without asking what it is about", async () => {
+        const user = userEvent.setup();
+        renderWithProviders(
+            <FeedbackForm
+                initialTopic={FeedbackTopic.FEATURESCRIPTS}
+                source={FeedbackSource.FEATURESCRIPT}
+                featureScript={FEATURE}
+            />
+        );
+        expect(screen.queryByRole("combobox", { name: "About" })).toBeNull();
+        expect(
+            screen.getByRole<HTMLInputElement>("textbox", { name: /Title/ })
+                .value
+        ).toBe("Bug: Robot frame");
+
+        await user.type(
+            screen.getByRole("textbox", { name: /Description/ }),
+            "Fails on curved faces."
+        );
+        await user.click(screen.getByRole("button", { name: "Send" }));
+        expect(sent()).toMatchObject({
+            topic: FeedbackTopic.FEATURESCRIPTS,
+            source: FeedbackSource.FEATURESCRIPT,
+            category: FeedbackCategory.BUG,
+            featureScript: { featureScriptId: "frame" }
+        });
+    });
+
+    it("offers another report on the feedback page, where there is nothing to close", () => {
+        answer.data = { reportId: "r" };
+        renderWithProviders(
+            <FeedbackForm
+                initialTopic={FeedbackTopic.APP}
+                source={FeedbackSource.GENERAL}
+                onPage
+            />
+        );
+        expect(
+            screen.getByRole("button", { name: "Send another" })
+        ).toBeTruthy();
+        expect(screen.queryByRole("button", { name: "Close" })).toBeNull();
     });
 });

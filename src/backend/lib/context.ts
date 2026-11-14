@@ -34,6 +34,7 @@ export interface AppBindings {
     /** FRCDesignLib's and MKCad's, which share a channel. */
     DISCORD_FRC_DESIGN_LIB_WEBHOOK_URL?: string;
     DISCORD_CONFIG_LIB_WEBHOOK_URL?: string;
+    DISCORD_FEATURESCRIPTS_WEBHOOK_URL?: string;
 }
 
 interface AppVariables {

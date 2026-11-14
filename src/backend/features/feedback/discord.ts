@@ -25,6 +25,16 @@ export interface ReportedPart {
     configuration?: string[];
 }
 
+export interface ReportedFeatureScript {
+    name: string;
+    /** As robot-code tagged its release, e.g. "1.3.0". */
+    releaseVersion?: string;
+    /** Opens its Feature Studio in the loaded version. */
+    url: string;
+    /** The released file on GitHub. */
+    sourceUrl?: string;
+}
+
 export interface Report {
     id: string;
     /** The reporter's; names the thread. */
@@ -44,6 +54,7 @@ export interface Report {
     accessLevels?: Record<LibraryId, AccessLevel>;
     userAgent?: string;
     part?: ReportedPart;
+    featureScript?: ReportedFeatureScript;
     diagnostics: FeedbackDiagnostics;
     createdAt: Date;
 }
@@ -159,6 +170,16 @@ function reportFields(report: Report): DiscordEmbedField[] {
             );
         }
     }
+    if (report.featureScript) {
+        const { name, releaseVersion, sourceUrl } = report.featureScript;
+        const value = releaseVersion ? `${name} v${releaseVersion}` : name;
+        fields.push(
+            field(
+                "FeatureScript",
+                sourceUrl ? `${value} ([source](${sourceUrl}))` : value
+            )
+        );
+    }
     if (diagnostics.error) {
         const { shown, kind, detail, request, errorId } = diagnostics.error;
         const lines = [shown];
@@ -225,7 +246,7 @@ export function buildReportMessage(report: Report): DiscordMessage {
     const title = truncate(report.title, TITLE_LIMIT);
     const main: DiscordEmbed = {
         title,
-        url: report.part?.url,
+        url: report.part?.url ?? report.featureScript?.url,
         description: report.message || "_No description given._",
         color: CATEGORY_COLORS[report.category],
         fields: reportFields(report)

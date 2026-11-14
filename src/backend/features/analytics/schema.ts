@@ -77,7 +77,7 @@ export const events = sqliteTable(
         reportCategory: text("report_category").$type<FeedbackCategory>(),
         reportSource: text("report_source").$type<FeedbackSource>(),
         reportTeamNumber: integer("report_team_number"),
-        // A FeatureScript add's: the feature's constant, which never changes once released.
+        // The FeatureScript an add or a report names: its constant, which never changes once released.
         featureType: text("feature_type")
     },
     // Only used to rebuild the rollups, which walk by day.

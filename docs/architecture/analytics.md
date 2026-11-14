@@ -813,8 +813,9 @@ no foreign key crosses between them):
   which a download leaves null; a version run adds its kind,
   scope, whether it was update-only, its outcome, and how many steps failed,
   versions it created and tabs it updated. A report adds its topic, category,
-  source and the team number the reporter gave, and a part report the element
-  path and insertable. A FeatureScript add has its feature's constant in
+  source and the team number the reporter gave, a part report the element
+  path and insertable, and a report naming a FeatureScript its constant in
+  `feature_type`. A FeatureScript add has its feature's constant in
   `feature_type`, and its Feature Studio's path in the loaded version in the
   element columns. Keyed on
   Onshape's element id with no foreign keys, so history survives a reload or a
@@ -822,7 +823,7 @@ no foreign key crosses between them):
 - `library_id` is null for an event that belongs to no library: an app open,
   which is the app being opened rather than the page it resumes into, a
   version run, which acts on the Onshape document the app was launched from,
-  a FeatureScript add, and a report about the app itself. A report from somebody signed out has
+  a FeatureScript add, and a report about the app itself or the FeatureScripts. A report from somebody signed out has
   `user_id` `signed-out` (`SIGNED_OUT_USER_ID`).
 - Rollups, each derived from the log alone: `daily_metrics`,
   `daily_target_metrics`, `daily_source_metrics`, `insertable_stats`,

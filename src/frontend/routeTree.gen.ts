@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TestbenchRouteImport } from './routes/testbench'
+import { Route as FeedbackRouteImport } from './routes/feedback'
 import { Route as DashboardRouteRouteImport } from './routes/dashboard/route'
 import { Route as AppRouteRouteImport } from './routes/app/route'
 import { Route as IndexRouteImport } from './routes/index'
@@ -37,6 +38,11 @@ import { Route as AppLibraryLibraryIdGroupsGroupIdRouteImport } from './routes/a
 const TestbenchRoute = TestbenchRouteImport.update({
   id: '/testbench',
   path: '/testbench',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FeedbackRoute = FeedbackRouteImport.update({
+  id: '/feedback',
+  path: '/feedback',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRouteRoute = DashboardRouteRouteImport.update({
@@ -166,6 +172,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRouteRouteWithChildren
   '/dashboard': typeof DashboardRouteRouteWithChildren
+  '/feedback': typeof FeedbackRoute
   '/testbench': typeof TestbenchRoute
   '/app/featurescripts': typeof AppFeaturescriptsRouteRouteWithChildren
   '/beta-complete': typeof PagesBetaCompleteRoute
@@ -191,6 +198,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/app': typeof AppRouteRouteWithChildren
+  '/feedback': typeof FeedbackRoute
   '/testbench': typeof TestbenchRoute
   '/beta-complete': typeof PagesBetaCompleteRoute
   '/cookie-error': typeof PagesCookieErrorRoute
@@ -215,6 +223,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/app': typeof AppRouteRouteWithChildren
   '/dashboard': typeof DashboardRouteRouteWithChildren
+  '/feedback': typeof FeedbackRoute
   '/testbench': typeof TestbenchRoute
   '/app/featurescripts': typeof AppFeaturescriptsRouteRouteWithChildren
   '/_pages/beta-complete': typeof PagesBetaCompleteRoute
@@ -243,6 +252,7 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/dashboard'
+    | '/feedback'
     | '/testbench'
     | '/app/featurescripts'
     | '/beta-complete'
@@ -268,6 +278,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/app'
+    | '/feedback'
     | '/testbench'
     | '/beta-complete'
     | '/cookie-error'
@@ -291,6 +302,7 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/dashboard'
+    | '/feedback'
     | '/testbench'
     | '/app/featurescripts'
     | '/_pages/beta-complete'
@@ -318,6 +330,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRouteRoute: typeof AppRouteRouteWithChildren
   DashboardRouteRoute: typeof DashboardRouteRouteWithChildren
+  FeedbackRoute: typeof FeedbackRoute
   TestbenchRoute: typeof TestbenchRoute
   PagesBetaCompleteRoute: typeof PagesBetaCompleteRoute
   PagesCookieErrorRoute: typeof PagesCookieErrorRoute
@@ -337,6 +350,13 @@ declare module '@tanstack/react-router' {
       path: '/testbench'
       fullPath: '/testbench'
       preLoaderRoute: typeof TestbenchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/feedback': {
+      id: '/feedback'
+      path: '/feedback'
+      fullPath: '/feedback'
+      preLoaderRoute: typeof FeedbackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -587,6 +607,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRouteRoute: AppRouteRouteWithChildren,
   DashboardRouteRoute: DashboardRouteRouteWithChildren,
+  FeedbackRoute: FeedbackRoute,
   TestbenchRoute: TestbenchRoute,
   PagesBetaCompleteRoute: PagesBetaCompleteRoute,
   PagesCookieErrorRoute: PagesCookieErrorRoute,

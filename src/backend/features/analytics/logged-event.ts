@@ -48,7 +48,7 @@ export type ElementColumns = Pick<
     "elementId" | "documentId" | "instanceId" | "instanceType" | "insertableId"
 >;
 
-/** What only a FeatureScript add fills in, beside the element columns of the studio it came from. */
+/** A FeatureScript's constant: an add's, beside its studio's element columns, or a report's that names one. */
 type FeatureAddColumns = Pick<LoggedEvent, "featureType">;
 
 /** What only a use, an insert or a download, fills in. */

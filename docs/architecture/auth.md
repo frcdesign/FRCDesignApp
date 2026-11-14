@@ -191,6 +191,7 @@ user chose to view the app as, clamped to what the server grants.
 | `DISCORD_APP_WEBHOOK_URL`                | Secret per environment; `.env` locally           | `feedback/channels.ts`                         | Discord webhook for reports about the app and the version manager; unset refuses them                   |
 | `DISCORD_FRC_DESIGN_LIB_WEBHOOK_URL`     | Secret per environment; `.env` locally           | `feedback/channels.ts`                         | The same, for FRCDesignLib and MKCad                                                                    |
 | `DISCORD_CONFIG_LIB_WEBHOOK_URL`         | Secret per environment; `.env` locally           | `feedback/channels.ts`                         | The same, for ConfigLib                                                                                 |
+| `DISCORD_FEATURESCRIPTS_WEBHOOK_URL`     | Secret per environment; `.env` locally           | `feedback/channels.ts`                         | The same, for FeatureScripts                                                                            |
 
 `README.md` also lists `API_ACCESS_KEY` and `API_SECRET_KEY`, which no code
 reads.

@@ -32,13 +32,18 @@ import {
 } from "./contract";
 import * as Discord from "./discord";
 import { REPORT_LIMIT } from "./rate-limit";
+import {
+    featureScripts,
+    featureScriptsDocument
+} from "../featurescripts/schema";
 
 const db = getDb(env.DB);
 
 const WEBHOOKS = {
     DISCORD_APP_WEBHOOK_URL: "https://discord.test/app",
     DISCORD_FRC_DESIGN_LIB_WEBHOOK_URL: "https://discord.test/frc-design-lib",
-    DISCORD_CONFIG_LIB_WEBHOOK_URL: "https://discord.test/config-lib"
+    DISCORD_CONFIG_LIB_WEBHOOK_URL: "https://discord.test/config-lib",
+    DISCORD_FEATURESCRIPTS_WEBHOOK_URL: "https://discord.test/featurescripts"
 };
 
 const DIAGNOSTICS = { url: "https://app.test/app/library/frc-design-lib" };
@@ -95,7 +100,11 @@ describe("POST /api/feedback", () => {
             WEBHOOKS.DISCORD_FRC_DESIGN_LIB_WEBHOOK_URL
         ],
         [FeedbackTopic.MKCAD, WEBHOOKS.DISCORD_FRC_DESIGN_LIB_WEBHOOK_URL],
-        [FeedbackTopic.CONFIG_LIB, WEBHOOKS.DISCORD_CONFIG_LIB_WEBHOOK_URL]
+        [FeedbackTopic.CONFIG_LIB, WEBHOOKS.DISCORD_CONFIG_LIB_WEBHOOK_URL],
+        [
+            FeedbackTopic.FEATURESCRIPTS,
+            WEBHOOKS.DISCORD_FEATURESCRIPTS_WEBHOOK_URL
+        ]
     ])("posts a %s report to its channel", async (topic, webhook) => {
         // A bug is the one kind every topic takes.
         const res = await send(body({ topic, category: FeedbackCategory.BUG }));
@@ -377,5 +386,94 @@ describe("POST /api/feedback", () => {
 
         expect(res.status).toBe(500);
         expect(await db.select().from(events).all()).toEqual([]);
+    });
+});
+
+describe("POST /api/feedback about a FeatureScript", () => {
+    beforeEach(async () => {
+        await resetDb(db);
+        post = vi.spyOn(Discord, "postToDiscord").mockResolvedValue();
+        await db.insert(featureScriptsDocument).values({
+            documentId: "frontend",
+            versionId: "v-1",
+            cacheVersion: 1
+        });
+        await db.insert(featureScripts).values({
+            id: "frame",
+            elementId: "e-frame",
+            microversionId: "mv",
+            featureType: "robotFrame",
+            name: "Robot frame",
+            description: "Add tube.",
+            releaseVersion: "1.3.0",
+            sourceUrl:
+                "https://github.com/robot-education/robot-code/blob/robotFrame/v1.3.0/featurescripts/released/frame/robotFrame.fs"
+        });
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
+    function featureReport(overrides: Partial<FeedbackIn> = {}) {
+        return body({
+            topic: FeedbackTopic.FEATURESCRIPTS,
+            source: FeedbackSource.FEATURESCRIPT,
+            featureScript: { featureScriptId: "frame" },
+            ...overrides
+        });
+    }
+
+    it("names the feature in its post, linking its studio, and counts it by its constant", async () => {
+        const res = await send(featureReport());
+        expect(res.status).toBe(200);
+
+        expect(postedTo()).toEqual([
+            WEBHOOKS.DISCORD_FEATURESCRIPTS_WEBHOOK_URL
+        ]);
+        const [main] = post.mock.calls[0][1].embeds;
+        expect(main.url).toBe(
+            "https://cad.onshape.com/documents/frontend/v/v-1/e/e-frame"
+        );
+        expect(main.fields).toContainEqual(
+            expect.objectContaining({
+                name: "FeatureScript",
+                value: expect.stringContaining("Robot frame v1.3.0")
+            })
+        );
+        expect(await db.select().from(events).get()).toMatchObject({
+            type: EventType.REPORT,
+            libraryId: null,
+            reportTopic: FeedbackTopic.FEATURESCRIPTS,
+            reportSource: FeedbackSource.FEATURESCRIPT,
+            featureType: "robotFrame"
+        });
+    });
+
+    it("takes a feature picked in the general form, under FeatureScripts", async () => {
+        const res = await send(
+            featureReport({ source: FeedbackSource.GENERAL })
+        );
+        expect(res.status).toBe(200);
+    });
+
+    it.each([
+        [
+            "names a feature under another topic",
+            { topic: FeedbackTopic.APP, source: FeedbackSource.GENERAL }
+        ],
+        ["comes from a menu but names none", { featureScript: undefined }]
+    ])("refuses a report that %s", async (_, overrides) => {
+        const res = await send(featureReport(overrides));
+        expect(res.status).toBe(400);
+        expect(post).not.toHaveBeenCalled();
+    });
+
+    it("refuses a feature that isn't loaded", async () => {
+        const res = await send(
+            featureReport({ featureScript: { featureScriptId: "gone" } })
+        );
+        expect(res.status).toBe(404);
+        expect(post).not.toHaveBeenCalled();
     });
 });

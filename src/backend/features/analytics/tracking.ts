@@ -209,6 +209,8 @@ export interface ReportEvent {
     teamNumber?: number;
     /** Set for a report from a part's menu. */
     part?: { path: ElementPath; insertableId: string };
+    /** The constant of the FeatureScript a report names. */
+    featureType?: string;
 }
 
 /** As `trackInsert`: the report has been sent, whatever happens to its record. */
@@ -229,7 +231,7 @@ export function trackReport(c: AppContext, event: ReportEvent): Promise<void> {
                 ...element,
                 ...NOT_A_USE,
                 ...NOT_A_VERSION_RUN,
-                ...NOT_A_FEATURE_ADD,
+                featureType: event.featureType ?? null,
                 reportTopic: event.topic,
                 reportCategory: event.category,
                 reportSource: event.source,

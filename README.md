@@ -41,6 +41,7 @@ FORCE_SIGNED_IN=false
 DISCORD_APP_WEBHOOK_URL=<Webhook for FRCDesignApp and Version Manager reports>
 DISCORD_FRC_DESIGN_LIB_WEBHOOK_URL=<Webhook for FRCDesignLib and MKCad reports>
 DISCORD_CONFIG_LIB_WEBHOOK_URL=<Webhook for ConfigLib reports>
+DISCORD_FEATURESCRIPTS_WEBHOOK_URL=<Webhook for FeatureScript reports>
 ```
 
 In a deployed environment, set the webhooks as secrets with
