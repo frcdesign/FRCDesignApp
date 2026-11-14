@@ -43,7 +43,7 @@ import {
     runFailure
 } from "./failures";
 import { getFastenerSet } from "./fastener-set";
-import { type FastenerSet } from "./studios";
+import { type FastenerSet, inSize } from "./studios";
 import { indexHoles } from "./index-holes";
 import {
     insertGroups,
@@ -170,7 +170,10 @@ async function runSteps(ctx: RunContext, request: AutoAssemblyIn) {
                 indexed.placed,
                 request.options,
                 set.catalog,
-                indexed.stopPlane
+                {
+                    stopPlane: indexed.stopPlane,
+                    inSize: (size) => inSize(set, request.options, size)
+                }
             );
             return {
                 plans,

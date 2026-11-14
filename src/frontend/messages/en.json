@@ -734,5 +734,6 @@
     "placementFasten": "Fasten",
     "placementSelectBy": "Select by",
     "insertMenuInsert": "Insert",
-    "insertMenuDerive": "Derive"
+    "insertMenuDerive": "Derive",
+    "autoAssemblySizeFromHole": "From hole"
 }

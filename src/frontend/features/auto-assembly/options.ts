@@ -157,6 +157,7 @@ export function fastenerOptions(settled: SettledChoices): FastenerOptions {
         program: form[FormInput.PROGRAM] as Program,
         mode: settled.mode,
         screw: settled.screw,
+        matchHoleSize: form[FormInput.MATCH_HOLE_SIZE] === "true",
         screwWasher: part(Part.SCREW_WASHER),
         nut: part(Part.NUT),
         nutWasher: part(Part.NUT_WASHER),

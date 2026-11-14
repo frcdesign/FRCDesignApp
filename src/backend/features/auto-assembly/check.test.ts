@@ -101,6 +101,37 @@ describe("pickProblems", () => {
         ]);
     });
 
+    it("leaves out a face's holes of another size, but not when they're all it has", () => {
+        const problems = pickProblems(
+            {
+                targets: [
+                    pick("F", SelectedEntityType.FACE),
+                    pick("G", SelectedEntityType.FACE)
+                ],
+                excluded: [],
+                replaced: []
+            },
+            indexed({
+                pickEdges: {
+                    "plate|F": ["plate|F1", "plate|F2"],
+                    "plate|G": ["plate|G1"]
+                }
+            }),
+            [
+                ready("plate|F1"),
+                { key: "plate|F2", status: HoleStatus.SKIPPED },
+                { key: "plate|G1", status: HoleStatus.SKIPPED }
+            ]
+        );
+        expect(problems).toEqual([
+            {
+                key: "plate|G",
+                message: "No holes in this face fit the screw.",
+                severity: ProblemSeverity.ERROR
+            }
+        ]);
+    });
+
     it("plans nothing without options, so only picks giving no hole are marked", () => {
         expect(
             pickProblems(

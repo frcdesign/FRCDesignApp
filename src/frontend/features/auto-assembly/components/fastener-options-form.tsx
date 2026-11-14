@@ -2,9 +2,12 @@ import { Text } from "@mantine/core";
 import { type ReactNode } from "react";
 import {
     type ConfigurationParameter,
+    type EnumOption,
+    type EnumParameter,
     ParameterType,
     type Selection
 } from "@backend/features/configurations/contract";
+import { getVisibleOptions } from "@backend/features/configurations/utils";
 import { Program } from "@backend/features/auto-assembly/catalog";
 import {
     FastenerMode,
@@ -139,9 +142,11 @@ function ScrewInputs(props: ScrewInputsProps): ReactNode {
     const { settled } = props;
     const setScrew = useAutoAssemblyStore((state) => state.setScrew);
     const setMode = useAutoAssemblyStore((state) => state.setMode);
+    const setForm = useAutoAssemblyStore((state) => state.setForm);
 
     const { parameters } = settled.set.studios[FastenerKind.SCREW];
     const selection: Selection = { ...settled.screw };
+    const isFromHole = settled.form[FormInput.MATCH_HOLE_SIZE] === "true";
 
     return (
         <>
@@ -167,6 +172,41 @@ function ScrewInputs(props: ScrewInputsProps): ReactNode {
                 ) {
                     return sizing;
                 }
+                if (
+                    parameter.id === StudioInput.SIZE &&
+                    parameter.type === ParameterType.ENUM
+                ) {
+                    const sizes = withFromHole(
+                        parameter,
+                        getVisibleOptions(parameter, selection, parameters)
+                    );
+                    return (
+                        <ParameterInput
+                            key={parameter.id}
+                            inputId={`screw-${parameter.id}`}
+                            parameter={sizes}
+                            value={isFromHole ? FROM_HOLE : settled.screw.size}
+                            selection={{
+                                [parameter.id]: isFromHole
+                                    ? FROM_HOLE
+                                    : settled.screw.size
+                            }}
+                            parameters={[sizes]}
+                            onValueChange={(value) => {
+                                if (value === undefined) {
+                                    return;
+                                }
+                                setForm(
+                                    FormInput.MATCH_HOLE_SIZE,
+                                    String(value === FROM_HOLE)
+                                );
+                                if (value !== FROM_HOLE) {
+                                    setScrew(parameter.id, value);
+                                }
+                            }}
+                        />
+                    );
+                }
                 return [
                     sizing,
                     <ParameterInput
@@ -184,6 +224,24 @@ function ScrewInputs(props: ScrewInputsProps): ReactNode {
             })}
         </>
     );
+}
+
+/** The Size input's option for sizing each screw by its hole. */
+const FROM_HOLE = "fromHole";
+
+/** The screw's Size with "From hole" first, and only the sizes it shows. */
+function withFromHole(
+    parameter: EnumParameter,
+    visible: EnumOption[]
+): EnumParameter {
+    return {
+        ...parameter,
+        options: [
+            { id: FROM_HOLE, name: m.autoAssemblySizeFromHole() },
+            ...visible
+        ],
+        optionConditions: []
+    };
 }
 
 interface PartGroupProps {

@@ -13,10 +13,11 @@ import {
 import {
     type AssemblyCircularEdge,
     type AssemblyHole,
+    holeSize,
     planHoles,
     type PlacedScrew
 } from "./planner";
-import { type PartChoice, type ScrewChoice } from "./studios";
+import { inSize, type PartChoice, type ScrewChoice } from "./studios";
 
 const INCH = 0.0254;
 
@@ -276,7 +277,12 @@ describe("planHoles", () => {
                     [],
                     options({ stop: StopCondition.FACE }),
                     FASTENER_SET.catalog,
-                    { point: [1, 1, -depth * INCH], normal: [0, 0, 1] }
+                    {
+                        stopPlane: {
+                            point: [1, 1, -depth * INCH],
+                            normal: [0, 0, 1]
+                        }
+                    }
                 );
                 return only.planned;
             };
@@ -296,6 +302,77 @@ describe("planHoles", () => {
             const { planned } = plan(deep);
             expect(planned.status).toBe(HoleStatus.NO_FIT);
             expect(planned.reason).toMatch(/maximum length/);
+        });
+    });
+
+    describe("hole sizes", () => {
+        const sizeOf = (diameter: number, extra: Partial<AssemblyHole> = {}) =>
+            holeSize(
+                hole("top", 0, 0.25, diameter, extra),
+                FASTENER_SET.catalog
+            )?.id;
+
+        it("takes a hole for the size it's a clearance, threads or tap drill of", () => {
+            expect(sizeOf(0.201)).toBe("NO_10_32");
+            expect(sizeOf(0.196)).toBe("NO_10_32");
+            expect(sizeOf(0.257)).toBe("QUARTER_20");
+            // #10-32's tap drill, which is too small for a #6's clearance
+            expect(sizeOf(0.159)).toBe("NO_10_32");
+            expect(
+                sizeOf(0.15, { threaded: true, majorDiameter: 0.19 * INCH })
+            ).toBe("NO_10_32");
+            expect(sizeOf(0.5)).toBeUndefined();
+        });
+
+        const fromFace = (holes: AssemblyHole[], extra: ExtraOptions = {}) => {
+            const opts = options(extra);
+            const [only] = planHoles(
+                [{ ...CIRCULAR_EDGE, isFromFace: true }],
+                holes,
+                [],
+                opts,
+                FASTENER_SET.catalog,
+                { inSize: (size) => inSize(FASTENER_SET, opts, size) }
+            );
+            return only.planned;
+        };
+        const quarter = [
+            hole("top", 0, 0.25, 0.257),
+            hole("bottom", 0.25, 0.5, 0.257)
+        ];
+
+        it("skips a face's hole made for another size", () => {
+            expect(fromFace(quarter).status).toBe(HoleStatus.SKIPPED);
+            expect(fromFace(TWO_PLATES).status).toBe(HoleStatus.READY);
+            expect(fromFace([hole("top", 0, 0.25, 0.5)]).status).toBe(
+                HoleStatus.SKIPPED
+            );
+        });
+
+        it("sizes each screw, and its nut, by its hole", () => {
+            const planned = fromFace(quarter, { matchHoleSize: true });
+            expect(planned.status).toBe(HoleStatus.READY);
+            expect(planned.screw?.size).toBe("QUARTER_20");
+            expect(planned.nut?.size).toBe("QUARTER_20");
+            expect(
+                fromFace(TWO_PLATES, { matchHoleSize: true }).screw?.size
+            ).toBe("NO_10_32");
+        });
+
+        it("refuses a hole picked itself that no size is made for", () => {
+            const opts = options({ matchHoleSize: true });
+            const [only] = planHoles(
+                [CIRCULAR_EDGE],
+                [hole("top", 0, 0.25, 0.5)],
+                [],
+                opts,
+                FASTENER_SET.catalog,
+                { inSize: (size) => inSize(FASTENER_SET, opts, size) }
+            );
+            expect(only.planned.status).toBe(HoleStatus.NO_FIT);
+            expect(only.planned.reason).toBe(
+                "No screw size is made for this hole."
+            );
         });
     });
 

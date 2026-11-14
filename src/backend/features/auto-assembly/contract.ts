@@ -29,6 +29,8 @@ export interface FastenerOptions {
     mode: FastenerMode;
     /** Its length is the preset's, and automatic picks one in its place. */
     screw: ScrewChoice;
+    /** Each screw is the size its hole is made for, in place of `screw.size`. */
+    matchHoleSize?: boolean;
     /** Under the head; none when absent. */
     screwWasher?: PartChoice;
     /** Where the screw comes out the far side; none when absent. */
@@ -128,7 +130,9 @@ export enum HoleStatus {
     /** A library screw is already in it. */
     FASTENED = "fastened",
     /** Nothing in the catalog fits, or reaches far enough within the maximum length. */
-    NO_FIT = "no-fit"
+    NO_FIT = "no-fit",
+    /** A hole in a face picked, made for another size than the run's screw: left alone. */
+    SKIPPED = "skipped"
 }
 
 /** How a fastener ends. */

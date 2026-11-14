@@ -32,6 +32,7 @@ import {
 import {
     FastenerKind,
     type FastenerSet,
+    inSize,
     isMade,
     type PartChoice,
     type ScrewChoice
@@ -90,6 +91,7 @@ const optionsSchema = z
         program: z.enum(Program),
         mode: z.enum(FastenerMode),
         screw: screwSchema,
+        matchHoleSize: z.boolean().optional(),
         screwWasher: partSchema.optional(),
         nut: partSchema.optional(),
         nutWasher: partSchema.optional(),
@@ -201,7 +203,10 @@ autoAssemblyRoutes.post(
                   indexed.placed,
                   options,
                   set.catalog,
-                  indexed.stopPlane
+                  {
+                      stopPlane: indexed.stopPlane,
+                      inSize: (size) => inSize(set, options, size)
+                  }
               ).map((plan) => plan.planned)
             : undefined;
         return c.json({

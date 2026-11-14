@@ -268,6 +268,27 @@ describe("AutoAssemblyPanel", () => {
         expect(screen.queryByLabelText("Fully threaded")).toBeNull();
     });
 
+    it("sizes each screw by its hole once Size is From hole, until a size is picked", async () => {
+        renderPanel();
+        await choose("Size", "From hole");
+        await userEvent.click(
+            screen.getByText("Circular edges", { selector: "p" })
+        );
+        select({ ...face("E"), entityType: "EDGE" });
+        await userEvent.click(insertButton());
+        expect(apiPost).toHaveBeenLastCalledWith("/auto-assembly/insert", {
+            body: expect.objectContaining({
+                options: expect.objectContaining({ matchHoleSize: true })
+            })
+        });
+
+        await choose("Size", "#8-32");
+        expect(useAutoAssemblyStore.getState().screw.size).toBe("NO_8_32");
+        expect(useAutoAssemblyStore.getState().form.matchHoleSize).toBe(
+            "false"
+        );
+    });
+
     it("asks what to fasten with before what to fasten", () => {
         renderPanel();
         const headings = screen

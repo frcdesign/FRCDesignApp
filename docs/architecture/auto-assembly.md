@@ -164,6 +164,8 @@ interface SettledChoices {
 enum FormInput {
     SELECT_BY = "selectBy",
     PROGRAM = "program",
+    /** Whether each screw is the size its hole is made for, in place of the screw's Size. */
+    MATCH_HOLE_SIZE = "matchHoleSize",
     STOP = "stop",
     MAX_LENGTH = "maxLength",
     MAX_THREAD_DEPTH = "maxThreadDepth"
@@ -241,6 +243,8 @@ interface FastenerOptions {
     mode: FastenerMode;
     /** Its length is the preset's, and automatic picks one in its place. */
     screw: ScrewChoice;
+    /** Each screw is the size its hole is made for, in place of `screw.size`. */
+    matchHoleSize?: boolean;
     /** Under the head; none when absent. */
     screwWasher?: PartChoice;
     /** Where the screw comes out the far side; none when absent. */
@@ -406,7 +410,9 @@ enum HoleStatus {
     /** A library screw is already in it. */
     FASTENED = "fastened",
     /** Nothing in the catalog fits, or reaches far enough within the maximum length. */
-    NO_FIT = "no-fit"
+    NO_FIT = "no-fit",
+    /** A hole in a face picked, made for another size than the run's screw: left alone. */
+    SKIPPED = "skipped"
 }
 
 enum HoleEnd {
@@ -587,8 +593,26 @@ function planHoles(
     placed: PlacedScrew[],
     options: FastenerOptions,
     catalog: Catalog,
-    stopPlane?: AssemblyPlane
+    context?: PlanContext
 ): HolePlan[];
+// The size a hole is made for: its threads, or the size it's a clearance or tap drill of.
+function holeSize(
+    hole: AssemblyHole,
+    catalog: Catalog
+): CatalogSize | undefined;
+// A run's options for another screw size, each part settled onto what's made in it.
+function inSize(
+    set: FastenerSet,
+    options: FastenerOptions,
+    size: string
+): FastenerOptions;
+
+interface PlanContext {
+    /** The plane `StopCondition.FACE` stops at. */
+    stopPlane?: AssemblyPlane;
+    /** The run's options for another size, its parts settled onto what's made in it. */
+    inSize?: (size: string) => FastenerOptions;
+}
 function getLengths(
     catalog: Catalog,
     vendor: string,
@@ -634,6 +658,8 @@ interface AssemblyCircularEdge {
     /** Unit, out of the part: a fastener goes in against it. */
     normal: Vec3;
     radius: number;
+    /** One of a face's circular edges, rather than one picked itself. */
+    isFromFace?: boolean;
 }
 
 interface AssemblyHole {
@@ -1022,7 +1048,8 @@ The panel is a `ParameterGrid` of the configuration dialog's own inputs
 (`ParameterInput`), in groups under plain headings (`ParameterGroup`):
 
 1. **Fastener**: Program, then the screw studio's Vendor, Size, Head and
-   Finish, then _Sizing_ in place of its Length: **Automatic** (the default)
+   Finish. Size offers **From hole** first, which sizes each screw by its hole
+   (`matchHoleSize`). Then comes _Sizing_ in place of its Length: **Automatic** (the default)
    picks a length for each hole, and **Manual** shows the studio's Length, and,
    beside a length sold both ways, its Fully threaded. Sized automatically, it
    goes on with _Stop condition_ (**All holes**, the default; **Max length**
@@ -1089,6 +1116,8 @@ options (`planHoles`), and answers each pick's problem (`pickProblems` in
 `check.ts`, keyed by `pickKey`, as the client keys its rows):
 
 - a target that gave no circular edge: why, as a run reports it;
+- a face none of whose holes is made for the screw's size, as an error. A
+  face's holes of another size are left out of the rest;
 - a hole that won't plan ready, as an error: its plan's reason; a face, how
   many of its holes won't, and the first reason;
 - a hole that plans ready with a warning, as a warning; a face, how many of its
@@ -1156,9 +1185,16 @@ recorded with why, and the steps after it are skipped.
        head:
         1. A library screw already on its axis, seated there: **fastened**.
         2. Every hole on the axis, nearest first. The first must start at the
-           circular edge (or within a flat head's countersink of it), and be at
-           least the size's major diameter across.
-        3. Follow the holes (`followStack`): into a hole tapped for the size
+           circular edge (or within a flat head's countersink of it).
+        3. The size the first hole is made for (`holeSize`): its threads'
+           size, else the size it's a clearance of (from the major diameter to
+           a little past free clearance), else the size it's a tap drill of.
+            - With **From hole**, the screw, washers and nut are that size
+              (`inSize`). A hole made for no size is **no fit**, or
+              **skipped** if it's one of a face's.
+            - Otherwise, a face's hole made for another size is **skipped**.
+        4. The first hole must be at least the screw's major diameter across.
+        5. Follow the holes (`followStack`): into a hole tapped for the size
            (threads, or a hole at its tap drill narrower than the screw), to the
            bottom of a blind hole, or out the far side, across any gap. **All
            holes** stops past the vendor's longest screw; **Max length** past
@@ -1166,9 +1202,9 @@ recorded with why, and the steps after it are skipped.
            the axis meets the face's plane, no farther than the longest screw,
            and gives a hole whose axis meets it behind the circular edge, or
            never, no screw.
-        4. Washers (`chooseWashers`): the screw washer chosen, never under a
+        6. Washers (`chooseWashers`): the screw washer chosen, never under a
            flat head; the nut washer only under a nut.
-        5. Length (`pickScrew`), from the lengths the vendor makes the size
+        7. Length (`pickScrew`), from the lengths the vendor makes the size
            and head in, in the finish chosen (`getLengths`; within the maximum
            length under **Max length**), partly threaded; preset, only the chosen
            length, fully threaded if chosen:
@@ -1188,7 +1224,7 @@ recorded with why, and the steps after it are skipped.
               bottoms out; past the maximum thread depth; or too short, and how
               far it goes in. Lengths in messages are inches for FRC and
               millimetres for FTC (`formatDistance`).
-        6. The nut chosen, only out the far side, with the far side's circular
+        8. The nut chosen, only out the far side, with the far side's circular
            edge and its radius.
     7. Stores each hole's plan with the status, and each pick with the problem
        the check would mark it with (`runPicks`, from `pickProblems`). With any
