@@ -31,6 +31,7 @@ team, plus one owner set by configuration.
 | `src/frontend/routes/_pages/document-access.tsx`            | `/document-access`: what to do about a grant that can't                            |
 | `src/backend/lib/context.ts`                                | `AppBindings` (every binding and variable) and `bindAuth`                          |
 | `src/frontend/features/auth/access-level.ts`                | `useAccessData`: the server's level and the level the app is viewed as             |
+| `src/frontend/lib/library.ts`                               | `useLibraryId`: the library a read is for; `LibraryIdOverride` points it elsewhere |
 | `src/frontend/features/auth/components/require-access.tsx`  | `RequireAccessLevel`, `RequireSignIn`: render children only past the guard         |
 | `wrangler.jsonc`                                            | Per-environment vars and bindings                                                  |
 
@@ -184,7 +185,18 @@ id is saved under `background-session:` so background work can borrow it (see
 [loading.md](./loading.md)).
 
 On the client, `useAccessData` combines the server's level with the level the
-user chose to view the app as, clamped to what the server grants.
+user chose to view the app as, clamped to what the server grants. It reads the
+library `useLibraryId` names, which is the one shown unless a
+`LibraryIdOverride` names another; `useEveryLibraryAccess` answers for every
+library at once.
+
+The settings menu's **Admin settings** are partitioned by **Settings for**: a
+library, or **FRCDesignApp** for what belongs to none (the FeatureScripts
+reload and the testbench). It offers each library the viewed level edits, plus
+FRCDesignApp for the owner, and opens on the library shown, or on FRCDesignApp
+from any other tab. A library's settings render under `LibraryIdOverride`, so
+each of them and each guard reads that library's access. The section and the
+**Access level** choices follow the highest access held in any library.
 
 ## Environment variables
 

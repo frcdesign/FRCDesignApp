@@ -9,17 +9,18 @@ import {
     SETTING_CONTROL_WIDTH,
     StatusColor
 } from "../../../lib/style-constants";
-import { ReactNode, useId } from "react";
+import { ReactNode, useId, useState } from "react";
 import {
     AccessLevel,
     hasEditorAccess,
     isWithinAccessLevel
 } from "@backend/features/auth/access-level";
+import { LibraryId } from "@backend/features/library/library-id";
 import { type AppTab, getTabPath } from "../../../lib/app-tab";
 import { InputRow } from "../../../components/input-row";
 import { OpenUrlButton } from "../../../components/open-url-button";
 import { AppSection, AppSections } from "../../../components/app-section";
-import { useAccessData } from "../../auth/access-level";
+import { useEveryLibraryAccess } from "../../auth/access-level";
 import {
     RequireAccessLevel,
     RequireSignIn
@@ -36,7 +37,12 @@ import { SETUP_URL } from "../../../lib/url";
 import { useAppModal } from "../../../components/open-app-modal";
 import { openFeedbackForm } from "../../feedback/open-feedback";
 import { m } from "../../../paraglide/messages";
-import { useLibraryId } from "../../../lib/library";
+import {
+    getLibraryName,
+    LibraryIdOverride,
+    useLibraryId,
+    useShownLibraryId
+} from "../../../lib/library";
 import { ReloadButton } from "../../library/components/reload-button";
 import {
     HeldVersionsSetting,
@@ -44,6 +50,7 @@ import {
 } from "../../library/components/version-approval";
 import { RefreshAdminTeamButton } from "../../admin-team/components/refresh-admin-team-button";
 import { AdminTeamSetting } from "../../admin-team/components/admin-team-setting";
+import { FeatureScriptsReloadButton } from "../../featurescripts/components/featurescripts-reload-button";
 
 /** The usage dashboard, served standalone and needing no sign-in. */
 const DASHBOARD_URL = "/dashboard";
@@ -56,14 +63,15 @@ function capitalize(value: string) {
 interface SettingSelectProps<T extends string> {
     label: string;
     value: T;
-    /** Shown capitalized, in the order given. */
+    /** In the order given. */
     options: T[];
+    optionLabel: (option: T) => string;
     onSelect: (value: T) => void;
 }
 
 /** A setting chosen from a short list of named values. */
 function SettingSelect<T extends string>(props: SettingSelectProps<T>) {
-    const { label, value, options, onSelect } = props;
+    const { label, value, options, optionLabel, onSelect } = props;
     const id = useId();
 
     return (
@@ -73,7 +81,7 @@ function SettingSelect<T extends string>(props: SettingSelectProps<T>) {
                 w={SETTING_CONTROL_WIDTH}
                 data={options.map((option) => ({
                     value: option,
-                    label: capitalize(option)
+                    label: optionLabel(option)
                 }))}
                 value={value}
                 allowDeselect={false}
@@ -89,7 +97,7 @@ function SettingSelect<T extends string>(props: SettingSelectProps<T>) {
 }
 
 export function SettingsMenuContent(): ReactNode {
-    const { maxAccessLevel } = useAccessData();
+    const { maxAccessLevel } = useHighestAccess();
 
     return (
         <>
@@ -223,11 +231,112 @@ function AdminSettingsSection(): ReactNode {
     );
 }
 
+function highestLevel(levels: AccessLevel[]): AccessLevel {
+    return levels.reduce((highest, level) =>
+        isWithinAccessLevel(highest, level) ? level : highest
+    );
+}
+
+interface HighestAccess {
+    maxAccessLevel: AccessLevel;
+    currentAccessLevel: AccessLevel;
+}
+
+/** Across every library, since the admin settings reach each one. */
+function useHighestAccess(): HighestAccess {
+    const access = useEveryLibraryAccess();
+    const libraries = Object.values(access);
+    return {
+        maxAccessLevel: highestLevel(
+            libraries.map((library) => library.maxAccessLevel)
+        ),
+        currentAccessLevel: highestLevel(
+            libraries.map((library) => library.currentAccessLevel)
+        )
+    };
+}
+
+/** The app's own settings, which belong to no library. */
+const APP_SCOPE = "app";
+
+/** What the admin settings below the scope select apply to. */
+type AdminScope = LibraryId | typeof APP_SCOPE;
+
+function scopeLabel(scope: AdminScope): string {
+    return scope === APP_SCOPE
+        ? m.settingsAdminScopeApp()
+        : getLibraryName(scope);
+}
+
+/** Each library the viewed level edits, then the app's own for the owner. */
+function useAdminScopes(): AdminScope[] {
+    const access = useEveryLibraryAccess();
+    const libraries = Object.values(LibraryId).filter((libraryId) =>
+        hasEditorAccess(access[libraryId].currentAccessLevel)
+    );
+    const isOwner = Object.values(access).some(
+        (library) => library.currentAccessLevel === AccessLevel.OWNER
+    );
+    return isOwner ? [...libraries, APP_SCOPE] : libraries;
+}
+
 function AdminSettings(): ReactNode {
+    const scopes = useAdminScopes();
+    const shownLibraryId = useShownLibraryId();
+    // Opens on the library shown, and on the app's own from any other tab.
+    const [chosen, setChosen] = useState<AdminScope>(
+        shownLibraryId ?? APP_SCOPE
+    );
+    const scope = scopes.includes(chosen) ? chosen : scopes[0];
+
     return (
         <Stack gap="sm">
             {/* Always show the access level select so admins can change access level if needed */}
             <AccessLevelSelect />
+            {scope !== undefined && (
+                <>
+                    <Divider />
+                    <SettingSelect
+                        label={m.settingsAdminScope()}
+                        value={scope}
+                        options={scopes}
+                        optionLabel={scopeLabel}
+                        onSelect={setChosen}
+                    />
+                    {scope === APP_SCOPE ? (
+                        <AppAdminSettings />
+                    ) : (
+                        <LibraryIdOverride value={scope}>
+                            <LibraryAdminSettings />
+                        </LibraryIdOverride>
+                    )}
+                </>
+            )}
+        </Stack>
+    );
+}
+
+/** The owner's alone, as the scope that shows them is. */
+function AppAdminSettings(): ReactNode {
+    return (
+        <>
+            <InputRow label={m.settingsFeatureScripts()}>
+                <FeatureScriptsReloadButton />
+            </InputRow>
+            <InputRow label={m.settingsWebhooks()}>
+                <OpenUrlButton
+                    text={m.settingsOpenTestbench()}
+                    url={TESTBENCH_URL}
+                />
+            </InputRow>
+        </>
+    );
+}
+
+/** Under `LibraryIdOverride`, so each setting and guard reads the chosen library. */
+function LibraryAdminSettings(): ReactNode {
+    return (
+        <>
             <RequireAccessLevel>
                 <InputRow label={m.settingsOutdatedDocuments()}>
                     <ReloadButton />
@@ -236,12 +345,6 @@ function AdminSettings(): ReactNode {
             <RequireAccessLevel accessLevel={AccessLevel.OWNER}>
                 <InputRow label={m.settingsAllDocuments()}>
                     <ReloadButton all />
-                </InputRow>
-                <InputRow label={m.settingsWebhooks()}>
-                    <OpenUrlButton
-                        text={m.settingsOpenTestbench()}
-                        url={TESTBENCH_URL}
-                    />
                 </InputRow>
             </RequireAccessLevel>
             <RequireAccessLevel accessLevel={AccessLevel.ADMIN}>
@@ -256,12 +359,12 @@ function AdminSettings(): ReactNode {
                     <RefreshAdminTeamButton />
                 </InputRow>
             </RequireAccessLevel>
-        </Stack>
+        </>
     );
 }
 
 function AccessLevelSelect(): ReactNode {
-    const { maxAccessLevel, currentAccessLevel } = useAccessData();
+    const { maxAccessLevel, currentAccessLevel } = useHighestAccess();
 
     return (
         <SettingSelect
@@ -273,6 +376,7 @@ function AccessLevelSelect(): ReactNode {
                 AccessLevel.EDITOR,
                 AccessLevel.USER
             ].filter((level) => isWithinAccessLevel(level, maxAccessLevel))}
+            optionLabel={capitalize}
             onSelect={(accessLevel) => updateUiState({ accessLevel })}
         />
     );

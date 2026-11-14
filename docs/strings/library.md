@@ -45,10 +45,25 @@ The insert menu's remaining tips are in
 | "This group has no visible elements"      | Notice                         | Same                  | It loaded, but every element is hidden from users         |                                     |
 | "All elements are hidden by filters"      | Notice, with Clear filters     | Same                  | The vendor filters leave nothing                          |                                     |
 
+## Reloading documents
+
+The reload buttons in a library's admin settings, and the confirmation each
+opens. `{library}` is the library chosen under **Settings for**, which need not
+be the one shown.
+
+| String                                                                                         | Kind          | Where                  | When                    | Review                      |
+| ---------------------------------------------------------------------------------------------- | ------------- | ---------------------- | ----------------------- | --------------------------- |
+| "Reload"                                                                                       | Button        | Beside each reload row | Editor or above / owner |                             |
+| "Reload outdated documents" / "Reload all documents"                                           | Modal title   | The confirmation       | Clicking the button     |                             |
+| "Reload the documents in {library} with a new version or a failed load?"                       | Modal text    | Same                   | Outdated documents      | **⚑** Was "in this library" |
+| "Are you sure you want to reload every document in {library}? This is an expensive operation." | Modal text    | Same                   | All documents           | **⚑** Was "in this library" |
+| "Reload documents" / "Cancel"                                                                  | Modal buttons | Same                   | Always                  |                             |
+
 ## Change badges
 
-On group and part cards in admin mode, and on a parent's row in the version
-manager; see [version-manager.md](../architecture/version-manager.md).
+On group and part cards in admin mode, after the build status icon, and on a
+parent's row in the version manager; see
+[version-manager.md](../architecture/version-manager.md).
 
 | String                                                                         | Kind    | Where                             | When                                                              | Review    |
 | ------------------------------------------------------------------------------ | ------- | --------------------------------- | ----------------------------------------------------------------- | --------- |

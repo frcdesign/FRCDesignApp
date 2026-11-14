@@ -425,7 +425,7 @@ the moment the release is.
 ### Loading — `LoadFeatureScriptsWorkflow`
 
 Started by the webhook for a new frontend version, and by the owner's
-**Reload** (the refresh button in the tab's header). A version is final once
+**Reload** (under FRCDesignApp in the admin settings). A version is final once
 it's in the frontend document, so a new version loads at once, with no
 approval. Nothing loads while `FEATURESCRIPTS_DOCUMENT_ID` is unset.
 

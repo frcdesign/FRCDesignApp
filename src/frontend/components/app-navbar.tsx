@@ -68,10 +68,6 @@ import { type WorkspacePath } from "@backend/features/version-manager/contract";
 import { type AppTab, UtilityTab } from "../lib/app-tab";
 import { getTabName, useNavigateToTab } from "../lib/tabs";
 import { useRefreshVersionManagerMutation } from "../features/version-manager/queries";
-import {
-    useIsOwner,
-    useReloadFeatureScriptsMutation
-} from "../features/featurescripts/queries";
 import { RefreshButton } from "./refresh-button";
 
 /** Stretched so a full-height child's underline lands on the row's border. */
@@ -119,7 +115,6 @@ export function AppNavbar(): ReactNode {
                     {isVersionManager && workspace && (
                         <VersionManagerRefreshButton workspace={workspace} />
                     )}
-                    {isFeatureScripts && <FeatureScriptsReloadButton />}
                     <SettingsControls />
                 </Group>
             </NavbarRow>
@@ -312,19 +307,6 @@ export function SettingsControls(): ReactNode {
             <ThemeToggle />
             <SettingsButton />
         </Group>
-    );
-}
-
-/** The owner's: loads the latest version of the frontend document. */
-function FeatureScriptsReloadButton(): ReactNode {
-    const isOwner = useIsOwner();
-    const reload = useReloadFeatureScriptsMutation();
-    if (!isOwner) return null;
-    return (
-        <RefreshButton
-            loading={reload.isPending}
-            onClick={() => reload.mutate()}
-        />
     );
 }
 

@@ -121,12 +121,12 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
                             selection={hitSelection}
                         />
                     )}
-                    <InsertableChangesBadge insertable={insertable} />
                     <InsertableStatusBadge
                         insertableId={insertable.id}
                         groupId={insertable.groupId}
                         name={insertable.name}
                     />
+                    <InsertableChangesBadge insertable={insertable} />
                 </>
             }
         />
