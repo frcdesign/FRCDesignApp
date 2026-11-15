@@ -94,12 +94,15 @@ FeatureScript report adds to it.
 | "Bug" / "Feature request" / "Kudos" / "Other" | Type options        | The form                                                       | A FeatureScript report, or the FeatureScripts area         |           |
 | "{type}: {name}"                              | Suggested title     | The form's title field                                         | From a feature's menu, until the reporter writes their own |           |
 
-## The dashboard (proposed)
+## The dashboard
 
-| String                                             | Kind           | Where                          | When                 | Review    |
-| -------------------------------------------------- | -------------- | ------------------------------ | -------------------- | --------- |
-| "FeatureScripts"                                   | Section title  | The overview, and its own page | Always               | **⚑** New |
-| "Features added"                                   | Tile label     | The section                    | Always               | **⚑** New |
-| "Users"                                            | Tile label     | The section                    | Always               |           |
-| "Feature" / "Adds" / "Users" / "Share" / "Reports" | Column headers | The page's table               | Always               | **⚑** New |
-| "No features added in this range."                 | Empty notice   | The section and page           | No adds in the range | **⚑** New |
+On the overview, over the picked range. Messages are keyed `dashboardFeatureScripts…`.
+
+| String                                 | Kind           | Where                   | When                                                      | Review    |
+| -------------------------------------- | -------------- | ----------------------- | --------------------------------------------------------- | --------- |
+| "FeatureScripts"                       | Section title  | The overview            | Always                                                    | **⚑** New |
+| "Features added" / "Users"             | Tile labels    | The section             | Always                                                    | **⚑** New |
+| "Feature" / "Adds" / "Users" / "Share" | Column headers | The section's table     | Always; every feature, unused ones at zero                | **⚑** New |
+| "{featureType} (removed)"              | Feature name   | A row of the table      | A feature added in the range is no longer in the document | **⚑** New |
+| "No FeatureScripts are loaded."        | Empty notice   | In place of the table   | The frontend document has no features                     | **⚑** New |
+| "Loading FeatureScripts..."            | Loading        | In place of the section | The section's query is loading                            | **⚑** New |

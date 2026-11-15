@@ -9,6 +9,7 @@ import { getDb } from "../../db/client";
 import { configurations, insertables } from "../../db/schema";
 import type {
     DailyUsePoint,
+    FeatureScriptUsageOut,
     InsertableReportOut,
     OverviewUsageOut,
     LibrarySummaryOut,
@@ -47,6 +48,7 @@ import {
     toTargets
 } from "./metric-queries";
 import { getReportedParts, getReportSummary } from "./report-queries";
+import { getFeatureScriptUsage } from "./featurescript-queries";
 import { libraryTopic } from "../feedback/contract";
 import {
     clampRange,
@@ -119,6 +121,17 @@ analyticsRoutes.get(
         const db = getDb(c.env.DB);
         const totals = await getVersionManagerTotals(db, c.req.valid("query"));
         return c.json(totals satisfies VersionManagerTotals);
+    }
+);
+
+/** GET /api/analytics/overview/featurescripts */
+analyticsRoutes.get(
+    "/analytics/overview/featurescripts",
+    validate("query", rangeQuery),
+    async (c) => {
+        const db = getDb(c.env.DB);
+        const usage = await getFeatureScriptUsage(db, c.req.valid("query"));
+        return c.json(usage satisfies FeatureScriptUsageOut);
     }
 );
 

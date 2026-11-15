@@ -98,7 +98,7 @@ export function NavbarRow(props: PropsWithChildren): ReactNode {
 /** The page picker with the brand and settings, over search and its filters. */
 export function AppNavbar(): ReactNode {
     // Search and its filters belong to a library; FeatureScripts has a search
-    // of its own there, and the version manager's page fills the room.
+    // of its own there, and the Version Manager's page fills the room.
     const isVersionManager = useIsVersionManager();
     const isFeatureScripts = useIsFeatureScripts();
     const isLibrary = !isVersionManager && !isFeatureScripts;

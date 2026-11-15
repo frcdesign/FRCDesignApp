@@ -5,6 +5,8 @@ import { configurations, insertables } from "../../db/schema";
 import {
     dailyAppOpens,
     dailyConfigurationMetrics,
+    dailyFeatureScriptMetrics,
+    dailyFeatureScriptUsers,
     dailyInsertableMetrics,
     dailyInsertableUsers,
     dailyMetrics,
@@ -28,6 +30,8 @@ import {
     seedTestData
 } from "../../../__test_utils__";
 import { getDb } from "../../db/client";
+import { featureScripts } from "../featurescripts/schema";
+import { MateLocation } from "../library/insertables/fasten";
 import { createApp } from "../../app";
 import { EventType, UseSource, UseTarget } from "./usage";
 import { LibraryId } from "../library/library-id";
@@ -37,6 +41,7 @@ import {
 } from "../configurations/contract";
 import {
     type DailyUsePoint,
+    type FeatureScriptUsageOut,
     type OverviewUsageOut,
     type ReportSummary,
     type UseSourceUsage,
@@ -180,6 +185,7 @@ const OVERVIEW_AREAS = [
     "series",
     "sources",
     "version-manager",
+    "featurescripts",
     "reports"
 ];
 
@@ -290,8 +296,6 @@ describe("analytics routes", () => {
             expect(body.totals).toMatchObject({
                 uses: 10,
                 favoriteUses: 4,
-                fastenInserts: 3,
-                quickInserts: 6,
                 targets: {
                     [UseTarget.ASSEMBLY]: 5,
                     [UseTarget.PART_STUDIO]: 5,
@@ -305,13 +309,49 @@ describe("analytics routes", () => {
                 activeUsers: 0,
                 favoriteUses: 4,
                 fastenInserts: 3,
-                quickInserts: 6,
+                fastenableUses: 0,
                 targets: {
                     [UseTarget.ASSEMBLY]: 5,
                     [UseTarget.PART_STUDIO]: 5,
                     [UseTarget.DOWNLOAD]: 0
                 }
             });
+        });
+
+        it("measures fasten against assembly uses of parts that offer it", async () => {
+            await seedPartStudio(db, {
+                fastenInfo: {
+                    mateConnectorId: "mc-1",
+                    mateLocation: MateLocation.Feature,
+                    path: []
+                }
+            });
+            await seedAssembly(db);
+            await db.insert(dailyInsertableMetrics).values(
+                [
+                    { elementId, target: UseTarget.ASSEMBLY, count: 4 },
+                    { elementId, target: UseTarget.PART_STUDIO, count: 3 },
+                    {
+                        elementId: TEST_ASSEMBLY_PATH.elementId,
+                        target: UseTarget.ASSEMBLY,
+                        count: 5
+                    }
+                ].map((row) => ({
+                    day: "2026-03-01",
+                    libraryId: TEST_LIBRARY_ID,
+                    elementId: row.elementId,
+                    targetElementType: row.target,
+                    count: row.count
+                }))
+            );
+
+            const res = await anonymousGet(
+                "/api/analytics/overview/usage?from=2026-03-01&to=2026-03-01"
+            );
+            const body: OverviewUsageOut = await res.json();
+
+            // Only the part with a mate connector, and only into an assembly.
+            expect(body.metricSeries[0].fastenableUses).toBe(4);
         });
 
         it("counts downloads among the uses, and apart in the targets", async () => {
@@ -603,6 +643,58 @@ describe("analytics routes", () => {
             const body: LibrarySummaryOut = await res.json();
 
             expect(body.totals.uses).toBe(2);
+        });
+    });
+
+    describe("GET /analytics/overview/featurescripts", () => {
+        it("breaks the range's adds down by feature", async () => {
+            await db.insert(featureScripts).values(
+                ["robotFrame", "robotBelt"].map((featureType) => ({
+                    elementId: `e-${featureType}`,
+                    microversionId: "mv-1",
+                    featureType,
+                    name: featureType === "robotFrame" ? "Frame" : "Belt",
+                    description: ""
+                }))
+            );
+            await db.insert(dailyFeatureScriptMetrics).values([
+                { day: "2026-06-01", featureType: "robotFrame", adds: 3 },
+                { day: "2026-06-02", featureType: "robotFrame", adds: 2 },
+                { day: "2026-06-01", featureType: "robotGone", adds: 1 },
+                { day: "2025-01-01", featureType: "robotBelt", adds: 9 }
+            ]);
+            await db.insert(dailyFeatureScriptUsers).values([
+                { day: "2026-06-01", featureType: "robotFrame", userId: "a" },
+                { day: "2026-06-02", featureType: "robotFrame", userId: "a" },
+                { day: "2026-06-02", featureType: "robotFrame", userId: "b" },
+                { day: "2026-06-01", featureType: "robotGone", userId: "a" },
+                { day: "2025-01-01", featureType: "robotBelt", userId: "c" }
+            ]);
+
+            const res = await anonymousGet(
+                "/api/analytics/overview/featurescripts?from=2026-05-01&to=2026-07-01"
+            );
+            const body: FeatureScriptUsageOut = await res.json();
+
+            expect(body).toEqual({
+                adds: 6,
+                users: 2,
+                features: [
+                    {
+                        featureType: "robotFrame",
+                        name: "Frame",
+                        adds: 5,
+                        users: 2
+                    },
+                    { featureType: "robotGone", adds: 1, users: 1 },
+                    {
+                        featureType: "robotBelt",
+                        name: "Belt",
+                        adds: 0,
+                        users: 0
+                    }
+                ]
+            });
         });
     });
 

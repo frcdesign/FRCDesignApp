@@ -1,6 +1,6 @@
 import { type ReactNode } from "react";
 import { LibraryUsesChart, MetricDetailChart } from "./trend-chart";
-import { Granularity } from "./series";
+import { pickChartGranularity } from "./series";
 import type {
     DailyUsePoint,
     DailyMetricPoint
@@ -24,14 +24,14 @@ export function UsesByLibraryCard({
 }: UsesByLibraryCardProps): ReactNode {
     return (
         <SectionCard title={m.dashboardUsesOverTime()}>
-            {/* Always monthly: this one plots everything recorded, and a finer
-                cut of two years is noise rather than detail. The app spans
-                both competitions, so both are marked. */}
+            {/* The app spans both competitions, so both are marked. */}
             <LibraryUsesChart
                 series={series}
                 h={PAGE_CHART_HEIGHT}
                 programs={[Program.FTC, Program.FRC]}
-                granularity={Granularity.MONTH}
+                granularity={pickChartGranularity(
+                    series.map((point) => point.day)
+                )}
             />
         </SectionCard>
     );

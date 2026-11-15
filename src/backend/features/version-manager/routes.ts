@@ -272,7 +272,7 @@ const changesQuery = z.object({
 
 /**
  * GET /api/workspace-changes?documentId=&instanceId=&elements= — how far a
- * workspace has moved since its own last version: a version manager parent's
+ * workspace has moved since its own last version: a Version Manager parent's
  * row, or a library group and its parts. Asked on its own because counting is
  * the slowest thing either page asks Onshape.
  */

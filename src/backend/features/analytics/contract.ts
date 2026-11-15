@@ -16,11 +16,6 @@ export function emptyTargets(): UseTargets {
     ) as UseTargets;
 }
 
-/** The uses that went into Onshape: quick insert's denominator. */
-export function insertsOf(targets: UseTargets): number {
-    return targets[UseTarget.PART_STUDIO] + targets[UseTarget.ASSEMBLY];
-}
-
 /** Lifetime counts, either overall or scoped to one library. */
 export interface AnalyticsTotals {
     /** Inserts and downloads; `targets` splits them. */
@@ -30,10 +25,6 @@ export interface AnalyticsTotals {
     uniqueUsers: number;
     /** A subset of `uses`. */
     favoriteUses: number;
-    /** A subset of the inserts; see {@link insertsOf}. */
-    quickInserts: number;
-    /** Onshape only offers fasten on assemblies, so compare to that entry of `targets`. */
-    fastenInserts: number;
     targets: UseTargets;
     /** Current, not over the range: a favorite is state, not an event. */
     favorites: number;
@@ -54,9 +45,9 @@ export interface DailyMetricPoint {
     /** Distinct users active that day; not summable across days. */
     activeUsers: number;
     favoriteUses: number;
-    quickInserts: number;
     fastenInserts: number;
-    /** That day's uses by target; the assembly entry is fasten's denominator. */
+    /** Uses into an assembly of parts that offer fasten now: fasten's denominator. */
+    fastenableUses: number;
     targets: UseTargets;
 }
 
@@ -126,12 +117,10 @@ export interface LibrarySummaryOut {
     to: string;
 }
 
-/** What the version manager has done, and how much is linked to do it with. */
+/** What the Version Manager has done, and how much is linked to do it with. */
 export interface VersionManagerTotals {
     /** Pushes and pulls together. */
     runs: number;
-    /** Runs with a step that failed, partway or entirely. */
-    runsWithFailures: number;
     /** Tabs whose references the app repointed. */
     updatedElements: number;
     createdVersions: number;
@@ -158,6 +147,25 @@ export interface ReportedPartOut {
 export interface ReportSummary {
     /** Every report over the range; only the kinds that happened are listed. */
     counts: ReportCount[];
+}
+
+/** One FeatureScript's adds over the range. */
+export interface FeatureScriptUsage {
+    /** The feature's constant, which never changes once released. */
+    featureType: string;
+    /** Absent for a feature no longer in the frontend document. */
+    name?: string;
+    adds: number;
+    users: number;
+}
+
+/** FeatureScripts added over the range, in total and per feature. */
+export interface FeatureScriptUsageOut {
+    adds: number;
+    /** Distinct over the range, so not the sum of the features'. */
+    users: number;
+    /** Every feature in the document, at zero if unused, most added first. */
+    features: FeatureScriptUsage[];
 }
 
 /** The overview's headline numbers, and the series its trends are drawn from. */

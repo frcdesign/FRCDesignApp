@@ -89,7 +89,7 @@ export function LibraryUsesChart({
             dataKey="bucket"
             xAxisProps={{ tickFormatter: toLabel(data) }}
             withLegend
-            withDots={series.length <= 45}
+            withDots={data.length <= 45}
             curveType="monotone"
             yAxisLabel="Total uses"
             referenceLines={seasonLines(programs, data)}

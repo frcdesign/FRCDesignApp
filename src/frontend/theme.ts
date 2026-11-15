@@ -73,7 +73,7 @@ export function getLibraryShade(libraryId: string): string {
 export const AppColor = {
     /** FRCDesign's own, on the dashboard pages that span every library. */
     DASHBOARD: "frcGreen",
-    /** The version manager acts on the open document, which is no library's. */
+    /** The Version Manager acts on the open document, which is no library's. */
     VERSION_MANAGER: "blue",
     /** FeatureScripts are their own area, released apart from any library. */
     FEATURESCRIPTS: "blue"

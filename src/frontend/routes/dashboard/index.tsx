@@ -5,6 +5,7 @@ import { type ReactNode } from "react";
 import { LibraryId } from "@backend/features/library/library-id";
 import { type DayRange } from "@backend/features/analytics/day";
 import {
+    getOverviewFeatureScriptsQuery,
     getOverviewReportsQuery,
     getOverviewSeriesQuery,
     getOverviewSourcesQuery,
@@ -22,11 +23,13 @@ import {
     useRangePreset
 } from "../../features/dashboard/range";
 import { HeadlineTiles } from "../../features/dashboard/headline-tiles";
-import { METRICS } from "../../features/dashboard/metrics";
+import { METRICS, rangeValue } from "../../features/dashboard/metrics";
 import { Section } from "../../components/section";
 import { UsageTreemap } from "../../features/dashboard/usage-treemap";
 import { VersionManagerTiles } from "../../features/dashboard/version-manager-tiles";
-import { TrendTile } from "../../features/dashboard/trend-tile";
+import { StatTile } from "../../features/dashboard/stat-tiles";
+import { formatPercent } from "../../features/dashboard/format";
+import { FeatureScriptUsageSection } from "../../features/dashboard/featurescript-usage";
 import { OverviewReports } from "../../features/dashboard/report-summary";
 import { m } from "../../paraglide/messages";
 
@@ -50,6 +53,7 @@ function DashboardOverview(): ReactNode {
     const series = useQuery(getOverviewSeriesQuery(range));
     const sources = useQuery(getOverviewSourcesQuery(range));
     const versionManager = useQuery(getVersionManagerQuery(range));
+    const featureScripts = useQuery(getOverviewFeatureScriptsQuery(range));
     const reports = useQuery(getOverviewReportsQuery(range));
     const allParts = useAllParts(range);
     const pendingParts = firstPending(allParts);
@@ -96,6 +100,16 @@ function DashboardOverview(): ReactNode {
                 />
             )}
 
+            {featureScripts.data ? (
+                <FeatureScriptUsageSection usage={featureScripts.data} />
+            ) : (
+                <DashboardState
+                    query={featureScripts}
+                    loading={m.dashboardLoadingFeatureScripts()}
+                    title={m.dashboardFeatureScripts()}
+                />
+            )}
+
             {reports.data ? (
                 <OverviewReports reports={reports.data} />
             ) : (
@@ -118,13 +132,16 @@ function DashboardOverview(): ReactNode {
                     )}
                 </Card>
                 {usage.data ? (
-                    <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }}>
+                    <SimpleGrid cols={{ base: 1, sm: 2 }}>
                         {HOW_USED_METRICS.map((metric) => (
-                            <TrendTile
+                            <StatTile
                                 key={metric.key}
-                                metric={metric}
-                                totals={usage.data.totals}
-                                series={usage.data.metricSeries}
+                                label={metric.label}
+                                value={rangeValue(
+                                    usage.data.metricSeries,
+                                    metric
+                                )}
+                                format={formatPercent}
                             />
                         ))}
                     </SimpleGrid>
@@ -152,9 +169,4 @@ function DashboardOverview(): ReactNode {
 }
 
 /** The shares of use the overview trends, in the order they are shown. */
-const HOW_USED_METRICS = [
-    METRICS.quickFraction,
-    METRICS.fastenFraction,
-    METRICS.assemblyFraction,
-    METRICS.downloadFraction
-];
+const HOW_USED_METRICS = [METRICS.fastenFraction, METRICS.assemblyFraction];

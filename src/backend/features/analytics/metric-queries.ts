@@ -6,15 +6,17 @@ import {
     eq,
     gte,
     inArray,
+    isNotNull,
     lte,
     sum,
     type SQL
 } from "drizzle-orm";
 import { type SQLiteColumn } from "drizzle-orm/sqlite-core";
 import { type Db } from "../../db/client";
-import { favorites } from "../../db/schema";
+import { favorites, insertables } from "../../db/schema";
 import {
     dailyAppOpens,
+    dailyInsertableMetrics,
     dailyMetrics,
     dailySourceMetrics,
     dailyTargetMetrics,
@@ -23,7 +25,7 @@ import {
     userStats
 } from "./schema";
 import { workspaceLinks } from "../version-manager/schema";
-import { USE_EVENT_TYPES, UseSource, type UseTarget } from "./usage";
+import { USE_EVENT_TYPES, UseSource, UseTarget } from "./usage";
 import { LibraryId } from "../library/library-id";
 import {
     emptyTargets,
@@ -59,8 +61,6 @@ export async function getTotals(
         appOpens: Number(opens?.value ?? 0),
         uniqueUsers: uniqueUsers?.value ?? 0,
         favoriteUses: Number(uses?.favorites ?? 0),
-        quickInserts: Number(uses?.quickInserts ?? 0),
-        fastenInserts: Number(uses?.fastens ?? 0),
         targets: toTargets(targets),
         favorites: favoriteCount?.value ?? 0
     };
@@ -95,9 +95,7 @@ function countMetrics(db: Db, libraryId?: LibraryId, range?: DayRange) {
     return db
         .select({
             total: sum(dailyMetrics.count),
-            favorites: sum(dailyMetrics.favoriteCount),
-            fastens: sum(dailyMetrics.fastenCount),
-            quickInserts: sum(dailyMetrics.quickInsertCount)
+            favorites: sum(dailyMetrics.favoriteCount)
         })
         .from(dailyMetrics)
         .where(and(...filters))
@@ -245,8 +243,7 @@ function countMetricsByDay(db: Db, range: DayRange, libraryId?: LibraryId) {
             day: dailyMetrics.day,
             total: sum(dailyMetrics.count),
             favoriteUses: sum(dailyMetrics.favoriteCount),
-            fastenInserts: sum(dailyMetrics.fastenCount),
-            quickInserts: sum(dailyMetrics.quickInsertCount)
+            fastenInserts: sum(dailyMetrics.fastenCount)
         })
         .from(dailyMetrics)
         .where(and(...filters))
@@ -267,6 +264,41 @@ function countTargetsByDay(db: Db, range: DayRange, libraryId?: LibraryId) {
         .from(dailyTargetMetrics)
         .where(and(...filters))
         .groupBy(dailyTargetMetrics.day, dailyTargetMetrics.targetElementType)
+        .all();
+}
+
+/**
+ * Each day's uses into an assembly of parts that offer fasten now. Against the
+ * library as it is, since no rollup records whether a part offered it then.
+ */
+function countFastenableByDay(db: Db, range: DayRange, libraryId?: LibraryId) {
+    const fastenable = db
+        .select({ elementId: insertables.elementId })
+        .from(insertables)
+        .where(
+            and(
+                isNotNull(insertables.fastenInfo),
+                libraryId ? eq(insertables.libraryId, libraryId) : undefined
+            )
+        );
+
+    return db
+        .select({
+            day: dailyInsertableMetrics.day,
+            total: sum(dailyInsertableMetrics.count)
+        })
+        .from(dailyInsertableMetrics)
+        .where(
+            and(
+                ...scopeFilters(dailyInsertableMetrics, libraryId, range),
+                eq(
+                    dailyInsertableMetrics.targetElementType,
+                    UseTarget.ASSEMBLY
+                ),
+                inArray(dailyInsertableMetrics.elementId, fastenable)
+            )
+        )
+        .groupBy(dailyInsertableMetrics.day)
         .all();
 }
 
@@ -297,12 +329,14 @@ export async function getMetricSeries(
     range: DayRange,
     libraryId?: LibraryId
 ): Promise<DailyMetricPoint[]> {
-    const [rows, targetRows, userRows, openRows] = await Promise.all([
-        countMetricsByDay(db, range, libraryId),
-        countTargetsByDay(db, range, libraryId),
-        countUsersByDay(db, range, libraryId),
-        countOpensByDay(db, range, libraryId)
-    ]);
+    const [rows, targetRows, fastenableRows, userRows, openRows] =
+        await Promise.all([
+            countMetricsByDay(db, range, libraryId),
+            countTargetsByDay(db, range, libraryId),
+            countFastenableByDay(db, range, libraryId),
+            countUsersByDay(db, range, libraryId),
+            countOpensByDay(db, range, libraryId)
+        ]);
 
     const byDay = new Map<string, DailyMetricPoint>();
     const pointFor = (day: string): DailyMetricPoint => {
@@ -314,8 +348,8 @@ export async function getMetricSeries(
             appOpens: 0,
             activeUsers: 0,
             favoriteUses: 0,
-            quickInserts: 0,
             fastenInserts: 0,
+            fastenableUses: 0,
             targets: emptyTargets()
         };
         byDay.set(day, created);
@@ -327,7 +361,9 @@ export async function getMetricSeries(
         point.uses = Number(row.total ?? 0);
         point.favoriteUses = Number(row.favoriteUses ?? 0);
         point.fastenInserts = Number(row.fastenInserts ?? 0);
-        point.quickInserts = Number(row.quickInserts ?? 0);
+    }
+    for (const row of fastenableRows) {
+        pointFor(row.day).fastenableUses = Number(row.total ?? 0);
     }
     for (const row of openRows) {
         pointFor(row.day).appOpens = Number(row.total ?? 0);
@@ -430,7 +466,7 @@ export async function getSeries(
     return [...byDay.values()].sort((a, b) => a.day.localeCompare(b.day));
 }
 
-/** The version manager's totals over a range, and what is linked right now. */
+/** The Version Manager's totals over a range, and what is linked right now. */
 export async function getVersionManagerTotals(
     db: Db,
     range: DayRange
@@ -439,8 +475,6 @@ export async function getVersionManagerTotals(
         db
             .select({
                 runs: sum(dailyVersionMetrics.runs),
-                partialRuns: sum(dailyVersionMetrics.partialRuns),
-                failedRuns: sum(dailyVersionMetrics.failedRuns),
                 createdVersions: sum(dailyVersionMetrics.createdVersions),
                 updatedElements: sum(dailyVersionMetrics.updatedElements)
             })
@@ -457,8 +491,6 @@ export async function getVersionManagerTotals(
 
     return {
         runs: Number(totals?.runs ?? 0),
-        runsWithFailures:
-            Number(totals?.partialRuns ?? 0) + Number(totals?.failedRuns ?? 0),
         createdVersions: Number(totals?.createdVersions ?? 0),
         updatedElements: Number(totals?.updatedElements ?? 0),
         links: links?.value ?? 0

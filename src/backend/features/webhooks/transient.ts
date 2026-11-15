@@ -11,13 +11,13 @@ import type { InstancePath } from "../../lib/onshape/path";
 /** Under `/api`. */
 export const UNITS_WEBHOOK_ROUTE = "/webhooks/units";
 
-/** The same, for a workspace the version manager links to. */
+/** The same, for a workspace the Version Manager links to. */
 export const LINKED_WORKSPACE_WEBHOOK_ROUTE = "/webhooks/linked-workspace";
 
 const UPDATE_WORKSPACE_UNITS = "onshape.model.lifecycle.updateworkspaceunits";
 
 /**
- * What can change what the version manager shows of a linked workspace: its
+ * What can change what the Version Manager shows of a linked workspace: its
  * name and its document's (`metadata`), how far it has moved since its last
  * version (`changed`, and `createversion`, which resets the count), and who may
  * read it (`shared`, sent for sharing and unsharing alike).
@@ -78,7 +78,7 @@ export function watchWorkspaceUnits(
     });
 }
 
-/** Tells the version manager's caches when a linked workspace changes; `watchId` names this registration. */
+/** Tells the Version Manager's caches when a linked workspace changes; `watchId` names this registration. */
 export function watchLinkedWorkspace(
     onshapeApi: OnshapeApi,
     workspace: InstancePath,
@@ -92,7 +92,7 @@ export function watchLinkedWorkspace(
         {
             route: LINKED_WORKSPACE_WEBHOOK_ROUTE,
             events: Object.values(LinkedWorkspaceEvent),
-            name: "FRCDesignApp version manager",
+            name: "FRCDesignApp Version Manager",
             description:
                 "Keeps the FRCDesignApp's copy of this workspace's name and pending changes current."
         },

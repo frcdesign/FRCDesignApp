@@ -1,4 +1,4 @@
-# Version manager
+# Version Manager
 
 ## Purpose
 
@@ -110,7 +110,7 @@ as a linked workspace is watched.
 
 ### Finding the page
 
-The page picker always lists the version manager. It marks it with a dot and a
+The page picker always lists the Version Manager. It marks it with a dot and a
 **New** badge for somebody signed in, with a workspace to act on, who has never
 opened the page (`useIsVersionManagerNew`). Opening it records `Hint.OPENED_VERSION_MANAGER`
 against the user in KV (`useMarkHintSeen`, see [auth.md](./auth.md)), so the
@@ -348,7 +348,7 @@ part its tab.
    records a version run, and answers how many tabs it moved.
 
 It is no run: no job status, no socket, and no lock against a run from the
-version manager page.
+Version Manager page.
 
 ### Recording a run
 

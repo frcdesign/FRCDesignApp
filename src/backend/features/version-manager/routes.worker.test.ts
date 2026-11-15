@@ -85,7 +85,7 @@ beforeEach(async () => {
 
 afterEach(() => vi.restoreAllMocks());
 
-describe("version manager routes", () => {
+describe("Version Manager routes", () => {
     it("shows a run only to somebody who may read the document", async () => {
         grant({});
         const res = await app.request(

@@ -54,7 +54,7 @@ team, plus one owner set by configuration.
   it from D1 on a miss.
 - **KV** `seen-hints:` — by user id, the features (`Hint`) whose blue dot and
   **New** badge the user no longer needs, recorded by `POST /api/seen-hints`
-  once the feature has been opened: the version manager's page on showing, the
+  once the feature has been opened: the Version Manager's page on showing, the
   insert location's card on closing, an insert menu's ⋯ menu offering **Set
   default configuration** on closing, and a part's menu (on its card or in the
   insert menu) offering **Report an issue** on closing. Kept until deleted;
@@ -209,7 +209,7 @@ each of them and each guard reads that library's access. The section and the
 | `FORCE_SIGNED_IN`                        | `.env`                                           | `request-auth.ts`                              | Dev only: signed in as a fake user with no Onshape session                                              |
 | `APP_URL`                                | `wrangler.jsonc` vars; `.env` to override in dev | `onshape-oauth.ts`, webhooks, `vite.config.ts` | Where the app is served: the OAuth redirect uri, every webhook url, and the host the dev server accepts |
 | `FEATURESCRIPTS_DOCUMENT_ID`             | `wrangler.jsonc` vars                            | `featurescripts/workflow.ts`                   | The frontend document the FeatureScripts tab loads; unset loads nothing                                 |
-| `DISCORD_APP_WEBHOOK_URL`                | Secret per environment; `.env` locally           | `feedback/channels.ts`                         | Discord webhook for reports about the app and the version manager; unset refuses them                   |
+| `DISCORD_APP_WEBHOOK_URL`                | Secret per environment; `.env` locally           | `feedback/channels.ts`                         | Discord webhook for reports about the app and the Version Manager; unset refuses them                   |
 | `DISCORD_FRC_DESIGN_LIB_WEBHOOK_URL`     | Secret per environment; `.env` locally           | `feedback/channels.ts`                         | The same, for FRCDesignLib and MKCad                                                                    |
 | `DISCORD_CONFIG_LIB_WEBHOOK_URL`         | Secret per environment; `.env` locally           | `feedback/channels.ts`                         | The same, for ConfigLib                                                                                 |
 | `DISCORD_FEATURESCRIPTS_WEBHOOK_URL`     | Secret per environment; `.env` locally           | `feedback/channels.ts`                         | The same, for FeatureScripts                                                                            |

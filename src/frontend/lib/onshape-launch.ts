@@ -61,7 +61,7 @@ export function toLaunchContext(launch: OnshapeLaunch): LaunchContext {
 }
 
 /**
- * The workspace the version manager acts on. Unlike {@link toTargetElement} it
+ * The workspace the Version Manager acts on. Unlike {@link toTargetElement} it
  * wants no tab: pushing and pulling move the whole workspace's references, and
  * which tab the panel was opened from has nothing to do with it.
  */

@@ -1,7 +1,7 @@
 # FeatureScripts
 
-**Status: built, but for the dashboard's section**, which is still the design
-below.
+**Status: built, but for the dashboard's own FeatureScripts page**, which is
+still the design below.
 
 ## Purpose
 
@@ -644,10 +644,14 @@ library's uses, users or part counts. It is its own event,
 - **The owner's card** reads them, and the favorites table, through
   `GET /api/featurescripts/stats`: each feature's adds, distinct users and
   favorites, all time.
-- **Dashboard** (to come): a **FeatureScripts** section on the overview (adds and users
-  over the range, against the previous season, and adds per day), and a
-  **FeatureScripts** page with one row per feature: adds, users, the share of
-  adds, and reports.
+- **Dashboard**: a **FeatureScripts** section on the overview
+  (`GET /api/analytics/overview/featurescripts`, drawn by
+  `src/frontend/features/dashboard/featurescript-usage.tsx`): adds and distinct
+  users over the range, and a row per feature in the document with its adds,
+  users and share of adds, unused ones at zero. A feature added in the range
+  but since removed is listed by its constant. Still to come: a comparison
+  against the previous season, adds per day, and a **FeatureScripts** page that
+  adds each feature's reports.
 
 ## User-facing strings
 

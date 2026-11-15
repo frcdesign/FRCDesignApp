@@ -2,6 +2,7 @@ import { queryOptions, type UseQueryResult } from "@tanstack/react-query";
 import { apiGet } from "../../lib/api-client";
 import type {
     DailyUsePoint,
+    FeatureScriptUsageOut,
     LibrarySummaryOut,
     InsertableReportOut,
     LibraryHealthCounts,
@@ -41,6 +42,10 @@ export function getOverviewSourcesQuery(range: DayRange) {
 
 export function getVersionManagerQuery(range: DayRange) {
     return overviewQuery<VersionManagerTotals>("version-manager", range);
+}
+
+export function getOverviewFeatureScriptsQuery(range: DayRange) {
+    return overviewQuery<FeatureScriptUsageOut>("featurescripts", range);
 }
 
 export function getOverviewReportsQuery(range: DayRange) {

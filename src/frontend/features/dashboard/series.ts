@@ -13,6 +13,9 @@ const DAILY_DAYS = 120;
 /** Past this, even a point per week runs to hundreds of them. */
 const WEEKLY_DAYS = 550;
 
+/** The overview's chart goes weekly past a quarter, however long the range. */
+const CHART_DAILY_DAYS = 90;
+
 export enum Granularity {
     DAY = "day",
     WEEK = "week",
@@ -28,17 +31,28 @@ export interface BucketPoint {
 
 /** From the span, not the count: a sparse series must still bucket. */
 export function pickGranularity(days: string[]): Granularity {
-    if (days.length === 0) return Granularity.DAY;
+    const span = spanOf(days);
+    if (span <= DAILY_DAYS) return Granularity.DAY;
+    return span <= WEEKLY_DAYS ? Granularity.WEEK : Granularity.MONTH;
+}
+
+/** Never monthly: the uses chart is the one place the week-to-week shape matters. */
+export function pickChartGranularity(days: string[]): Granularity {
+    return spanOf(days) <= CHART_DAILY_DAYS
+        ? Granularity.DAY
+        : Granularity.WEEK;
+}
+
+/** Inclusive days from the earliest key to the latest; 0 for none. */
+function spanOf(days: string[]): number {
+    if (days.length === 0) return 0;
     let first = days[0];
     let last = days[0];
     for (const day of days) {
         if (day < first) first = day;
         if (day > last) last = day;
     }
-
-    const span = spanInDays(first, last);
-    if (span <= DAILY_DAYS) return Granularity.DAY;
-    return span <= WEEKLY_DAYS ? Granularity.WEEK : Granularity.MONTH;
+    return spanInDays(first, last);
 }
 
 /** Inclusive day count between two "YYYY-MM-DD" keys. */

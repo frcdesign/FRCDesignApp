@@ -144,7 +144,7 @@ To serve your own tunnel at another hostname, set `APP_URL=https://<hostname>` i
 
 ## VSCode Setup
 
-Install nvm (node version manager) in your WSL container, install npm, and then install the dependencies:
+Install nvm (node Version Manager) in your WSL container, install npm, and then install the dependencies:
 
 ```
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.5/install.sh | bash

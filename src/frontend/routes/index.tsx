@@ -51,7 +51,7 @@ function utilityRoute(tab: UtilityTab) {
 }
 
 /**
- * Whether a utility page has what it acts on. The version manager acts on the
+ * Whether a utility page has what it acts on. The Version Manager acts on the
  * workspace Onshape launched the app in.
  */
 function canResume(tab: UtilityTab, search: Record<string, unknown>): boolean {

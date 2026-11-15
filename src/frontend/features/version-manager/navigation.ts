@@ -3,7 +3,7 @@ import { useTargetWorkspace } from "../../lib/onshape-params";
 import { Hint } from "@backend/features/hints/contract";
 import { useHasSeenHint } from "../hints/queries";
 
-/** Whether the version manager's page is the one showing. */
+/** Whether the Version Manager's page is the one showing. */
 export function useIsVersionManager(): boolean {
     return (
         useMatch({ from: "/app/version-manager", shouldThrow: false }) !==

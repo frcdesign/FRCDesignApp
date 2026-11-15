@@ -206,8 +206,7 @@ teamNumber?, featureScript?, part?, diagnostics }`, where `part` is
 ### The dashboard
 
 The overview's **Reports** section counts every topic's reports over the
-range: the total, those from errors, those about a part, and a table by topic
-and type. A library's page shows its own topic's, and its ten most reported
+range: the total, those from errors and those about a part. A library's page shows its own topic's, and its ten most reported
 parts still in the library, each opening the part's page.
 
 ## Invariants

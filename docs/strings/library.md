@@ -62,7 +62,7 @@ be the one shown.
 ## Change badges
 
 On group and part cards in admin mode, after the build status icon, and on a
-parent's row in the version manager; see
+parent's row in the Version Manager; see
 [version-manager.md](../architecture/version-manager.md).
 
 | String                                                                         | Kind    | Where                             | When                                                              | Review    |

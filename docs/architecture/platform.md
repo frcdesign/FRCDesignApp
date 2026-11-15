@@ -168,7 +168,7 @@ The flows that use them:
 | Save favorite configuration   | none                                                      | —                              | "Favorite default configuration set."                           |
 | Link a document               | none                                                      | —                              | "Successfully linked {document} - {workspace}."                 |
 | Link all suggested parents    | none                                                      | —                              | "Linked {count} documents."                                     |
-| Refresh the version manager   | none                                                      | the button's spinner           | "Refreshed linked documents."                                   |
+| Refresh the Version Manager   | none                                                      | the button's spinner           | "Refreshed linked documents."                                   |
 | Tips                          | `quick-insert-tip`, `thumbnail-wait-tip`, sign-in preview | —                              | info, 8 s                                                       |
 
 Loading toasts are for work the user watches; background work gets an info

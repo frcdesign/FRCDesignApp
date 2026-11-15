@@ -110,7 +110,7 @@ export function storedThumbnailQueryKey(url: string | undefined) {
 }
 
 /**
- * The version manager's queries, keyed by the workspace they are about and kept
+ * The Version Manager's queries, keyed by the workspace they are about and kept
  * outside the library prefix: a library reload moves nothing here.
  */
 export function workspaceLinksQueryKey(workspace: InstancePath | undefined) {

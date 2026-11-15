@@ -305,6 +305,7 @@ GET /api/analytics/overview/usage                                   OverviewUsag
 GET /api/analytics/overview/series                                  DailyUsePoint[], per library
 GET /api/analytics/overview/sources                                 UseSourceUsage[]
 GET /api/analytics/overview/version-manager                         VersionManagerTotals
+GET /api/analytics/overview/featurescripts                          FeatureScriptUsageOut
 GET /api/analytics/overview/reports                                 ReportSummary
 GET /api/analytics/summary/library/:libraryId                       LibrarySummaryOut
 GET /api/analytics/health/library/:libraryId?v=                     LibraryHealthCounts, cached by the library's version
@@ -315,7 +316,8 @@ GET /api/analytics/insertable/library/:libraryId/element/:elementId InsertableRe
 ```
 
 `src/backend/features/analytics/metric-queries.ts`, `growth.ts`,
-`part-queries.ts` and `report-queries.ts`, the reads behind them
+`part-queries.ts`, `report-queries.ts` and `featurescript-queries.ts`, the
+reads behind them
 
 ```ts
 async function getTotals(
@@ -343,6 +345,11 @@ async function getVersionManagerTotals(
     db: Db,
     range: DayRange
 ): Promise<VersionManagerTotals>;
+// Every feature in the document, at zero if unused, and any added since removed.
+async function getFeatureScriptUsage(
+    db: Db,
+    range: DayRange
+): Promise<FeatureScriptUsageOut>;
 // Who was about each day: library activity unioned with app opens.
 function activeUserRows(db: Db, range: DayRange, libraryId?: LibraryId);
 // How many of them over the whole range: a union of ids, which dedupes them.
@@ -461,9 +468,6 @@ type UseTargets = Record<UseTarget, number>;
 
 function emptyTargets(): UseTargets;
 
-/** The uses that went into Onshape: quick insert's denominator. */
-function insertsOf(targets: UseTargets): number;
-
 /** Lifetime counts, either overall or scoped to one library. */
 interface AnalyticsTotals {
     /** Inserts and downloads; `targets` splits them. */
@@ -473,10 +477,6 @@ interface AnalyticsTotals {
     uniqueUsers: number;
     /** A subset of `uses`. */
     favoriteUses: number;
-    /** A subset of the inserts; see {@link insertsOf}. */
-    quickInserts: number;
-    /** Onshape only offers fasten on assemblies, so compare to that entry of `targets`. */
-    fastenInserts: number;
     targets: UseTargets;
     /** Current, not over the range: a favorite is state, not an event. */
     favorites: number;
@@ -497,9 +497,9 @@ interface DailyMetricPoint {
     /** Distinct users active that day; not summable across days. */
     activeUsers: number;
     favoriteUses: number;
-    quickInserts: number;
     fastenInserts: number;
-    /** That day's uses by target; the assembly entry is fasten's denominator. */
+    /** Uses into an assembly of parts that offer fasten now: fasten's denominator. */
+    fastenableUses: number;
     targets: UseTargets;
 }
 
@@ -569,12 +569,10 @@ interface LibrarySummaryOut {
     to: string;
 }
 
-/** What the version manager has done, and how much is linked to do it with. */
+/** What the Version Manager has done, and how much is linked to do it with. */
 interface VersionManagerTotals {
     /** Pushes and pulls together. */
     runs: number;
-    /** Runs with a step that failed, partway or entirely. */
-    runsWithFailures: number;
     /** Tabs whose references the app repointed. */
     updatedElements: number;
     createdVersions: number;
@@ -601,6 +599,25 @@ interface ReportedPartOut {
 interface ReportSummary {
     /** Every report over the range; only the kinds that happened are listed. */
     counts: ReportCount[];
+}
+
+/** One FeatureScript's adds over the range. */
+interface FeatureScriptUsage {
+    /** The feature's constant, which never changes once released. */
+    featureType: string;
+    /** Absent for a feature no longer in the frontend document. */
+    name?: string;
+    adds: number;
+    users: number;
+}
+
+/** FeatureScripts added over the range, in total and per feature. */
+interface FeatureScriptUsageOut {
+    adds: number;
+    /** Distinct over the range, so not the sum of the features'. */
+    users: number;
+    /** Every feature in the document, at zero if unused, most added first. */
+    features: FeatureScriptUsage[];
 }
 
 /** The overview's headline numbers, and the series its trends are drawn from. */
@@ -712,6 +729,7 @@ function getOverviewUsageQuery(range: DayRange);
 function getOverviewSeriesQuery(range: DayRange);
 function getOverviewSourcesQuery(range: DayRange);
 function getVersionManagerQuery(range: DayRange);
+function getOverviewFeatureScriptsQuery(range: DayRange);
 function getOverviewReportsQuery(range: DayRange);
 function getLibrarySummaryQuery(libraryId: LibraryId, range: DayRange);
 function getPartsQuery(libraryId: LibraryId, range: DayRange);
@@ -782,7 +800,6 @@ function rangeValue(
 type MetricKey =
     | "uses"
     | "fastenFraction"
-    | "quickFraction"
     | "assemblyFraction"
     | "downloadFraction";
 
@@ -792,27 +809,23 @@ interface MetricDefinition {
     /** Percentages divide by `denominator`; counts leave it undefined. */
     numerator: (point: DailyMetricPoint) => number;
     denominator?: (point: DailyMetricPoint) => number;
-    /** The all-time figure, shown as context beneath the range value. */
-    lifetimeValue: (totals: AnalyticsTotals) => number;
-    lifetimeDenominator?: (totals: AnalyticsTotals) => number;
     /** What the detail chart's y-axis is measuring. */
     detailLabel: string;
 }
 ```
 
-| Metric             | Counts                | Divided by            |
-| ------------------ | --------------------- | --------------------- |
-| `uses`             | Inserts and downloads | —                     |
-| `quickFraction`    | Quick inserts         | Inserts (`insertsOf`) |
-| `fastenFraction`   | Inserts that fastened | Uses into an assembly |
-| `assemblyFraction` | Uses into an assembly | Every use             |
-| `downloadFraction` | Downloads             | Every use             |
+| Metric             | Counts                | Divided by                                           |
+| ------------------ | --------------------- | ---------------------------------------------------- |
+| `uses`             | Inserts and downloads | —                                                    |
+| `fastenFraction`   | Inserts that fastened | Uses into an assembly of parts that offer fasten now |
+| `assemblyFraction` | Uses into an assembly | Every use                                            |
+| `downloadFraction` | Downloads             | Every use                                            |
 
 Named, not copied: `AppContext` and `AppBindings` (`src/backend/lib/context.ts`),
 `Db` (`src/backend/db/client.ts`), `ElementPath` and `InstanceType`
 (`src/backend/lib/onshape/path.ts`), `ElementType`, `LibraryId`, `Selection`
 and `ConfigurationParameter` ([configurations.md](./configurations.md)), the
-version manager's `VersionJobKind`, `VersionJobOutcome`, `VersionJobStatus`,
+Version Manager's `VersionJobKind`, `VersionJobOutcome`, `VersionJobStatus`,
 `PushScopeKind` and `PullScopeKind` ([version-manager.md](./version-manager.md)),
 and feedback's `FeedbackTopic`, `FeedbackCategory` and `FeedbackSource`
 ([feedback.md](./feedback.md)).
@@ -889,7 +902,7 @@ no foreign key crosses between them):
    `POST /api/step-export` calls `trackDownload` once Onshape accepts the
    export (see [download.md](./download.md)); `/init`'s
    handoff calls `POST /api/app-open`, which calls `trackAppOpen`; the
-   version manager's workflow calls `trackVersionRun` in its `record-run` step
+   Version Manager's workflow calls `trackVersionRun` in its `record-run` step
    once its run has finished, so a run that failed halfway still records what
    it managed; `POST /api/update-references` records one in the background once
    it has updated a library document's references; `POST /api/feedback` calls `trackReport` once the report is
@@ -954,12 +967,15 @@ panel. Its routes read only rollups and return only aggregates:
 - **Overview** — one route per area, each fetched by its own query, so every
   section shows as soon as its numbers arrive: **usage** (totals, the metric
   series behind the headline tiles and the trend tiles, growth), **series**
-  (uses per library per day), **sources** (every source, with "Not recorded"
-  only when the range reaches imported history), the **version manager**'s totals,
-  and **reports** by topic and type. Its usage breakdown reads each library's
-  **Parts** report.
+  (uses per library per day, which the chart plots a day per point up to 90
+  days and a week per point past that, `pickChartGranularity`), **sources**
+  (every source, with "Not recorded" only when the range reaches imported
+  history), the **Version Manager**'s totals, **featurescripts** (adds and
+  distinct users, and each feature's adds and users, every feature in the
+  document listed), and **reports**' totals. Its usage breakdown reads each
+  library's **Parts** report.
 - **Library** — its summary, health (build issues by severity, hidden elements
-  left out), its parts table, its reports by type, and its most reported parts.
+  left out), its parts table, its reports' totals, and its most reported parts.
 - **Part** — one element's history, its uses split by target (into an
   assembly, downloaded), and usage of each configuration option, split per way
   the option is shown (`toParameterInstances`).
@@ -1006,13 +1022,13 @@ only on **All time**, its own window being a season rather than the picked one.
 - A use is one of `USE_EVENT_TYPES`, and writes every rollup any use writes;
   only its `UseTarget` and the insert-only flags tell the kinds apart. A count
   labelled "uses" sums them all; "inserts" means the uses that went into
-  Onshape (`insertsOf`), which quick insert is measured against.
+  Onshape.
 - A use is one part, inserted or downloaded. An action that places several
   parts — an insert and fasten to several picked edges, an Auto Assembly run —
   records one use per part, and every count of uses sums them, the headline
   numbers included.
-- A share of a choice only a person makes, such as quick insert, divides by
-  the uses that choice was open to, not by every use.
+- A share of a choice only a person makes, such as fasten, divides by the
+  uses that choice was open to, not by every use.
 - Every new or major feature records its use here, in the same change
   (`AGENTS.md`, Feature tracking).
 
@@ -1042,8 +1058,15 @@ only on **All time**, its own window being a season rather than the picked one.
 - **A FeatureScript add is not a use.** A feature is no library's part, so
   it counts toward no library's uses, users or parts, and rolls up into tables
   of its own; the owner reads them in each feature's card
-  (`GET /api/featurescripts/stats`), and the dashboard's section is still to
-  come.
+  (`GET /api/featurescripts/stats`), and the overview's FeatureScripts section
+  over the range.
+- **Fasten is measured against the parts that offer it now.** Onshape offers
+  fasten only into an assembly, and the app only for a part with a mate
+  connector an admin hasn't turned off (`insertables.fasten_info`). No rollup
+  records whether a part offered it at the time, so the denominator joins the
+  assembly uses in `daily_insertable_metrics` against the parts as they are,
+  rather than adding a column history couldn't fill. A part that has since
+  lost its connector drops out of the denominator but not the numerator.
 - **Reports are not activity.** Reporting a library's part is not using it, so
   a report writes no row to `daily_metrics`, `daily_user_activity` or
   `user_stats`, even when it names a library.

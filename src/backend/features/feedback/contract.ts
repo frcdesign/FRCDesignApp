@@ -132,7 +132,7 @@ export function libraryTopic(libraryId: LibraryId): FeedbackTopic {
 
 /**
  * The broad things a report can be about, which the form asks first: a part
- * library, the app, the version manager, or a FeatureScript. People mistook
+ * library, the app, the Version Manager, or a FeatureScript. People mistook
  * the app for its libraries when the two were one list.
  */
 export enum FeedbackArea {

@@ -18,18 +18,17 @@ catalog. A **use** is an insert or a download.
 
 ## How people use the app
 
-On the overview. Each share is a trend tile; the detail is its chart's axis.
+On the overview. Each share is a tile over the range; the detail is its chart's axis.
 
-| String                                                                                                    | Kind              | Where                 | When                               | Review                                                |
-| --------------------------------------------------------------------------------------------------------- | ----------------- | --------------------- | ---------------------------------- | ----------------------------------------------------- |
-| "How people use the app"                                                                                  | Section title     |                       | Always                             |                                                       |
-| "Search results" / "Search within a group" / "Browsing a group" / "Favorites list" / "Recently used list" | Bar labels        | The source breakdown  | Always; uses by where they started |                                                       |
-| "Not recorded (before September 2026)"                                                                    | Bar label         | The source breakdown  | The range reaches imported history | **⚑** New: uses imported from the legacy app          |
-| "No uses recorded yet."                                                                                   | Empty notice      | In place of the bars  | No use in the range                | **⚑** Was "No inserts recorded yet."                  |
-| "Quick insert" / "% of inserts"                                                                           | Tile label / axis |                       | Always                             | **⚑** Measured against inserts, leaving downloads out |
-| "Insert and fasten" / "% of assembly inserts"                                                             | Tile label / axis |                       | Always                             |                                                       |
-| "Into an assembly" / "% of uses"                                                                          | Tile label / axis | Also on a part's page | Always                             | **⚑** Now a share of every use                        |
-| "Downloaded" / "% of uses"                                                                                | Tile label / axis | Also on a part's page | Always                             | **⚑** New                                             |
+| String                                                                                                    | Kind              | Where                 | When                               | Review                                           |
+| --------------------------------------------------------------------------------------------------------- | ----------------- | --------------------- | ---------------------------------- | ------------------------------------------------ |
+| "How people use the app"                                                                                  | Section title     |                       | Always                             |                                                  |
+| "Search results" / "Search within a group" / "Browsing a group" / "Favorites list" / "Recently used list" | Bar labels        | The source breakdown  | Always; uses by where they started |                                                  |
+| "Not recorded"                                                                                            | Bar label         | The source breakdown  | The range reaches imported history | **⚑** Was "Not recorded (before September 2026)" |
+| "No uses recorded yet."                                                                                   | Empty notice      | In place of the bars  | No use in the range                | **⚑** Was "No inserts recorded yet."             |
+| "Insert and fasten" / "% of assembly inserts that could fasten"                                           | Tile label / axis |                       | Always                             | **⚑** Now of parts that offer fasten             |
+| "Into an assembly" / "% of uses"                                                                          | Tile label / axis | Also on a part's page | Always                             | **⚑** Now a share of every use                   |
+| "Downloaded" / "% of uses"                                                                                | Card label        | A part's page         | Always                             | **⚑** No longer a tile on the overview           |
 
 ## Parts
 
@@ -56,16 +55,15 @@ On the overview. Each share is a trend tile; the detail is its chart's axis.
 | "If the problem persists, send a report." | Zero state description | Under it                        | Same; shared with the app's other section errors            |           |
 | "Try again" / "Send a report"             | Buttons                | Under it                        | Same; Try again refetches that section alone                | **⚑** New |
 
-## Version manager
+## Version Manager
 
 On the overview.
 
-| String                                                 | Kind          | Where       | When   | Review |
-| ------------------------------------------------------ | ------------- | ----------- | ------ | ------ |
-| "Version manager"                                      | Section title |             | Always |        |
-| "Runs" / "Tabs updated" / "Versions created" / "Links" | Tile labels   |             | Always |        |
-| "{n} with failures"                                    | Tile caption  | Under Runs  | Always |        |
-| "Right now"                                            | Tile caption  | Under Links | Always |        |
+| String                                                 | Kind          | Where       | When   | Review                      |
+| ------------------------------------------------------ | ------------- | ----------- | ------ | --------------------------- |
+| "Version Manager"                                      | Section title |             | Always | **⚑** Was "Version manager" |
+| "Runs" / "Tabs updated" / "Versions created" / "Links" | Tile labels   |             | Always |                             |
+| "Right now"                                            | Tile caption  | Under Links | Always |                             |
 
 ## Low usage
 

@@ -1,4 +1,4 @@
-# Version manager: strings
+# Version Manager: strings
 
 What [version-manager.md](../architecture/version-manager.md) shows a person.
 App text is a message in `src/frontend/messages/en.json`, keyed

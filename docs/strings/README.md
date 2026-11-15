@@ -12,7 +12,7 @@ user.
 | [library.md](./library.md)                 | The library pages: the group page, change badges         |
 | [feedback.md](./feedback.md)               | Reports, the access page, and the dashboard's counts     |
 | [download.md](./download.md)               | STEP downloads from the standalone app                   |
-| [version-manager.md](./version-manager.md) | The version manager's page, welcome and suggested links  |
+| [version-manager.md](./version-manager.md) | The Version Manager's page, welcome and suggested links  |
 | [analytics.md](./analytics.md)             | The dashboard's usage numbers, charts and tables         |
 | [featurescripts.md](./featurescripts.md)   | The FeatureScripts tab, its cards and details (proposed) |
 | [testbench.md](./testbench.md)             | The owner's testbench page                               |

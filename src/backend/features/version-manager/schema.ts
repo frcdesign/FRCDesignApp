@@ -1,5 +1,5 @@
 /**
- * The version manager's own table, kept out of `db/schema.ts` because nothing
+ * The Version Manager's own table, kept out of `db/schema.ts` because nothing
  * here points at the app's data: a link names Onshape ids, not library rows.
  */
 
