@@ -33,6 +33,7 @@ import {
 import { IconSize, StatusColor } from "../lib/style-constants";
 import { Status, STATUS_COLOR } from "../lib/status";
 import { m } from "../paraglide/messages";
+import { showInfoToast } from "../lib/notifications";
 
 interface QueryListProps {
     /** Unique on the page: which list takes picks. */
@@ -124,23 +125,32 @@ export function QueryList(props: QueryListProps): ReactNode {
 
     useEffect(
         () =>
-            onPick(id, ({ added, removed, isHighlightCleared }) => {
-                const kept = without(entities, removed);
-                const keys = new Set(kept.map(selectionKey));
-                const taken = added.filter(
-                    (entity) =>
-                        accepts(entity) && !keys.has(selectionKey(entity))
-                );
-                if (target && isHighlightCleared) {
-                    sendHighlightMessage(
-                        target,
-                        [...kept, ...taken].map(toHighlighted)
+            onPick(
+                id,
+                ({ added, removed, isHighlightCleared, isDeselectRefused }) => {
+                    const kept = without(entities, removed);
+                    const keys = new Set(kept.map(selectionKey));
+                    const taken = added.filter(
+                        (entity) =>
+                            accepts(entity) && !keys.has(selectionKey(entity))
                     );
+                    // Kept, so the window shows them again
+                    if (target && (isHighlightCleared || isDeselectRefused)) {
+                        sendHighlightMessage(
+                            target,
+                            [...kept, ...taken].map(toHighlighted)
+                        );
+                    }
+                    if (isDeselectRefused) {
+                        showInfoToast(m.queryListDeselectRefused(), {
+                            id: "query-list-deselect-refused"
+                        });
+                    }
+                    if (taken.length > 0 || kept.length !== entities.length) {
+                        onChange([...kept, ...taken]);
+                    }
                 }
-                if (taken.length > 0 || kept.length !== entities.length) {
-                    onChange([...kept, ...taken]);
-                }
-            }),
+            ),
         [id, entities, onChange, accepts, target]
     );
 

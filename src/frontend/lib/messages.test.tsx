@@ -57,7 +57,8 @@ describe("useMessageListener", () => {
         expect(picked).toHaveBeenCalledWith({
             added: picks,
             removed: [],
-            isHighlightCleared: false
+            isHighlightCleared: false,
+            isDeselectRefused: false
         });
     });
 
@@ -67,7 +68,8 @@ describe("useMessageListener", () => {
         expect(picked).toHaveBeenLastCalledWith({
             added: [],
             removed: picks,
-            isHighlightCleared: false
+            isHighlightCleared: false,
+            isDeselectRefused: false
         });
     });
 
@@ -84,13 +86,15 @@ describe("useMessageListener", () => {
         expect(picked).toHaveBeenLastCalledWith({
             added: picks,
             removed: [],
-            isHighlightCleared: false
+            isHighlightCleared: false,
+            isDeselectRefused: false
         });
         answer([]);
         expect(picked).toHaveBeenLastCalledWith({
             added: [],
             removed: picks,
-            isHighlightCleared: false
+            isHighlightCleared: false,
+            isDeselectRefused: false
         });
     });
 
@@ -111,7 +115,8 @@ describe("useMessageListener", () => {
         expect(picked).toHaveBeenCalledWith({
             added: [],
             removed: [],
-            isHighlightCleared: true
+            isHighlightCleared: true,
+            isDeselectRefused: false
         });
     });
 
@@ -129,7 +134,29 @@ describe("useMessageListener", () => {
         expect(picked).toHaveBeenCalledWith({
             added: [],
             removed: [],
-            isHighlightCleared: true
+            isHighlightCleared: true,
+            isDeselectRefused: false
+        });
+    });
+
+    it("refuses a deselection from a highlight well after it's shown", () => {
+        const both = [edge, { ...edge, selectionId: "JHE" }];
+        expectSelection(
+            both.map(({ entityType, selectionId, occurrencePath }) => ({
+                entityType,
+                selectionId,
+                occurrencePath
+            }))
+        );
+        post({ messageName: "SELECTION", selections: both });
+        // A person takes a while; Onshape's own answers come at once
+        useOnshapeSelection.setState({ highlightedAt: 0 });
+        post({ messageName: "SELECTION", selections: [edge] });
+        expect(picked).toHaveBeenLastCalledWith({
+            added: [],
+            removed: [],
+            isHighlightCleared: false,
+            isDeselectRefused: true
         });
     });
 
@@ -180,7 +207,8 @@ describe("useMessageListener", () => {
         expect(picked).toHaveBeenLastCalledWith({
             added: [],
             removed: [],
-            isHighlightCleared: false
+            isHighlightCleared: false,
+            isDeselectRefused: false
         });
     });
 });

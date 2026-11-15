@@ -76,6 +76,8 @@ interface SelectionChange {
     removed: OnshapeSelection[];
     /** Onshape cleared a highlight the app made, as a click in its window does. */
     isHighlightCleared: boolean;
+    /** Someone deselected part of a highlight the app made, which the list keeps. */
+    isDeselectRefused: boolean;
 }
 
 type PickHandler = (change: SelectionChange) => void;
@@ -1039,6 +1041,11 @@ closes the menu and switches to the page.
    as picks deselected and others picked. A click in its window that clears
    the highlight (`isHighlightCleared`) keeps the picks, takes any new one,
    and lights them all up again, until Onshape can resume a selection.
+   Deselecting part of the highlight in Onshape is refused the same way
+   (`isDeselectRefused`): the list keeps the pick, lights its picks up again,
+   and a toast says why. It counts as a deselection only when some of the
+   highlight left, nothing came, and the highlight is more than a second old,
+   so Onshape's own late answers don't.
 
 ### The form
 

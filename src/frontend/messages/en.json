@@ -728,5 +728,6 @@
     "placementSelectBy": "Select by",
     "insertMenuInsert": "Insert",
     "insertMenuDerive": "Derive",
-    "autoAssemblySizeFromHole": "From hole"
+    "autoAssemblySizeFromHole": "From hole",
+    "queryListDeselectRefused": "Due to Onshape limitations, deselecting via the graphics window is not possible after resuming a selection."
 }

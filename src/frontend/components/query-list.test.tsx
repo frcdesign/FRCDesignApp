@@ -10,6 +10,7 @@ import {
     useOnshapeSelection,
     type OnshapeSelection
 } from "../lib/selection";
+import * as Notifications from "../lib/notifications";
 import { Status } from "../lib/status";
 import { QueryList } from "./query-list";
 import { SelectingActionBar } from "./selecting-action-bar";
@@ -388,6 +389,51 @@ describe("QueryList", () => {
                     expect.objectContaining({ selectionId: "B" })
                 ]
             })
+        );
+    });
+
+    it("refuses a pick deselected from its highlight, showing it again and saying why", () => {
+        const toast = vi.spyOn(Notifications, "showInfoToast");
+        const AutoFocused = () => {
+            const [entities, setEntities] = useState(() => [
+                edge("A"),
+                edge("B")
+            ]);
+            return (
+                <QueryList
+                    id="holes"
+                    label="Holes"
+                    entities={entities}
+                    onChange={setEntities}
+                    accepts={() => true}
+                    filter={CIRCULAR_EDGES}
+                    autoFocus
+                />
+            );
+        };
+        // Focused with picks, it lights them up, which Onshape answers
+        renderWithProviders(<AutoFocused />);
+        const { receive } = useOnshapeSelection.getState();
+        act(() => receive([]));
+        act(() => receive([edge("A"), edge("B")]));
+
+        // Deselected in Onshape, a while later
+        useOnshapeSelection.setState({ highlightedAt: 0 });
+        messages = [];
+        act(() => receive([edge("A")]));
+        expect(screen.getByText("Edge 2")).toBeTruthy();
+        expect(messages).toContainEqual(
+            expect.objectContaining({
+                messageName: "requestSelectionHighlight",
+                selections: [
+                    expect.objectContaining({ selectionId: "A" }),
+                    expect.objectContaining({ selectionId: "B" })
+                ]
+            })
+        );
+        expect(toast).toHaveBeenCalledWith(
+            "Due to Onshape limitations, deselecting via the graphics window is not possible after resuming a selection.",
+            expect.anything()
         );
     });
 
