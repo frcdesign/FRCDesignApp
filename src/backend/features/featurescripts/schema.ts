@@ -12,15 +12,17 @@ import {
 import type { ThumbnailUrls } from "../thumbnails/contract";
 import type { FeatureScriptProblem } from "./contract";
 
-/** One row: the version of the frontend document the tab shows. */
+/** One row: the frontend document's version features are added from, and the workspace the rest is read from. */
 export const featureScriptsDocument = sqliteTable("featurescripts_document", {
     documentId: text("document_id").primaryKey(),
     versionId: text("version_id").notNull(),
+    /** Null until a load reads the workspace. */
+    workspaceId: text("workspace_id"),
     /** Bumped by every load that wrote; the list is cached under it. */
     cacheVersion: integer("cache_version").notNull().default(0)
 });
 
-/** One per Feature Studio in the loaded version. */
+/** One per Feature Studio the workspace's manifest lists that the loaded version has. */
 export const featureScripts = sqliteTable("featurescripts", {
     /** Kept across loads for the same element, so urls and analytics stay put. */
     id: text("id")

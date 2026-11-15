@@ -33,9 +33,12 @@ export interface FeatureScriptOut {
 }
 
 export interface FeatureScriptsOut {
-    /** The frontend version loaded, for **Open example**; absent before the first load. */
+    /** Absent before the first load. */
     documentId?: string;
+    /** The frontend version features are added from, which **Get FeatureScript** opens. */
     versionId?: string;
+    /** The frontend workspace examples are read from, which **Open example** opens. */
+    workspaceId?: string;
     /** In the frontend document's tab order. */
     features: FeatureScriptOut[];
 }
@@ -63,7 +66,7 @@ export enum FeatureScriptsLoadState {
     RUNNING = "running",
     /** Wrote the version's features. */
     LOADED = "loaded",
-    /** The version was the one loaded, so nothing was written. */
+    /** Nothing changed since the last load, so nothing was written. */
     UP_TO_DATE = "up-to-date",
     FAILED = "failed"
 }

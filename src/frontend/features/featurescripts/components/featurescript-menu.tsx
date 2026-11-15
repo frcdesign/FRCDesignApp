@@ -13,7 +13,7 @@ import { SectionNotice } from "../../../components/app-notice";
 import { openUrlInNewTab } from "../../../lib/url";
 import { m } from "../../../paraglide/messages";
 import { RequireSignIn } from "../../auth/components/require-access";
-import { useFrontendTabUrl } from "../queries";
+import { useExampleUrl } from "../queries";
 import { FeatureScriptAddButton } from "./featurescript-add-button";
 import { FeatureScriptStatus } from "./featurescript-status";
 import { FeatureScriptMenuItems } from "./featurescript-menu-items";
@@ -66,7 +66,7 @@ interface FeatureScriptMenuProps {
 export function FeatureScriptMenu(props: FeatureScriptMenuProps): ReactNode {
     const { feature } = props;
     const modal = useAppModal();
-    const exampleUrl = useFrontendTabUrl(feature.exampleElementId);
+    const exampleUrl = useExampleUrl(feature.exampleElementId);
 
     return (
         <>

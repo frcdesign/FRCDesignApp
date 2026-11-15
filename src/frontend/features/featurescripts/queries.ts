@@ -66,19 +66,34 @@ export function useFeatureScriptsQuery() {
     return useQuery(getFeatureScriptsQuery(version.data ?? 0));
 }
 
-/** A tab of the frontend document in the loaded version: the example, or the Feature Studio. */
-export function useFrontendTabUrl(
-    elementId: string | undefined
-): string | undefined {
+/** The Feature Studio in the version its feature is added from. */
+export function useStudioUrl(elementId: string): string | undefined {
     const origin = useOnshapeOrigin();
     const { data } = useFeatureScriptsQuery();
-    if (!elementId || !data?.documentId || !data.versionId) {
+    if (!data?.documentId || !data.versionId) {
         return undefined;
     }
     return makeUrl(origin, {
         documentId: data.documentId,
         instanceType: "v",
         instanceId: data.versionId,
+        elementId
+    });
+}
+
+/** The example in the workspace it was read from. */
+export function useExampleUrl(
+    elementId: string | undefined
+): string | undefined {
+    const origin = useOnshapeOrigin();
+    const { data } = useFeatureScriptsQuery();
+    if (!elementId || !data?.documentId || !data.workspaceId) {
+        return undefined;
+    }
+    return makeUrl(origin, {
+        documentId: data.documentId,
+        instanceType: "w",
+        instanceId: data.workspaceId,
         elementId
     });
 }

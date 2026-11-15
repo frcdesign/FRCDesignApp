@@ -66,6 +66,7 @@ function renderMenu(feature: FeatureScriptOut) {
     queryClient.setQueryData<FeatureScriptsOut>(featureScriptsQueryKey(0), {
         documentId: "frontend",
         versionId: "v-1",
+        workspaceId: "w-1",
         features: [feature]
     });
     renderWithProviders(<FeatureScriptMenu feature={feature} />, queryClient);
@@ -153,7 +154,7 @@ describe("FeatureScriptMenu", () => {
         await user.keyboard("{Escape}");
         await user.click(screen.getByRole("button", { name: "Open example" }));
         expect(open).toHaveBeenCalledWith(
-            "https://cad.onshape.com/documents/frontend/v/v-1/e/e-example",
+            "https://cad.onshape.com/documents/frontend/w/w-1/e/e-example",
             "_blank"
         );
     });
@@ -202,6 +203,7 @@ function renderList(
     queryClient.setQueryData<FeatureScriptsOut>(featureScriptsQueryKey(0), {
         documentId: "frontend",
         versionId: "v-1",
+        workspaceId: "w-1",
         features: options.features ?? LISTED
     });
     queryClient.setQueryData<AccessData>(accessDataQueryKey(DEFAULT_LIBRARY), {

@@ -32,6 +32,7 @@ export async function getFeatureScriptsOut(db: Db): Promise<FeatureScriptsOut> {
     return {
         documentId: document?.documentId,
         versionId: document?.versionId,
+        workspaceId: document?.workspaceId ?? undefined,
         features: rows.map((row) => ({
             id: row.id,
             elementId: row.elementId,

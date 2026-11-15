@@ -110,8 +110,12 @@ function frontend(extrudeMicroversion = "mv-extrude"): {
 }
 
 let version: string;
+/** The workspace: the manifest, examples and icons. */
 let document: ReturnType<typeof frontend>;
+/** The latest version's contents, where features are added from; the workspace's unless a test sets it. */
+let versionContents: OnshapeDocumentContents | undefined;
 let thumbnailUploads: string[];
+let thumbnailInstances: string[];
 
 async function runLoad(
     id: string,
@@ -144,7 +148,9 @@ describe("LoadFeatureScriptsWorkflow", () => {
         await Promise.all(keys.map((key) => env.KV.delete(key.name)));
         version = "v-1";
         document = frontend();
+        versionContents = undefined;
         thumbnailUploads = [];
+        thumbnailInstances = [];
         vi.spyOn(
             BackgroundSessions,
             "getBackgroundOnshapeApi"
@@ -162,8 +168,12 @@ describe("LoadFeatureScriptsWorkflow", () => {
                 createdAt: new Date().toISOString()
             })
         );
-        vi.spyOn(Documents, "getContents").mockImplementation(() =>
-            Promise.resolve(document.contents)
+        vi.spyOn(Documents, "getContents").mockImplementation((_api, path) =>
+            Promise.resolve(
+                path.instanceType === "v"
+                    ? (versionContents ?? document.contents)
+                    : document.contents
+            )
         );
         vi.spyOn(Blobs, "downloadBlob").mockImplementation((_api, path) =>
             Promise.resolve(
@@ -177,6 +187,9 @@ describe("LoadFeatureScriptsWorkflow", () => {
         vi.spyOn(ThumbnailStore, "uploadThumbnails").mockImplementation(
             (_bucket, _api, path, _workspace, microversionId) => {
                 thumbnailUploads.push(path.elementId);
+                thumbnailInstances.push(
+                    `${path.instanceType}/${path.instanceId}`
+                );
                 return Promise.resolve(
                     ThumbnailStore.thumbnailUrls(path.elementId, microversionId)
                 );
@@ -238,14 +251,23 @@ describe("LoadFeatureScriptsWorkflow", () => {
                 isVisible: true
             }
         ]);
-        // The shared example is rendered once.
+        // The shared example is rendered once, from the workspace.
         expect(thumbnailUploads).toEqual(["multi"]);
+        expect(thumbnailInstances).toEqual(["w/w"]);
+        expect(Blobs.downloadBlob).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({
+                instanceType: "w",
+                elementId: "manifest"
+            })
+        );
         expect(
             await env.BLOB.get(iconKey("extrude-icon", "mv-extrude-icon"))
         ).not.toBeNull();
         expect(await db.select().from(featureScriptsDocument).get()).toEqual({
             documentId: DOCUMENT_ID,
             versionId: "v-1",
+            workspaceId: "w",
             cacheVersion: 1
         });
         expect(Registration.ensureWebhook).toHaveBeenCalled();
@@ -277,7 +299,55 @@ describe("LoadFeatureScriptsWorkflow", () => {
         ).toBe(2);
     });
 
-    it("leaves the list alone when the version is the one loaded", async () => {
+    it("reads a manifest edited in the workspace without a new version", async () => {
+        await runLoad("first");
+        document.manifest = {
+            schemaVersion: 1,
+            features: (
+                document.manifest as { features: object[] }
+            ).features.map((feature) => ({
+                ...feature,
+                description: "Does it better."
+            }))
+        };
+
+        await runLoad("second");
+
+        expect(await getLoadStatus(env)).toMatchObject({
+            state: FeatureScriptsLoadState.LOADED,
+            versionName: "v-1"
+        });
+        expect((await readRows()).map((row) => row.description)).toEqual([
+            "Does it better.",
+            "Does it better.",
+            "Does it better."
+        ]);
+    });
+
+    it("adds from the version, and leaves out a studio only the workspace has", async () => {
+        versionContents = {
+            ...document.contents,
+            elements: document.contents.elements
+                .filter((element) => element.id !== "frame")
+                .map((element) =>
+                    element.id === "extrude"
+                        ? { ...element, microversionId: "mv-extrude-released" }
+                        : element
+                )
+        };
+        document = frontend("mv-extrude-edited");
+
+        await runLoad("first");
+
+        const rows = await readRows();
+        expect(rows.map((row) => row.elementId)).toEqual([
+            "extrude",
+            "revolve"
+        ]);
+        expect(rows[0].microversionId).toBe("mv-extrude-released");
+    });
+
+    it("leaves the list alone when nothing changed", async () => {
         await runLoad("first");
         thumbnailUploads = [];
 
@@ -312,7 +382,7 @@ describe("LoadFeatureScriptsWorkflow", () => {
         ]);
     });
 
-    it("changes nothing when the version has no manifest", async () => {
+    it("changes nothing when the workspace has no manifest", async () => {
         document.contents = {
             ...document.contents,
             elements: document.contents.elements.filter(
@@ -326,7 +396,7 @@ describe("LoadFeatureScriptsWorkflow", () => {
         expect(await getLoadStatus(env)).toMatchObject({
             state: FeatureScriptsLoadState.FAILED,
             versionName: "v-1",
-            error: "Version v-1 of the frontend document has no featurescripts.json"
+            error: "The frontend document's workspace has no featurescripts.json"
         });
         expect(
             await db.select().from(featureScriptsDocument).get()

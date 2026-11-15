@@ -21,7 +21,10 @@ import {
     type InstancePath,
     toDefaultWorkspacePath
 } from "../../lib/onshape/path";
-import type { OnshapeElement } from "../../lib/onshape/types";
+import type {
+    OnshapeDocumentContents,
+    OnshapeElement
+} from "../../lib/onshape/types";
 import { getBackgroundOnshapeApi } from "../auth/background-sessions";
 import { getOnshapeApiFromSessionId } from "../auth/request-auth";
 import { withoutDeprecated } from "../load/parse-document-contents";
@@ -108,8 +111,9 @@ async function getApi(ctx: FeatureScriptsLoadContext): Promise<OAuthApi> {
 }
 
 /**
- * Loads the latest version of the frontend document: the features its
- * manifest lists, each feature's example and icon, and its category.
+ * Loads the frontend document: the features its workspace's manifest lists,
+ * each added from the latest version, with its example, icon and category
+ * from the workspace.
  */
 export class LoadFeatureScriptsWorkflow extends WorkflowEntrypoint<
     AppBindings,
@@ -193,13 +197,14 @@ export class LoadFeatureScriptsWorkflow extends WorkflowEntrypoint<
     }
 }
 
-/** A manifest entry paired with the tabs it names in this version. */
+/** A manifest entry paired with its studio in the version and the workspace tabs it names. */
 interface LoadedEntry {
     feature: ManifestFeature;
+    /** In the version: what a Part Studio adds. */
     studio: OnshapeElement;
     example?: OnshapeElement;
     icon?: OnshapeElement;
-    /** The manifest names an icon tab the version doesn't have. */
+    /** The manifest names an icon tab the workspace doesn't have. */
     missingIcon: boolean;
     category?: string;
     sortOrder: number;
@@ -234,33 +239,32 @@ async function loadFeatureScripts(
         instanceId: version.id
     };
 
-    const stored = await step.do("read-stored", async () => ({
-        versionId: (await db.select().from(featureScriptsDocument).get())
-            ?.versionId,
-        rows: await db.select().from(featureScripts)
-    }));
-    const failedBefore = stored.rows.some((row) =>
-        row.problems.includes(FeatureScriptProblem.LOAD_FAILED)
-    );
-    if (stored.versionId === version.id && !force && !failedBefore) {
-        await registerWebhook(ctx, documentId);
+    const stored = await step.do("read-stored", async () => {
+        const loadedDocument = await db
+            .select()
+            .from(featureScriptsDocument)
+            .get();
         return {
-            state: FeatureScriptsLoadState.UP_TO_DATE,
-            versionName: version.name,
-            featureCount: stored.rows.length,
-            failedCount: 0
+            versionId: loadedDocument?.versionId,
+            workspaceId: loadedDocument?.workspaceId ?? undefined,
+            rows: await db.select().from(featureScripts)
         };
-    }
+    });
 
-    const contents = await step.do(
-        "contents",
+    const versionContents = await step.do(
+        "version-contents",
         { retries: ONSHAPE_STEP_RETRIES },
         async () => getContents(await getApi(ctx), versionPath)
     );
-    const manifestTab = findManifestTab(contents);
+    const workspaceContents = await step.do(
+        "workspace-contents",
+        { retries: ONSHAPE_STEP_RETRIES },
+        async () => getContents(await getApi(ctx), workspacePath)
+    );
+    const manifestTab = findManifestTab(workspaceContents);
     if (!manifestTab) {
         throw new Error(
-            `Version ${version.name} of the frontend document has no featurescripts.json`
+            "The frontend document's workspace has no featurescripts.json"
         );
     }
     const manifestText = await step.do(
@@ -268,7 +272,7 @@ async function loadFeatureScripts(
         { retries: ONSHAPE_STEP_RETRIES },
         async () => {
             const response = await downloadBlob(await getApi(ctx), {
-                ...versionPath,
+                ...workspacePath,
                 elementId: manifestTab.id
             });
             return response.text();
@@ -279,11 +283,15 @@ async function loadFeatureScripts(
         manifest = parseManifest(JSON.parse(manifestText));
     } catch (error) {
         throw new NonRetryableError(
-            `featurescripts.json in version ${version.name} doesn't parse: ${String(error)}`
+            `featurescripts.json in the frontend workspace doesn't parse: ${String(error)}`
         );
     }
 
-    const entries = pairEntries(contents, manifest.features);
+    const entries = pairEntries(
+        versionContents,
+        workspaceContents,
+        manifest.features
+    );
     const storedByElement = new Map(
         stored.rows.map((row) => [row.elementId, row])
     );
@@ -292,7 +300,7 @@ async function loadFeatureScripts(
     );
 
     const elementPath = (tab: OnshapeElement): ElementPath => ({
-        ...versionPath,
+        ...workspacePath,
         elementId: tab.id
     });
 
@@ -307,7 +315,7 @@ async function loadFeatureScripts(
                     env.BLOB,
                     await getApi(ctx),
                     elementPath(example),
-                    { ...workspacePath, elementId: example.id },
+                    elementPath(example),
                     example.microversionId,
                     force
                 )
@@ -400,7 +408,32 @@ async function loadFeatureScripts(
         };
     });
 
-    await step.do("save", () => saveLoad(env, documentId, version.id, values));
+    const failedCount = values.filter((value) =>
+        value.problems.includes(FeatureScriptProblem.LOAD_FAILED)
+    ).length;
+    if (
+        !force &&
+        stored.versionId === version.id &&
+        stored.workspaceId === workspacePath.instanceId &&
+        isUnchanged(stored.rows, values)
+    ) {
+        await registerWebhook(ctx, documentId);
+        return {
+            state: FeatureScriptsLoadState.UP_TO_DATE,
+            versionName: version.name,
+            featureCount: values.length,
+            failedCount
+        };
+    }
+
+    await step.do("save", () =>
+        saveLoad(env, {
+            documentId,
+            versionId: version.id,
+            workspaceId: workspacePath.instanceId,
+            values
+        })
+    );
     await step.do("push", () => pushFeatureScriptsChanged(env));
 
     // Not fatal: anything left behind is cleaned up by the next load.
@@ -416,30 +449,37 @@ async function loadFeatureScripts(
         state: FeatureScriptsLoadState.LOADED,
         versionName: version.name,
         featureCount: values.length,
-        failedCount: values.filter((value) =>
-            value.problems.includes(FeatureScriptProblem.LOAD_FAILED)
-        ).length
+        failedCount
     };
 }
 
-/** Each manifest entry whose Feature Studio is in the version, with its tabs. */
+/**
+ * Each manifest entry whose Feature Studio is in the version, with that
+ * studio, and its example, icon, category and place in the workspace.
+ */
 function pairEntries(
-    contents: Parameters<typeof findExample>[0],
+    versionContents: OnshapeDocumentContents,
+    workspaceContents: OnshapeDocumentContents,
     features: ManifestFeature[]
 ): LoadedEntry[] {
-    const current = withoutDeprecated(contents);
-    const byId = new Map(contents.elements.map((tab) => [tab.id, tab]));
-    const order = tabOrder(contents);
+    const current = withoutDeprecated(workspaceContents);
+    const studios = new Map(
+        versionContents.elements.map((tab) => [tab.id, tab])
+    );
+    const tabs = new Map(
+        workspaceContents.elements.map((tab) => [tab.id, tab])
+    );
+    const order = tabOrder(workspaceContents);
     return features.flatMap((feature): LoadedEntry[] => {
-        const studio = byId.get(feature.studioElementId);
+        const studio = studios.get(feature.studioElementId);
         if (!studio) {
-            console.error(
-                `The manifest names ${feature.name}'s studio ${feature.studioElementId}, which the version doesn't have`
+            console.warn(
+                `The manifest names ${feature.name}'s studio ${feature.studioElementId}, which the latest version doesn't have`
             );
             return [];
         }
         const icon = feature.iconElementId
-            ? byId.get(feature.iconElementId)
+            ? tabs.get(feature.iconElementId)
             : undefined;
         return [
             {
@@ -448,7 +488,7 @@ function pairEntries(
                 example: findExample(current, studio.id, feature.name),
                 icon,
                 missingIcon: !!feature.iconElementId && !icon,
-                category: categoryOf(contents, studio.id),
+                category: categoryOf(workspaceContents, studio.id),
                 sortOrder: order.get(studio.id) ?? order.size
             }
         ];
@@ -479,12 +519,39 @@ type FeatureScriptValues = Omit<
     "id" | "isVisible"
 >;
 
+/** Every row as the load would write it, so there is nothing to save. */
+function isUnchanged(
+    rows: FeatureScriptRow[],
+    values: FeatureScriptValues[]
+): boolean {
+    if (rows.length !== values.length) {
+        return false;
+    }
+    const byElement = new Map(rows.map((row) => [row.elementId, row]));
+    return values.every((value) => {
+        const row = byElement.get(value.elementId);
+        return (
+            !!row &&
+            Object.entries(value).every(
+                ([key, field]) =>
+                    JSON.stringify(row[key as keyof FeatureScriptValues]) ===
+                    JSON.stringify(field)
+            )
+        );
+    });
+}
+
+interface SavedLoad {
+    documentId: string;
+    versionId: string;
+    workspaceId: string;
+    values: FeatureScriptValues[];
+}
+
 /** Every row at once, with the version and a bumped cache version, so a reader sees one load or the other. */
 async function saveLoad(
     env: AppBindings,
-    documentId: string,
-    versionId: string,
-    values: FeatureScriptValues[]
+    { documentId, versionId, workspaceId, values }: SavedLoad
 ): Promise<void> {
     const db = getDb(env.DB);
     const elementIds = values.map((value) => value.elementId);
@@ -506,6 +573,7 @@ async function saveLoad(
         db.insert(featureScriptsDocument).values({
             documentId,
             versionId,
+            workspaceId,
             cacheVersion: (previous?.cacheVersion ?? 0) + 1
         })
     ]);

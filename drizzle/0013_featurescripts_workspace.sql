@@ -1,0 +1,1 @@
+ALTER TABLE `featurescripts_document` ADD `workspace_id` text;

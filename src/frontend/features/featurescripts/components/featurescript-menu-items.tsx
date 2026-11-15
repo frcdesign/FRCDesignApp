@@ -10,7 +10,7 @@ import { type FeatureScriptOut } from "@backend/features/featurescripts/contract
 import { openUrlInNewTab } from "../../../lib/url";
 import { openFeatureScriptReport } from "../../feedback/open-feedback";
 import { m } from "../../../paraglide/messages";
-import { useFrontendTabUrl } from "../queries";
+import { useExampleUrl, useStudioUrl } from "../queries";
 
 interface FeatureScriptMenuItemsProps {
     feature: FeatureScriptOut;
@@ -26,8 +26,8 @@ export function FeatureScriptMenuItems(
     props: FeatureScriptMenuItemsProps
 ): ReactNode {
     const { feature, inPopup = false } = props;
-    const exampleUrl = useFrontendTabUrl(feature.exampleElementId);
-    const studioUrl = useFrontendTabUrl(feature.elementId);
+    const exampleUrl = useExampleUrl(feature.exampleElementId);
+    const studioUrl = useStudioUrl(feature.elementId);
     const { sourceUrl } = feature;
 
     return (

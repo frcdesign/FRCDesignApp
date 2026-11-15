@@ -14,7 +14,10 @@ its example Part Studio's thumbnail as a hero image, adds its feature to the
 open Part Studio in one click, opens its Feature Studio or its source on
 GitHub, and takes feedback on it, as a part's **Report an issue** does. What it
 knows of each feature comes from one file robot-code's release writes into the
-frontend document, [the manifest](#the-manifest).
+frontend document, [the manifest](#the-manifest). A feature is added from the
+frontend document's latest version; the manifest, its example and its icon
+are read from the frontend workspace, so the owner can edit them there without
+cutting a version.
 
 It is its own area, not a library. A library is many documents of parts,
 curated by an admin team, with configurations, and is measured in uses of
@@ -50,7 +53,7 @@ POST   /api/featurescripts/:featureId/visibility    owner: shows or hides it, bu
 POST   /api/featurescripts/:featureId/add    adds it to the Part Studio in the body
 GET    /api/featurescripts/stats             owner: each feature's adds, users and favorites, all time
 GET    /api/featurescripts/load-status       owner: how the last load is going or went
-POST   /api/featurescripts/reload            owner: loads the latest version now, as the owner
+POST   /api/featurescripts/reload            owner: loads the workspace and latest version now, as the owner
 ```
 
 `src/backend/features/featurescripts/store.ts`
@@ -65,7 +68,7 @@ function iconUrl(elementId: string, microversionId: string): string;
 `src/backend/features/featurescripts/workflow.ts`
 
 ```ts
-// Loads the latest version of the frontend document; one run at a time.
+// Loads the frontend document: the workspace's manifest, examples and icons, and the latest version's studios; one run at a time.
 class LoadFeatureScriptsWorkflow extends WorkflowEntrypoint<
     AppBindings,
     LoadFeatureScriptsParams
@@ -153,9 +156,12 @@ class CustomFeature {
 
 ```ts
 interface FeatureScriptsOut {
-    /** The frontend version loaded, for **Open example**; absent before the first load. */
+    /** Absent before the first load. */
     documentId?: string;
+    /** The frontend version features are added from, which **Get FeatureScript** opens. */
     versionId?: string;
+    /** The frontend workspace examples are read from, which **Open example** opens. */
+    workspaceId?: string;
     /** In the frontend document's tab order. */
     features: FeatureScriptOut[];
 }
@@ -283,7 +289,7 @@ Under `src/frontend/features/featurescripts/components/`:
   the owner's **Reload** and, above it, the last load as a `Callout`, both in
   the settings menu's admin settings under FRCDesignApp. The callout spins
   while a load runs; says the version and how many features it kept, or that
-  the version was already loaded; warns when some features failed; and on a
+  nothing had changed since the last load; warns when some features failed; and on a
   failure offers **Details**: the version, the times and the error.
 
 The tab is `UtilityTab.FEATURESCRIPTS`: `src/frontend/routes/app/featurescripts/route.tsx`
@@ -297,28 +303,31 @@ them, and they hold no foreign key into the rest; added to
 `drizzle.config.ts`):
 
 - `featurescripts_document` — one row: `document_id`, the loaded
-  `version_id`, and `cache_version` (bumped by every load that wrote).
-- `featurescripts` — one row per Feature Studio in the loaded version:
+  `version_id` features are added from, the `workspace_id` the manifest,
+  examples and icons were read from (null until a load sets it), and
+  `cache_version` (bumped by every load that wrote).
+- `featurescripts` — one row per manifest entry whose Feature Studio the
+  loaded version has:
 
-| Column                    | What it holds                                                                          |
-| ------------------------- | -------------------------------------------------------------------------------------- |
-| `id`                      | Random, kept across loads for the same `element_id`, so analytics and urls stay stable |
-| `element_id`              | The frontend Feature Studio's tab                                                      |
-| `microversion_id`         | Its microversion, which goes into the namespace a Part Studio imports it by            |
-| `feature_type`            | From the manifest: the exported constant, e.g. `robotFrame`, a Part Studio's type      |
-| `name`                    | From the manifest: the Feature Type Name, e.g. `Robot frame`, never the tab name       |
-| `description`             | From the manifest, its credit already cut by robot-code                                |
-| `release_version`         | From the manifest, e.g. `1.3.0`; shown to the owner alone                              |
-| `source_url`              | From the manifest: the released file on GitHub at its release's tag                    |
-| `example_element_id`      | The feature's example Part Studio in the version (`findExample`); null without one     |
-| `example_microversion_id` | Its microversion, which names its thumbnail; null with it                              |
-| `icon_element_id`         | The icon tab the manifest names; null when it names none                               |
-| `icon_microversion_id`    | Its microversion, which names its R2 object; null with it                              |
-| `thumbnail_urls`          | As `insertables`'; null without an example                                             |
-| `problems`                | `FeatureScriptProblem[]`                                                               |
-| `category`                | The folder holding the Feature Studio in the frontend document; null at its top level  |
-| `is_visible`              | The owner's choice, true for a new feature; a load never writes it                     |
-| `sort_order`              | The tab order in the frontend document                                                 |
+| Column                    | What it holds                                                                              |
+| ------------------------- | ------------------------------------------------------------------------------------------ |
+| `id`                      | Random, kept across loads for the same `element_id`, so analytics and urls stay stable     |
+| `element_id`              | The frontend Feature Studio's tab                                                          |
+| `microversion_id`         | Its microversion in the version, which goes into the namespace a Part Studio imports it by |
+| `feature_type`            | From the manifest: the exported constant, e.g. `robotFrame`, a Part Studio's type          |
+| `name`                    | From the manifest: the Feature Type Name, e.g. `Robot frame`, never the tab name           |
+| `description`             | From the manifest, its credit already cut by robot-code                                    |
+| `release_version`         | From the manifest, e.g. `1.3.0`; shown to the owner alone                                  |
+| `source_url`              | From the manifest: the released file on GitHub at its release's tag                        |
+| `example_element_id`      | The feature's example Part Studio in the workspace (`findExample`); null without one       |
+| `example_microversion_id` | Its microversion, which names its thumbnail; null with it                                  |
+| `icon_element_id`         | The icon tab the manifest names; null when it names none                                   |
+| `icon_microversion_id`    | Its microversion, which names its R2 object; null with it                                  |
+| `thumbnail_urls`          | As `insertables`'; null without an example                                                 |
+| `problems`                | `FeatureScriptProblem[]`                                                                   |
+| `category`                | The folder holding the Feature Studio in the workspace; null at its top level              |
+| `is_visible`              | The owner's choice, true for a new feature; a load never writes it                         |
+| `sort_order`              | The tab order in the workspace                                                             |
 
 - `featurescript_favorites` — `user_id`, `featurescript_id` (referencing
   `featurescripts.id`, cascading, so a feature gone from the document takes
@@ -342,8 +351,8 @@ them, and they hold no foreign key into the rest; added to
   decide what to load.
 
 **Onshape**: the manifest, `featurescripts.json`, an image-and-file (blob)
-tab in the frontend document, in any folder, written by robot-code's release
-alone; see [The manifest](#the-manifest).
+tab in the frontend workspace, in any folder, written by robot-code's release
+and edited by hand; see [The manifest](#the-manifest).
 
 **Webhooks**: one `onshape_webhooks` row, subject
 `WebhookSubject.FEATURESCRIPTS`, subject id the frontend document's id.
@@ -392,7 +401,7 @@ folder by hand, once.
 
 ### Finding the example
 
-`findExample` reads the version's contents, whose folder tree is in tab-bar
+`findExample` reads the workspace's contents, whose folder tree is in tab-bar
 order, and skips any Part Studio named or foldered `DEPRECATED`:
 
 1. A Part Studio named the feature's Feature Type Name, in any case
@@ -413,8 +422,8 @@ place, so only step 1 can find its example.
 contract between robot-code and the app: everything the app shows of a feature
 but its category (a folder) and its example (a Part Studio found by name and
 place).
-Written only
-by `fs release` and `fs deprecate`; the app only reads it. The app takes the
+Written by `fs release` and `fs deprecate`, and by the owner by hand in the
+workspace; the app only reads it, from the workspace. The app takes the
 blob tab of that name at the top level if there is one, else the first in
 tab-bar order in any folder (`findManifestTab`).
 
@@ -453,30 +462,31 @@ the moment the release is.
 ### Loading — `LoadFeatureScriptsWorkflow`
 
 Started by the webhook for a new frontend version, and by the owner's
-**Reload** (under FRCDesignApp in the admin settings). A version is final once
-it's in the frontend document, so a new version loads at once, with no
+**Reload** (under FRCDesignApp in the admin settings), which is how an edit to
+the workspace's manifest, examples or icons is picked up. A version is final
+once it's in the frontend document, so a new version loads at once, with no
 approval. Nothing loads while `FEATURESCRIPTS_DOCUMENT_ID` is unset.
 
 1. `claim-{turn}`: takes the load (`claimLoad`), waiting 30 seconds a turn
    while a live run holds it, as a library reload does.
 2. `document`, `version`: the document, for its default workspace, and its
-   latest version, the one to load.
-3. `read-stored`: the loaded version and the rows. Ends here, registering
-   the webhook, when that version is the one loaded, unless forced or a
-   feature's last load failed.
-4. `contents`: the version's tabs, for each tab's microversion, folder and
-   place.
-5. `manifest`: `findManifestTab`, then `GET /blobelements/d/{did}/v/{vid}/e/{eid}`,
-   then `parseManifest`. A version without one fails the load; one that
-   doesn't parse fails it without retrying. Either changes nothing.
-6. Pairs each entry with its Feature Studio, its example (`findExample`,
-   deprecated tabs left out; see
+   latest version, which features are added from.
+3. `read-stored`: the loaded version and workspace, and the rows.
+4. `version-contents`, `workspace-contents`: each one's tabs, for each tab's
+   microversion, folder and place.
+5. `manifest`: `findManifestTab` in the workspace, then
+   `GET /blobelements/d/{did}/w/{wid}/e/{eid}`, then `parseManifest`. A
+   workspace without one fails the load; one that doesn't parse fails it
+   without retrying. Either changes nothing.
+6. Pairs each entry with its Feature Studio in the version, and in the
+   workspace its example (`findExample`, deprecated tabs left out; see
    [Finding the example](#finding-the-example)), its icon tab, its category
    (`categoryOf`) and its place (`tabOrder`). An entry whose studio the
-   version doesn't have is logged and left out of the list.
+   version doesn't have, as a first release not yet published, is logged and
+   left out of the list.
 7. Selects the entries that are new, whose studio's, example's or icon's tab
    or microversion changed, or that failed last time; every one when forced.
-8. Per selected entry, under the run's limiters:
+8. Per selected entry, under the run's limiters, from the workspace:
     - `thumbnail-{element}-{microversion}`: the example's, stored by
       `uploadThumbnailsStep` under the example's element and microversion,
       once for every feature sharing it. No example: `NO_EXAMPLE`, and the
@@ -484,25 +494,28 @@ approval. Nothing loads while `FEATURESCRIPTS_DOCUMENT_ID` is unset.
     - `icon-{element}-{microversion}`: the icon tab's file, stored in R2 as
       `image/svg+xml`. No icon named: `NO_ICON`, and the card shows the
       generic FeatureScript icon.
-    - An icon the manifest names that the version doesn't have, or a
+    - An icon the manifest names that the workspace doesn't have, or a
       thumbnail or icon that failed, is `LOAD_FAILED`, which the next load
       retries.
-9. `save`: one batch — the rows the manifest no longer lists deleted, every
-   listed row upserted by `element_id` (keeping its `id` and `is_visible`),
-   and the document row with its version and bumped `cache_version`.
-10. `push`: `featurescripts-changed` (`PushType.FEATURESCRIPTS`) to every
+9. Ends here, registering the webhook, when the version and workspace are
+   the ones loaded and every row is as stored (`isUnchanged`), unless forced.
+10. `save`: one batch — the rows the manifest no longer lists deleted, every
+    listed row upserted by `element_id` (keeping its `id` and `is_visible`),
+    and the document row with its version, workspace and bumped
+    `cache_version`.
+11. `push`: `featurescripts-changed` (`PushType.FEATURESCRIPTS`) to every
     client, which refetches the cache version.
-11. `delete-stale`: thumbnails of examples no row names, through
+12. `delete-stale`: thumbnails of examples no row names, through
     `deleteStaleThumbnails` with the rows' examples as `alsoLive`, and icons
     no row names, each past an hour's grace. Never fatal.
-12. `register-webhook`: `ensureWebhook` for the document, subject
+13. `register-webhook`: `ensureWebhook` for the document, subject
     `WebhookSubject.FEATURESCRIPTS`. Never fatal.
-13. `release`: always, so the next load can start.
+14. `release`: always, so the next load can start.
 
 The run reports its status as it goes (`reportLoadStatus`), each report a
-step: `report-running` once it holds the load; `report-done` after step 12,
+step: `report-running` once it holds the load; `report-done` after step 13,
 `loaded` with the features kept and how many failed, or `up-to-date` when
-step 3 ended it; and `report-failed` when anything above throws, with the
+step 9 ended it; and `report-failed` when anything above throws, with the
 version once step 2 read it and the error's message, before the run fails.
 With `FEATURESCRIPTS_DOCUMENT_ID` unset, `report-unset` records that failure
 and the run ends.
@@ -580,8 +593,8 @@ be added to Part Studios.
 
 ### Opening the example
 
-**Open example** opens the example Part Studio in the loaded version, in a
-new browser tab. It calls nothing.
+**Open example** opens the example Part Studio in the workspace it was read
+from, in a new browser tab. It calls nothing.
 
 ### Feedback
 
@@ -666,12 +679,12 @@ short has little use for them.
 
 - A feature is added from the version loaded, never from a workspace, so
   what's added is what was released.
-- The manifest is the list: a feature is shown only when the loaded version's
-  manifest names it, with the name, type, description, version, source and
+- The manifest is the list: a feature is shown only when the workspace's
+  manifest names it and the loaded version has its Feature Studio, with the name, type, description, version, source and
   icon it gives. The app never writes the manifest.
-- An example is a Part Studio in the **same version** as the Feature Studio,
-  found by `findExample` alone, and an icon the tab the manifest
-  names there.
+- An example is a Part Studio in the **frontend workspace**, found by
+  `findExample` alone, and an icon the tab the manifest names there. Only the
+  Feature Studio a Part Studio adds comes from the version.
 - The credit line is never shown: robot-code cuts it before writing the
   description.
 - An icon is only ever shown as an image, never inlined into the page.
@@ -684,7 +697,7 @@ short has little use for them.
   it.
 - A load reads Onshape as the owner, its own session or a borrowed one, and
   never as a library's team.
-- A feature's category is the folder it is in, in the loaded version; nothing
+- A feature's category is the folder it is in, in the workspace; nothing
   else sets it.
 - Favorites are a person's own: every favorite route answers for the caller
   alone, and the list is never cached.
@@ -694,18 +707,19 @@ short has little use for them.
 
 ## Failure and recovery
 
-| What goes wrong                                    | What happens                                        | What puts it right                                          |
-| -------------------------------------------------- | --------------------------------------------------- | ----------------------------------------------------------- |
-| An example is renamed, moved or deleted            | `NO_EXAMPLE`, or the next Part Studio in its folder | Name it for the feature, or move it after it; cut a version |
-| An example is published empty                      | A blank thumbnail                                   | Model it, cut a version                                     |
-| A release before icons has none in the frontend    | `NO_ICON`; the generic icon                         | Its next release writes it                                  |
-| A thumbnail or an icon fails past its retries      | `LOAD_FAILED` on that feature; the rest save        | **Reload**                                                  |
-| A version has no manifest, or one that won't parse | The load fails; the last version stays shown        | Release again; **Reload**                                   |
-| Any load fails                                     | `report-failed` keeps its error for the owner       | The FRCDesignApp settings' callout; **Details** shows it    |
-| An entry names a tab the version lacks             | `LOAD_FAILED` on that feature                       | Release it again                                            |
-| Onshape cancels or deactivates the webhook         | New versions don't load                             | The next **Reload** registers it                            |
-| No owner session to borrow                         | A webhook's load fails                              | The owner opens the app                                     |
-| Onshape refuses the feature at its defaults        | The add fails, toasted                              | Unverified; see the open questions                          |
+| What goes wrong                                        | What happens                                        | What puts it right                                       |
+| ------------------------------------------------------ | --------------------------------------------------- | -------------------------------------------------------- |
+| An example is renamed, moved or deleted                | `NO_EXAMPLE`, or the next Part Studio in its folder | Name it for the feature, or move it after it; **Reload** |
+| An example is left empty                               | A blank thumbnail                                   | Model it; **Reload**                                     |
+| A release before icons has none in the frontend        | `NO_ICON`; the generic icon                         | Its next release writes it                               |
+| A thumbnail or an icon fails past its retries          | `LOAD_FAILED` on that feature; the rest save        | **Reload**                                               |
+| The workspace has no manifest, or one that won't parse | The load fails; the last load stays shown           | Release again, or fix it by hand; **Reload**             |
+| Any load fails                                         | `report-failed` keeps its error for the owner       | The FRCDesignApp settings' callout; **Details** shows it |
+| An entry names an icon the workspace lacks             | `LOAD_FAILED` on that feature                       | Release it again                                         |
+| An entry's studio isn't in the latest version yet      | Left out of the list                                | Publish the release (`fs sync-versions`)                 |
+| Onshape cancels or deactivates the webhook             | New versions don't load                             | The next **Reload** registers it                         |
+| No owner session to borrow                             | A webhook's load fails                              | The owner opens the app                                  |
+| Onshape refuses the feature at its defaults            | The add fails, toasted                              | Unverified; see the open questions                       |
 
 ## Decisions
 
@@ -720,7 +734,18 @@ short has little use for them.
 - **New versions, not edits, and no approval.** The webhook listens for
   `onshape.model.lifecycle.createversion` rather than `changed`: a release is
   final only once its frontend version exists, and it was reviewed in
-  robot-code before that. So a new version loads at once.
+  robot-code before that. So a new version loads at once. An edit to the
+  workspace waits for the owner's **Reload**: modeling an example is many
+  edits, and each load would render its thumbnail again.
+- **The manifest, examples and icons from the workspace; the feature from the
+  version.** What a Part Studio adds has to be a version, and is what was
+  released. What describes it — the manifest's text, the example, the icon,
+  the folders — the owner tweaks by hand, and reading it from a version made
+  every tweak cost a version of the frontend document that changed no
+  feature. So the manifest can run ahead of the version: a release not yet
+  published shows its new description and version number while the old
+  release is still what's added. A first release not yet published has no
+  studio in the version and stays out of the list.
 - **A manifest the release writes.** robot-code already knows everything the
   app shows: each feature's constant, name, description, version, file and
   the tabs it made. Writing that into the frontend document as it releases

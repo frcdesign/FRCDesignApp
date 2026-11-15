@@ -39,6 +39,7 @@ async function seed() {
     await db.insert(featureScriptsDocument).values({
         documentId: "frontend",
         versionId: "v-1",
+        workspaceId: "w-1",
         cacheVersion: 3
     });
     await db.insert(featureScripts).values([
@@ -103,6 +104,7 @@ describe("featurescripts routes", () => {
 
         expect(body.documentId).toBe("frontend");
         expect(body.versionId).toBe("v-1");
+        expect(body.workspaceId).toBe("w-1");
         expect(body.features.map((feature) => feature.id)).toEqual([
             "belt",
             "frame"
