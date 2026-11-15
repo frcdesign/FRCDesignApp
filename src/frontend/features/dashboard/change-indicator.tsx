@@ -1,11 +1,11 @@
 import { Group, Stack, Text, Tooltip } from "@mantine/core";
-import { ArrowDownIcon, ArrowUpIcon, MinusIcon } from "@phosphor-icons/react";
+import { ArrowDownIcon, ArrowUpIcon } from "@phosphor-icons/react";
 import { type ReactNode } from "react";
 import {
     ChangeUnavailable,
     type PeriodComparison
 } from "@backend/features/analytics/contract";
-import { IconSize } from "../../lib/style-constants";
+import { IconSize, StatusColor } from "../../lib/style-constants";
 import { formatCount } from "./format";
 
 interface ChangeIndicatorProps {
@@ -30,14 +30,19 @@ export function ChangeIndicator({
     }
 
     const rising = comparison.changeRatio >= 0;
-    // A flat reading gets neither color: calling 0% green would overstate it.
+    // A flat reading gets no arrow or color: calling 0% green would overstate it.
     const flat = Math.abs(comparison.changeRatio) < 0.005;
-    const Arrow = flat ? MinusIcon : rising ? ArrowUpIcon : ArrowDownIcon;
-    const color = flat ? "dimmed" : rising ? "green" : "red";
+    const Arrow = rising ? ArrowUpIcon : ArrowDownIcon;
+    const color = flat
+        ? StatusColor.DIMMED
+        : rising
+          ? StatusColor.SUCCESS
+          : StatusColor.ERROR;
 
+    // The icon takes the text's color, and its direction is the only sign.
     const change = (
-        <Group gap={4}>
-            <Arrow size={IconSize.TINY} weight="bold" color={color} />
+        <Group gap={4} c={color}>
+            {!flat && <Arrow size={IconSize.TINY} weight="bold" />}
             <Text c={color}>{formatPercentChange(comparison.changeRatio)}</Text>
         </Group>
     );
@@ -85,7 +90,6 @@ function explain(comparison: PeriodComparison): string {
 
 /** A decimal only under 10%, where rounding to a whole number loses the move. */
 function formatPercentChange(ratio: number): string {
-    const percent = ratio * 100;
-    const sign = percent > 0 ? "+" : "";
-    return `${sign}${percent.toFixed(Math.abs(percent) < 10 ? 1 : 0)}%`;
+    const percent = Math.abs(ratio * 100);
+    return `${percent.toFixed(percent < 10 ? 1 : 0)}%`;
 }
