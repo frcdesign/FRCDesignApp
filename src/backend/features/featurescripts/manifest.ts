@@ -32,7 +32,10 @@ const manifestSchema = z.object({
 export type FeatureScriptsManifest = z.infer<typeof manifestSchema>;
 export type ManifestFeature = z.infer<typeof manifestFeature>;
 
-/** The manifest tab, at the document's top level. */
+/**
+ * The manifest tab, in any folder. One at the top level wins, so a copy filed
+ * away in a folder can't shadow it; otherwise the first in tab-bar order.
+ */
 export function findManifestTab(
     contents: OnshapeDocumentContents
 ): OnshapeElement | undefined {
@@ -43,12 +46,12 @@ export function findManifestTab(
                 : []
         )
     );
-    return contents.elements.find(
+    const manifests = inTabOrder(contents).filter(
         (element) =>
             element.elementType === OnshapeElementType.BLOB &&
-            element.name === MANIFEST_TAB_NAME &&
-            topLevel.has(element.id)
+            element.name === MANIFEST_TAB_NAME
     );
+    return manifests.find((tab) => topLevel.has(tab.id)) ?? manifests[0];
 }
 
 /** Refuses a file of another schema version, or one that doesn't parse. */

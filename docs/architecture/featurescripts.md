@@ -107,7 +107,7 @@ function reportLoadStatus(
 `src/backend/features/featurescripts/manifest.ts`
 
 ```ts
-// The manifest tab, "featurescripts.json" at the document's top level.
+// The manifest tab, "featurescripts.json" in any folder; one at the top level wins.
 function findManifestTab(contents: DocumentContents): Tab | undefined;
 // Refuses a file of another schema version, or one that doesn't parse.
 function parseManifest(json: unknown): FeatureScriptsManifest;
@@ -342,7 +342,7 @@ them, and they hold no foreign key into the rest; added to
   decide what to load.
 
 **Onshape**: the manifest, `featurescripts.json`, an image-and-file (blob)
-tab at the top level of the frontend document, written by robot-code's release
+tab in the frontend document, in any folder, written by robot-code's release
 alone; see [The manifest](#the-manifest).
 
 **Webhooks**: one `onshape_webhooks` row, subject
@@ -409,12 +409,14 @@ place, so only step 1 can find its example.
 
 ### The manifest
 
-`featurescripts.json`, at the top level of the frontend document, is the whole
+`featurescripts.json`, anywhere in the frontend document, is the whole
 contract between robot-code and the app: everything the app shows of a feature
 but its category (a folder) and its example (a Part Studio found by name and
 place).
 Written only
-by `fs release` and `fs deprecate`; the app only reads it.
+by `fs release` and `fs deprecate`; the app only reads it. The app takes the
+blob tab of that name at the top level if there is one, else the first in
+tab-bar order in any folder (`findManifestTab`).
 
 ```json
 {
@@ -707,6 +709,10 @@ short has little use for them.
 
 ## Decisions
 
+- **The manifest may be filed in a folder.** The owner keeps it with the
+  icons, and a load that looked only at the top level failed once it was
+  moved. One at the top level still wins, so a copy kept in a folder never
+  shadows it.
 - **Its own area, on shared plumbing.** A library's tables, metrics and pages
   assume parts: configurations, admin teams, uses. FeatureScripts are measured
   and shown differently, so they get their own tables, event and pages, and the

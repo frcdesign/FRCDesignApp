@@ -153,12 +153,18 @@ describe("categoryOf", () => {
 });
 
 describe("findManifestTab", () => {
-    it("is the blob tab of that name at the top level only", () => {
-        const nested = tab("nested", BLOB, MANIFEST_TAB_NAME);
-        const top = tab("top", BLOB, MANIFEST_TAB_NAME);
+    const nested = tab("nested", BLOB, MANIFEST_TAB_NAME);
+    const later = tab("later", BLOB, MANIFEST_TAB_NAME);
+    const top = tab("top", BLOB, MANIFEST_TAB_NAME);
+
+    it("finds the manifest in a folder", () => {
         expect(
-            findManifestTab(contents([nested], folder("Old", ref("nested"))))
-        ).toBeUndefined();
+            findManifestTab(contents([nested], folder("Docs", ref("nested"))))
+                ?.id
+        ).toBe("nested");
+    });
+
+    it("prefers the one at the top level to one in a folder", () => {
         expect(
             findManifestTab(
                 contents(
@@ -168,6 +174,25 @@ describe("findManifestTab", () => {
                 )
             )?.id
         ).toBe("top");
+    });
+
+    it("takes the first in tab order among several in folders", () => {
+        expect(
+            findManifestTab(
+                contents(
+                    [later, nested],
+                    folder("A", ref("nested")),
+                    folder("B", ref("later"))
+                )
+            )?.id
+        ).toBe("nested");
+    });
+
+    it("finds none without a blob tab of that name", () => {
+        const studio = tab("studio", PART_STUDIO, MANIFEST_TAB_NAME);
+        expect(
+            findManifestTab(contents([studio], ref("studio")))
+        ).toBeUndefined();
     });
 });
 
