@@ -289,12 +289,28 @@ describe("AutoAssemblyPanel", () => {
         );
     });
 
-    it("asks what to fasten with before what to fasten", () => {
+    it("asks what to fasten before what to fasten with, each group folding from its header", async () => {
         renderPanel();
         const headings = screen
             .getAllByRole("heading")
             .map((heading) => heading.textContent);
-        expect(headings).toEqual(["Fastener", "Selections"]);
+        expect(headings).toEqual([
+            "Selections",
+            "Fastener",
+            "Add screw washer",
+            "Add nut",
+            "Add nut washer"
+        ]);
+
+        // Folded, its rows are hidden, not gone
+        const sizing = () =>
+            screen.queryByRole("textbox", { name: "Sizing" }) ??
+            screen.queryByRole("combobox", { name: "Sizing" });
+        expect(sizing()).toBeTruthy();
+        await userEvent.click(
+            screen.getByRole("heading", { name: "Fastener" })
+        );
+        expect(sizing()).toBeNull();
     });
 
     it("has no screw washer under a flat head", () => {

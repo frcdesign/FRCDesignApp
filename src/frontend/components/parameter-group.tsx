@@ -3,78 +3,73 @@ import {
     Checkbox,
     Collapse,
     Group,
-    Text,
     Title,
     UnstyledButton
 } from "@mantine/core";
 import { CaretDownIcon, CaretRightIcon } from "@phosphor-icons/react";
 import { type ReactNode, useState } from "react";
-import { FontWeight, IconSize, StatusColor } from "../lib/style-constants";
+import { IconSize, StatusColor } from "../lib/style-constants";
 import classes from "./parameter-group.module.css";
 
 interface ParameterGroupProps {
     title: string;
-    /** A checkbox in its header: ticked, the group opens, and folds from its title. */
+    /** A checkbox in its header, as an Onshape feature's: unticked, its rows are gone. */
     checked?: boolean;
     onCheckedChange?: (checked: boolean) => void;
     children?: ReactNode;
 }
 
 /**
- * A titled group of rows in a `ParameterGrid`. A part's group is an accordion
- * headed by its checkbox: ticking it opens the group, and its title folds it.
+ * A titled group of rows in a `ParameterGrid`, folded by its chevron or title
+ * as an Onshape feature dialog's groups are. A group driven by a checkbox has
+ * its rows only while ticked, and opens when ticked.
  */
 export function ParameterGroup(props: ParameterGroupProps): ReactNode {
     const { title, checked, onCheckedChange, children } = props;
     const [isOpen, setIsOpen] = useState(true);
-
-    if (checked === undefined) {
-        return (
-            <>
-                <div className={classes.header}>
-                    <Title order={5}>{title}</Title>
-                </div>
-                {children && <div className={classes.body}>{children}</div>}
-            </>
-        );
-    }
+    const hasCheckbox = checked !== undefined;
+    const isFoldable = !hasCheckbox || checked;
+    const isExpanded = isOpen && isFoldable;
+    const toggle = () => {
+        if (isFoldable) {
+            setIsOpen(!isOpen);
+        }
+    };
 
     return (
         <>
-            <Group gap="sm" wrap="nowrap" className={classes.header}>
-                <Checkbox
-                    aria-label={title}
-                    checked={checked}
-                    onChange={(event) => {
-                        setIsOpen(true);
-                        onCheckedChange?.(event.currentTarget.checked);
-                    }}
-                />
-                <UnstyledButton
-                    flex={1}
-                    disabled={!checked}
-                    onClick={() => setIsOpen(!isOpen)}
+            <Group gap="xs" wrap="nowrap" className={classes.header}>
+                <ActionIcon
+                    variant="subtle"
+                    color={StatusColor.NEUTRAL}
+                    size="sm"
+                    disabled={!isFoldable}
+                    onClick={toggle}
                 >
-                    <Text fw={FontWeight.SEMI_BOLD}>{title}</Text>
-                </UnstyledButton>
-                {checked && (
-                    <ActionIcon
-                        variant="subtle"
-                        color={StatusColor.NEUTRAL}
-                        onClick={() => setIsOpen(!isOpen)}
-                    >
-                        {isOpen ? (
-                            <CaretDownIcon size={IconSize.SMALL} />
-                        ) : (
-                            <CaretRightIcon size={IconSize.SMALL} />
-                        )}
-                    </ActionIcon>
+                    {isExpanded ? (
+                        <CaretDownIcon size={IconSize.SMALL} />
+                    ) : (
+                        <CaretRightIcon size={IconSize.SMALL} />
+                    )}
+                </ActionIcon>
+                {hasCheckbox && (
+                    <Checkbox
+                        aria-label={title}
+                        checked={checked}
+                        onChange={(event) => {
+                            setIsOpen(true);
+                            onCheckedChange?.(event.currentTarget.checked);
+                        }}
+                    />
                 )}
+                <UnstyledButton flex={1} onClick={toggle}>
+                    <Title order={5}>{title}</Title>
+                </UnstyledButton>
             </Group>
-            {checked && children && (
+            {children && isFoldable && (
                 // Hidden by display alone: a folded query list still takes picks, which needs its effects.
                 <Collapse
-                    expanded={isOpen}
+                    expanded={isExpanded}
                     keepMountedMode="display-none"
                     transitionDuration={0}
                     className={classes.full}

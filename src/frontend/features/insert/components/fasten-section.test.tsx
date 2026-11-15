@@ -267,7 +267,7 @@ describe("fasten picks", () => {
 
         act(() => useOnshapeSelection.setState({ filtering: "selection-1" }));
         await userEvent.click(
-            await screen.findByRole("button", { name: "Finish selecting" })
+            await screen.findByRole("button", { name: "Stop selecting" })
         );
         expect(useOnshapeSelection.getState().isFinished).toBe(true);
     });

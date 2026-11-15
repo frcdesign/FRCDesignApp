@@ -167,11 +167,6 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
         <Stack gap="md" p="md">
             <LastRunCallout assembly={assembly} />
             <ParameterGrid>
-                <FastenerOptionsForm
-                    settled={settled}
-                    problem={problem}
-                    isChecking={isChecking}
-                />
                 <ParameterGroup title={m.autoAssemblySelections()}>
                     <FormInputRow id={FormInput.SELECT_BY} settled={settled} />
                     {mode === SelectionMode.FACES && (
@@ -237,6 +232,11 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
                         </FullWidthRow>
                     )}
                 </ParameterGroup>
+                <FastenerOptionsForm
+                    settled={settled}
+                    problem={problem}
+                    isChecking={isChecking}
+                />
             </ParameterGrid>
             <Button
                 disabled={

@@ -74,7 +74,7 @@ interface SelectionState {
 interface SelectionChange {
     added: OnshapeSelection[];
     removed: OnshapeSelection[];
-    /** Onshape cleared a highlight the app made, as a click in its window does, so nothing is removed. */
+    /** Onshape cleared a highlight the app made, as a click in its window does. */
     isHighlightCleared: boolean;
 }
 
@@ -186,7 +186,7 @@ enum Part {
 function AutoAssemblyPanel(props: AutoAssemblyPanelProps): ReactNode;
 // The Fastener group, a group per washer and the nut, and the stop condition.
 function FastenerOptionsForm(props: FastenerOptionsFormProps): ReactNode;
-// Onshape's parameter groups: plain, or an accordion its checkbox opens.
+// Onshape's parameter groups: each folds from its chevron or title, and may be driven by a checkbox.
 function ParameterGroup(props: ParameterGroupProps): ReactNode;
 
 interface AutoAssemblyPanelProps {
@@ -199,7 +199,7 @@ interface FastenerOptionsFormProps {
 
 interface ParameterGroupProps {
     title: string;
-    /** A checkbox in its header, which shows its rows while ticked. */
+    /** A checkbox in its header, as an Onshape feature's: unticked, its rows are gone. */
     checked?: boolean;
     onCheckedChange?: (checked: boolean) => void;
     children?: ReactNode;
@@ -986,8 +986,9 @@ closes the menu and switches to the page.
    and from Onshape is logged at debug level ("Sent to Onshape", "Received from
    Onshape"), and `window.sendToOnshape(message)` sends one by hand from the
    browser console, addressed to the launching element.
-2. Clicking a `QueryList` focuses it (one at a time, `useOnshapeSelection`).
-   A form's first list is `autoFocus`:
+2. Clicking a `QueryList` focuses it (one at a time, `useOnshapeSelection`)
+   and starts selecting with it, whatever it holds. A form's first list is
+   `autoFocus`:
    focused on mount, and again whenever no list is, as when the focused list
    unmounts; here that's **Faces** or **Circular edges**. Once the person
    finishes selecting (below), no list is focused until one is clicked. A
@@ -1011,30 +1012,33 @@ closes the menu and switches to the page.
    sent as picks arrive. As a list is focused, as any list shows or hides
    (`bumpLayout`), and once its picks are cleared (by **Clear**, removing its
    last row, or the form), the focused list asks for the filter again, or,
-   holding picks, lights them up instead.
+   holding picks and not clicked, lights them up instead.
    Losing focus or unmounting sends
    `stopRequest`. Every stop names the request it ends by its `messageId`,
    which Onshape answers as `stoppedRequestId`.
 
     While a request is live (`filtering`), Mantine's `ActionBar` floats over
     the bottom of the panel naming the list limiting picks
-    (`SelectingActionBar`, `listLabel`). Its **Finish selecting** button, and
+    (`SelectingActionBar`, `listLabel`). Its **Stop selecting** button, and
     its close button, unfocus the list (`finishSelecting`), which stops the
     request.
 
 4. Hovering a row, in any list, lights its entity up alone
    (`requestSelectionHighlight`, which makes it what the Onshape window shows
    selected, each with its own message id). Moving between rows lights each
-   alone; leaving the rows lights the focused list's picks up
-   (`focusedPicks`), or nothing with no list focused. Removing a row lights
-   the rest up. A highlight cancels any pending selection request, and a
-   request clears what the window shows, so the filter stays off after a
-   hover until the focused list is clicked again, which asks for it again.
-5. A click in the Onshape window clears a highlight, which reads as every
-   highlighted entity deselected at once. Until Onshape can resume a selection,
-   a change after a highlight that removes more than one entity removes
-   nothing (`isHighlightCleared`): the focused list keeps its picks, takes
-   any new one, and lights them all up again.
+   alone. A highlight cancels a pending selection request in Onshape, so a
+   hover pauses selecting without ending it: the action bar stays, and
+   leaving the rows sends the focused list's request again
+   (`showFocused`, `resumeSelecting`). A focused list that isn't selecting has
+   its picks lit up instead, and nothing lights up with no list focused.
+   Removing a row lights the rest up.
+5. While the window shows the app's highlight (`isHighlighted`), its
+   selection messages never remove picks, and what the app highlighted since
+   its last request (`highlightedKeys`) is never taken as a pick. Onshape can
+   answer a fast mouse's highlights late and out of order, which would read
+   as picks deselected and others picked. A click in its window that clears
+   the highlight (`isHighlightCleared`) keeps the picks, takes any new one,
+   and lights them all up again, until Onshape can resume a selection.
 
 ### The form
 
@@ -1043,9 +1047,13 @@ The panel first reads the fasteners the library loaded (`useFastenerSetQuery`,
 loaded them it says so, and offers nothing to insert.
 
 The panel is a `ParameterGrid` of the configuration dialog's own inputs
-(`ParameterInput`), in groups under plain headings (`ParameterGroup`):
+(`ParameterInput`), in groups (`ParameterGroup`) that fold from their chevron
+or title, as an Onshape feature dialog's do:
 
-1. **Fastener**: Program, then the screw studio's Vendor, Size, Head and
+1. **Selections**, first, so the picks can decide the screw: _Select by_
+   (Circular edges, the default, Faces, or Screws), and its query lists, the
+   first focused.
+2. **Fastener**: Program, then the screw studio's Vendor, Size, Head and
    Finish. Size offers **From hole** first, which sizes each screw by its hole
    (`matchHoleSize`). Then comes _Sizing_ in place of its Length: **Automatic** (the default)
    picks a length for each hole, and **Manual** shows the studio's Length, and,
@@ -1054,16 +1062,14 @@ The panel is a `ParameterGrid` of the configuration dialog's own inputs
    with _Max length_; or **Face** with _Face to stop at_, a query list of one
    planar face, where a new pick takes the old one's place), then _Max thread
    depth_.
-2. **Add screw washer**, **Add nut** and **Add nut washer**, each an accordion its
-   checkbox opens: the washer or nut studio's parameters but its Size, which is
+3. **Add screw washer**, **Add nut** and **Add nut washer**, each a group its
+   checkbox drives, whose rows are there only while ticked: the washer or nut studio's parameters but its Size, which is
    the screw's. A washer's Vendor offers those making it in that size, and is
    left out under a Generic screw, whose washers are Generic; a nut has none,
    since one vendor makes them all. Like every studio input, a washer's Type and
    Finish show only where there's a choice, so a Generic washer, one in each
    size, shows its checkbox alone. The screw washer is gone under a countersunk
    head, and the nut washer without a nut.
-3. **Selections**, last: _Select by_ (Circular edges, the default, Faces, or
-   Screws), and its query lists, the first focused.
 
 The studios' parameters are their configurations as Onshape answers them,
 parsed by `parseOnshapeConfiguration`, so their options show as the Part

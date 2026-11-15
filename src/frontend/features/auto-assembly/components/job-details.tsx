@@ -21,10 +21,11 @@ import { AppTitle } from "../../../components/app-title";
 import { StatusIcon } from "../../../components/status-icon";
 import {
     type HighlightedEntity,
-    sendHighlightMessage
+    sendHighlightMessage,
+    showFocused
 } from "../../../lib/messages";
 import { useTargetElement } from "../../../lib/onshape-params";
-import { focusedPicks, type OnshapeSelection } from "../../../lib/selection";
+import { type OnshapeSelection } from "../../../lib/selection";
 import { Status, STATUS_COLOR } from "../../../lib/status";
 import { IconSize, StatusColor } from "../../../lib/style-constants";
 import { m } from "../../../paraglide/messages";
@@ -82,6 +83,7 @@ interface JobDetailsProps {
 export function JobDetails(props: JobDetailsProps): ReactNode {
     const { data: status } = useAssemblyJobQuery(props.assembly);
     const show = useShowInOnshape();
+    const leave = useShowFocused();
     if (!status) {
         return null;
     }
@@ -109,7 +111,7 @@ export function JobDetails(props: JobDetailsProps): ReactNode {
                     description={stopped}
                 />
             )}
-            <Stack gap="sm" onMouseLeave={() => show(focusedPicks())}>
+            <Stack gap="sm" onMouseLeave={leave}>
                 {index && (
                     <StepRow
                         step={stepOf(index)}
@@ -377,6 +379,16 @@ function pickName(pick: RunPick, index: number): string {
 }
 
 /** Lights entities up in the Onshape window, in place of what it shows. */
+/** Back to the focused list in the Onshape window, once the mouse leaves what lit up. */
+function useShowFocused(): () => void {
+    const target = useTargetElement();
+    return () => {
+        if (target) {
+            showFocused(target);
+        }
+    };
+}
+
 function useShowInOnshape(): (shown: HighlightedEntity[]) => void {
     const target = useTargetElement();
     return (shown) => {
@@ -402,13 +414,14 @@ interface PickGroupsProps {
 function PickGroups(props: PickGroupsProps): ReactNode {
     const { picks } = props;
     const show = useShowInOnshape();
+    const leave = useShowFocused();
     const groups = Object.values(PickList).flatMap((list) => {
         const listed = picks.filter((pick) => pick.list === list);
         return listed.length > 0 ? [{ list, listed }] : [];
     });
 
     return (
-        <Stack gap="sm" onMouseLeave={() => show(focusedPicks())}>
+        <Stack gap="sm" onMouseLeave={leave}>
             {groups.map(({ list, listed }) => (
                 <Stack key={list} gap={6}>
                     <Text size="xs" c={StatusColor.DIMMED}>

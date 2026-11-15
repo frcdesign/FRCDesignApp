@@ -13,17 +13,18 @@ import {
     sendHighlightMessage,
     sendSelectionRequest,
     sendStopRequestMessage,
+    showFocused,
     type HighlightedEntity,
     type SelectionFilter
 } from "../lib/messages";
 import { useTargetElement } from "../lib/onshape-params";
 import {
     bumpLayout,
-    focusedPicks,
     heldPicks,
     holdPicks,
     nameList,
     onPick,
+    onResume,
     selectionKey,
     useOnshapeSelection,
     without,
@@ -175,12 +176,16 @@ export function QueryList(props: QueryListProps): ReactNode {
         [id]
     );
 
+    // A click starts selecting whatever the list holds; focused otherwise, it lights its picks up
+    const startsSelecting = useRef(false);
     useEffect(() => {
         if (!target || !isFocused || !isLimiting) {
             return;
         }
         const picks = heldPicks(id);
-        if (picks.length > 0) {
+        const isStarted = startsSelecting.current;
+        startsSelecting.current = false;
+        if (picks.length > 0 && !isStarted) {
             sendHighlightMessage(target, picks.map(toHighlighted));
         } else {
             selectionRequest.current = sendSelectionRequest(target, filter);
@@ -193,6 +198,19 @@ export function QueryList(props: QueryListProps): ReactNode {
         };
     }, [target, isFocused, filter, id, layout, isLimiting]);
 
+    useEffect(
+        () =>
+            onResume(id, () => {
+                if (target) {
+                    selectionRequest.current = sendSelectionRequest(
+                        target,
+                        filter
+                    );
+                }
+            }),
+        [id, target, filter]
+    );
+
     // Cleared, by Clear, its last row's removal or the form, it asks for picks again
     const wasEmpty = useRef(isEmpty);
     useEffect(() => {
@@ -203,11 +221,15 @@ export function QueryList(props: QueryListProps): ReactNode {
     }, [target, isFocused, isEmpty, filter, isLimiting]);
 
     const focus = () => {
-        useOnshapeSelection.getState().activate(id);
-        // Newly limiting, the focus effect asks; already, a highlight has cancelled the request since
-        if (target && isFocused && isLimiting) {
-            selectionRequest.current = sendSelectionRequest(target, filter);
+        // Newly limiting, the focus effect asks; already, a highlight may have paused the request since
+        if (isFocused && isLimiting) {
+            if (target) {
+                selectionRequest.current = sendSelectionRequest(target, filter);
+            }
+        } else {
+            startsSelecting.current = true;
         }
+        useOnshapeSelection.getState().activate(id);
     };
 
     const show = (picks: OnshapeSelection[]) => {
@@ -218,12 +240,20 @@ export function QueryList(props: QueryListProps): ReactNode {
 
     const highlight = (entity: OnshapeSelection) => show([entity]);
 
-    // Back to the focused list's picks, whichever list the rows were in
-    const unhighlight = () => show(focusedPicks());
+    // Back to the focused list, whichever list the rows were in: selecting again, or its picks lit up
+    const unhighlight = () => {
+        if (target) {
+            showFocused(target);
+        }
+    };
 
     const remove = (entity: OnshapeSelection) => {
         const rest = without(entities, [entity]);
-        show(isFocused ? rest : focusedPicks());
+        if (isFocused) {
+            show(rest);
+        } else {
+            unhighlight();
+        }
         onChange(rest);
     };
 

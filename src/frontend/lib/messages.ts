@@ -6,7 +6,9 @@ import { useOnshapeServer, useTargetElement } from "./onshape-params";
 import {
     expectCleared,
     expectSelection,
+    focusedPicks,
     parseSelections,
+    resumeSelecting,
     useOnshapeSelection
 } from "./selection";
 
@@ -121,8 +123,6 @@ export function sendHighlightMessage(
     entities: HighlightedEntity[]
 ): string {
     expectSelection(entities.filter(isEntity));
-    // A highlight cancels a pending selection request
-    useOnshapeSelection.setState({ filtering: undefined });
     const messageId = `${HIGHLIGHT_PREFIX}${++highlights}`;
     sendMessage(elementPath, {
         messageName: MessageType.REQUEST_HIGHLIGHT_SELECTION,
@@ -142,6 +142,18 @@ export function sendHighlightMessage(
         )
     });
     return messageId;
+}
+
+/**
+ * Back to the focused list in the Onshape window: its selection request, if
+ * the person is selecting with it, else its picks lit up.
+ */
+export function showFocused(elementPath: ElementPath): void {
+    if (useOnshapeSelection.getState().filtering !== undefined) {
+        resumeSelecting();
+        return;
+    }
+    sendHighlightMessage(elementPath, focusedPicks());
 }
 
 /**

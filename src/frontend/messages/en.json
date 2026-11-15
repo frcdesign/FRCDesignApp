@@ -719,7 +719,7 @@
     "autoAssemblyOpen": "Auto Assembly",
     "selectingBarSelecting": "Selecting: {label}",
     "selectingBarFiltered": "Selections are filtered.",
-    "selectingBarFinish": "Finish selecting",
+    "selectingBarStop": "Stop selecting",
     "contextBarPreselection": "Preselection",
     "contextBarAddInsertLocation": "Add insert location",
     "contextBarCancel": "Cancel",

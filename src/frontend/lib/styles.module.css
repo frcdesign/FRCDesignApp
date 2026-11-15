@@ -61,3 +61,8 @@
 .titleIcon {
     transform: translateY(-1px);
 }
+
+/* An inline element out of the line box, as an icon sitting on centred text should be */
+.block {
+    display: block;
+}

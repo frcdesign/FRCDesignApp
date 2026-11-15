@@ -1,4 +1,4 @@
-import { ActionBar, Button, Text } from "@mantine/core";
+import { ActionBar, Button, Center, Text } from "@mantine/core";
 import { CursorClickIcon } from "@phosphor-icons/react";
 import { type ReactNode } from "react";
 import { listLabel, useOnshapeSelection } from "../lib/selection";
@@ -16,24 +16,31 @@ export function SelectingActionBar(): ReactNode {
         (state) => state.filtering !== undefined
     );
     const label = useOnshapeSelection((state) => listLabel(state.focused));
-    const finish = () => useOnshapeSelection.getState().finishSelecting();
+    const stop = () => useOnshapeSelection.getState().finishSelecting();
 
     return (
-        <ActionBar opened={isFiltering} onClose={finish}>
-            <AppIcon
-                icon={CursorClickIcon}
-                size={IconSize.MEDIUM}
-                color={PrimaryColor.FILLED}
+        <ActionBar opened={isFiltering} onClose={stop}>
+            {/* A box the icon's size, centred, so the glyph sits on the text's line */}
+            <Center
+                w={IconSize.MEDIUM}
+                h={IconSize.MEDIUM}
                 className={styles.noShrink}
-            />
+            >
+                <AppIcon
+                    icon={CursorClickIcon}
+                    size={IconSize.MEDIUM}
+                    color={PrimaryColor.FILLED}
+                    className={styles.block}
+                />
+            </Center>
             <Text size="sm" truncate>
                 {label === undefined
                     ? m.selectingBarFiltered()
                     : m.selectingBarSelecting({ label })}
             </Text>
             <ActionBar.Divider />
-            <Button size="compact-sm" onClick={finish}>
-                {m.selectingBarFinish()}
+            <Button size="compact-sm" onClick={stop}>
+                {m.selectingBarStop()}
             </Button>
         </ActionBar>
     );
