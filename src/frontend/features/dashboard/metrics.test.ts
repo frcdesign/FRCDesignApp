@@ -33,12 +33,18 @@ function day(index: number, overrides: Partial<DailyMetricPoint> = {}) {
         appOpens: 0,
         activeUsers: 0,
         favoriteUses: 0,
-        fastenInserts: 0,
-        fastenableUses: 0,
         // Every use a part-studio insert, unless a test splits them itself.
         targets: targets(overrides.uses ?? 0, 0),
         ...overrides
     };
+}
+
+/** A day of `uses`, `intoAssembly` of them into an assembly. */
+function assembly(index: number, uses: number, intoAssembly: number) {
+    return day(index, {
+        uses,
+        targets: targets(uses - intoAssembly, intoAssembly)
+    });
 }
 
 describe("metric definitions", () => {
@@ -46,35 +52,15 @@ describe("metric definitions", () => {
         const percentages = Object.values(METRICS)
             .filter(isPercentage)
             .map((metric) => metric.key);
-        expect(percentages.sort()).toEqual([
-            "assemblyFraction",
-            "downloadFraction",
-            "fastenFraction"
-        ]);
+        expect(percentages).toEqual(["assemblyFraction"]);
     });
 
-    it("measures downloads against every use", () => {
+    it("measures uses into an assembly against every use, downloads included", () => {
         const [point] = toTrend(
-            [day(0, { uses: 10, targets: targets(4, 4, 2) })],
-            METRICS.downloadFraction
+            [day(0, { uses: 10, targets: targets(4, 2, 4) })],
+            METRICS.assemblyFraction
         );
         expect(point.value).toBe(20);
-    });
-
-    it("measures fasten against the assembly inserts that could fasten", () => {
-        // Of 16 assembly inserts, only the 8 of parts that offer fasten count.
-        const [point] = toTrend(
-            [
-                day(0, {
-                    uses: 40,
-                    fastenInserts: 2,
-                    fastenableUses: 8,
-                    targets: targets(24, 16)
-                })
-            ],
-            METRICS.fastenFraction
-        );
-        expect(point.value).toBe(25);
     });
 });
 
@@ -89,11 +75,8 @@ describe("toTrend", () => {
 
     it("turns a share into a percentage per day", () => {
         const trend = toTrend(
-            [
-                day(0, { fastenableUses: 10, fastenInserts: 3 }),
-                day(1, { fastenableUses: 4, fastenInserts: 1 })
-            ],
-            METRICS.fastenFraction
+            [assembly(0, 10, 3), assembly(1, 4, 1)],
+            METRICS.assemblyFraction
         );
         expect(trend.map((point) => point.value)).toEqual([30, 25]);
     });
@@ -101,12 +84,12 @@ describe("toTrend", () => {
     it("ratios a month from its totals, not by averaging daily rates", () => {
         // A quiet 1-of-1 day beside many busy 0-of-99 days is ~1%, not ~50%.
         const points = [
-            day(0, { fastenableUses: 1, fastenInserts: 1 }),
+            assembly(0, 1, 1),
             ...Array.from({ length: 200 }, (_, index) =>
-                day(index + 1, { fastenableUses: 99, fastenInserts: 0 })
+                assembly(index + 1, 99, 0)
             )
         ];
-        const [first] = toTrend(points, METRICS.fastenFraction);
+        const [first] = toTrend(points, METRICS.assemblyFraction);
         expect(first.value).toBeLessThan(1);
     });
 
@@ -139,7 +122,7 @@ describe("toTrend", () => {
     });
 
     it("reports zero rather than dividing by zero", () => {
-        const [point] = toTrend([day(0)], METRICS.fastenFraction);
+        const [point] = toTrend([day(0)], METRICS.assemblyFraction);
         expect(point.value).toBe(0);
     });
 
@@ -157,8 +140,6 @@ describe("rangeValue", () => {
                 appOpens: 4,
                 activeUsers: 6,
                 favoriteUses: 5,
-                fastenInserts: 1,
-                fastenableUses: 3,
                 targets: targets(6, 4)
             }),
             day(1, {
@@ -166,8 +147,6 @@ describe("rangeValue", () => {
                 appOpens: 6,
                 activeUsers: 8,
                 favoriteUses: 5,
-                fastenInserts: 3,
-                fastenableUses: 5,
                 targets: targets(24, 6)
             })
         ];
@@ -197,34 +176,28 @@ describe("rangeValue", () => {
 
     it("ratios a share from range totals, not from daily rates", () => {
         const value = rangeValue(
-            [
-                day(0, { fastenableUses: 1, fastenInserts: 1 }),
-                day(1, { fastenableUses: 99, fastenInserts: 0 })
-            ],
-            METRICS.fastenFraction
+            [assembly(0, 1, 1), assembly(1, 99, 0)],
+            METRICS.assemblyFraction
         );
         expect(value).toBeCloseTo(1, 1);
     });
 
     it("reports zero for an empty range", () => {
         expect(rangeValue([], METRICS.uses)).toBe(0);
-        expect(rangeValue([], METRICS.fastenFraction)).toBe(0);
+        expect(rangeValue([], METRICS.assemblyFraction)).toBe(0);
     });
 });
 
 describe("rangeTerms", () => {
     it("returns the numbers the share is divided from", () => {
-        const points = [
-            day(0, { fastenableUses: 10, fastenInserts: 3 }),
-            day(1, { fastenableUses: 30, fastenInserts: 7 })
-        ];
+        const points = [assembly(0, 10, 3), assembly(1, 30, 7)];
 
-        expect(rangeTerms(points, METRICS.fastenFraction)).toEqual({
+        expect(rangeTerms(points, METRICS.assemblyFraction)).toEqual({
             numerator: 10,
             denominator: 40
         });
         // Those terms are exactly what the displayed value divides.
-        expect(rangeValue(points, METRICS.fastenFraction)).toBeCloseTo(25, 5);
+        expect(rangeValue(points, METRICS.assemblyFraction)).toBeCloseTo(25, 5);
     });
 
     it("leaves the denominator at zero for a count", () => {

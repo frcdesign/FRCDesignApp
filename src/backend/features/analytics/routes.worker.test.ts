@@ -31,7 +31,6 @@ import {
 } from "../../../__test_utils__";
 import { getDb } from "../../db/client";
 import { featureScripts } from "../featurescripts/schema";
-import { MateLocation } from "../library/insertables/fasten";
 import { createApp } from "../../app";
 import { EventType, UseSource, UseTarget } from "./usage";
 import { LibraryId } from "../library/library-id";
@@ -186,6 +185,7 @@ const OVERVIEW_AREAS = [
     "sources",
     "version-manager",
     "featurescripts",
+    "health",
     "reports"
 ];
 
@@ -308,50 +308,12 @@ describe("analytics routes", () => {
                 appOpens: 0,
                 activeUsers: 0,
                 favoriteUses: 4,
-                fastenInserts: 3,
-                fastenableUses: 0,
                 targets: {
                     [UseTarget.ASSEMBLY]: 5,
                     [UseTarget.PART_STUDIO]: 5,
                     [UseTarget.DOWNLOAD]: 0
                 }
             });
-        });
-
-        it("measures fasten against assembly uses of parts that offer it", async () => {
-            await seedPartStudio(db, {
-                fastenInfo: {
-                    mateConnectorId: "mc-1",
-                    mateLocation: MateLocation.Feature,
-                    path: []
-                }
-            });
-            await seedAssembly(db);
-            await db.insert(dailyInsertableMetrics).values(
-                [
-                    { elementId, target: UseTarget.ASSEMBLY, count: 4 },
-                    { elementId, target: UseTarget.PART_STUDIO, count: 3 },
-                    {
-                        elementId: TEST_ASSEMBLY_PATH.elementId,
-                        target: UseTarget.ASSEMBLY,
-                        count: 5
-                    }
-                ].map((row) => ({
-                    day: "2026-03-01",
-                    libraryId: TEST_LIBRARY_ID,
-                    elementId: row.elementId,
-                    targetElementType: row.target,
-                    count: row.count
-                }))
-            );
-
-            const res = await anonymousGet(
-                "/api/analytics/overview/usage?from=2026-03-01&to=2026-03-01"
-            );
-            const body: OverviewUsageOut = await res.json();
-
-            // Only the part with a mate connector, and only into an assembly.
-            expect(body.metricSeries[0].fastenableUses).toBe(4);
         });
 
         it("counts downloads among the uses, and apart in the targets", async () => {
@@ -1243,6 +1205,25 @@ describe("analytics routes", () => {
                 insertableCount: 1,
                 errorCount: 1,
                 healthyItems: 1
+            });
+        });
+
+        it("counts the visible parts by kind on the overview", async () => {
+            await seedPartStudio(db);
+            await seedAssembly(db);
+            await db.update(insertables).set({ isVisible: true });
+            await seedPartStudio(db, {
+                id: "hidden",
+                elementId: "hidden-element"
+            });
+
+            const res = await anonymousGet("/api/analytics/overview/health");
+            const body: LibraryHealthCounts = await res.json();
+
+            expect(body).toMatchObject({
+                insertableCount: 2,
+                partStudioCount: 1,
+                assemblyCount: 1
             });
         });
 

@@ -48,6 +48,14 @@ export function getOverviewFeatureScriptsQuery(range: DayRange) {
     return overviewQuery<FeatureScriptUsageOut>("featurescripts", range);
 }
 
+/** Every library's together; it changes with a reload, not with the range. */
+export function getOverviewHealthQuery() {
+    return queryOptions<LibraryHealthCounts>({
+        queryKey: ["analytics", "overview", "health"],
+        queryFn: () => apiGet("/analytics/overview/health")
+    });
+}
+
 export function getOverviewReportsQuery(range: DayRange) {
     return overviewQuery<ReportSummary>("reports", range);
 }

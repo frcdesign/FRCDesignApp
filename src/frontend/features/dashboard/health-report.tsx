@@ -4,42 +4,53 @@ import type { LibraryHealthCounts } from "@backend/features/analytics/contract";
 import { BuildIssueSeverity } from "@backend/features/build-checker/issues";
 import { IssueIcon } from "../build-status/components/issues";
 import { formatCount, formatFraction } from "./format";
+import { m } from "../../paraglide/messages";
 
 interface HealthTilesProps {
     counts: LibraryHealthCounts;
 }
 
-/** Headline health of the library: how much of it is clean, and what isn't. */
+/** What the library holds, how much of it is clean, and what isn't. */
 export function HealthTiles({ counts }: HealthTilesProps): ReactNode {
     const total = counts.groupCount + counts.insertableCount;
 
     // Info issues get no tile: nobody acts on them.
     const tiles = [
         {
-            label: "Parts",
+            label: m.dashboardHealthParts(),
             value: formatCount(counts.insertableCount),
             icon: undefined
         },
         {
-            label: "Healthy",
+            label: m.dashboardHealthPartStudios(),
+            value: formatCount(counts.partStudioCount),
+            icon: undefined
+        },
+        {
+            label: m.dashboardHealthAssemblies(),
+            value: formatCount(counts.assemblyCount),
+            icon: undefined
+        },
+        {
+            label: m.dashboardHealthHealthy(),
             value: formatFraction(counts.healthyItems, total),
             // Every check passing is drawn as the absence of a severity.
             icon: <IssueIcon />
         },
         {
-            label: "Errors",
+            label: m.dashboardHealthErrors(),
             value: formatCount(counts.errorCount),
             icon: <IssueIcon severity={BuildIssueSeverity.ERROR} />
         },
         {
-            label: "Warnings",
+            label: m.dashboardHealthWarnings(),
             value: formatCount(counts.warningCount),
             icon: <IssueIcon severity={BuildIssueSeverity.WARNING} />
         }
     ];
 
     return (
-        <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }}>
+        <SimpleGrid cols={{ base: 1, sm: 3 }}>
             {tiles.map((tile) => (
                 <Card key={tile.label}>
                     <Group gap="xs">

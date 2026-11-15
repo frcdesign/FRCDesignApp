@@ -15,6 +15,8 @@ import {
     type PeriodComparison
 } from "./contract";
 import { countActiveUsers } from "./metric-queries";
+import { addDays, toReportingDay, type DayRange } from "./day";
+import { clampRange, eachDay } from "./range";
 
 /** Both bounds inclusive, as every day key in this file is. */
 interface Window {
@@ -172,6 +174,38 @@ async function measure(
         activeUsers: compare(people),
         appOpens: opens && compare(opens)
     };
+}
+
+/**
+ * The change beside each headline number. All time, a range reaching back to
+ * when tracking began, compares seasons; any shorter range is measured against
+ * as many days just before it.
+ */
+export function getGrowthFor(
+    db: Db,
+    requested: DayRange,
+    trackingSince: string | undefined,
+    libraryId?: LibraryId
+): Promise<GrowthOut> {
+    const through = toReportingDay(Date.now());
+    if (trackingSince === undefined || requested.from <= trackingSince) {
+        return getGrowth(db, through, trackingSince, libraryId);
+    }
+    const current = clampRange(requested, trackingSince, through);
+    const days = eachDay(current).length;
+    const windows = {
+        current,
+        previous: {
+            from: addDays(current.from, -days),
+            to: addDays(current.from, -1)
+        }
+    };
+    const labels = {
+        label: `these ${days} days`,
+        baselineLabel: `the ${days} days before`,
+        baselineShort: `previous ${days} days`
+    };
+    return measure(db, windows, labels, trackingSince, libraryId);
 }
 
 /**

@@ -9,11 +9,7 @@ import {
     type Granularity
 } from "./series";
 
-type MetricKey =
-    | "uses"
-    | "fastenFraction"
-    | "assemblyFraction"
-    | "downloadFraction";
+type MetricKey = "uses" | "assemblyFraction";
 
 export interface MetricDefinition {
     key: MetricKey;
@@ -32,25 +28,10 @@ export const METRICS: Record<MetricKey, MetricDefinition> = {
         numerator: (point) => point.uses,
         detailLabel: m.dashboardMetricUses()
     },
-    fastenFraction: {
-        key: "fastenFraction",
-        label: m.dashboardMetricFasten(),
-        numerator: (point) => point.fastenInserts,
-        // Only the uses that could have fastened: into an assembly, of a part that offers it.
-        denominator: (point) => point.fastenableUses,
-        detailLabel: m.dashboardMetricOfFastenable()
-    },
     assemblyFraction: {
         key: "assemblyFraction",
         label: m.dashboardMetricIntoAssembly(),
         numerator: (point) => point.targets[UseTarget.ASSEMBLY],
-        denominator: (point) => point.uses,
-        detailLabel: m.dashboardMetricOfUses()
-    },
-    downloadFraction: {
-        key: "downloadFraction",
-        label: m.dashboardMetricDownloaded(),
-        numerator: (point) => point.targets[UseTarget.DOWNLOAD],
         denominator: (point) => point.uses,
         detailLabel: m.dashboardMetricOfUses()
     }

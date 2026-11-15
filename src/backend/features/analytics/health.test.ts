@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { BuildIssueType } from "../build-checker/issues";
+import { ElementType } from "../../lib/onshape/element-type";
 import { summarizeHealth } from "./health";
 
 describe("summarizeHealth", () => {
     const cleanGroup = { buildIssues: [] };
-    const insertable = { buildIssues: [] };
+    const insertable = {
+        elementType: ElementType.PART_STUDIO,
+        buildIssues: []
+    };
 
     it("counts every issue, including a lesser one on the same item", () => {
         const counts = summarizeHealth(
@@ -12,6 +16,7 @@ describe("summarizeHealth", () => {
             [
                 insertable,
                 {
+                    elementType: ElementType.ASSEMBLY,
                     buildIssues: [
                         { type: BuildIssueType.LOAD_FAILED },
                         { type: BuildIssueType.NO_VENDORS }
@@ -19,6 +24,7 @@ describe("summarizeHealth", () => {
                 },
                 {
                     // Info-only: unhealthy, but on neither tile.
+                    ...insertable,
                     buildIssues: [{ type: BuildIssueType.NO_THUMBNAIL_TAB }]
                 }
             ]
@@ -27,6 +33,8 @@ describe("summarizeHealth", () => {
         expect(counts).toEqual({
             groupCount: 1,
             insertableCount: 3,
+            partStudioCount: 2,
+            assemblyCount: 1,
             errorCount: 1,
             warningCount: 1,
             healthyItems: 2
@@ -38,6 +46,7 @@ describe("summarizeHealth", () => {
             [cleanGroup],
             [
                 {
+                    ...insertable,
                     buildIssues: [
                         { type: BuildIssueType.CONFIGURATION_LIMIT_EXCEEDED },
                         { type: BuildIssueType.MANUAL_INDEXING_REQUIRED }

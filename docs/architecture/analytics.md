@@ -306,6 +306,7 @@ GET /api/analytics/overview/series                                  DailyUsePoin
 GET /api/analytics/overview/sources                                 UseSourceUsage[]
 GET /api/analytics/overview/version-manager                         VersionManagerTotals
 GET /api/analytics/overview/featurescripts                          FeatureScriptUsageOut
+GET /api/analytics/overview/health                                  LibraryHealthCounts, every library's
 GET /api/analytics/overview/reports                                 ReportSummary
 GET /api/analytics/summary/library/:libraryId                       LibrarySummaryOut
 GET /api/analytics/health/library/:libraryId?v=                     LibraryHealthCounts, cached by the library's version
@@ -358,6 +359,13 @@ async function countActiveUsers(
     range: DayRange,
     libraryId?: LibraryId
 ): Promise<number>;
+// All time compares seasons; a shorter range, as many days just before it.
+function getGrowthFor(
+    db: Db,
+    requested: DayRange,
+    trackingSince: string | undefined,
+    libraryId?: LibraryId
+): Promise<GrowthOut>;
 // Season to date against the same stretch of the season before.
 async function getGrowth(
     db: Db,
@@ -397,10 +405,11 @@ async function getReportedParts(
     libraryId: LibraryId,
     range: DayRange
 ): Promise<ReportedPartOut[]>;
-// `health.ts`: build-issue counts, hidden elements left out.
+// `health.ts`: build-issue and part counts, hidden elements left out; every
+// library's together without a `libraryId`.
 async function getHealthCounts(
     db: Db,
-    libraryId: LibraryId
+    libraryId?: LibraryId
 ): Promise<LibraryHealthCounts>;
 
 interface PartRow {
@@ -497,9 +506,6 @@ interface DailyMetricPoint {
     /** Distinct users active that day; not summable across days. */
     activeUsers: number;
     favoriteUses: number;
-    fastenInserts: number;
-    /** Uses into an assembly of parts that offer fasten now: fasten's denominator. */
-    fastenableUses: number;
     targets: UseTargets;
 }
 
@@ -515,6 +521,9 @@ interface UseSourceUsage {
 interface LibraryHealthCounts {
     groupCount: number;
     insertableCount: number;
+    /** The two split `insertableCount` by the kind of tab. */
+    partStudioCount: number;
+    assemblyCount: number;
     errorCount: number;
     warningCount: number;
     healthyItems: number;
@@ -749,6 +758,7 @@ function getInsertableReportQuery(
     range: DayRange
 );
 function getHealthQuery(libraryId: LibraryId, cacheVersion: number);
+function getOverviewHealthQuery();
 // The first failure among several queries, else the first still loading.
 function firstPending(
     queries: UseQueryResult<unknown>[]
@@ -797,11 +807,7 @@ function rangeValue(
     metric: MetricDefinition
 ): number;
 
-type MetricKey =
-    | "uses"
-    | "fastenFraction"
-    | "assemblyFraction"
-    | "downloadFraction";
+type MetricKey = "uses" | "assemblyFraction";
 
 interface MetricDefinition {
     key: MetricKey;
@@ -814,12 +820,10 @@ interface MetricDefinition {
 }
 ```
 
-| Metric             | Counts                | Divided by                                           |
-| ------------------ | --------------------- | ---------------------------------------------------- |
-| `uses`             | Inserts and downloads | —                                                    |
-| `fastenFraction`   | Inserts that fastened | Uses into an assembly of parts that offer fasten now |
-| `assemblyFraction` | Uses into an assembly | Every use                                            |
-| `downloadFraction` | Downloads             | Every use                                            |
+| Metric             | Counts                | Divided by |
+| ------------------ | --------------------- | ---------- |
+| `uses`             | Inserts and downloads | —          |
+| `assemblyFraction` | Uses into an assembly | Every use  |
 
 Named, not copied: `AppContext` and `AppBindings` (`src/backend/lib/context.ts`),
 `Db` (`src/backend/db/client.ts`), `ElementPath` and `InstanceType`
@@ -955,9 +959,11 @@ more than one, it keeps its own id and counts only in the totals.
 
 A day key is the date in `America/New_York`, since US teams work evenings that
 UTC midnight would split. Reports end yesterday: today is still filling, and
-would dip every chart. Growth compares a season's stretch with the same stretch
-of the previous season (`seasons.ts`), since a January–April competition year
-is nothing like a calendar year; between seasons it shows the last complete one.
+would dip every chart. On **All time**, growth compares a season's stretch
+with the same stretch of the previous season (`seasons.ts`), since a
+January–April competition year is nothing like a calendar year; between
+seasons it shows the last complete one. A shorter range is the reader's own
+window, so it is compared with the one just before it, season or not.
 
 ### Reporting
 
@@ -966,18 +972,19 @@ panel. Its routes read only rollups and return only aggregates:
 
 - **Overview** — one route per area, each fetched by its own query, so every
   section shows as soon as its numbers arrive: **usage** (totals, the metric
-  series behind the headline tiles and the trend tiles, growth), **series**
+  series behind the headline tiles, growth), **series**
   (uses per library per day, which the chart plots a day per point up to 90
   days and a week per point past that, `pickChartGranularity`), **sources**
   (every source, with "Not recorded" only when the range reaches imported
-  history), the **Version Manager**'s totals, **featurescripts** (adds and
+  history), **health** (every library's parts by kind and build issues,
+  standing now), the **Version Manager**'s totals, **featurescripts** (adds and
   distinct users, and each feature's adds and users, every feature in the
   document listed), and **reports**' totals. Its usage breakdown reads each
   library's **Parts** report.
-- **Library** — its summary, health (build issues by severity, hidden elements
-  left out), its parts table, its reports' totals, and its most reported parts.
-- **Part** — one element's history, its uses split by target (into an
-  assembly, downloaded), and usage of each configuration option, split per way
+- **Library** — its summary, health (parts, part studios and assemblies, and
+  build issues by severity, hidden elements left out), its parts table, its reports' totals, and its most reported parts.
+- **Part** — one element's history, the share of its uses that went
+  into an assembly, and usage of each configuration option, split per way
   the option is shown (`toParameterInstances`).
 - **Unused** — parts and options at or below a usage threshold.
 
@@ -997,8 +1004,10 @@ open, and reuses an answer for five minutes.
 
 Every page's totals are over the picked range, and two numbers are not: the
 favorites and linked documents standing now, which are state rather than events
-and say so on the tile. The season comparison beside a headline number is shown
-only on **All time**, its own window being a season rather than the picked one.
+and say so on the tile. Beside each headline number is its change
+(`getGrowthFor`): on **All time** against the same stretch of the season
+before, and on any shorter range against as many days just before it. Either
+is withheld while its baseline reaches back before tracking began.
 
 ## Invariants
 
@@ -1027,8 +1036,8 @@ only on **All time**, its own window being a season rather than the picked one.
   parts — an insert and fasten to several picked edges, an Auto Assembly run —
   records one use per part, and every count of uses sums them, the headline
   numbers included.
-- A share of a choice only a person makes, such as fasten, divides by the
-  uses that choice was open to, not by every use.
+- A share of a choice only a person makes divides by the uses that choice was
+  open to, not by every use.
 - Every new or major feature records its use here, in the same change
   (`AGENTS.md`, Feature tracking).
 
@@ -1060,13 +1069,6 @@ only on **All time**, its own window being a season rather than the picked one.
   of its own; the owner reads them in each feature's card
   (`GET /api/featurescripts/stats`), and the overview's FeatureScripts section
   over the range.
-- **Fasten is measured against the parts that offer it now.** Onshape offers
-  fasten only into an assembly, and the app only for a part with a mate
-  connector an admin hasn't turned off (`insertables.fasten_info`). No rollup
-  records whether a part offered it at the time, so the denominator joins the
-  assembly uses in `daily_insertable_metrics` against the parts as they are,
-  rather than adding a column history couldn't fill. A part that has since
-  lost its connector drops out of the denominator but not the numerator.
 - **Reports are not activity.** Reporting a library's part is not using it, so
   a report writes no row to `daily_metrics`, `daily_user_activity` or
   `user_stats`, even when it names a library.

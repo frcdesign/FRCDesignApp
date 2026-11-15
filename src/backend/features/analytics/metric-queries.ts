@@ -6,17 +6,15 @@ import {
     eq,
     gte,
     inArray,
-    isNotNull,
     lte,
     sum,
     type SQL
 } from "drizzle-orm";
 import { type SQLiteColumn } from "drizzle-orm/sqlite-core";
 import { type Db } from "../../db/client";
-import { favorites, insertables } from "../../db/schema";
+import { favorites } from "../../db/schema";
 import {
     dailyAppOpens,
-    dailyInsertableMetrics,
     dailyMetrics,
     dailySourceMetrics,
     dailyTargetMetrics,
@@ -25,7 +23,7 @@ import {
     userStats
 } from "./schema";
 import { workspaceLinks } from "../version-manager/schema";
-import { USE_EVENT_TYPES, UseSource, UseTarget } from "./usage";
+import { USE_EVENT_TYPES, UseSource, type UseTarget } from "./usage";
 import { LibraryId } from "../library/library-id";
 import {
     emptyTargets,
@@ -226,7 +224,7 @@ function countFavorites(db: Db, libraryId?: LibraryId) {
         .get();
 }
 
-/** Daily insert mix (favorites / fasten / quick insert) across the range. */
+/** Who was active, scoped as the caller asked. */
 function activityFilters(range: DayRange, libraryId?: LibraryId) {
     return scopeFilters(dailyUserActivity, libraryId, range);
 }
@@ -242,8 +240,7 @@ function countMetricsByDay(db: Db, range: DayRange, libraryId?: LibraryId) {
         .select({
             day: dailyMetrics.day,
             total: sum(dailyMetrics.count),
-            favoriteUses: sum(dailyMetrics.favoriteCount),
-            fastenInserts: sum(dailyMetrics.fastenCount)
+            favoriteUses: sum(dailyMetrics.favoriteCount)
         })
         .from(dailyMetrics)
         .where(and(...filters))
@@ -264,41 +261,6 @@ function countTargetsByDay(db: Db, range: DayRange, libraryId?: LibraryId) {
         .from(dailyTargetMetrics)
         .where(and(...filters))
         .groupBy(dailyTargetMetrics.day, dailyTargetMetrics.targetElementType)
-        .all();
-}
-
-/**
- * Each day's uses into an assembly of parts that offer fasten now. Against the
- * library as it is, since no rollup records whether a part offered it then.
- */
-function countFastenableByDay(db: Db, range: DayRange, libraryId?: LibraryId) {
-    const fastenable = db
-        .select({ elementId: insertables.elementId })
-        .from(insertables)
-        .where(
-            and(
-                isNotNull(insertables.fastenInfo),
-                libraryId ? eq(insertables.libraryId, libraryId) : undefined
-            )
-        );
-
-    return db
-        .select({
-            day: dailyInsertableMetrics.day,
-            total: sum(dailyInsertableMetrics.count)
-        })
-        .from(dailyInsertableMetrics)
-        .where(
-            and(
-                ...scopeFilters(dailyInsertableMetrics, libraryId, range),
-                eq(
-                    dailyInsertableMetrics.targetElementType,
-                    UseTarget.ASSEMBLY
-                ),
-                inArray(dailyInsertableMetrics.elementId, fastenable)
-            )
-        )
-        .groupBy(dailyInsertableMetrics.day)
         .all();
 }
 
@@ -329,14 +291,12 @@ export async function getMetricSeries(
     range: DayRange,
     libraryId?: LibraryId
 ): Promise<DailyMetricPoint[]> {
-    const [rows, targetRows, fastenableRows, userRows, openRows] =
-        await Promise.all([
-            countMetricsByDay(db, range, libraryId),
-            countTargetsByDay(db, range, libraryId),
-            countFastenableByDay(db, range, libraryId),
-            countUsersByDay(db, range, libraryId),
-            countOpensByDay(db, range, libraryId)
-        ]);
+    const [rows, targetRows, userRows, openRows] = await Promise.all([
+        countMetricsByDay(db, range, libraryId),
+        countTargetsByDay(db, range, libraryId),
+        countUsersByDay(db, range, libraryId),
+        countOpensByDay(db, range, libraryId)
+    ]);
 
     const byDay = new Map<string, DailyMetricPoint>();
     const pointFor = (day: string): DailyMetricPoint => {
@@ -348,8 +308,6 @@ export async function getMetricSeries(
             appOpens: 0,
             activeUsers: 0,
             favoriteUses: 0,
-            fastenInserts: 0,
-            fastenableUses: 0,
             targets: emptyTargets()
         };
         byDay.set(day, created);
@@ -360,10 +318,6 @@ export async function getMetricSeries(
         const point = pointFor(row.day);
         point.uses = Number(row.total ?? 0);
         point.favoriteUses = Number(row.favoriteUses ?? 0);
-        point.fastenInserts = Number(row.fastenInserts ?? 0);
-    }
-    for (const row of fastenableRows) {
-        pointFor(row.day).fastenableUses = Number(row.total ?? 0);
     }
     for (const row of openRows) {
         pointFor(row.day).appOpens = Number(row.total ?? 0);

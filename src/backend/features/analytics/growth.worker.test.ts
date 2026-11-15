@@ -6,7 +6,7 @@ import { EventType } from "./usage";
 import { LibraryId } from "../library/library-id";
 import { resetDb, seedLibrary, TEST_LIBRARY_ID } from "../../../__test_utils__";
 import { getDb } from "../../db/client";
-import { getGrowth, toComparison } from "./growth";
+import { getGrowth, getGrowthFor, toComparison } from "./growth";
 
 const db = getDb(env.DB);
 
@@ -218,5 +218,42 @@ describe("getGrowth", () => {
             LibraryId.CONFIG_LIB
         );
         expect(ftc.uses.label).toBe("FTC 2025–26");
+    });
+});
+
+describe("getGrowthFor", () => {
+    beforeEach(async () => {
+        await resetDb(db);
+    });
+
+    it("measures a shorter range against as many days just before it", async () => {
+        await seedInserts("2026-07-20", 40);
+        await seedInserts("2026-07-27", 999);
+        await seedInserts("2026-08-10", 60);
+        await seedInserts("2026-07-06", 999);
+
+        const growth = await getGrowthFor(
+            db,
+            { from: "2026-07-28", to: "2026-08-10" },
+            "2026-01-01"
+        );
+
+        // 14 days, against 2026-07-14 to 2026-07-27.
+        expect(growth.uses).toMatchObject({
+            current: 60,
+            previous: 1039,
+            previousFrom: "2026-07-14",
+            previousTo: "2026-07-27",
+            baselineShort: "previous 14 days"
+        });
+    });
+
+    it("compares seasons for a range reaching back to when tracking began", async () => {
+        const growth = await getGrowthFor(
+            db,
+            { from: "2000-01-01", to: THROUGH },
+            "2024-09-01"
+        );
+        expect(growth.uses.baselineShort).toBe("last season");
     });
 });

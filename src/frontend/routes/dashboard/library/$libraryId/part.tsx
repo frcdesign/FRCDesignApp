@@ -139,13 +139,6 @@ function ReportBody({
                         report.useCount
                     )}
                 />
-                <SummaryCard
-                    label={METRICS.downloadFraction.label}
-                    value={formatFraction(
-                        report.targets[UseTarget.DOWNLOAD],
-                        report.useCount
-                    )}
-                />
             </SimpleGrid>
 
             <div>

@@ -45,9 +45,6 @@ export interface DailyMetricPoint {
     /** Distinct users active that day; not summable across days. */
     activeUsers: number;
     favoriteUses: number;
-    fastenInserts: number;
-    /** Uses into an assembly of parts that offer fasten now: fasten's denominator. */
-    fastenableUses: number;
     targets: UseTargets;
 }
 
@@ -63,6 +60,9 @@ export interface UseSourceUsage {
 export interface LibraryHealthCounts {
     groupCount: number;
     insertableCount: number;
+    /** The two split `insertableCount` by the kind of tab. */
+    partStudioCount: number;
+    assemblyCount: number;
     errorCount: number;
     warningCount: number;
     healthyItems: number;

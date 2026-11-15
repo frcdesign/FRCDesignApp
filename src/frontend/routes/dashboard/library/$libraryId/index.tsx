@@ -20,7 +20,6 @@ import { PartsTable } from "../../../../features/dashboard/parts-table";
 import { getLibraryName } from "../../../../lib/library";
 import { useCacheVersion } from "../../../../features/library/queries";
 import {
-    RangePreset,
     toDayRange,
     useRangePreset
 } from "../../../../features/dashboard/range";
@@ -52,7 +51,6 @@ function LibraryOverview(): ReactNode {
                 <LibraryBody
                     libraryId={libraryId}
                     summary={summary.data}
-                    preset={preset}
                     parts={parts}
                     health={health}
                 />
@@ -69,8 +67,6 @@ function LibraryOverview(): ReactNode {
 interface LibraryBodyProps {
     libraryId: LibraryId;
     summary: LibrarySummaryOut;
-    /** Which window the totals cover; the season change fits only all of it. */
-    preset: RangePreset;
     parts: UseQueryResult<PartUsageOut[]>;
     health: UseQueryResult<LibraryHealthCounts>;
 }
@@ -78,7 +74,6 @@ interface LibraryBodyProps {
 function LibraryBody({
     libraryId,
     summary,
-    preset,
     parts,
     health
 }: LibraryBodyProps): ReactNode {
@@ -88,7 +83,7 @@ function LibraryBody({
         <>
             <HeadlineTiles
                 totals={totals}
-                growth={preset === RangePreset.ALL ? growth : undefined}
+                growth={growth}
                 series={metricSeries}
             />
 

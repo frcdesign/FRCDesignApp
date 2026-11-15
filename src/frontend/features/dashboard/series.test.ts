@@ -35,8 +35,6 @@ function day(index: number, values: Partial<DailyMetricPoint> = {}) {
         appOpens: 0,
         activeUsers: 0,
         favoriteUses: 0,
-        fastenInserts: 0,
-        fastenableUses: 0,
         targets: emptyTargets(),
         ...values
     };

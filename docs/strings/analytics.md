@@ -8,27 +8,26 @@ catalog. A **use** is an insert or a download.
 
 ## Headline tiles
 
-| String           | Kind       | Where               | When                          | Review                     |
-| ---------------- | ---------- | ------------------- | ----------------------------- | -------------------------- |
-| "Total uses"     | Tile label | First headline tile | Always; inserts and downloads | **⚑** Now counts downloads |
-| "Total users"    | Tile label | Beside it           | Always                        |                            |
-| "Uses per user"  | Tile label | Beside it           | Always                        |                            |
-| "App sessions"   | Tile label | Beside it           | The overview only             |                            |
-| "Uses over time" | Card title | Under the tiles     | Always                        |                            |
+| String                                    | Kind           | Where                          | When                                                                | Review                                      |
+| ----------------------------------------- | -------------- | ------------------------------ | ------------------------------------------------------------------- | ------------------------------------------- |
+| "Total uses"                              | Tile label     | First headline tile            | Always; inserts and downloads                                       | **⚑** Now counts downloads                  |
+| "Total users"                             | Tile label     | Beside it                      | Always                                                              |                                             |
+| "Uses per user"                           | Tile label     | Beside it                      | Always                                                              |                                             |
+| "App sessions"                            | Tile label     | Beside it                      | The overview only                                                   |                                             |
+| "vs last season" / "vs previous {n} days" | Change caption | Under a headline tile's change | All time / any shorter range; built in `growth.ts`, not the catalog | **⚑** New: shorter ranges now show a change |
+| "Uses over time"                          | Card title     | Under the tiles                | Always                                                              |                                             |
 
 ## How people use the app
 
-On the overview. Each share is a tile over the range; the detail is its chart's axis.
+On the overview: where uses started, over the range.
 
-| String                                                                                                    | Kind              | Where                 | When                               | Review                                           |
-| --------------------------------------------------------------------------------------------------------- | ----------------- | --------------------- | ---------------------------------- | ------------------------------------------------ |
-| "How people use the app"                                                                                  | Section title     |                       | Always                             |                                                  |
-| "Search results" / "Search within a group" / "Browsing a group" / "Favorites list" / "Recently used list" | Bar labels        | The source breakdown  | Always; uses by where they started |                                                  |
-| "Not recorded"                                                                                            | Bar label         | The source breakdown  | The range reaches imported history | **⚑** Was "Not recorded (before September 2026)" |
-| "No uses recorded yet."                                                                                   | Empty notice      | In place of the bars  | No use in the range                | **⚑** Was "No inserts recorded yet."             |
-| "Insert and fasten" / "% of assembly inserts that could fasten"                                           | Tile label / axis |                       | Always                             | **⚑** Now of parts that offer fasten             |
-| "Into an assembly" / "% of uses"                                                                          | Tile label / axis | Also on a part's page | Always                             | **⚑** Now a share of every use                   |
-| "Downloaded" / "% of uses"                                                                                | Card label        | A part's page         | Always                             | **⚑** No longer a tile on the overview           |
+| String                                                                                                    | Kind          | Where                | When                               | Review                                           |
+| --------------------------------------------------------------------------------------------------------- | ------------- | -------------------- | ---------------------------------- | ------------------------------------------------ |
+| "How people use the app"                                                                                  | Section title |                      | Always                             |                                                  |
+| "Search results" / "Search within a group" / "Browsing a group" / "Favorites list" / "Recently used list" | Bar labels    | The source breakdown | Always; uses by where they started |                                                  |
+| "Not recorded (legacy data)"                                                                              | Bar label     | The source breakdown | The range reaches imported history | **⚑** Was "Not recorded (before September 2026)" |
+| "No uses recorded yet."                                                                                   | Empty notice  | In place of the bars | No use in the range                | **⚑** Was "No inserts recorded yet."             |
+| "Into an assembly"                                                                                        | Card label    | A part's page        | Always                             | **⚑** No longer a tile on the overview           |
 
 ## Parts
 
@@ -46,6 +45,17 @@ On the overview. Each share is a tile over the range; the detail is its chart's 
 | "Usage breakdown"                                        | Card title     | The treemap                 | Always                        |                                                                |
 | "All libraries"                                          | Breadcrumb     | Above the treemap           | On the overview               |                                                                |
 | "Nothing was used in this range."                        | Empty notice   | In place of the treemap     | No use in the range           | **⚑** Was "Nothing was inserted in this range."                |
+
+## Health
+
+What a library holds and how clean it is, standing now: on a library's page,
+and every library's together on the overview.
+
+| String                                  | Kind          | Where        | When                       | Review                                    |
+| --------------------------------------- | ------------- | ------------ | -------------------------- | ----------------------------------------- |
+| "Libraries"                             | Section title | The overview | Always                     | **⚑** New                                 |
+| "Parts" / "Part Studios" / "Assemblies" | Tile labels   | First row    | Always; visible parts only | **⚑** Part Studios and Assemblies are new |
+| "Healthy" / "Errors" / "Warnings"       | Tile labels   | Second row   | Always                     |                                           |
 
 ## Every section
 

@@ -1,4 +1,4 @@
-import { Card, SimpleGrid, Stack } from "@mantine/core";
+import { Stack } from "@mantine/core";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { type ReactNode } from "react";
@@ -6,6 +6,7 @@ import { LibraryId } from "@backend/features/library/library-id";
 import { type DayRange } from "@backend/features/analytics/day";
 import {
     getOverviewFeatureScriptsQuery,
+    getOverviewHealthQuery,
     getOverviewReportsQuery,
     getOverviewSeriesQuery,
     getOverviewSourcesQuery,
@@ -17,20 +18,14 @@ import {
 import { DashboardState } from "../../features/dashboard/dashboard-state";
 import { UsesByLibraryCard } from "../../features/dashboard/uses-chart";
 import { UseSourceBreakdown } from "../../features/dashboard/use-mix";
-import {
-    RangePreset,
-    toDayRange,
-    useRangePreset
-} from "../../features/dashboard/range";
+import { toDayRange, useRangePreset } from "../../features/dashboard/range";
 import { HeadlineTiles } from "../../features/dashboard/headline-tiles";
-import { METRICS, rangeValue } from "../../features/dashboard/metrics";
-import { Section } from "../../components/section";
+import { Section, SectionCard } from "../../components/section";
 import { UsageTreemap } from "../../features/dashboard/usage-treemap";
 import { VersionManagerTiles } from "../../features/dashboard/version-manager-tiles";
-import { StatTile } from "../../features/dashboard/stat-tiles";
-import { formatPercent } from "../../features/dashboard/format";
 import { FeatureScriptUsageSection } from "../../features/dashboard/featurescript-usage";
 import { OverviewReports } from "../../features/dashboard/report-summary";
+import { HealthTiles } from "../../features/dashboard/health-report";
 import { m } from "../../paraglide/messages";
 
 export const Route = createFileRoute("/dashboard/")({
@@ -52,6 +47,7 @@ function DashboardOverview(): ReactNode {
     const usage = useQuery(getOverviewUsageQuery(range));
     const series = useQuery(getOverviewSeriesQuery(range));
     const sources = useQuery(getOverviewSourcesQuery(range));
+    const health = useQuery(getOverviewHealthQuery());
     const versionManager = useQuery(getVersionManagerQuery(range));
     const featureScripts = useQuery(getOverviewFeatureScriptsQuery(range));
     const reports = useQuery(getOverviewReportsQuery(range));
@@ -64,11 +60,7 @@ function DashboardOverview(): ReactNode {
                 {usage.data ? (
                     <HeadlineTiles
                         totals={usage.data.totals}
-                        growth={
-                            preset === RangePreset.ALL
-                                ? usage.data.growth
-                                : undefined
-                        }
+                        growth={usage.data.growth}
                         series={usage.data.metricSeries}
                         withOpens
                     />
@@ -89,6 +81,17 @@ function DashboardOverview(): ReactNode {
                     title={m.dashboardUsesOverTime()}
                 />
             )}
+
+            <Section title={m.dashboardHealthLibraries()}>
+                {health.data ? (
+                    <HealthTiles counts={health.data} />
+                ) : (
+                    <DashboardState
+                        query={health}
+                        loading={m.dashboardLoadingHealth()}
+                    />
+                )}
+            </Section>
 
             {versionManager.data ? (
                 <VersionManagerTiles totals={versionManager.data} />
@@ -120,38 +123,16 @@ function DashboardOverview(): ReactNode {
                 />
             )}
 
-            <Section title={m.dashboardOverviewHowUsed()}>
-                <Card>
-                    {sources.data ? (
-                        <UseSourceBreakdown sources={sources.data} />
-                    ) : (
-                        <DashboardState
-                            query={sources}
-                            loading={m.dashboardLoadingSources()}
-                        />
-                    )}
-                </Card>
-                {usage.data ? (
-                    <SimpleGrid cols={{ base: 1, sm: 2 }}>
-                        {HOW_USED_METRICS.map((metric) => (
-                            <StatTile
-                                key={metric.key}
-                                label={metric.label}
-                                value={rangeValue(
-                                    usage.data.metricSeries,
-                                    metric
-                                )}
-                                format={formatPercent}
-                            />
-                        ))}
-                    </SimpleGrid>
+            <SectionCard title={m.dashboardOverviewHowUsed()}>
+                {sources.data ? (
+                    <UseSourceBreakdown sources={sources.data} />
                 ) : (
                     <DashboardState
-                        query={usage}
-                        loading={m.dashboardLoadingUsage()}
+                        query={sources}
+                        loading={m.dashboardLoadingSources()}
                     />
                 )}
-            </Section>
+            </SectionCard>
 
             {pendingParts ? (
                 <DashboardState
@@ -167,6 +148,3 @@ function DashboardOverview(): ReactNode {
         </Stack>
     );
 }
-
-/** The shares of use the overview trends, in the order they are shown. */
-const HOW_USED_METRICS = [METRICS.fastenFraction, METRICS.assemblyFraction];

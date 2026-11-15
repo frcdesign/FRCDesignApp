@@ -14,7 +14,7 @@ import { m } from "../../paraglide/messages";
 interface HeadlineTilesProps {
     /** Over the selected window. */
     totals: AnalyticsTotals;
-    /** Season change; only meaningful on All time. */
+    /** Against last season on All time, else the window just before. */
     growth?: GrowthOut;
     /** Daily points over the selected window, for the sparklines. */
     series: DailyMetricPoint[];
