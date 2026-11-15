@@ -122,7 +122,7 @@ describe("FeedbackForm", () => {
         // The app and its libraries are separate choices, then the library.
         await user.click(screen.getByRole("combobox", { name: "About" }));
         expect(screen.queryByRole("option", { name: "MKCad" })).toBeNull();
-        await user.click(screen.getByRole("option", { name: "Part library" }));
+        await user.click(screen.getByRole("option", { name: "Part Library" }));
         const library = screen.getByRole<HTMLInputElement>("combobox", {
             name: "Library"
         });

@@ -24,7 +24,9 @@ import { type ReportedError } from "./diagnostics";
 const REPORT_MODAL_SIZE = 500;
 
 /** The form in settings: anything about the app or a library. */
-export function openFeedbackForm(initialTopic = FeedbackTopic.APP): void {
+export function openFeedbackForm(
+    initialTopic = FeedbackTopic.FRC_DESIGN_LIB
+): void {
     openAppModal({
         title: (
             <AppTitle

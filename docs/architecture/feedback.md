@@ -101,9 +101,9 @@ The source decides what the form offers and what the report carries
 
 - **General** — **Leave feedback** in settings, which is also the app's way
   into the Discord, and the `/feedback` page. The reporter picks the area
-  first (`FeedbackArea`: part library, FRCDesignApp, Version Manager or
-  FeatureScripts), then under a part library which library (FRCDesignLib to
-  start), and under FeatureScripts, optionally, which FeatureScript; that one
+  first (`FeedbackArea`: Part Library, FRCDesignApp, Version Manager or
+  FeatureScripts; Part Library to start), then under Part Library which
+  library (FRCDesignLib to start), and under FeatureScripts, optionally, which FeatureScript; that one
   is sent as `featureScript` and the report names it as one from its menu
   does. Changing the area drops the FeatureScript, and keeps the library for
   coming back to. The app's topics and FeatureScripts offer bug, feature request, kudos and other; a library's offer

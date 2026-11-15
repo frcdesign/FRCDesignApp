@@ -37,7 +37,7 @@ function FeedbackPage(): ReactNode {
                     <SettingsControls />
                 </Group>
                 <FeedbackForm
-                    initialTopic={FeedbackTopic.APP}
+                    initialTopic={FeedbackTopic.FRC_DESIGN_LIB}
                     source={FeedbackSource.GENERAL}
                     onPage
                 />
