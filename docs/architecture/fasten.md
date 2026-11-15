@@ -45,8 +45,6 @@ interface QueryListProps {
     /** Unique on the page: which list takes picks. */
     id: string;
     label: string;
-    /** What to pick, in Onshape's message bubble when it's focused and when something else is picked. */
-    prompt: string;
     entities: OnshapeSelection[];
     onChange: (entities: OnshapeSelection[]) => void;
     /** Which picks it takes; the rest are refused. */
@@ -59,7 +57,7 @@ interface QueryListProps {
     rowSection?: (entity: OnshapeSelection) => ReactNode;
     /** Takes picks whenever no list does, as a form's first list should. */
     autoFocus?: boolean;
-    /** Takes picks from what the Onshape window has selected without limiting or prompting for them, until clicked. */
+    /** Takes picks from what the Onshape window has selected without limiting them, until clicked. */
     isPassive?: boolean;
 }
 ```
@@ -315,7 +313,7 @@ enum MateLocation {
       alone, so they take picks then too.
     - The targets' list is `autoFocus`, so one list always takes picks.
     - Both lists are passive (`isPassive`): they take what's selected, without
-      limiting or prompting, until one is clicked or **Preselection** opens.
+      limiting picks, until one is clicked or **Preselection** opens.
     - Hovering a row lights its entity up.
     - The insert menu shows the same picks in its **Fasten** accordion
       (`FastenSection`), a `ParameterGroup` whose checkbox is `fasten`. Folded

@@ -84,8 +84,6 @@ interface QueryListProps {
     /** Unique on the page: which list takes picks. */
     id: string;
     label: string;
-    /** What to pick, in Onshape's message bubble when it's focused and when something else is picked. */
-    prompt: string;
     entities: OnshapeSelection[];
     onChange: (entities: OnshapeSelection[]) => void;
     /** Which picks it takes; the rest are refused. */
@@ -102,7 +100,7 @@ interface QueryListProps {
     problem?: (entity: OnshapeSelection) => RowProblem | undefined;
     /** Whether the rows' problems are being worked out, shown by a spinner beside Clear. */
     isChecking?: boolean;
-    /** Takes picks from what the Onshape window has selected without limiting or prompting for them, until clicked. */
+    /** Takes picks from what the Onshape window has selected without limiting them, until clicked. */
     isPassive?: boolean;
 }
 
@@ -988,16 +986,17 @@ closes the menu and switches to the page.
    and from Onshape is logged at debug level ("Sent to Onshape", "Received from
    Onshape"), and `window.sendToOnshape(message)` sends one by hand from the
    browser console, addressed to the launching element.
-2. Clicking a `QueryList` focuses it (one at a time, `useOnshapeSelection`) and
-   shows its prompt in Onshape's bubble. A form's first list is `autoFocus`:
+2. Clicking a `QueryList` focuses it (one at a time, `useOnshapeSelection`).
+   A form's first list is `autoFocus`:
    focused on mount, and again whenever no list is, as when the focused list
    unmounts; here that's **Faces** or **Circular edges**. Once the person
    finishes selecting (below), no list is focused until one is clicked. A
-   passive list (`isPassive`) listens without limiting or prompting until it's
+   passive list (`isPassive`) listens without limiting picks until it's
    clicked (`activate`), and listens again once the person finishes. The focused list adds
-   what's picked of the kind it takes, drops what's deselected, and repeats its
-   prompt in the bubble for anything else picked. The panel shows no prompt of
-   its own. With no list focused, the selection is ignored. A list is named
+   what's picked of the kind it takes, and drops what's deselected. No list
+   sends Onshape a message for its bubble: the bubble falls out of step with the
+   panel, since nothing clears it when the focused list changes. With no list
+   focused, the selection is ignored. A list is named
    inside its box, as Onshape's query parameters are. While the background
    check works out its rows' problems, a spinner shows beside **Clear**
    (`isChecking`).
@@ -1011,8 +1010,8 @@ closes the menu and switches to the page.
    window's selection, and Onshape shows what's picked under it, so nothing is
    sent as picks arrive. As a list is focused, as any list shows or hides
    (`bumpLayout`), and once its picks are cleared (by **Clear**, removing its
-   last row, or the form), the focused list puts its prompt in the bubble
-   again and asks for the filter, or, holding picks, lights them up instead.
+   last row, or the form), the focused list asks for the filter again, or,
+   holding picks, lights them up instead.
    Losing focus or unmounting sends
    `stopRequest`. Every stop names the request it ends by its `messageId`,
    which Onshape answers as `stoppedRequestId`.

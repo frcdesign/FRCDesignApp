@@ -3,7 +3,7 @@
 One file per feature area, beside its document in
 [`docs/architecture/`](../architecture/README.md), listing the strings the area
 shows a user that are worth a reviewer's read: titles, labels, descriptions,
-placeholders, prompts sent to Onshape, toasts, tips, and errors written for the
+placeholders, toasts, tips, and errors written for the
 user.
 
 | File                                       | Area                                                    |

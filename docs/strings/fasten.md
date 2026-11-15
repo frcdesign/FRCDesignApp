@@ -25,9 +25,6 @@ Preselection button.
 | "A part will be inserted and fastened to every hole in the selected faces."  | Description        | Under the lists                  | Faces picked                                               |           |
 | "Circular edges" / "Faces"                                                   | Option, list label | Select by, first list            | Always                                                     |           |
 | "Edges to exclude"                                                           | Query list label   | Second list                      | Faces                                                      |           |
-| "Select circular edges to fasten parts to."                                  | Prompt             | Onshape's message bubble         | Circular edges focused, or something else picked           |           |
-| "Select faces to fasten parts to every hole in."                             | Prompt             | Onshape's message bubble         | Faces focused, or something else picked                    |           |
-| "Select circular edges to exclude."                                          | Prompt             | Onshape's message bubble         | Edges to exclude focused, or something else picked         |           |
 
 A row's problem under it is the check's, listed in
 [auto-assembly.md](./auto-assembly.md#a-picks-problem).

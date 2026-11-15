@@ -14,15 +14,12 @@ import { Status } from "../lib/status";
 import { QueryList } from "./query-list";
 import { SelectingActionBar } from "./selecting-action-bar";
 
-const PROMPT = "Select edges.";
-
 function Harness() {
     const [entities, setEntities] = useState<OnshapeSelection[]>([]);
     return (
         <QueryList
             id="holes"
             label="Holes"
-            prompt={PROMPT}
             entities={entities}
             onChange={setEntities}
             accepts={(entity) => entity.entityType === "EDGE"}
@@ -77,13 +74,9 @@ describe("QueryList", () => {
         expect(screen.getByText("Holes")).toBeTruthy();
 
         await userEvent.click(screen.getByText("Holes"));
-        // Said in Onshape, not under the list
-        expect(screen.queryByText(PROMPT)).toBeNull();
-        expect(messages).toContainEqual(
-            expect.objectContaining({
-                messageName: "showMessageBubble",
-                message: PROMPT
-            })
+        // Onshape's bubble is never sent: it falls out of step with the panel
+        expect(messages).not.toContainEqual(
+            expect.objectContaining({ messageName: "showMessageBubble" })
         );
 
         // The request clears what the window showed
@@ -93,17 +86,12 @@ describe("QueryList", () => {
         expect(screen.queryByText("Edge 2")).toBeNull();
     });
 
-    it("refuses picks it doesn't take, saying what it wants", async () => {
+    it("refuses picks it doesn't take, saying nothing to Onshape", async () => {
         renderWithProviders(<Harness />);
         await userEvent.click(screen.getByText("Holes"));
         messages = [];
         select({ ...edge("F"), entityType: "FACE" });
-        expect(messages).toContainEqual(
-            expect.objectContaining({
-                messageName: "showMessageBubble",
-                message: PROMPT
-            })
-        );
+        expect(messages).toEqual([]);
         expect(screen.queryByText("Face 1")).toBeNull();
     });
 
@@ -114,7 +102,6 @@ describe("QueryList", () => {
                 <QueryList
                     id="faces"
                     label="Faces"
-                    prompt="Select faces."
                     entities={[]}
                     onChange={() => undefined}
                     accepts={() => true}
@@ -146,15 +133,10 @@ describe("QueryList", () => {
         const names = messages.map(
             (message) => (message as { messageName: string }).messageName
         );
-        expect(names).toEqual([
-            "stopRequest",
-            "showMessageBubble",
-            "requestSelection"
-        ]);
+        expect(names).toEqual(["stopRequest", "requestSelection"]);
         // The edges' request, by its id
         expect(messages[0]).toMatchObject({ messageId });
-        expect(messages[1]).toMatchObject({ message: "Select faces." });
-        expect(messages[2]).toMatchObject({
+        expect(messages[1]).toMatchObject({
             entityTypeSpecifier: ["FACE"],
             geometryTypeSpecifier: ["PLANE"]
         });
@@ -246,7 +228,6 @@ describe("QueryList", () => {
                 <QueryList
                     id="other"
                     label="Other"
-                    prompt="Other"
                     entities={entities}
                     onChange={setEntities}
                     accepts={() => true}
@@ -288,7 +269,7 @@ describe("QueryList", () => {
         expect(screen.getByText("Edge 1")).toBeTruthy();
     });
 
-    it("clears the Onshape window's selection with its picks, prompting and limiting picks again", async () => {
+    it("clears the Onshape window's selection with its picks, limiting picks again", async () => {
         renderWithProviders(<Harness />);
         await userEvent.click(screen.getByText("Holes"));
         select(edge("A"));
@@ -298,17 +279,13 @@ describe("QueryList", () => {
         expect(screen.queryByText("Edge 1")).toBeNull();
         expect(messages).toEqual([
             expect.objectContaining({
-                messageName: "showMessageBubble",
-                message: PROMPT
-            }),
-            expect.objectContaining({
                 messageName: "requestSelection",
                 entityTypeSpecifier: ["EDGE"]
             })
         ]);
     });
 
-    it("prompts again as lists show and hide, lighting its picks up if it has some", async () => {
+    it("lights its picks up again as lists show and hide", async () => {
         const Toggled = () => {
             const [shown, setShown] = useState(false);
             return (
@@ -319,7 +296,6 @@ describe("QueryList", () => {
                         <QueryList
                             id="faces"
                             label="Faces"
-                            prompt="Select faces."
                             entities={[]}
                             onChange={() => undefined}
                             accepts={() => true}
@@ -335,12 +311,6 @@ describe("QueryList", () => {
 
         messages = [];
         await userEvent.click(screen.getByText("Toggle"));
-        expect(messages).toContainEqual(
-            expect.objectContaining({
-                messageName: "showMessageBubble",
-                message: PROMPT
-            })
-        );
         expect(messages).toContainEqual(
             expect.objectContaining({
                 messageName: "requestSelectionHighlight",
@@ -381,7 +351,6 @@ describe("QueryList", () => {
                     <QueryList
                         id="holes"
                         label="Holes"
-                        prompt={PROMPT}
                         entities={entities}
                         onChange={setEntities}
                         accepts={() => true}
@@ -420,7 +389,6 @@ describe("QueryList", () => {
                     <QueryList
                         id="holes"
                         label="Holes"
-                        prompt={PROMPT}
                         entities={entities}
                         onChange={setEntities}
                         accepts={(entity) => entity.entityType === "EDGE"}
@@ -440,17 +408,11 @@ describe("QueryList", () => {
         expect(messages).not.toContainEqual(
             expect.objectContaining({ messageName: "requestSelection" })
         );
-        expect(messages).not.toContainEqual(
-            expect.objectContaining({ messageName: "showMessageBubble" })
-        );
         expect(screen.queryByText("Selecting: Holes")).toBeNull();
 
         await userEvent.click(screen.getByText("Holes"));
         expect(messages).toContainEqual(
-            expect.objectContaining({
-                messageName: "showMessageBubble",
-                message: PROMPT
-            })
+            expect.objectContaining({ messageName: "requestSelection" })
         );
         expect(screen.getByText("Selecting: Holes")).toBeTruthy();
 
@@ -469,7 +431,6 @@ describe("QueryList", () => {
             <QueryList
                 id="holes"
                 label="Holes"
-                prompt={PROMPT}
                 entities={[edge("A")]}
                 onChange={() => undefined}
                 accepts={() => true}
@@ -487,7 +448,6 @@ describe("QueryList", () => {
                 <QueryList
                     id="other"
                     label="Other"
-                    prompt="Other"
                     entities={[]}
                     onChange={() => undefined}
                     accepts={() => true}
@@ -510,7 +470,6 @@ describe("QueryList", () => {
             <QueryList
                 id={id}
                 label={id}
-                prompt={id}
                 entities={[]}
                 onChange={() => undefined}
                 accepts={() => true}
@@ -541,7 +500,6 @@ describe("QueryList", () => {
             <QueryList
                 id="checked"
                 label="Checked"
-                prompt="Select edges."
                 entities={[edge("A"), edge("B"), edge("C")]}
                 onChange={() => undefined}
                 accepts={() => true}

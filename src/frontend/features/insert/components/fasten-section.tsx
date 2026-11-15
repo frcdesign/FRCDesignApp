@@ -132,11 +132,6 @@ export function FastenPicks(): ReactNode {
                     // Picks before an insert are whatever's selected; limiting them would get in the way
                     isPassive
                     label={isFaces ? m.fastenFaces() : m.fastenCircularEdges()}
-                    prompt={
-                        isFaces
-                            ? m.fastenFacesPrompt()
-                            : m.fastenCircularEdgesPrompt()
-                    }
                     entities={targets}
                     onChange={setFastenTargets}
                     accepts={acceptsTarget(mode)}
@@ -152,7 +147,6 @@ export function FastenPicks(): ReactNode {
                         id={FASTEN_EXCLUDED_LIST}
                         isPassive
                         label={m.fastenEdgesToExclude()}
-                        prompt={m.fastenEdgesToExcludePrompt()}
                         entities={excluded}
                         onChange={setFastenExcluded}
                         accepts={isEdge}

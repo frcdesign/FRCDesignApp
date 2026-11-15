@@ -341,7 +341,6 @@ function StopInputs(props: StopInputsProps): ReactNode {
                     <QueryList
                         id="auto-assembly-stop-face"
                         label={m.autoAssemblyStopFaceList()}
-                        prompt={m.autoAssemblyStopFacePrompt()}
                         entities={stopFace}
                         onChange={setStopFace}
                         accepts={isFaceSelection}

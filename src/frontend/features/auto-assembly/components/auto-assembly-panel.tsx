@@ -181,7 +181,6 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
                                     id="auto-assembly-faces"
                                     autoFocus
                                     label={m.autoAssemblyFaces()}
-                                    prompt={m.autoAssemblyFacesPrompt()}
                                     entities={targets}
                                     onChange={setTargets}
                                     accepts={isFace}
@@ -194,7 +193,6 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
                                 <QueryList
                                     id="auto-assembly-excluded"
                                     label={m.autoAssemblyEdgesToExclude()}
-                                    prompt={m.autoAssemblyEdgesToExcludePrompt()}
                                     entities={excluded}
                                     onChange={setExcluded}
                                     accepts={isEdge}
@@ -211,7 +209,6 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
                                 id="auto-assembly-locations"
                                 autoFocus
                                 label={m.autoAssemblyCircularEdges()}
-                                prompt={m.autoAssemblyCircularEdgesPrompt()}
                                 entities={targets}
                                 onChange={setTargets}
                                 accepts={isEdge}
@@ -227,7 +224,6 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
                                 id="auto-assembly-replaced"
                                 autoFocus
                                 label={m.autoAssemblyScrewsToUpdate()}
-                                prompt={m.autoAssemblyScrewsToUpdatePrompt()}
                                 entities={replaced}
                                 onChange={setReplaced}
                                 accepts={isBody}

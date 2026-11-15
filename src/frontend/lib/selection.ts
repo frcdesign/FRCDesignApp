@@ -130,7 +130,7 @@ interface SelectionState {
     finishSelecting: () => void;
 }
 
-/** A list shown or hidden: the focused list's prompt and request go again. */
+/** A list shown or hidden: the focused list asks for picks again. */
 export function bumpLayout(): void {
     useOnshapeSelection.setState((state) => ({ layout: state.layout + 1 }));
 }
