@@ -6,6 +6,13 @@ import { IssueIcon } from "../build-status/components/issues";
 import { formatCount, formatFraction } from "./format";
 import { m } from "../../paraglide/messages";
 
+interface HealthTile {
+    label: string;
+    value: string;
+    icon?: ReactNode;
+    caption?: string;
+}
+
 interface HealthTilesProps {
     counts: LibraryHealthCounts;
 }
@@ -14,22 +21,26 @@ interface HealthTilesProps {
 export function HealthTiles({ counts }: HealthTilesProps): ReactNode {
     const total = counts.groupCount + counts.insertableCount;
 
+    const shareOfParts = (count: number) =>
+        m.dashboardHealthShareOfParts({
+            share: formatFraction(count, counts.insertableCount)
+        });
+
     // Info issues get no tile: nobody acts on them.
-    const tiles = [
+    const tiles: HealthTile[] = [
         {
             label: m.dashboardHealthParts(),
-            value: formatCount(counts.insertableCount),
-            icon: undefined
+            value: formatCount(counts.insertableCount)
         },
         {
             label: m.dashboardHealthPartStudios(),
             value: formatCount(counts.partStudioCount),
-            icon: undefined
+            caption: shareOfParts(counts.partStudioCount)
         },
         {
             label: m.dashboardHealthAssemblies(),
             value: formatCount(counts.assemblyCount),
-            icon: undefined
+            caption: shareOfParts(counts.assemblyCount)
         },
         {
             label: m.dashboardHealthHealthy(),
@@ -60,6 +71,7 @@ export function HealthTiles({ counts }: HealthTilesProps): ReactNode {
                         </Text>
                     </Group>
                     <Title order={2}>{tile.value}</Title>
+                    {tile.caption && <Text c="dimmed">{tile.caption}</Text>}
                 </Card>
             ))}
         </SimpleGrid>

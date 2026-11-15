@@ -416,6 +416,7 @@
     "dashboardHealthParts": "Parts",
     "dashboardHealthPartStudios": "Part Studios",
     "dashboardHealthAssemblies": "Assemblies",
+    "dashboardHealthShareOfParts": "{share} of parts",
     "dashboardHealthHealthy": "Healthy",
     "dashboardHealthErrors": "Errors",
     "dashboardHealthWarnings": "Warnings",

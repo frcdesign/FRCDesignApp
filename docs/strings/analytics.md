@@ -51,11 +51,12 @@ On the overview: where uses started, over the range.
 What a library holds and how clean it is, standing now: on a library's page,
 and every library's together on the overview.
 
-| String                                  | Kind          | Where        | When                       | Review                                    |
-| --------------------------------------- | ------------- | ------------ | -------------------------- | ----------------------------------------- |
-| "Libraries"                             | Section title | The overview | Always                     | **⚑** New                                 |
-| "Parts" / "Part Studios" / "Assemblies" | Tile labels   | First row    | Always; visible parts only | **⚑** Part Studios and Assemblies are new |
-| "Healthy" / "Errors" / "Warnings"       | Tile labels   | Second row   | Always                     |                                           |
+| String                                  | Kind          | Where                             | When                       | Review                                    |
+| --------------------------------------- | ------------- | --------------------------------- | -------------------------- | ----------------------------------------- |
+| "Libraries"                             | Section title | The overview                      | Always                     | **⚑** New                                 |
+| "Parts" / "Part Studios" / "Assemblies" | Tile labels   | First row                         | Always; visible parts only | **⚑** Part Studios and Assemblies are new |
+| "{share} of parts"                      | Tile caption  | Under Part Studios and Assemblies | Always                     | **⚑** New                                 |
+| "Healthy" / "Errors" / "Warnings"       | Tile labels   | Second row                        | Always                     |                                           |
 
 ## Every section
 
