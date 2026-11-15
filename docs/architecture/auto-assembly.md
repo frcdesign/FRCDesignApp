@@ -1017,9 +1017,11 @@ closes the menu and switches to the page.
    `stopRequest`. Every stop names the request it ends by its `messageId`,
    which Onshape answers as `stoppedRequestId`.
 
-    While a request is live (`filtering`), the header's context bar names the
-    list limiting picks (`ContextBar`, `listLabel`). Its **Finish selecting**
-    button unfocuses the list (`finishSelecting`), which stops the request.
+    While a request is live (`filtering`), Mantine's `ActionBar` floats over
+    the bottom of the panel naming the list limiting picks
+    (`SelectingActionBar`, `listLabel`). Its **Finish selecting** button, and
+    its close button, unfocus the list (`finishSelecting`), which stops the
+    request.
 
 4. Hovering a row, in any list, lights its entity up alone
    (`requestSelectionHighlight`, which makes it what the Onshape window shows

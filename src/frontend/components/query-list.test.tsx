@@ -12,7 +12,7 @@ import {
 } from "../lib/selection";
 import { Status } from "../lib/status";
 import { QueryList } from "./query-list";
-import { ContextBar } from "./context-bar";
+import { SelectingActionBar } from "./selecting-action-bar";
 
 const PROMPT = "Select edges.";
 
@@ -388,7 +388,7 @@ describe("QueryList", () => {
                         filter={CIRCULAR_EDGES}
                         autoFocus
                     />
-                    <ContextBar isLibrary={false} />
+                    <SelectingActionBar />
                 </>
             );
         };
@@ -428,7 +428,7 @@ describe("QueryList", () => {
                         autoFocus
                         isPassive
                     />
-                    <ContextBar isLibrary={false} />
+                    <SelectingActionBar />
                 </>
             );
         };

@@ -1,5 +1,5 @@
-import { type ReactNode, useState } from "react";
-import { Badge, Box, Button, Collapse, Group, Text } from "@mantine/core";
+import { type ReactNode, useEffect, useState } from "react";
+import { Badge, Box, Button, Collapse, Group } from "@mantine/core";
 import { CursorClickIcon, PlusIcon, TargetIcon } from "@phosphor-icons/react";
 import { useIsSignedIn } from "../features/auth/access-level";
 import {
@@ -14,12 +14,11 @@ import {
     useFastenPicks
 } from "../features/insert/fasten-picks";
 import { useTargetAssembly } from "../lib/onshape-params";
-import { listLabel, useOnshapeSelection } from "../lib/selection";
-import { IconSize, PrimaryColor } from "../lib/style-constants";
+import { useOnshapeSelection } from "../lib/selection";
+import { IconSize } from "../lib/style-constants";
 import { useUiState } from "../lib/ui-state";
 import { m } from "../paraglide/messages";
 import styles from "../lib/styles.module.css";
-import { AppIcon } from "./app-icon";
 import { ParameterGrid } from "./parameter-input";
 
 const BAR_HEIGHT = 40;
@@ -30,51 +29,16 @@ interface ContextBarProps {
 }
 
 /**
- * The header's last row. On a library page in an assembly, the actions that
- * work with the Onshape window: each opens its query lists under the bar and
- * starts selecting. On any other page, which query list limits picks, with
- * the button to stop.
+ * The header's last row, on a library page in an assembly: the actions that
+ * work with the Onshape window, each opening its query lists under the bar and
+ * starting to select. Nothing elsewhere.
  */
 export function ContextBar(props: ContextBarProps): ReactNode {
-    return props.isLibrary ? <LibraryBar /> : <SelectingBar />;
-}
-
-function LibraryBar(): ReactNode {
     const assembly = useTargetAssembly();
     const isSignedIn = useIsSignedIn();
-    return assembly && isSignedIn ? <ActionBar /> : <SelectingBar />;
-}
-
-/** Only while a query list limits picks. */
-function SelectingBar(): ReactNode {
-    const isFiltering = useOnshapeSelection(
-        (state) => state.filtering !== undefined
-    );
-    const label = useOnshapeSelection((state) => listLabel(state.focused));
-    if (!isFiltering) {
-        return null;
-    }
-    return (
-        <BarRow>
-            <AppIcon
-                icon={CursorClickIcon}
-                size={IconSize.MEDIUM}
-                color={PrimaryColor.FILLED}
-                className={styles.noShrink}
-            />
-            <Text size="sm" flex={1} truncate>
-                {label === undefined
-                    ? m.contextBarFinish()
-                    : m.contextBarSelecting({ label })}
-            </Text>
-            <Button
-                size="compact-sm"
-                onClick={() => useOnshapeSelection.getState().finishSelecting()}
-            >
-                {m.contextBarFinish()}
-            </Button>
-        </BarRow>
-    );
+    return props.isLibrary && assembly && isSignedIn ? (
+        <LibraryActions />
+    ) : null;
 }
 
 interface BarRowProps {
@@ -101,7 +65,7 @@ enum BarAction {
 }
 
 /** The library's actions, and the one open under them. */
-function ActionBar(): ReactNode {
+function LibraryActions(): ReactNode {
     const [open, setOpen] = useState<BarAction>();
     const pickCount = useFastenPicks((state) => state.targets.length);
     const insertLocation = useInsertLocation();
@@ -109,6 +73,17 @@ function ActionBar(): ReactNode {
         (state) => state.openInsertableId !== undefined
     );
     const isPreselecting = open === BarAction.PRESELECTION;
+
+    // Finished from the selecting action bar, it closes too
+    useEffect(
+        () =>
+            useOnshapeSelection.subscribe((state, previous) => {
+                if (state.isFinished && !previous.isFinished) {
+                    setOpen(undefined);
+                }
+            }),
+        []
+    );
 
     const stop = () => {
         useOnshapeSelection.getState().finishSelecting();

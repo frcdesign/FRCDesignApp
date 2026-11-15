@@ -6,6 +6,7 @@ import { ElementType } from "@backend/lib/onshape/element-type";
 import { SelectionMode } from "@backend/features/auto-assembly/contract";
 import { renderWithProviders } from "../../../../__test_utils__/render";
 import { ContextBar } from "../../../components/context-bar";
+import { SelectingActionBar } from "../../../components/selecting-action-bar";
 import { ParameterGrid } from "../../../components/parameter-input";
 import { apiPost } from "../../../lib/api-client";
 import { useOnshapeLaunch } from "../../../lib/onshape-params";
@@ -206,6 +207,15 @@ describe("fasten picks", () => {
         expect(useFastenPicks.getState().targets).toEqual([]);
     });
 
+    it("closes Preselection when selecting is finished from the action bar", async () => {
+        renderBar();
+        await userEvent.click(preselection());
+        expect(screen.getByRole("button", { name: "Done" })).toBeTruthy();
+
+        act(() => useOnshapeSelection.getState().finishSelecting());
+        expect(screen.queryByRole("button", { name: "Done" })).toBeNull();
+    });
+
     it("offers Add insert location in the bar only when the assembly has none", async () => {
         seedInsertLocation();
         const { unmount } = renderBar();
@@ -245,13 +255,20 @@ describe("fasten picks", () => {
         ]);
     });
 
-    it("has no bar on a utility's page until a list limits picks", () => {
-        renderWithProviders(<ContextBar isLibrary={false} />, queryClient);
+    it("has no context bar on a utility's page, where a list limiting picks shows the selecting action bar", async () => {
+        renderWithProviders(
+            <>
+                <ContextBar isLibrary={false} />
+                <SelectingActionBar />
+            </>,
+            queryClient
+        );
         expect(screen.queryByRole("button")).toBeNull();
 
         act(() => useOnshapeSelection.setState({ filtering: "selection-1" }));
-        expect(
-            screen.getByRole("button", { name: "Finish selecting" })
-        ).toBeTruthy();
+        await userEvent.click(
+            await screen.findByRole("button", { name: "Finish selecting" })
+        );
+        expect(useOnshapeSelection.getState().isFinished).toBe(true);
     });
 });

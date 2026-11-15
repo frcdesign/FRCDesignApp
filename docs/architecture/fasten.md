@@ -90,9 +90,10 @@ interface FastenPicksState {
 function FastenSection(props: FastenSectionProps): ReactNode;
 // Select by and the query lists, in the menu and under the context bar.
 function FastenPicks(): ReactNode;
-// The header's last row: Preselection and Add insert location on a library
-// page, and which list limits picks on any other.
+// The header's last row on a library page: Preselection and Add insert location.
 function ContextBar(props: ContextBarProps): ReactNode;
+// Mantine's ActionBar over the bottom of the panel while a list limits picks, on any page.
+function SelectingActionBar(): ReactNode;
 // Sends the picks with a fasten, a quick insert's included.
 function useInsertMutation(
     insertable: InsertableOut,
@@ -308,7 +309,8 @@ enum MateLocation {
    with the targets' list. `FastenPicks` holds **Select by** (**Circular
    edges** or planar **Faces**), the targets' query list, and in faces mode
    **Edges to exclude**. **Done** stops selecting and keeps the picks;
-   **Cancel** also clears them.
+   **Cancel** also clears them. Finishing from the selecting action bar
+   closes it too.
     - The lists stay mounted while the bar is closed, hidden by `display`
       alone, so they take picks then too.
     - The targets' list is `autoFocus`, so one list always takes picks.
