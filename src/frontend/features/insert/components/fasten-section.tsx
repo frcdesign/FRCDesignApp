@@ -111,6 +111,7 @@ export function FastenPicks(): ReactNode {
 
     const problem = (entity: OnshapeSelection) =>
         problems.get(selectionKey(entity));
+    const description = describeFasten(mode, targets.length);
 
     return (
         <>
@@ -156,21 +157,27 @@ export function FastenPicks(): ReactNode {
                     />
                 </FullWidthRow>
             )}
-            <FullWidthRow>
-                <Text size="xs" c={StatusColor.DIMMED}>
-                    {describeFasten(mode, targets.length)}
-                </Text>
-            </FullWidthRow>
+            {description && (
+                <FullWidthRow>
+                    <Text size="xs" c={StatusColor.DIMMED}>
+                        {description}
+                    </Text>
+                </FullWidthRow>
+            )}
         </>
     );
 }
 
-function describeFasten(mode: SelectionMode, count: number): string {
-    if (mode === SelectionMode.FACES) {
-        return count === 0 ? m.fastenFacesNone() : m.fastenFacesSome();
-    }
+/** What the picks will do; nothing before there are any. */
+function describeFasten(
+    mode: SelectionMode,
+    count: number
+): string | undefined {
     if (count === 0) {
-        return m.fastenCircularEdgesNone();
+        return undefined;
+    }
+    if (mode === SelectionMode.FACES) {
+        return m.fastenFacesSome();
     }
     if (count === 1) {
         return m.fastenCircularEdgesOne();

@@ -57,7 +57,6 @@ import { LibraryId } from "@backend/features/library/library-id";
 import { AppColor, getLibraryColor, toShade } from "../theme";
 import { queryClient } from "../lib/query-client";
 import { ContextBar } from "./context-bar";
-import { InsertLocationStatus } from "../features/insert-location/components/insert-location-status";
 import { useIsVersionManager } from "../features/version-manager/navigation";
 import { useTargetElement, useTargetWorkspace } from "../lib/onshape-params";
 import {
@@ -108,7 +107,6 @@ export function AppNavbar(): ReactNode {
                 <PagePicker />
                 <Group gap="xs" ml="auto" className={styles.noShrink}>
                     {/* Inserting is the library's; a utility inserts nothing from a row. */}
-                    {!isUtility && <InsertLocationStatus />}
                     <SignInButton />
                     {isVersionManager && <VersionManagerRefreshButton />}
                     <SettingsControls />

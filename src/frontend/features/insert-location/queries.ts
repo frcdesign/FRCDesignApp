@@ -9,7 +9,7 @@ import { useTargetElement } from "../../lib/onshape-params";
 import { useIsSignedIn } from "../auth/access-level";
 import { queryClient } from "../../lib/query-client";
 import { insertLocationQueryKey } from "../../lib/query-keys";
-import { showSuccessToast } from "../../lib/notifications";
+import { m } from "../../paraglide/messages";
 
 /** Only an assembly has one; a derive places itself. */
 export function useInsertLocationTarget(): TargetElement | undefined {
@@ -73,12 +73,9 @@ export function useAddInsertLocationMutation(target: TargetElement) {
             apiPost<InsertLocationOut>("/insert-location", {
                 body: { targetPath: target }
             }),
-        onSuccess: (result) => {
-            queryClient.setQueryData(insertLocationQueryKey(target), result);
-            showSuccessToast("Added an insert location.");
-        },
-        onError: getAppErrorHandler(
-            "Unexpectedly failed to add an insert location."
-        )
+        // The button that added it shows it added
+        onSuccess: (result) =>
+            queryClient.setQueryData(insertLocationQueryKey(target), result),
+        onError: getAppErrorHandler(m.insertLocationAddFailed())
     });
 }

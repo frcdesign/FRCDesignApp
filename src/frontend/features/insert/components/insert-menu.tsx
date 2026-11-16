@@ -46,7 +46,6 @@ import { useHasSeenHint, useMarkHintSeen } from "../../hints/queries";
 import { useCanFasten, useTargetElementType } from "../insert-hooks";
 import { UseSource } from "@backend/features/analytics/usage";
 import { FastenSection } from "./fasten-section";
-import { InsertLocationStatus } from "../../insert-location/components/insert-location-status";
 import { ParameterGrid } from "../../../components/parameter-input";
 import { m } from "../../../paraglide/messages";
 import { DownloadStepButton } from "../../download/components/download-step-button";
@@ -346,8 +345,6 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
 
     return (
         <Group gap="sm" align="center">
-            {/* Fastened, the part lands on its mate. */}
-            {!(canFasten && fasten) && <InsertLocationStatus />}
             <Button
                 // Light would put green on pale green.
                 variant="filled"

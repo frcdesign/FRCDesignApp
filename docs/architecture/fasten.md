@@ -306,6 +306,8 @@ enum MateLocation {
 2. In an assembly, signed in, a library page's header ends in the context bar
    (`ContextBar`). Its **Preselection** button counts the picks held.
    **Add insert location** shows beside it while the assembly has none.
+   Once it adds one, the button turns green and reads **Insert location
+   added** for as long as the bar is up.
     - A part that can insert and fasten (`useCanFasten`) has a plugs icon
       after its name (`FastenMark`). It's grey with nothing picked. While
       picks are held it's filled in Preselection's blue, so the part reads
@@ -328,8 +330,6 @@ enum MateLocation {
       still take picks. While a menu is open
       (`openInsertableId`) the bar unmounts its own lists, since two lists of
       one id would both take picks. Both read `useFastenPicks`.
-    - The insert menu's footer shows the insert location's icon only when the
-      insert won't fasten.
 4. Changing the mode clears the picks.
 5. A moment after the picks change, they're checked in the background with
    Auto Assembly's `POST /api/auto-assembly/check`, without options: a pick

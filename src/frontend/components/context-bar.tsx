@@ -1,6 +1,11 @@
 import { type ReactNode, useEffect, useState } from "react";
 import { Badge, Box, Button, Collapse, Group } from "@mantine/core";
-import { CursorClickIcon, PlusIcon, TargetIcon } from "@phosphor-icons/react";
+import {
+    CheckIcon,
+    CursorClickIcon,
+    PlusIcon,
+    TargetIcon
+} from "@phosphor-icons/react";
 import { useIsSignedIn } from "../features/auth/access-level";
 import {
     type InsertLocation,
@@ -15,7 +20,7 @@ import {
 } from "../features/insert/fasten-picks";
 import { useTargetAssembly } from "../lib/onshape-params";
 import { useOnshapeSelection } from "../lib/selection";
-import { IconSize } from "../lib/style-constants";
+import { IconSize, StatusColor } from "../lib/style-constants";
 import { useUiState } from "../lib/ui-state";
 import { m } from "../paraglide/messages";
 import styles from "../lib/styles.module.css";
@@ -73,6 +78,8 @@ function LibraryActions(): ReactNode {
         (state) => state.openInsertableId !== undefined
     );
     const isPreselecting = open === BarAction.PRESELECTION;
+    // Added from here, it stays to say so
+    const [isAdded, setIsAdded] = useState(false);
 
     // Finished from the selecting action bar, it closes too
     useEffect(
@@ -109,7 +116,12 @@ function LibraryActions(): ReactNode {
                     leftSection={<CursorClickIcon />}
                     rightSection={
                         pickCount > 0 && (
-                            <Badge size="sm" circle>
+                            // Mantine's badge sets its own cursor
+                            <Badge
+                                size="sm"
+                                circle
+                                style={{ cursor: "inherit" }}
+                            >
                                 {pickCount}
                             </Badge>
                         )
@@ -118,9 +130,14 @@ function LibraryActions(): ReactNode {
                 >
                     {m.contextBarPreselection()}
                 </Button>
-                {insertLocation && insertLocation.instanceId === undefined && (
-                    <AddInsertLocationButton insertLocation={insertLocation} />
-                )}
+                {insertLocation &&
+                    (isAdded || insertLocation.instanceId === undefined) && (
+                        <AddInsertLocationButton
+                            insertLocation={insertLocation}
+                            isAdded={isAdded}
+                            onAdded={() => setIsAdded(true)}
+                        />
+                    )}
             </BarRow>
             {/* Two lists of the same id would both take picks, so the insert menu's replace these while it's open. */}
             {!isMenuOpen && (
@@ -163,21 +180,38 @@ function LibraryActions(): ReactNode {
 
 interface AddInsertLocationButtonProps {
     insertLocation: InsertLocation;
+    isAdded: boolean;
+    onAdded: () => void;
 }
 
+/** Adds one, then says it's added in its place. */
 function AddInsertLocationButton(
     props: AddInsertLocationButtonProps
 ): ReactNode {
-    const addMutation = useAddInsertLocationMutation(
-        props.insertLocation.target
-    );
+    const { insertLocation, isAdded, onAdded } = props;
+    const addMutation = useAddInsertLocationMutation(insertLocation.target);
+    if (isAdded) {
+        return (
+            <Button
+                component="div"
+                size="compact-sm"
+                variant="light"
+                color={StatusColor.SUCCESS}
+                leftSection={<CheckIcon />}
+            >
+                {m.contextBarInsertLocationAdded()}
+            </Button>
+        );
+    }
     return (
         <Button
             size="compact-sm"
             leftSection={<TargetIcon />}
             rightSection={<PlusIcon size={IconSize.TINY} />}
             loading={addMutation.isPending}
-            onClick={() => addMutation.mutate()}
+            onClick={() =>
+                addMutation.mutate(undefined, { onSuccess: onAdded })
+            }
         >
             {m.contextBarAddInsertLocation()}
         </Button>
