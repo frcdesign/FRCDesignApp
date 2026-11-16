@@ -79,6 +79,7 @@ interface FastenPicksState {
 ```
 
 `src/frontend/features/insert/components/fasten-section.tsx`,
+`src/frontend/features/insert/components/fasten-mark.tsx`,
 `src/frontend/components/context-bar.tsx`,
 `src/frontend/features/insert/queries.ts` and
 `src/frontend/features/insert/insert-tips.ts`
@@ -88,6 +89,8 @@ interface FastenPicksState {
 function FastenSection(props: FastenSectionProps): ReactNode;
 // Select by and the query lists, in the menu and under the context bar.
 function FastenPicks(): ReactNode;
+// Beside a part that can insert and fasten: filled in Preselection's blue while picks are held for it.
+function FastenMark(props: FastenMarkProps): ReactNode;
 // The header's last row on a library page: Preselection and Add insert location.
 function ContextBar(props: ContextBarProps): ReactNode;
 // Mantine's ActionBar over the bottom of the panel while a list limits picks, on any page.
@@ -303,6 +306,10 @@ enum MateLocation {
 2. In an assembly, signed in, a library page's header ends in the context bar
    (`ContextBar`). Its **Preselection** button counts the picks held.
    **Add insert location** shows beside it while the assembly has none.
+    - A part that can insert and fasten (`useCanFasten`) has a plugs icon
+      after its name (`FastenMark`). It's grey with nothing picked. While
+      picks are held it's filled in Preselection's blue, so the part reads
+      as fastening to them. Its tooltip says how many.
 3. **Preselection** opens `FastenPicks` under the bar and starts selecting
    with the targets' list. `FastenPicks` holds **Select by** (**Circular
    edges** or planar **Faces**), the targets' query list, and in faces mode

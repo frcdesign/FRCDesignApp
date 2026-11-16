@@ -727,6 +727,21 @@
     "contextBarCancel": "Cancel",
     "contextBarDone": "Done",
     "placementFasten": "Fasten",
+    "fastenMarkNoPicks": "Can fasten to preselections",
+    "fastenMarkPicks": [
+        {
+            "declarations": [
+                "input count",
+                "local countPlural = count: plural",
+                "local formatted = count: number"
+            ],
+            "selectors": ["countPlural"],
+            "match": {
+                "countPlural=one": "Fastens to {formatted} preselection",
+                "countPlural=other": "Fastens to {formatted} preselections"
+            }
+        }
+    ],
     "placementSelectBy": "Select by",
     "insertMenuInsert": "Insert",
     "insertMenuDerive": "Derive",

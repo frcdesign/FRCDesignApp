@@ -17,7 +17,12 @@ import {
     useOnshapeSelection
 } from "../../../lib/selection";
 import { getUiState, updateUiState } from "../../../lib/ui-state";
-import { clearFastenPicks, useFastenPicks } from "../fasten-picks";
+import {
+    clearFastenPicks,
+    setFastenTargets,
+    useFastenPicks
+} from "../fasten-picks";
+import { FastenMark } from "./fasten-mark";
 import { FastenSection } from "./fasten-section";
 
 vi.mock("../../auth/access-level", () => ({ useIsSignedIn: () => true }));
@@ -171,6 +176,34 @@ describe("fasten picks", () => {
 
         selectInOnshape(edge("JH1"));
         expect(useFastenPicks.getState().targets).toEqual([edge("JH1")]);
+    });
+
+    it("marks a part that can fasten, filled while picks are held for it", async () => {
+        const { unmount } = renderWithProviders(
+            <>
+                <FastenMark insertable={SCREW} />
+                <FastenMark insertable={TUBE} />
+            </>,
+            queryClient
+        );
+        const mark = () => document.querySelector("svg")?.parentElement;
+        expect(document.querySelectorAll("svg")).toHaveLength(1);
+        await userEvent.hover(mark()!);
+        expect(
+            await screen.findByText("Can fasten to preselections")
+        ).toBeTruthy();
+
+        // As Preselection holds them
+        act(() => setFastenTargets([edge("JH1"), edge("JH2")]));
+        expect(mark()?.dataset.hasPicks).toBe("true");
+        expect(
+            await screen.findByText("Fastens to 2 preselections")
+        ).toBeTruthy();
+        unmount();
+
+        useOnshapeLaunch.setState({ elementType: ElementType.PART_STUDIO });
+        renderWithProviders(<FastenMark insertable={SCREW} />, queryClient);
+        expect(document.querySelector("svg")).toBeNull();
     });
 
     it("has no section for a part that can't fasten, or in a Part Studio", () => {
