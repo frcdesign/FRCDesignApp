@@ -12,7 +12,7 @@ their Onshape calls and link here for how those calls behave.
 | Path                                              | Role                                                                                                     |
 | ------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | `src/backend/lib/onshape/client.ts`               | `OnshapeApi`, `OAuthApi`, `ApiKeyApi`; `OnshapeApiError`, `OnshapeRateLimitError`, `OnshapeTimeoutError` |
-| `src/backend/lib/onshape/retry.ts`                | `retryInsert`, `INSERT_RETRY`: an insert's timeout, and calling again on a 5xx or a timeout              |
+| `src/backend/lib/onshape/retry.ts`                | `retryInsert`, `INSERT_RETRY`: an insert's timeout, calling again on a 5xx, and wording a timeout        |
 | `src/backend/lib/onshape/endpoints/`              | One wrapper per Onshape endpoint, grouped by Onshape's API category                                      |
 | `src/backend/lib/api-error.ts`                    | `ApiError` and its four kinds; the body every failed `/api` response carries                             |
 | `src/backend/lib/errors.ts`                       | `errorHandler`: turns any thrown error into that body and a status                                       |
@@ -60,19 +60,19 @@ Which calls each flow makes is listed in that flow's document.
 
 A route throws; `errorHandler` answers with `{ kind, message }` and a status:
 
-| Thrown                           | Kind               | Status   | Message the user sees                                       |
-| -------------------------------- | ------------------ | -------- | ----------------------------------------------------------- |
-| `handledError(message, status)`  | `handled`          | as given | `message`                                                   |
-| `signInRequiredError(message)`   | `sign-in-required` | 401      | `message`, with a **Sign in** button                        |
-| `forbiddenError(message)`        | `forbidden`        | 403      | `message`                                                   |
-| `internalError(message, status)` | `internal`         | as given | The caller's default wording; `message` is logged           |
-| `OnshapeRateLimitError`          | `handled`          | 429      | "Onshape rate limit reached. Please try again later."       |
-| `OnshapeApiError` 401            | `sign-in-required` | 401      | "Onshape did not accept the session. Try signing in again." |
-| `OnshapeApiError` 403            | `forbidden`        | 403      | "Onshape rejected the operation. …"                         |
-| Any other `OnshapeApiError`      | `internal`         | 502      | Default wording; logged                                     |
-| `OnshapeTimeoutError`            | `internal`         | 504      | Default wording; logged                                     |
-| A validator's `HTTPException`    | `internal`         | its own  | Default wording; logged                                     |
-| Anything else                    | `internal`         | 500      | Default wording; logged                                     |
+| Thrown                           | Kind               | Status   | Message the user sees                                                      |
+| -------------------------------- | ------------------ | -------- | -------------------------------------------------------------------------- |
+| `handledError(message, status)`  | `handled`          | as given | `message`                                                                  |
+| `signInRequiredError(message)`   | `sign-in-required` | 401      | `message`, with a **Sign in** button                                       |
+| `forbiddenError(message)`        | `forbidden`        | 403      | `message`                                                                  |
+| `internalError(message, status)` | `internal`         | as given | The caller's default wording; `message` is logged                          |
+| `OnshapeRateLimitError`          | `handled`          | 429      | "Onshape rate limit reached. Please try again later."                      |
+| `OnshapeApiError` 401            | `sign-in-required` | 401      | "Onshape did not accept the session. Try signing in again."                |
+| `OnshapeApiError` 403            | `forbidden`        | 403      | "Onshape rejected the operation. …"                                        |
+| Any other `OnshapeApiError`      | `internal`         | 502      | Default wording; logged                                                    |
+| `OnshapeTimeoutError`            | `internal`         | 504      | Default wording; logged. An insert's is `handled`, worded by `retryInsert` |
+| A validator's `HTTPException`    | `internal`         | its own  | Default wording; logged                                                    |
+| Anything else                    | `internal`         | 500      | Default wording; logged                                                    |
 
 A logged error's body also carries an `errorId`: the request's Ray ID (`cf-ray`),
 or a random id where there is none, as in tests and local dev. It is logged as
@@ -112,7 +112,7 @@ crash page.
 | Where                           | Setting                            | Policy                                                                                     |
 | ------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------ |
 | Any Onshape request             | `REQUEST_TIMEOUT_MS`               | Aborts after 60 s                                                                          |
-| An insert's Onshape call        | `INSERT_RETRY`                     | Aborts after 20 s; 1 retry after 1 s on a 5xx or a timeout, none on a 4xx or a 429         |
+| An insert's Onshape call        | `INSERT_RETRY`                     | Aborts after 60 s; 1 retry after 1 s on a 5xx, none on a timeout, a 4xx or a 429           |
 | An insert after a disconnect    | `finishEvenIfDisconnected`         | Keeps running up to 30 s past the client leaving, so Onshape's insert is still recorded    |
 | Load steps calling Onshape      | `ONSHAPE_STEP_RETRIES`             | 5 retries after 10, 20, 40, 80, 160 s; a 429 waits its `Retry-After` plus 0–20 s of jitter |
 | Load thumbnail steps            | `THUMBNAIL_RETRIES`                | 3 retries after 10, 20, 40 s; a 429 as above                                               |
@@ -154,22 +154,22 @@ which is how a loading toast turns into its result.
 
 The flows that use them:
 
-| Action                        | Toast id                                                  | While                          | Then                                                            |
-| ----------------------------- | --------------------------------------------------------- | ------------------------------ | --------------------------------------------------------------- |
-| Insert                        | per insertable                                            | "Inserting {name}..."          | "Successfully inserted {name}." (and "…created a Fasten mate.") |
-| Add document                  | `add-group`                                               | "Adding document..."           | "Added {name}."                                                 |
-| Reload thumbnail              | `reload-thumbnail`                                        | "Reloading thumbnail..."       | "Thumbnail reloaded."                                           |
-| Update references             | `update-references`                                       | "Updating references..."       | "Updated references."                                           |
-| Show or hide elements         | `set-visibility`                                          | "Showing/Hiding element(s)..." | "Element(s) shown/hidden."                                      |
-| Toggle insert and fasten      | per insertable                                            | loading                        | success                                                         |
-| Save indexing changes         | per insertable                                            | info: "Reindexing part..."     | "Successfully indexed part."                                    |
-| Set or refresh the admin team | none                                                      | —                              | "Admin team set/refreshed: {n} members."                        |
-| Reload documents / approve    | none                                                      | —                              | info: "Reloading {n} documents..."                              |
-| Save favorite configuration   | none                                                      | —                              | "Favorite default configuration set."                           |
-| Link a document               | none                                                      | —                              | "Successfully linked {document} - {workspace}."                 |
-| Link all suggested parents    | none                                                      | —                              | "Linked {count} documents."                                     |
-| Refresh the Version Manager   | none                                                      | the button's spinner           | "Refreshed linked documents."                                   |
-| Tips                          | `quick-insert-tip`, `thumbnail-wait-tip`, sign-in preview | —                              | info, 8 s                                                       |
+| Action                        | Toast id                                                  | While                                                         | Then                                                            |
+| ----------------------------- | --------------------------------------------------------- | ------------------------------------------------------------- | --------------------------------------------------------------- |
+| Insert                        | per insertable                                            | "Inserting {name}...", after 15 s "Still inserting {name}. …" | "Successfully inserted {name}." (and "…created a Fasten mate.") |
+| Add document                  | `add-group`                                               | "Adding document..."                                          | "Added {name}."                                                 |
+| Reload thumbnail              | `reload-thumbnail`                                        | "Reloading thumbnail..."                                      | "Thumbnail reloaded."                                           |
+| Update references             | `update-references`                                       | "Updating references..."                                      | "Updated references."                                           |
+| Show or hide elements         | `set-visibility`                                          | "Showing/Hiding element(s)..."                                | "Element(s) shown/hidden."                                      |
+| Toggle insert and fasten      | per insertable                                            | loading                                                       | success                                                         |
+| Save indexing changes         | per insertable                                            | info: "Reindexing part..."                                    | "Successfully indexed part."                                    |
+| Set or refresh the admin team | none                                                      | —                                                             | "Admin team set/refreshed: {n} members."                        |
+| Reload documents / approve    | none                                                      | —                                                             | info: "Reloading {n} documents..."                              |
+| Save favorite configuration   | none                                                      | —                                                             | "Favorite default configuration set."                           |
+| Link a document               | none                                                      | —                                                             | "Successfully linked {document} - {workspace}."                 |
+| Link all suggested parents    | none                                                      | —                                                             | "Linked {count} documents."                                     |
+| Refresh the Version Manager   | none                                                      | the button's spinner                                          | "Refreshed linked documents."                                   |
+| Tips                          | `quick-insert-tip`, `thumbnail-wait-tip`, sign-in preview | —                                                             | info, 8 s                                                       |
 
 Loading toasts are for work the user watches; background work gets an info
 toast and then shows its progress where it happens (a group's spinner, a job
@@ -239,12 +239,14 @@ that reconnects refreshes the library, since pushes during the outage are lost.
 - **Retries at the step, not the request.** A workflow step's retry is durable
   and visible; a retry inside `fetch` would hide attempts inside one step's
   timeout.
-- **An insert waits 20 s, then tries once more.** Someone is watching the
-  toast, and a part inserted twice is better than none. Onshape may still
-  finish a call that timed out, so the retry can double an insert: 20 s cuts
-  off about 1% of assembly inserts that would have succeeded (see
-  [ONSHAPE.md](../ONSHAPE.md#calling-the-api)), where 5 s would cut off one in
-  eight.
+- **An insert waits 60 s and never retries a timeout.** Onshape finishes an
+  insert it is slow to answer (see
+  [ONSHAPE.md](../ONSHAPE.md#calling-the-api)), so a retry inserts the part
+  twice. A timeout answers `handled` 504 in the caller's words, that the part
+  should still appear, rather than a failure; the use goes unrecorded. The
+  client's loading toast says Onshape is slow after 15 s (`SLOW_INSERT_MS`), so
+  the wait doesn't look stuck. A 5xx is still retried, as nothing says it
+  inserted.
 - **The cache version retries for half a minute; D1 reads aren't retried on
   the server.** The library route awaits the version, so its failure is the
   crash page, where any other query's is one section's error. D1 already

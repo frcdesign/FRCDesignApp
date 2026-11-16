@@ -247,9 +247,14 @@ errors.
     | Into a Part Studio | 3.0 s  | 33%      | 15%       | 2.6%      | 0.7%      |
 
     About 1% of insert requests went the full 60 s without an answer, and none
-    answered 5xx. Whether Onshape still finishes an insert after the app stops
-    waiting is _unverified_, and so is whether a 5xx means nothing was
-    inserted.
+    answered 5xx. Whether a 5xx means nothing was inserted is _unverified_.
+
+- **Onshape finishes an insert after the app stops waiting** — _observed_
+  2026-11-16: four inserts of the same mecanum wheel into one assembly, a few
+  seconds apart, each went unanswered for 20 s twice, and the wheels appeared
+  in the assembly. At least six of that part's inserts in the week before went
+  unanswered twice too. Inserts into one assembly seem to wait on each other, so
+  several in a row each take as long as those before it — _unverified_.
 
 - **Internal endpoints** — the ones Onshape's own web client calls, such as the
   custom toolbar's — are served at `/api/v14` — _observed_. Whether the same

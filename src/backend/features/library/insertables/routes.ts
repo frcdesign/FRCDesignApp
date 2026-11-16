@@ -300,13 +300,15 @@ insertableRoutes.post(
                     parameters
                 );
 
-                const result = await retryInsert((timeoutMs) =>
-                    addPartStudioFeature(
-                        onshapeApi,
-                        targetPath,
-                        feature.getFeature(),
-                        timeoutMs
-                    )
+                const result = await retryInsert(
+                    (timeoutMs) =>
+                        addPartStudioFeature(
+                            onshapeApi,
+                            targetPath,
+                            feature.getFeature(),
+                            timeoutMs
+                        ),
+                    `Onshape is still inserting ${row.name}. It should appear in your Part Studio shortly; check for it before inserting it again.`
                 );
 
                 await recordRecentInsert(c, {
@@ -417,14 +419,16 @@ insertableRoutes.post(
                       )
                     : undefined;
 
-                const result = await retryInsert((timeoutMs) =>
-                    addElementToAssembly(
-                        onshapeApi,
-                        targetPath,
-                        sourcePath,
-                        row.elementType,
-                        { configuration, partTypes, transform, timeoutMs }
-                    )
+                const result = await retryInsert(
+                    (timeoutMs) =>
+                        addElementToAssembly(
+                            onshapeApi,
+                            targetPath,
+                            sourcePath,
+                            row.elementType,
+                            { configuration, partTypes, transform, timeoutMs }
+                        ),
+                    `Onshape is still inserting ${row.name}. It should appear in your assembly shortly; check for it before inserting it again.`
                 );
 
                 // The part is in the assembly whatever the fasten does.

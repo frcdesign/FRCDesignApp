@@ -25,15 +25,16 @@ messages.
 
 ## The popup
 
-| String                  | Kind              | Where                      | When                                        | Review    |
-| ----------------------- | ----------------- | -------------------------- | ------------------------------------------- | --------- |
-| "{name}"                | Popup title       | Beside the feature's icon  | Opened from a row                           |           |
-| "No example yet"        | Empty state title | In place of the hero image | The feature has no example Part Studio      | **⚑** New |
-| "Open example"          | Button            | The footer                 | The feature has an example                  | **⚑** New |
-| "Add to Part Studio"    | Button            | The footer, last           | In a Part Studio or an assembly             | **⚑** New |
-| "Adding {name}..."      | Loading toast     |                            | The add started                             | **⚑** New |
-| "Added {name}."         | Success toast     |                            | The add landed; its dialog opens in Onshape | **⚑** New |
-| "Failed to add {name}." | Error toast       |                            | Onshape refused it, without a worded reason | **⚑** New |
+| String                                                                                                               | Kind              | Where                      | When                                                 | Review    |
+| -------------------------------------------------------------------------------------------------------------------- | ----------------- | -------------------------- | ---------------------------------------------------- | --------- |
+| "{name}"                                                                                                             | Popup title       | Beside the feature's icon  | Opened from a row                                    |           |
+| "No example yet"                                                                                                     | Empty state title | In place of the hero image | The feature has no example Part Studio               | **⚑** New |
+| "Open example"                                                                                                       | Button            | The footer                 | The feature has an example                           | **⚑** New |
+| "Add to Part Studio"                                                                                                 | Button            | The footer, last           | In a Part Studio or an assembly                      | **⚑** New |
+| "Adding {name}..."                                                                                                   | Loading toast     |                            | The add started                                      | **⚑** New |
+| "Added {name}."                                                                                                      | Success toast     |                            | The add landed; its dialog opens in Onshape          | **⚑** New |
+| "Failed to add {name}."                                                                                              | Error toast       |                            | Onshape refused it, without a worded reason          | **⚑** New |
+| "Onshape is still adding {name}. It should appear in your Part Studio shortly; check for it before adding it again." | Error toast       |                            | Onshape gave no answer in 60 s; worded by the server | **⚑** New |
 
 ## The owner's card
 

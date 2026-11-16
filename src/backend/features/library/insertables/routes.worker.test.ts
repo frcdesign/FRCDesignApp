@@ -660,23 +660,22 @@ describe("insertable routes", () => {
         expect(await loggedInsert()).toBeDefined();
     });
 
-    it("tries a timed-out insert again, and says it timed out when that does too", async () => {
+    it("says a timed-out insert is still running, without inserting again", async () => {
         await seedAssembly(db);
         vi.spyOn(console, "warn").mockImplementation(() => undefined);
-        vi.spyOn(console, "error").mockImplementation(() => undefined);
         const insert = vi
             .spyOn(AssemblyEndpoints, "addElementToAssembly")
-            .mockRejectedValue(new OnshapeTimeoutError(20_000));
+            .mockRejectedValue(new OnshapeTimeoutError(60_000));
 
         const res = await insertIntoAssembly(false);
 
         expect(res.status).toBe(504);
         expect(await res.json()).toMatchObject({
-            kind: "internal",
-            message: "Onshape request timed out: no answer after 20 s"
+            kind: "handled",
+            message: expect.stringContaining("still inserting")
         });
-        expect(insert).toHaveBeenCalledTimes(2);
-        expect(insert.mock.calls[0][4]?.timeoutMs).toBe(20_000);
+        expect(insert).toHaveBeenCalledTimes(1);
+        expect(insert.mock.calls[0][4]?.timeoutMs).toBe(60_000);
     });
 
     it("POST /indexing indexes and forces the flag on", async () => {

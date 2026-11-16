@@ -136,13 +136,15 @@ featureScriptRoutes.post(
                     studioPath,
                     row.microversionId
                 );
-                const result = await retryInsert((timeoutMs) =>
-                    addPartStudioFeature(
-                        onshapeApi,
-                        targetPath,
-                        feature.getFeature(),
-                        timeoutMs
-                    )
+                const result = await retryInsert(
+                    (timeoutMs) =>
+                        addPartStudioFeature(
+                            onshapeApi,
+                            targetPath,
+                            feature.getFeature(),
+                            timeoutMs
+                        ),
+                    `Onshape is still adding ${row.name}. It should appear in your Part Studio shortly; check for it before adding it again.`
                 );
                 await trackFeatureAdd(c, {
                     featureType: row.featureType,
