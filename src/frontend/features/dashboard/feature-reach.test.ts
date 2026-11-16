@@ -58,6 +58,54 @@ describe("toReachSeries", () => {
     });
 });
 
+describe("toReachSeries, new and existing users", () => {
+    const split: FeatureReachOut = {
+        weeks: [
+            // Too near when tracking began to tell new users apart.
+            { week: "2026-10-26", activeUsers: 6, users: {} },
+            {
+                week: "2026-11-02",
+                activeUsers: 10,
+                users: { [AppFeature.SEARCH]: 6 },
+                newActiveUsers: 4,
+                newUsers: { [AppFeature.SEARCH]: 1 }
+            },
+            {
+                week: "2026-11-09",
+                activeUsers: 5,
+                users: { [AppFeature.SEARCH]: 5 },
+                newActiveUsers: 0,
+                newUsers: {}
+            }
+        ],
+        firstUsed: { [AppFeature.SEARCH]: "2026-01-04" }
+    };
+
+    it("takes the new users out of everybody's to leave the existing", () => {
+        const [, week] = toReachSeries(split, AppFeature.SEARCH);
+
+        expect(week).toMatchObject({
+            reach: 60,
+            newReach: 25,
+            existingReach: (5 / 6) * 100,
+            newCount: { users: 1, activeUsers: 4 },
+            existingCount: { users: 5, activeUsers: 6 }
+        });
+    });
+
+    it("leaves a group blank where it can't be told apart or had nobody about", () => {
+        const points = toReachSeries(split, AppFeature.SEARCH);
+
+        expect(points.map((point) => point.newReach)).toEqual([null, 25, null]);
+        expect(points.map((point) => point.existingReach)).toEqual([
+            null,
+            (5 / 6) * 100,
+            100
+        ]);
+        expect(points[0].reach).toBe(0);
+    });
+});
+
 describe("nudgeMarks", () => {
     const dot = {
         feature: AppFeature.VERSION_MANAGER,

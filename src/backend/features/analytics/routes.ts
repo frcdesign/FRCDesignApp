@@ -143,12 +143,10 @@ analyticsRoutes.get(
     validate("query", rangeQuery),
     async (c) => {
         const db = getDb(c.env.DB);
+        const trackingSince = await getTrackingSince(db);
         // Weeks are densified, so they need the clamped range.
-        const range = clampRange(
-            c.req.valid("query"),
-            await getTrackingSince(db)
-        );
-        const reach = await getFeatureReach(db, range);
+        const range = clampRange(c.req.valid("query"), trackingSince);
+        const reach = await getFeatureReach(db, range, trackingSince);
         return c.json(reach satisfies FeatureReachOut);
     }
 );

@@ -8,6 +8,7 @@ import { type ReactNode } from "react";
 import * as z from "zod";
 import { DashboardNavbar } from "../../features/dashboard/dashboard-navbar";
 import { RangePreset } from "../../features/dashboard/range";
+import { ReachView } from "../../features/dashboard/feature-reach";
 import { parseSearch } from "../../lib/search-params";
 
 // Caught, so a hand-edited url drops the bad param instead of failing.
@@ -15,7 +16,14 @@ const DashboardSearchType = z.object({
     /** Preset window for the range chart; kept in the URL so views are shareable. */
     range: z.enum(RangePreset).optional().catch(undefined),
     /** The uses a part must be at or below to count as low usage. */
-    threshold: z.coerce.number().int().nonnegative().optional().catch(undefined)
+    threshold: z.coerce
+        .number()
+        .int()
+        .nonnegative()
+        .optional()
+        .catch(undefined),
+    /** Feature reach for everybody, or new and existing users apart. */
+    reach: z.enum(ReachView).optional().catch(undefined)
 });
 
 type DashboardSearch = z.infer<typeof DashboardSearchType>;
@@ -25,7 +33,7 @@ export const Route = createFileRoute("/dashboard")({
     validateSearch: (search: Record<string, unknown>): DashboardSearch =>
         parseSearch(DashboardSearchType, search),
     search: {
-        middlewares: [retainSearchParams(["range", "threshold"])]
+        middlewares: [retainSearchParams(["range", "threshold", "reach"])]
     }
 });
 

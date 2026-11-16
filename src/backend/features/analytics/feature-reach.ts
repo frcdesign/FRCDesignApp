@@ -1,7 +1,21 @@
-import { and, countDistinct, gte, lte, min, sql, type SQL } from "drizzle-orm";
+import {
+    and,
+    countDistinct,
+    eq,
+    gte,
+    lte,
+    min,
+    sql,
+    type SQL
+} from "drizzle-orm";
 import { type SQLiteColumn } from "drizzle-orm/sqlite-core";
 import { type Db } from "../../db/client";
-import { dailyFeatureUsers, type LoggedEvent } from "./schema";
+import {
+    dailyAppOpens,
+    dailyFeatureUsers,
+    dailyUserActivity,
+    type LoggedEvent
+} from "./schema";
 import {
     asFeatureAdd,
     asReport,
@@ -10,7 +24,11 @@ import {
     SIGNED_OUT_USER_ID
 } from "./logged-event";
 import { AppFeature, EventType, UseSource, UseTarget } from "./usage";
-import type { FeatureReachOut, FeatureReachWeek } from "./contract";
+import {
+    NEW_USER_WEEKS,
+    type FeatureReachOut,
+    type FeatureReachWeek
+} from "./contract";
 import { activeUserRows } from "./metric-queries";
 import { addDays, toWeekStart, type DayRange } from "./day";
 
@@ -58,13 +76,63 @@ function weekOf(day: SQLiteColumn | SQL.Aliased<string>): SQL<string> {
     return sql<string>`date(${day}, '-' || ((strftime('%w', ${day}) + 6) % 7) || ' days')`;
 }
 
+/** Everybody's first day in any rollup that names people, all time. */
+function firstSeenRows(db: Db) {
+    const sightings = db
+        .select({
+            userId: dailyUserActivity.userId,
+            day: dailyUserActivity.day
+        })
+        .from(dailyUserActivity)
+        .unionAll(
+            db
+                .select({
+                    userId: dailyAppOpens.userId,
+                    day: dailyAppOpens.day
+                })
+                .from(dailyAppOpens)
+        )
+        .unionAll(
+            db
+                .select({
+                    userId: dailyFeatureUsers.userId,
+                    day: dailyFeatureUsers.day
+                })
+                .from(dailyFeatureUsers)
+        )
+        .as("sightings");
+    return db.$with("first_seen").as(
+        db
+            .select({
+                userId: sightings.userId,
+                firstDay: min(sightings.day).as("first_day")
+            })
+            .from(sightings)
+            .groupBy(sightings.userId)
+    );
+}
+
+/** Distinct users first seen in the {@link NEW_USER_WEEKS} weeks up to and including `week`. */
+function countNew(
+    userId: SQLiteColumn | SQL.Aliased<string>,
+    firstDay: SQL.Aliased<string | null>,
+    week: SQL<string>
+): SQL<number> {
+    const window = `-${(NEW_USER_WEEKS - 1) * 7} days`;
+    return sql<number>`count(distinct case when ${firstDay} >= date(${week}, ${window}) then ${userId} end)`.mapWith(
+        Number
+    );
+}
+
 /**
- * Each week's active users and each feature's users among them. Everybody who
- * used a feature counts as active, so a share never passes 100%.
+ * Each week's active users and each feature's users among them, all and only
+ * the new. Everybody who used a feature counts as active, so a share never
+ * passes 100%.
  */
 export async function getFeatureReach(
     db: Db,
-    range: DayRange
+    range: DayRange,
+    trackingSince: string | undefined
 ): Promise<FeatureReachOut> {
     const inRange = and(
         gte(dailyFeatureUsers.day, range.from),
@@ -84,25 +152,43 @@ export async function getFeatureReach(
                 .where(inRange)
         )
         .as("everyone");
+    const firstSeen = firstSeenRows(db);
     const everyoneWeek = weekOf(everyone.day);
     const featureWeek = weekOf(dailyFeatureUsers.day);
 
     const [activeRows, featureRows, firstRows] = await Promise.all([
         db
+            .with(firstSeen)
             .select({
                 week: everyoneWeek,
-                users: countDistinct(everyone.userId)
+                users: countDistinct(everyone.userId),
+                newUsers: countNew(
+                    everyone.userId,
+                    firstSeen.firstDay,
+                    everyoneWeek
+                )
             })
             .from(everyone)
+            .innerJoin(firstSeen, eq(firstSeen.userId, everyone.userId))
             .groupBy(everyoneWeek)
             .all(),
         db
+            .with(firstSeen)
             .select({
                 week: featureWeek,
                 feature: dailyFeatureUsers.feature,
-                users: countDistinct(dailyFeatureUsers.userId)
+                users: countDistinct(dailyFeatureUsers.userId),
+                newUsers: countNew(
+                    dailyFeatureUsers.userId,
+                    firstSeen.firstDay,
+                    featureWeek
+                )
             })
             .from(dailyFeatureUsers)
+            .innerJoin(
+                firstSeen,
+                eq(firstSeen.userId, dailyFeatureUsers.userId)
+            )
             .where(inRange)
             .groupBy(featureWeek, dailyFeatureUsers.feature)
             .all(),
@@ -124,15 +210,29 @@ export async function getFeatureReach(
         week <= range.to;
         week = addDays(week, 7)
     ) {
-        byWeek.set(week, { week, activeUsers: 0, users: {} });
+        const splits = knowsNewUsers(week, trackingSince);
+        byWeek.set(week, {
+            week,
+            activeUsers: 0,
+            users: {},
+            ...(splits ? { newActiveUsers: 0, newUsers: {} } : {})
+        });
     }
     for (const row of activeRows) {
         const week = byWeek.get(row.week);
-        if (week) week.activeUsers = row.users;
+        if (!week) continue;
+        week.activeUsers = row.users;
+        if (week.newActiveUsers !== undefined) {
+            week.newActiveUsers = row.newUsers;
+        }
     }
     for (const row of featureRows) {
         const week = byWeek.get(row.week);
-        if (week) week.users[row.feature] = row.users;
+        if (!week) continue;
+        week.users[row.feature] = row.users;
+        if (week.newUsers && row.newUsers > 0) {
+            week.newUsers[row.feature] = row.newUsers;
+        }
     }
 
     const firstUsed: FeatureReachOut["firstUsed"] = {};
@@ -141,4 +241,13 @@ export async function getFeatureReach(
     }
 
     return { weeks: [...byWeek.values()], firstUsed };
+}
+
+/**
+ * Only once tracking began before the week's new-user window: somebody first
+ * seen the day tracking began may have been using the app long before.
+ */
+function knowsNewUsers(week: string, trackingSince: string | undefined) {
+    if (trackingSince === undefined) return false;
+    return addDays(week, -(NEW_USER_WEEKS - 1) * 7) > trackingSince;
 }

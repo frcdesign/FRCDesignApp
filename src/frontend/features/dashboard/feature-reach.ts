@@ -5,32 +5,68 @@ import { formatBucket, Granularity, type BucketPoint } from "./series";
 import { NUDGES, nudgeLabel, type Nudge } from "./nudges";
 import { m } from "../../paraglide/messages";
 
-export interface ReachPoint extends BucketPoint {
-    /** A percentage; null for a week before the feature's record starts, or with nobody about. */
-    reach: number | null;
+/** One group's part of a week: how many used the feature, of how many about. */
+export interface ReachCount {
     users: number;
     activeUsers: number;
 }
 
-/** One feature's weekly share of active users. */
+export interface ReachPoint extends BucketPoint, ReachCount {
+    /**
+     * Percentages; null for a week before the feature's record starts, with
+     * nobody in the group about, or where new users can't be told apart.
+     */
+    reach: number | null;
+    newReach: number | null;
+    existingReach: number | null;
+    /** Undefined where new users can't be told apart. */
+    newCount?: ReachCount;
+    existingCount?: ReachCount;
+}
+
+/** Which lines each feature's chart draws; kept in the url. */
+export enum ReachView {
+    ALL = "all",
+    NEW_VS_EXISTING = "new-vs-existing"
+}
+
+/** One feature's weekly share of active users, all and split by new and existing. */
 export function toReachSeries(
     out: FeatureReachOut,
     feature: AppFeature
 ): ReachPoint[] {
     const firstUsed = out.firstUsed[feature];
     const firstWeek = firstUsed ? toWeekStart(firstUsed) : undefined;
-    return out.weeks.map(({ week, activeUsers, users }) => {
-        const count = users[feature] ?? 0;
-        const recorded = firstWeek !== undefined && week >= firstWeek;
+    return out.weeks.map((week) => {
+        const recorded = firstWeek !== undefined && week.week >= firstWeek;
+        const all: ReachCount = {
+            users: week.users[feature] ?? 0,
+            activeUsers: week.activeUsers
+        };
+        const newCount: ReachCount | undefined =
+            week.newActiveUsers === undefined
+                ? undefined
+                : {
+                      users: week.newUsers?.[feature] ?? 0,
+                      activeUsers: week.newActiveUsers
+                  };
+        const existingCount: ReachCount | undefined = newCount && {
+            users: all.users - newCount.users,
+            activeUsers: all.activeUsers - newCount.activeUsers
+        };
+        const share = (count: ReachCount | undefined) =>
+            recorded && count && count.activeUsers > 0
+                ? (count.users / count.activeUsers) * 100
+                : null;
         return {
-            bucket: week,
-            label: formatBucket(week, Granularity.WEEK),
-            reach:
-                recorded && activeUsers > 0
-                    ? (count / activeUsers) * 100
-                    : null,
-            users: count,
-            activeUsers
+            bucket: week.week,
+            label: formatBucket(week.week, Granularity.WEEK),
+            ...all,
+            reach: share(all),
+            newReach: share(newCount),
+            existingReach: share(existingCount),
+            newCount,
+            existingCount
         };
     });
 }

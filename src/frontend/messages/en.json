@@ -432,6 +432,25 @@
             }
         }
     ],
+    "dashboardFeatureReachViewAll": "All users",
+    "dashboardFeatureReachViewSplit": "New vs existing",
+    "dashboardFeatureReachExisting": "Existing users",
+    "dashboardFeatureReachNew": [
+        {
+            "declarations": [
+                "input weeks",
+                "local weeksPlural = weeks: plural",
+                "local weeksFormatted = weeks: number"
+            ],
+            "selectors": ["weeksPlural"],
+            "match": {
+                "weeksPlural=one": "New users (first seen that week)",
+                "weeksPlural=other": "New users (first seen within {weeksFormatted} weeks)"
+            }
+        }
+    ],
+    "dashboardFeatureReachExistingShare": "Existing users: {share}",
+    "dashboardFeatureReachNewShare": "New users: {share}",
     "dashboardFeatureSearch": "Search",
     "dashboardFeatureFavorites": "Favorites list",
     "dashboardFeatureRecents": "Recently used list",

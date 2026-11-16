@@ -673,6 +673,69 @@ describe("analytics routes", () => {
         });
     });
 
+    describe("GET /analytics/overview/feature-reach, new users", () => {
+        it("splits out those first seen in the four weeks up to each", async () => {
+            // The week of 2026-06-01 counts as new anyone first seen from 2026-05-11.
+            const opens: [string, string][] = [
+                ["2026-01-05", "old"],
+                ["2026-06-02", "old"],
+                ["2026-05-10", "edge-old"],
+                ["2026-06-06", "edge-old"],
+                ["2026-05-11", "edge-new"],
+                ["2026-06-03", "edge-new"],
+                ["2026-06-04", "fresh"]
+            ];
+            await db
+                .insert(dailyAppOpens)
+                .values(
+                    opens.map(([day, userId]) => ({ day, userId, opens: 1 }))
+                );
+            await db.insert(dailyFeatureUsers).values([
+                {
+                    day: "2026-06-02",
+                    feature: AppFeature.SEARCH,
+                    userId: "old"
+                },
+                {
+                    day: "2026-06-03",
+                    feature: AppFeature.SEARCH,
+                    userId: "edge-new"
+                }
+            ]);
+
+            const res = await anonymousGet(
+                "/api/analytics/overview/feature-reach?from=2026-06-01&to=2026-06-07"
+            );
+            const body: FeatureReachOut = await res.json();
+
+            expect(body.weeks).toEqual([
+                {
+                    week: "2026-06-01",
+                    activeUsers: 4,
+                    users: { [AppFeature.SEARCH]: 2 },
+                    newActiveUsers: 2,
+                    newUsers: { [AppFeature.SEARCH]: 1 }
+                }
+            ]);
+        });
+
+        it("doesn't split a week whose window reaches back to when tracking began", async () => {
+            await db.insert(dailyAppOpens).values([
+                { day: "2026-05-15", userId: "a", opens: 1 },
+                { day: "2026-06-02", userId: "a", opens: 1 }
+            ]);
+
+            const res = await anonymousGet(
+                "/api/analytics/overview/feature-reach?from=2026-06-01&to=2026-06-07"
+            );
+            const body: FeatureReachOut = await res.json();
+
+            expect(body.weeks).toEqual([
+                { week: "2026-06-01", activeUsers: 1, users: {} }
+            ]);
+        });
+    });
+
     describe("GET /analytics/overview/featurescripts", () => {
         it("breaks the range's adds down by feature", async () => {
             await db.insert(featureScripts).values(

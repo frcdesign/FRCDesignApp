@@ -449,10 +449,11 @@ async function getHealthCounts(
     libraryId?: LibraryId
 ): Promise<LibraryHealthCounts>;
 // `feature-reach.ts`: each week's active users and each feature's users among
-// them, and each feature's first recorded use.
+// them, all and only the new, and each feature's first recorded use.
 async function getFeatureReach(
     db: Db,
-    range: DayRange
+    range: DayRange,
+    trackingSince: string | undefined
 ): Promise<FeatureReachOut>;
 
 interface PartRow {
@@ -672,6 +673,9 @@ interface FeatureScriptUsageOut {
     features: FeatureScriptUsage[];
 }
 
+/** How recently a person must have been first seen to count as new: this week or the three before. */
+const NEW_USER_WEEKS = 4;
+
 /** One week of feature reach: who was about, and who used each feature. */
 interface FeatureReachWeek {
     /** The Monday it starts on, which may fall before the range does. */
@@ -680,6 +684,10 @@ interface FeatureReachWeek {
     activeUsers: number;
     /** Distinct users of each feature that week; a feature nobody used is absent. */
     users: Partial<Record<AppFeature, number>>;
+    /** Of `activeUsers`, the new; absent while the window reaches back to when tracking began. */
+    newActiveUsers?: number;
+    /** Of `users`, the new; set whenever `newActiveUsers` is. */
+    newUsers?: Partial<Record<AppFeature, number>>;
 }
 
 /** Each week of the range, oldest first, and where each feature's record starts. */
@@ -868,8 +876,9 @@ interface Nudge {
     day: string;
 }
 
-// A percentage per week; null before the feature's first recorded use, or
-// for a week with nobody about.
+// Percentages per week, of everybody, the new and the existing; null before the
+// feature's first recorded use, for a group with nobody about, or where new
+// users can't be told apart.
 function toReachSeries(out: FeatureReachOut, feature: AppFeature): ReachPoint[];
 // A marker per week the feature's nudges changed in, labelled by kind.
 function nudgeMarks(
@@ -1100,6 +1109,15 @@ feature's nudges (`NUDGES`) shipped or was withdrawn; features with a nudge
 come first. The tooltip gives the week's users and active users beside the
 share.
 
+**New vs existing** (`reach=new-vs-existing` in the url) draws two lines per
+chart in place of one. A person is new in a week when their first day in any
+rollup that names people — `daily_user_activity`, `daily_app_opens` or
+`daily_feature_users`, all time — falls in that week or the
+`NEW_USER_WEEKS` − 1 before it; everybody else active that week is existing.
+The split is left out of a week whose window starts on or before the day
+tracking began, since somebody first seen then may have used the app long
+before.
+
 The range, threshold and preset live in the url, so a view can be shared.
 
 Every loading, empty and failed section is a notice (`app-notice.tsx`), as
@@ -1192,6 +1210,12 @@ is withheld while its baseline reaches back before tracking began.
   that week, not of everyone ever seen, which only rises and is weighed down
   by people long gone. A day holds too few people for a share to mean much; a
   week is the shortest span that does, and a nudge that works shows as a step.
+- **New means first seen in the last four weeks, across every rollup.** Four
+  weeks covers a newcomer's first sessions without keeping them new for a
+  whole season. First seen is read from the
+  rollups at request time rather than stored, so it never drifts from them,
+  at the cost of reading every person's days in those three tables on each
+  request.
 - **A feature's line starts at its first recorded use.** Search, favorites and
   recents rest on `source`, which imported history never recorded; insert
   location and default configurations were not recorded at all before schema

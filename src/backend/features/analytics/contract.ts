@@ -250,6 +250,9 @@ export interface InsertableReportOut {
     parameters: ConfigurationParameterUsage[];
 }
 
+/** How recently a person must have been first seen to count as new: this week or the three before. */
+export const NEW_USER_WEEKS = 4;
+
 /** One week of feature reach: who was about, and who used each feature. */
 export interface FeatureReachWeek {
     /** The Monday it starts on, which may fall before the range does. */
@@ -258,6 +261,14 @@ export interface FeatureReachWeek {
     activeUsers: number;
     /** Distinct users of each feature that week; a feature nobody used is absent. */
     users: Partial<Record<AppFeature, number>>;
+    /**
+     * Of `activeUsers`, those first seen in the {@link NEW_USER_WEEKS} weeks up
+     * to and including this one. Absent for a week whose window reaches back
+     * to when tracking began, where first seen isn't first used.
+     */
+    newActiveUsers?: number;
+    /** Of `users`, the new ones; set whenever `newActiveUsers` is. */
+    newUsers?: Partial<Record<AppFeature, number>>;
 }
 
 /** Each week of the range, oldest first, and where each feature's record starts. */
