@@ -38,9 +38,11 @@ export function toOnshapeOrigin(server: string | undefined): string {
 /** Opened in a new window so the insert menu stays. */
 export const SETUP_URL = "/setup";
 
-/** The FRCDesignApp Companion in the Chrome Web Store, found by its name. */
-export const COMPANION_URL =
+/** The FRCDesignApp Companion in each store, found by its name. */
+export const COMPANION_CHROME_URL =
     "https://chromewebstore.google.com/search/FRCDesignApp%20Companion";
+export const COMPANION_FIREFOX_URL =
+    "https://addons.mozilla.org/firefox/search/?q=FRCDesignApp%20Companion";
 
 /** Onshape fills in whatever the configuration leaves out. */
 export function makeUrl(

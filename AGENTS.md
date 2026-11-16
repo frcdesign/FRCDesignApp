@@ -73,7 +73,8 @@ it through the `@backend/*` alias. Imports within a side stay relative.
 
 `src/extension/` is the FRCDesignApp Companion, the browser extension that
 draws previews in Onshape's graphics window. It is built on its own (`npm run
-build:extension`, into `dist-extension/`). Like the frontend, it imports only
+build:extension`, into `dist-extension/chrome/` and `dist-extension/firefox/`).
+Like the frontend, it imports only
 leaf modules from the backend, through `@backend/*`;
 `features/companion/contract.ts` is its contract with the app's panel.
 

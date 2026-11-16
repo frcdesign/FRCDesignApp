@@ -13,6 +13,11 @@ import {
     useOnshapeServer
 } from "../../lib/onshape-params";
 import { useMarkHintSeen } from "../hints/queries";
+import {
+    COMPANION_CHROME_URL,
+    COMPANION_FIREFOX_URL,
+    openUrlInNewTab
+} from "../../lib/url";
 
 interface CompanionState {
     /** Whether it answered, in this protocol's version. */
@@ -28,14 +33,29 @@ export function postToCompanion(server: string, request: CompanionRequest) {
     window.parent.postMessage(request, server);
 }
 
-/** It's a Chrome extension: Chrome and the browsers built on it, Edge and Opera, can install it. */
-export function isCompanionBrowser(): boolean {
-    return /\bChrome\//.test(navigator.userAgent);
+/**
+ * Where this browser installs it from: Firefox from its add-ons site, and
+ * Chrome and the browsers built on it, Edge and Opera, from the Chrome Web
+ * Store. Undefined in any other.
+ */
+export function companionStoreUrl(): string | undefined {
+    const { userAgent } = navigator;
+    if (/\bFirefox\//.test(userAgent)) {
+        return COMPANION_FIREFOX_URL;
+    }
+    return /\bChrome\//.test(userAgent) ? COMPANION_CHROME_URL : undefined;
+}
+
+export function openCompanionStore() {
+    const url = companionStoreUrl();
+    if (url) {
+        openUrlInNewTab(url);
+    }
 }
 
 /** Inside Onshape, in a browser that can install it. */
 export function useCanUseCompanion(): boolean {
-    return useIsConnectedToOnshape() && isCompanionBrowser();
+    return useIsConnectedToOnshape() && companionStoreUrl() !== undefined;
 }
 
 /** Asks the Onshape page for the Companion once a launch names it; from the app shell. */

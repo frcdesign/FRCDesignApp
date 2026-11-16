@@ -12,7 +12,8 @@ There are three pieces:
 - **The panel** fetches the meshes and posts them to the Onshape page.
 - **The FRCDesignApp Companion** draws them in Onshape's view.
 
-The Companion is a Chrome extension, `src/extension/`, that gives the app
+The Companion is a browser extension, `src/extension/`, built for Chrome and
+for Firefox, that gives the app
 more to work with inside Onshape. Previews are all it does today. It draws only
 what the panel sends; it calls no API and fetches nothing. Without it, nothing
 is previewed and nothing else changes. The panel offers it in the navbar and
@@ -162,7 +163,7 @@ interface PreviewInstance {
 `onshape-viewer.ts`
 
 ```ts
-// In-scene when it can be, over the view otherwise.
+// Draws into Onshape's own frame.
 class PreviewController {
     show(meshes: Record<string, ArrayBuffer>, parts: PreviewInstance[]): void;
     clear(): void;
@@ -171,13 +172,12 @@ class PreviewController {
 class GhostRenderer {
     setScene(meshes: Map<string, PreviewMesh>, instances: Instance[]): void;
     drawInScene(camera: Camera): void;
-    drawOverlay(camera: Camera): void;
 }
 function findViewer(): OnshapeViewer | undefined;
 function readCamera(viewer: OnshapeViewer): Camera | undefined;
 function findDepthClearPass(viewer: OnshapeViewer): DrawPass | undefined;
 
-type PreviewMode = "scene" | "overlay" | "none";
+type PreviewMode = "scene" | "none";
 
 interface Instance {
     mesh: string;
@@ -192,10 +192,18 @@ interface Camera {
 }
 ```
 
-`vite.extension.config.ts` builds the Companion (`npm run build:extension`)
-into `dist-extension/`, with its manifest from `src/extension/public/`.
-`COMPANION_URL` in `src/frontend/lib/url.tsx` is where the app sends someone to
-get it.
+`npm run build:extension` builds the Companion twice with
+`vite.extension.config.ts`, into `dist-extension/chrome/` and
+`dist-extension/firefox/`. The script is the same; each gets its own manifest
+from `companionManifest` in `src/extension/manifest.ts`:
+
+- Chrome's names its oldest version, 111, the first to run a content script in
+  the page's own world.
+- Firefox's names the add-on's id (`companion@frcdesign.org`), its oldest
+  version, 128, for the same reason, and that it collects no data.
+
+`COMPANION_CHROME_URL` and `COMPANION_FIREFOX_URL` in
+`src/frontend/lib/url.tsx` are where the app sends someone to get it.
 
 ## Storage
 
@@ -226,16 +234,19 @@ get it.
 
 ### Offering the Companion
 
-Both offers show only inside Onshape, in a browser that can install a Chrome
-extension (`useCanUseCompanion`: Chrome, Edge or Opera).
+Both offers show only inside Onshape, in a browser that can install it
+(`useCanUseCompanion`). Each opens its store (`companionStoreUrl`):
+
+- Firefox, its add-ons site;
+- Chrome, Edge and Opera, the Chrome Web Store.
 
 - **The navbar** has a puzzle piece beside the theme toggle
   (`CompanionButton`), badged with its status (`BadgedIcon`). Without the
   Companion, it carries the info badge, its tooltip says to get it, and a
-  click opens `COMPANION_URL`. Connected, it carries the check, and its tooltip
+  click opens the store. Connected, it carries the check, and its tooltip
   says so.
 - **After an insert** — a library insert, or starting an Auto Assembly run —
-  a tip toast offers it, with a button opening `COMPANION_URL`
+  a tip toast offers it, with a button opening the store
   (`useCompanionTip`). It shows at most once a page load and three times in
   all, and never once the Companion has connected on any computer.
 
@@ -287,17 +298,16 @@ extension (`useCanUseCompanion`: Chrome, Edge or Opera).
     Every piece of WebGL state it changes is put back after. It draws only
     into the screen's framebuffer, so never into a pick or print.
 
-3. **Over the view.** If the viewer, the camera, Onshape's context or the pass
-   can't be found, it draws on its own canvas over the view instead, without
-   the model hiding anything. So does a draw that throws, or Onshape drawing
-   no frame with the preview in 1.5 seconds. After three failures in-scene
-   drawing stays off until the page reloads.
+3. **Nothing otherwise.** If the viewer, the camera, Onshape's context or the
+   pass can't be found, nothing is drawn. A draw that throws, or Onshape
+   drawing no frame with the preview in 1.5 seconds, counts as a failure, and
+   after three, drawing stays off until the page reloads.
 4. Every 400 ms it checks the viewer, pass and wrapped `draw` are still the
    ones it found, since Onshape swaps them as tabs change, and draws again
    where it should.
-5. `clear-preview` puts the pass's `draw` back, frees the GPU copies and
-   removes the overlay. `frcDesignCompanion` in the page's console clears it
-   (`clearPreview`), and says how it's drawn (`previewMode`).
+5. `clear-preview` puts the pass's `draw` back and frees the GPU copies.
+   `frcDesignCompanion` in the page's console clears it (`clearPreview`), and
+   says whether it's drawn (`previewMode`).
 
 ## User-facing strings
 
@@ -325,7 +335,7 @@ In [strings/previews.md](../strings/previews.md).
 | Failure                                        | Result                                        | Recovery                         |
 | ---------------------------------------------- | --------------------------------------------- | -------------------------------- |
 | The Companion isn't installed                  | No preview; nothing is fetched                | Install it                       |
-| Onshape renames what the Companion reaches     | Drawn over the view, or not at all            | Update `onshape-viewer.ts`       |
+| Onshape renames what the Companion reaches     | Not drawn                                     | Update `onshape-viewer.ts`       |
 | Onshape refuses the tessellation, or times out | That mesh is left out; its parts aren't drawn | The next check asks again        |
 | Onshape answers a shape the parser can't read  | 404, nothing stored                           | Fix `toPreviewMesh`              |
 | The library loads a new version mid-check      | 404 for the old url                           | The next check names the new one |
@@ -343,9 +353,13 @@ In [strings/previews.md](../strings/previews.md).
 - **One mesh per configuration, keyed as thumbnails are.** A mesh is a render
   of a selection, so it is named by its `ConfigurationKey`. Finishes are in the
   key, so two finishes of one screw are two meshes; they're small.
-- **Inside Onshape's frame, with an overlay to fall back to.** Drawing just
-  before the depth-only clear is when the model's depth is there to hide the
-  preview against. The overlay keeps something on screen when Onshape changes.
+- **Inside Onshape's frame, or not at all.** Drawing just before the
+  depth-only clear is when the model's depth is there to hide the preview
+  against. A canvas over the view couldn't be hidden by the model, and isn't
+  worth keeping for when Onshape changes.
+- **One script for Chrome and Firefox.** Both run a content script in the
+  page's own world, which is all the Companion needs, so only the manifest
+  differs.
 - **Hidden parts show faintly.** A nut under a plate is still worth seeing,
   as Onshape shows what a feature makes behind other parts.
 - **A Companion, not a preview extension.** The extension is named for what it

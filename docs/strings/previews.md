@@ -2,16 +2,16 @@
 
 What [previews.md](../architecture/previews.md) shows a person. They're
 messages in `src/frontend/messages/en.json`, keyed `companion…`. The
-Companion's own name and description are in its manifest,
-`src/extension/public/manifest.json`, which the Chrome Web Store and the
-browser's extensions page show.
+Companion's own name and description are in its manifests
+(`src/extension/manifest.ts`), which the stores and the browser's extensions
+page show.
 
 ## The navbar
 
-| String                | Kind    | Where                         | When                                                         | Review    |
-| --------------------- | ------- | ----------------------------- | ------------------------------------------------------------ | --------- |
-| "Get the extension"   | Tooltip | The puzzle piece, info badge  | Inside Onshape, in Chrome, Edge or Opera, without it running | **⚑** New |
-| "Extension connected" | Tooltip | The puzzle piece, check badge | The Companion answered                                       | **⚑** New |
+| String                | Kind    | Where                         | When                                                                  | Review    |
+| --------------------- | ------- | ----------------------------- | --------------------------------------------------------------------- | --------- |
+| "Get the extension"   | Tooltip | The puzzle piece, info badge  | Inside Onshape, in Chrome, Edge, Opera or Firefox, without it running | **⚑** New |
+| "Extension connected" | Tooltip | The puzzle piece, check badge | The Companion answered                                                | **⚑** New |
 
 ## After an insert
 
@@ -22,7 +22,7 @@ browser's extensions page show.
 
 ## The Companion
 
-| String                                                                                                           | Kind                  | Where                                     | When   | Review    |
-| ---------------------------------------------------------------------------------------------------------------- | --------------------- | ----------------------------------------- | ------ | --------- |
-| "FRCDesignApp Companion"                                                                                         | Extension name        | The Chrome Web Store, the extensions page | Always | **⚑** New |
-| "Gives FRCDesignApp additional functionality inside Onshape, such as previews of parts before they're inserted." | Extension description | The Chrome Web Store, the extensions page | Always | **⚑** New |
+| String                                                                                                           | Kind                  | Where                           | When   | Review    |
+| ---------------------------------------------------------------------------------------------------------------- | --------------------- | ------------------------------- | ------ | --------- |
+| "FRCDesignApp Companion"                                                                                         | Extension name        | The stores, the extensions page | Always | **⚑** New |
+| "Gives FRCDesignApp additional functionality inside Onshape, such as previews of parts before they're inserted." | Extension description | The stores, the extensions page | Always | **⚑** New |

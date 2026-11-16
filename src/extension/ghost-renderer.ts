@@ -1,4 +1,4 @@
-/** Draws preview meshes translucent, in Onshape's WebGL context or one of our own. */
+/** Draws preview meshes translucent, into Onshape's own WebGL context. */
 import { type PreviewMesh } from "@backend/features/previews/contract";
 import { type Camera } from "./onshape-viewer";
 
@@ -270,25 +270,6 @@ export class GhostRenderer {
         } finally {
             restoreState(gl, state);
         }
-    }
-
-    /** Onto our own canvas over the viewport, where nothing of the model can hide it. */
-    drawOverlay(camera: Camera) {
-        const { gl } = this;
-        if (gl.isContextLost()) {
-            return;
-        }
-        gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
-        gl.clearColor(0, 0, 0, 0);
-        gl.clearDepth(1);
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-        if (this.instances.length === 0) {
-            return;
-        }
-        this.begin(camera, [0, 1], false);
-        gl.depthFunc(gl.LEQUAL);
-        this.visible();
-        gl.bindVertexArray(null);
     }
 
     dispose() {

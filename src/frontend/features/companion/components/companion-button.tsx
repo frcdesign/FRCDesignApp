@@ -3,9 +3,12 @@ import { PuzzlePieceIcon } from "@phosphor-icons/react";
 import { type ReactNode } from "react";
 import { BadgedIcon } from "../../../components/badged-icon";
 import { Status } from "../../../lib/status";
-import { COMPANION_URL, openUrlInNewTab } from "../../../lib/url";
 import { m } from "../../../paraglide/messages";
-import { useCanUseCompanion, useCompanion } from "../connection";
+import {
+    openCompanionStore,
+    useCanUseCompanion,
+    useCompanion
+} from "../connection";
 
 /** Beside the theme toggle: gets the Companion, or says it's connected. Inside Onshape, in a browser that can install it. */
 export function CompanionButton(): ReactNode {
@@ -23,11 +26,7 @@ export function CompanionButton(): ReactNode {
             <ActionIcon
                 my="auto"
                 size="input-sm"
-                onClick={
-                    isConnected
-                        ? undefined
-                        : () => openUrlInNewTab(COMPANION_URL)
-                }
+                onClick={isConnected ? undefined : () => openCompanionStore()}
             >
                 <BadgedIcon
                     icon={PuzzlePieceIcon}

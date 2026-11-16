@@ -15,7 +15,7 @@ import {
 import { accessDataQueryKey } from "../../lib/query-keys";
 import { useOnshapeLaunch } from "../../lib/onshape-params";
 import { getUiState, updateUiState } from "../../lib/ui-state";
-import { COMPANION_URL } from "../../lib/url";
+import { COMPANION_CHROME_URL, COMPANION_FIREFOX_URL } from "../../lib/url";
 
 const showTipToast = vi.hoisted(() => vi.fn());
 vi.mock("../../lib/notifications", () => ({
@@ -34,6 +34,8 @@ const CHROME =
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36";
 const FIREFOX =
     "Mozilla/5.0 (X11; Linux x86_64; rv:140.0) Gecko/20100101 Firefox/140.0";
+const SAFARI =
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15";
 
 function TipButton(): ReactNode {
     const showTip = useCompanionTip();
@@ -72,16 +74,23 @@ afterEach(() => {
 });
 
 describe("CompanionButton", () => {
-    it("gets the extension until it's connected", async () => {
-        const user = userEvent.setup();
-        inOnshape();
-        renderWithAccess(<CompanionButton />);
+    it.each([
+        ["Chrome Web Store", CHROME, COMPANION_CHROME_URL],
+        ["Firefox's add-ons site", FIREFOX, COMPANION_FIREFOX_URL]
+    ])(
+        "gets the extension from the %s until it's connected",
+        async (_name, userAgent, url) => {
+            vi.spyOn(navigator, "userAgent", "get").mockReturnValue(userAgent);
+            const user = userEvent.setup();
+            inOnshape();
+            renderWithAccess(<CompanionButton />);
 
-        await user.hover(screen.getByRole("button"));
-        expect(await screen.findByText("Get the extension")).toBeTruthy();
-        await user.click(screen.getByRole("button"));
-        expect(window.open).toHaveBeenCalledWith(COMPANION_URL, "_blank");
-    });
+            await user.hover(screen.getByRole("button"));
+            expect(await screen.findByText("Get the extension")).toBeTruthy();
+            await user.click(screen.getByRole("button"));
+            expect(window.open).toHaveBeenCalledWith(url, "_blank");
+        }
+    );
 
     it("says the extension is connected once it answers", async () => {
         const user = userEvent.setup();
@@ -95,7 +104,7 @@ describe("CompanionButton", () => {
 
     it.each([
         ["outside Onshape", false, CHROME],
-        ["in a browser that can't install it", true, FIREFOX]
+        ["in a browser that can't install it", true, SAFARI]
     ])("shows nothing %s", (_name, isInOnshape, userAgent) => {
         if (isInOnshape) {
             inOnshape();

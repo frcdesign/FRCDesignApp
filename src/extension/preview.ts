@@ -1,4 +1,4 @@
-/** Shows a preview in Onshape's graphics window: in its own frame when that works, over it otherwise. */
+/** Shows a preview in Onshape's graphics window, drawn into its own frame. */
 import {
     decodePreviewMesh,
     type PreviewInstance,
@@ -15,14 +15,13 @@ import {
     viewerContext
 } from "./onshape-viewer";
 
-/** How long Onshape gets to draw a frame with the preview in it before the overlay takes over. */
+/** How long Onshape gets to draw a frame with the preview in it before it counts as a failure. */
 const IN_SCENE_TIMEOUT = 1500;
 const SYNC_INTERVAL = 400;
-/** In-scene drawing that has failed this often stays off until the page reloads. */
+/** Drawing that has failed this often stays off until the page reloads. */
 const MAX_FAILURES = 3;
-const OVERLAY_ATTRIBUTE = "data-frcdesign-preview";
 
-export type PreviewMode = "scene" | "overlay" | "none";
+export type PreviewMode = "scene" | "none";
 
 interface Scene {
     viewer: OnshapeViewer;
@@ -51,21 +50,14 @@ function toColumnMajor(transform: number[]): Float32Array {
     return matrix;
 }
 
-interface Overlay {
-    canvas: HTMLCanvasElement;
-    renderer: GhostRenderer;
-    frame: number;
-}
-
 export class PreviewController {
     private content: Content | undefined;
     private scene: Scene | undefined;
-    private overlay: Overlay | undefined;
     private timer: number | undefined;
     private failures = 0;
 
     get mode(): PreviewMode {
-        return this.scene ? "scene" : this.overlay ? "overlay" : "none";
+        return this.scene ? "scene" : "none";
     }
 
     /** A mesh this version can't read is left out, with the parts drawn with it. */
@@ -91,8 +83,6 @@ export class PreviewController {
         if (this.scene) {
             this.scene.renderer.setScene(decoded, instances);
             requestDraw(this.scene.viewer);
-        } else if (this.overlay) {
-            this.overlay.renderer.setScene(decoded, instances);
         }
         this.sync();
         this.timer ??= window.setInterval(() => {
@@ -105,7 +95,6 @@ export class PreviewController {
         window.clearInterval(this.timer);
         this.timer = undefined;
         this.detachScene();
-        this.stopOverlay();
     }
 
     /** Onshape swaps its viewer and passes as tabs change, so where the preview is drawn is checked over and over. */
@@ -128,11 +117,6 @@ export class PreviewController {
         }
         if (!this.scene && this.failures < MAX_FAILURES) {
             this.attachScene();
-        }
-        if (this.scene) {
-            this.stopOverlay();
-        } else {
-            this.startOverlay();
         }
     }
 
@@ -225,80 +209,9 @@ export class PreviewController {
     private fail(reason: unknown) {
         this.failures++;
         console.warn(
-            "[FRCDesign preview] Drawing in Onshape's view failed; drawing over it instead.",
+            "[FRCDesignApp Companion] Drawing in Onshape's view failed.",
             reason
         );
         this.detachScene();
-        this.startOverlay();
-    }
-
-    private startOverlay() {
-        const { content } = this;
-        if (this.overlay || !content) {
-            return;
-        }
-        const canvas = document.createElement("canvas");
-        canvas.setAttribute(OVERLAY_ATTRIBUTE, "");
-        Object.assign(canvas.style, {
-            position: "fixed",
-            pointerEvents: "none",
-            zIndex: "1"
-        });
-        const gl = canvas.getContext("webgl2", {
-            alpha: true,
-            premultipliedAlpha: true,
-            antialias: true,
-            depth: true
-        });
-        if (!gl) {
-            return;
-        }
-        const renderer = new GhostRenderer(gl);
-        renderer.setScene(content.meshes, content.instances);
-        document.documentElement.append(canvas);
-        const overlay: Overlay = { canvas, renderer, frame: 0 };
-        const draw = () => {
-            this.drawOverlay(overlay);
-            overlay.frame = requestAnimationFrame(draw);
-        };
-        overlay.frame = requestAnimationFrame(draw);
-        this.overlay = overlay;
-    }
-
-    private drawOverlay({ canvas, renderer }: Overlay) {
-        const viewer = findViewer();
-        const camera = viewer && readCamera(viewer);
-        const target = viewer && viewerContext(viewer)?.canvas;
-        if (!camera || !(target instanceof HTMLCanvasElement)) {
-            canvas.style.display = "none";
-            return;
-        }
-        const rect = target.getBoundingClientRect();
-        const scale = window.devicePixelRatio || 1;
-        const width = Math.max(1, Math.round(rect.width * scale));
-        const height = Math.max(1, Math.round(rect.height * scale));
-        if (canvas.width !== width || canvas.height !== height) {
-            canvas.width = width;
-            canvas.height = height;
-        }
-        Object.assign(canvas.style, {
-            display: "block",
-            left: `${rect.left}px`,
-            top: `${rect.top}px`,
-            width: `${rect.width}px`,
-            height: `${rect.height}px`
-        });
-        renderer.drawOverlay(camera);
-    }
-
-    private stopOverlay() {
-        const { overlay } = this;
-        if (!overlay) {
-            return;
-        }
-        this.overlay = undefined;
-        cancelAnimationFrame(overlay.frame);
-        overlay.renderer.dispose();
-        overlay.canvas.remove();
     }
 }

@@ -2,10 +2,13 @@ import { Hint } from "@backend/features/hints/contract";
 import { useCallback } from "react";
 import { renderNotification, showTipToast } from "../../lib/notifications";
 import { getUiState, updateUiState } from "../../lib/ui-state";
-import { COMPANION_URL, openUrlInNewTab } from "../../lib/url";
 import { m } from "../../paraglide/messages";
 import { useHasSeenHint } from "../hints/queries";
-import { useCanUseCompanion, useCompanion } from "./connection";
+import {
+    openCompanionStore,
+    useCanUseCompanion,
+    useCompanion
+} from "./connection";
 
 /** Somebody who hasn't got it after this many has a reason not to. */
 const MAX_COMPANION_TIPS = 3;
@@ -33,7 +36,7 @@ export function useCompanionTip(): () => void {
         showTipToast(
             renderNotification(m.companionTip(), {
                 text: m.companionTipAction(),
-                onClick: () => openUrlInNewTab(COMPANION_URL)
+                onClick: () => openCompanionStore()
             }),
             "companion-tip"
         );
