@@ -16,6 +16,8 @@ import { useTargetAssembly, useTargetWorkspace } from "./onshape-params";
 import { queryClient } from "./query-client";
 import {
     assemblyJobQueryKey,
+    featureScriptsLoadStatusQueryKey,
+    featureScriptsVersionQueryKey,
     jobStatusQueryKey,
     versionJobQueryKey
 } from "./query-keys";
@@ -74,6 +76,16 @@ export function usePushSync(): void {
                         });
                     }
                     break;
+                case PushType.FEATURESCRIPTS:
+                    void queryClient.invalidateQueries({
+                        queryKey: featureScriptsVersionQueryKey()
+                    });
+                    break;
+                case PushType.FEATURESCRIPTS_LOAD:
+                    void queryClient.invalidateQueries({
+                        queryKey: featureScriptsLoadStatusQueryKey()
+                    });
+                    break;
                 case PushType.THUMBNAIL:
                     // Rows that took a miss; anything waiting on the render hears the push itself.
                     void queryClient.refetchQueries({
@@ -102,6 +114,9 @@ export function usePushSync(): void {
                 }
                 if (hasConnected.current) {
                     void refreshLibrary();
+                    void queryClient.invalidateQueries({
+                        queryKey: featureScriptsLoadStatusQueryKey()
+                    });
                     if (workspace) {
                         void queryClient.invalidateQueries({
                             queryKey: versionJobQueryKey(workspace)

@@ -41,6 +41,7 @@ FORCE_SIGNED_IN=false
 DISCORD_APP_WEBHOOK_URL=<Webhook for FRCDesignApp and Version Manager reports>
 DISCORD_FRC_DESIGN_LIB_WEBHOOK_URL=<Webhook for FRCDesignLib and MKCad reports>
 DISCORD_CONFIG_LIB_WEBHOOK_URL=<Webhook for ConfigLib reports>
+DISCORD_FEATURESCRIPTS_WEBHOOK_URL=<Webhook for FeatureScript reports>
 ```
 
 In a deployed environment, set the webhooks as secrets with
@@ -143,7 +144,7 @@ To serve your own tunnel at another hostname, set `APP_URL=https://<hostname>` i
 
 ## VSCode Setup
 
-Install nvm (node version manager) in your WSL container, install npm, and then install the dependencies:
+Install nvm (node Version Manager) in your WSL container, install npm, and then install the dependencies:
 
 ```
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.5/install.sh | bash

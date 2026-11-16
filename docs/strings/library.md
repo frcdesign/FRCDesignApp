@@ -2,20 +2,39 @@
 
 The library's pages, which have no architecture document of their own; how a
 document loads is in [loading.md](../architecture/loading.md). Messages are
-keyed `groupPage…`, `changesBadge…` and `library…` in
+keyed `groupPage…`, `changesBadge…`, `library…` and `insert…` in
 `src/frontend/messages/en.json`. Only what has moved into the catalog is
 listed so far: the rest join as their strings move there.
 
 ## Menus
 
-| String                                                | Kind          | Where                                         | When                                                  | Review    |
-| ----------------------------------------------------- | ------------- | --------------------------------------------- | ----------------------------------------------------- | --------- |
-| "Insert" / "Configuration" / "Favorites" / "Document" | Menu sections | A part's menu                                 | As each applies                                       |           |
-| "Update references"                                   | Menu item     | The Admin section of a part's or group's menu | An editor or above                                    | **⚑** New |
-| "Updating references..."                              | Loading toast |                                               | While the update runs                                 | **⚑** New |
-| "Updated references."                                 | Success toast |                                               | Something moved                                       | **⚑** New |
-| "References are already up to date."                  | Success toast |                                               | Nothing was out of date                               | **⚑** New |
-| "Failed to update references."                        | Error toast   |                                               | The update failed for a reason the server didn't word | **⚑** New |
+| String                                     | Kind          | Where                                         | When                                                  | Review    |
+| ------------------------------------------ | ------------- | --------------------------------------------- | ----------------------------------------------------- | --------- |
+| "Configuration" / "Favorites" / "Document" | Menu sections | A part's menu; a favorite's and a recent's    | As each applies                                       |           |
+| "Update references"                        | Menu item     | The Admin section of a part's or group's menu | An editor or above                                    | **⚑** New |
+| "Updating references..."                   | Loading toast |                                               | While the update runs                                 | **⚑** New |
+| "Updated references."                      | Success toast |                                               | Something moved                                       | **⚑** New |
+| "References are already up to date."       | Success toast |                                               | Nothing was out of date                               | **⚑** New |
+| "Failed to update references."             | Error toast   |                                               | The update failed for a reason the server didn't word | **⚑** New |
+
+## Row buttons
+
+Every part row (a group's, Favorites', Recently Used's) carries the same
+outlined button, before its heart and ⋯; the button is
+`src/frontend/features/insert/components/quick-insert-button.tsx`. It is the
+only quick insert: the menus offer none. In an assembly it fastens wherever
+the part has a mate connector, whatever the insert menu's **Fasten** is set to.
+The insert menu's remaining tips are in
+`src/frontend/features/insert/insert-tips.ts`.
+
+| String                                                                            | Kind              | Where                  | When                                                 | Review    |
+| --------------------------------------------------------------------------------- | ----------------- | ---------------------- | ---------------------------------------------------- | --------- |
+| "Insert" / "Derive"                                                               | Outlined button   | Each part row          | In an assembly / a Part Studio; none standalone      | **⚑** New |
+| "Assemblies can't be derived into a Part Studio."                                 | Tooltip           | On the disabled button | An assembly's row, in a Part Studio                  | **⚑** New |
+| "Tip: you can insert a part even while the part's thumbnail is still generating." | Tip toast         |                        | The insert menu's preview is still rendering         |           |
+| "Sign in to Onshape to see a preview of your selection." / "Sign in"              | Tip toast, button |                        | Signed out, after changing the configuration         |           |
+| "Still inserting {name}. Onshape is taking longer than usual..."                  | Loading toast     |                        | An insert has gone 15 s without an answer            | **⚑** New |
+| "Onshape timed out while inserting. If your part doesn't appear, file a report."  | Error toast       |                        | Onshape gave no answer in 60 s; worded by the server | **⚑** New |
 
 ## Group page
 
@@ -28,10 +47,25 @@ listed so far: the rest join as their strings move there.
 | "This group has no visible elements"      | Notice                         | Same                  | It loaded, but every element is hidden from users         |                                     |
 | "All elements are hidden by filters"      | Notice, with Clear filters     | Same                  | The vendor filters leave nothing                          |                                     |
 
+## Reloading documents
+
+The reload buttons in a library's admin settings, and the confirmation each
+opens. `{library}` is the library chosen under **Settings for**, which need not
+be the one shown.
+
+| String                                                                                         | Kind          | Where                  | When                    | Review                      |
+| ---------------------------------------------------------------------------------------------- | ------------- | ---------------------- | ----------------------- | --------------------------- |
+| "Reload"                                                                                       | Button        | Beside each reload row | Editor or above / owner |                             |
+| "Reload outdated documents" / "Reload all documents"                                           | Modal title   | The confirmation       | Clicking the button     |                             |
+| "Reload the documents in {library} with a new version or a failed load?"                       | Modal text    | Same                   | Outdated documents      | **⚑** Was "in this library" |
+| "Are you sure you want to reload every document in {library}? This is an expensive operation." | Modal text    | Same                   | All documents           | **⚑** Was "in this library" |
+| "Reload documents" / "Cancel"                                                                  | Modal buttons | Same                   | Always                  |                             |
+
 ## Change badges
 
-On group and part cards in admin mode, and on a parent's row in the version
-manager; see [version-manager.md](../architecture/version-manager.md).
+On group and part cards in admin mode, after the build status icon, and on a
+parent's row in the Version Manager; see
+[version-manager.md](../architecture/version-manager.md).
 
 | String                                                                         | Kind    | Where                             | When                                                              | Review    |
 | ------------------------------------------------------------------------------ | ------- | --------------------------------- | ----------------------------------------------------------------- | --------- |

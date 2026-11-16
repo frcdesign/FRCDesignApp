@@ -6,7 +6,12 @@ import {
 } from "@backend/features/analytics/contract";
 import { LibraryId } from "@backend/features/library/library-id";
 import { getLibraryName } from "../../lib/library";
-import { Granularity, toChartData, toSparkSeries } from "./series";
+import {
+    Granularity,
+    pickChartGranularity,
+    toChartData,
+    toSparkSeries
+} from "./series";
 
 const FRC = getLibraryName(LibraryId.FRC_DESIGN_LIB);
 const MKCAD = getLibraryName(LibraryId.MKCAD);
@@ -30,11 +35,6 @@ function day(index: number, values: Partial<DailyMetricPoint> = {}) {
         appOpens: 0,
         activeUsers: 0,
         favoriteUses: 0,
-        quickInserts: 0,
-        fastenInserts: 0,
-        fastenableInserts: 0,
-        preselectedInserts: 0,
-        autoAssemblyInserts: 0,
         targets: emptyTargets(),
         ...values
     };
@@ -97,6 +97,20 @@ describe("toChartData", () => {
         expect(data[0].bucket).toBe("2025-12-29");
         expect(data[0][FRC]).toBe(4);
         expect(data[1][FRC]).toBe(7);
+    });
+});
+
+describe("pickChartGranularity", () => {
+    const days = (count: number) => makeDays(count).map((point) => point.day);
+
+    it("plots a day per point up to 90 days", () => {
+        expect(pickChartGranularity(days(7))).toBe(Granularity.DAY);
+        expect(pickChartGranularity(days(90))).toBe(Granularity.DAY);
+    });
+
+    it("plots a week per point past 90 days, however long", () => {
+        expect(pickChartGranularity(days(91))).toBe(Granularity.WEEK);
+        expect(pickChartGranularity(days(800))).toBe(Granularity.WEEK);
     });
 });
 

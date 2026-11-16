@@ -17,6 +17,7 @@ import {
     type Icon,
     MagnifyingGlassIcon,
     MoonIcon,
+    PuzzlePieceIcon,
     SunIcon
 } from "@phosphor-icons/react";
 import {
@@ -63,6 +64,9 @@ import {
     useIsAutoAssembly,
     useIsAutoAssemblyNew
 } from "../features/auto-assembly/navigation";
+import { useIsFeatureScripts } from "../features/featurescripts/navigation";
+import { FeatureScriptSearchBar } from "../features/featurescripts/components/featurescript-search-bar";
+import { type WorkspacePath } from "@backend/features/version-manager/contract";
 import { type AppTab, UtilityTab } from "../lib/app-tab";
 import { getTabName, useNavigateToTab } from "../lib/tabs";
 import { useRefreshVersionManagerMutation } from "../features/version-manager/queries";
@@ -95,30 +99,38 @@ export function NavbarRow(props: PropsWithChildren): ReactNode {
 
 /** The page picker with the brand and settings, over search and its filters, then the context bar. */
 export function AppNavbar(): ReactNode {
-    // Search and its filters belong to a library, and neither utility is
-    // one; their pages fill the room they leave.
+    // Search and its filters belong to a library; FeatureScripts has a search
+    // of its own there, and the Version Manager's and Auto Assembly's pages fill the room.
     const isVersionManager = useIsVersionManager();
     const isAutoAssembly = useIsAutoAssembly();
-    const isUtility = isVersionManager || isAutoAssembly;
+    const isFeatureScripts = useIsFeatureScripts();
+    const isLibrary = !isVersionManager && !isAutoAssembly && !isFeatureScripts;
+    const workspace = useTargetWorkspace();
 
     return (
         <Stack gap={0}>
             <NavbarRow>
                 <PagePicker />
                 <Group gap="xs" ml="auto" className={styles.noShrink}>
-                    {/* Inserting is the library's; a utility inserts nothing from a row. */}
                     <SignInButton />
-                    {isVersionManager && <VersionManagerRefreshButton />}
+                    {isVersionManager && workspace && (
+                        <VersionManagerRefreshButton workspace={workspace} />
+                    )}
                     <SettingsControls />
                 </Group>
             </NavbarRow>
-            {!isUtility && (
+            {isLibrary && (
                 <Group gap="xs" px="sm" h={NAVBAR_ROW_HEIGHT}>
                     <SearchBar />
                     <VendorMenu />
                 </Group>
             )}
-            <ContextBar isLibrary={!isUtility} />
+            {isFeatureScripts && (
+                <Group gap="xs" px="sm" h={NAVBAR_ROW_HEIGHT}>
+                    <FeatureScriptSearchBar />
+                </Group>
+            )}
+            <ContextBar isLibrary={isLibrary} />
         </Stack>
     );
 }
@@ -153,9 +165,7 @@ interface AppPage {
 }
 
 function useAppPages(): AppPage[] {
-    const targetWorkspace = useTargetWorkspace();
     const targetElement = useTargetElement();
-    const isVersionManager = useIsVersionManager();
     const isAutoAssembly = useIsAutoAssembly();
     const isNew = useIsAutoAssemblyNew();
 
@@ -172,20 +182,16 @@ function useAppPages(): AppPage[] {
         )
     }));
 
-    // Each is listed while it is showing even without what it acts on, so the
-    // picker never names a page it does not offer.
-    const utilities: AppPage[] = [
-        ...(targetWorkspace || isVersionManager
-            ? [
-                  {
-                      tab: UtilityTab.VERSION_MANAGER,
-                      group: UTILITIES_GROUP,
-                      icon: GitBranchIcon,
-                      color: AppColor.VERSION_MANAGER
-                  }
-              ]
-            : []),
-        ...(targetElement || isAutoAssembly
+    // Needs no document: browsing works anywhere, and adding says why it can't.
+    const featureScripts: AppPage = {
+        tab: UtilityTab.FEATURESCRIPTS,
+        group: UTILITIES_GROUP,
+        icon: PuzzlePieceIcon,
+        color: AppColor.FEATURESCRIPTS
+    };
+    // Listed while it is showing even without an element, so the picker never names a page it does not offer.
+    const autoAssembly: AppPage[] =
+        targetElement || isAutoAssembly
             ? [
                   {
                       tab: UtilityTab.AUTO_ASSEMBLY,
@@ -196,9 +202,19 @@ function useAppPages(): AppPage[] {
                       isNew
                   }
               ]
-            : [])
+            : [];
+
+    return [
+        ...libraries,
+        featureScripts,
+        {
+            tab: UtilityTab.VERSION_MANAGER,
+            group: UTILITIES_GROUP,
+            icon: GitBranchIcon,
+            color: AppColor.VERSION_MANAGER
+        },
+        ...autoAssembly
     ];
-    return [...libraries, ...utilities];
 }
 
 /** The pages under their headings, each heading where its first page comes. */
@@ -216,13 +232,16 @@ function PagePicker(): ReactNode {
     const currentLibraryId = useLibraryId();
     const isVersionManager = useIsVersionManager();
     const isAutoAssembly = useIsAutoAssembly();
+    const isFeatureScripts = useIsFeatureScripts();
     const navigateToTab = useNavigateToTab();
 
     const current: AppTab = isVersionManager
         ? UtilityTab.VERSION_MANAGER
         : isAutoAssembly
           ? UtilityTab.AUTO_ASSEMBLY
-          : currentLibraryId;
+          : isFeatureScripts
+            ? UtilityTab.FEATURESCRIPTS
+            : currentLibraryId;
     const currentPage = pages.find((page) => page.tab === current);
 
     // Warm the versions on hover, so picking one has nothing left to wait for.
@@ -313,9 +332,15 @@ export function SettingsControls(): ReactNode {
     );
 }
 
+interface VersionManagerRefreshButtonProps {
+    workspace: WorkspacePath;
+}
+
 /** Reads the linked documents again, past what the server cached of them. */
-function VersionManagerRefreshButton(): ReactNode {
-    const workspace = useTargetWorkspace();
+function VersionManagerRefreshButton(
+    props: VersionManagerRefreshButtonProps
+): ReactNode {
+    const { workspace } = props;
     const refresh = useRefreshVersionManagerMutation(workspace);
     return (
         <RefreshButton

@@ -59,11 +59,11 @@ export function GroupCard(props: GroupCardProps): ReactNode {
                     }
                     badge={
                         <>
-                            <GroupChangesBadge documentId={group.documentId} />
                             <GroupStatusBadge
                                 groupId={group.id}
                                 name={group.name}
                             />
+                            <GroupChangesBadge documentId={group.documentId} />
                         </>
                     }
                 />

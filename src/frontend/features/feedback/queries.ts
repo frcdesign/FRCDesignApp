@@ -16,11 +16,8 @@ export function useSendFeedbackMutation() {
             apiPost<FeedbackOut>("/feedback", { body }),
         onError: (error) =>
             // No Report button: a report that can't be sent can't report itself.
-            handleAppError(
-                error,
-                m.feedbackSendFailed(),
-                FEEDBACK_TOAST_ID,
-                false
-            )
+            handleAppError(error, m.feedbackSendFailed(), FEEDBACK_TOAST_ID, {
+                reportable: false
+            })
     });
 }

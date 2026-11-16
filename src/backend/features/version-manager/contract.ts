@@ -1,11 +1,11 @@
 /**
- * What the version manager's routes take and answer. A leaf: the frontend
+ * What the Version Manager's routes take and answer. A leaf: the frontend
  * imports it, so nothing Worker-only belongs here.
  */
 import { type InstancePath } from "../../lib/onshape/path";
 
 /**
- * The only instance the version manager acts on. A version is a snapshot with
+ * The only instance the Version Manager acts on. A version is a snapshot with
  * no references to update, and a microversion cannot be written to at all.
  */
 export type WorkspacePath = InstancePath & { instanceType: "w" };

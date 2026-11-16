@@ -11,10 +11,12 @@ their Onshape calls and link here for how those calls behave.
 
 | Path                                              | Role                                                                                                                   |
 | ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `src/backend/lib/onshape/client.ts`               | `OnshapeApi`, `OAuthApi`, `ApiKeyApi`; `OnshapeApiError`, `OnshapeRateLimitError`                                      |
+| `src/backend/lib/onshape/client.ts`               | `OnshapeApi`, `OAuthApi`, `ApiKeyApi`; `OnshapeApiError`, `OnshapeRateLimitError`, `OnshapeTimeoutError`               |
+| `src/backend/lib/onshape/retry.ts`                | `retryInsert`, `INSERT_RETRY`: an insert's timeout, calling again on a 5xx, and wording a timeout                      |
 | `src/backend/lib/onshape/endpoints/`              | One wrapper per Onshape endpoint, grouped by Onshape's API category                                                    |
 | `src/backend/lib/api-error.ts`                    | `ApiError` and its four kinds; the body every failed `/api` response carries                                           |
 | `src/backend/lib/errors.ts`                       | `errorHandler`: turns any thrown error into that body and a status                                                     |
+| `src/backend/lib/error-text.ts`                   | `describeError`: an error's message and its causes', as one line for a log                                             |
 | `src/backend/lib/onshape/failures.ts`             | `onshapeStatus`, `isTransient`, `isRateLimited`; `OnshapeFailure` and `describeOnshapeFailure`: one wording per status |
 | `src/backend/lib/run-failures.ts`                 | `runFailures`: a background run's failures worded at the step and read back at the report                              |
 | `src/backend/features/load/steps.ts`              | Workflow retry policies for Onshape and thumbnail steps                                                                |
@@ -39,7 +41,8 @@ Every call goes through `OnshapeApi._call` to
   second 401 is thrown. `ApiKeyApi` signs with an HMAC for scripts.
 - **Timeout.** Each request aborts after 60 s (`REQUEST_TIMEOUT_MS`), well under
   a workflow step's 10-minute limit, so a hung call fails the step and it
-  retries.
+  retries. A caller may set its own with `timeoutMs`, as an insert does. The
+  abort throws `OnshapeTimeoutError`, whose message says how long it waited.
 - **Query.** Built by `toQueryString` (`src/backend/lib/query-params.ts`),
   which spells a space `%20`: Onshape reads a `+` literally, and a
   configuration sent with one (`0.1524+m`) is ignored without an error.
@@ -50,7 +53,8 @@ Every call goes through `OnshapeApi._call` to
   (60 s when absent), and spells it into the message, since a Workflow rebuilds
   errors and only the message survives; `readRetryAfterSeconds` reads it back.
 - **No retry in the client.** A request is tried once (plus the 401 refresh). Retrying
-  belongs to the caller: a workflow step's policy, or the user.
+  belongs to the caller: a workflow step's policy, `retryInsert` around an
+  insert, or the user.
 
 Which calls each flow makes is listed in that flow's document.
 
@@ -58,23 +62,33 @@ Which calls each flow makes is listed in that flow's document.
 
 A route throws; `errorHandler` answers with `{ kind, message }` and a status:
 
-| Thrown                           | Kind               | Status   | Message the user sees                             |
-| -------------------------------- | ------------------ | -------- | ------------------------------------------------- |
-| `handledError(message, status)`  | `handled`          | as given | `message`                                         |
-| `signInRequiredError(message)`   | `sign-in-required` | 401      | `message`, with a **Sign in** button              |
-| `forbiddenError(message)`        | `forbidden`        | 403      | `message`                                         |
-| `internalError(message, status)` | `internal`         | as given | The caller's default wording; `message` is logged |
-| `OnshapeRateLimitError`          | `handled`          | 429      | `OnshapeFailure.RATE_LIMITED`                     |
-| `OnshapeApiError` 401            | `sign-in-required` | 401      | `OnshapeFailure.SIGN_IN_EXPIRED`                  |
-| `OnshapeApiError` 403            | `forbidden`        | 403      | `OnshapeFailure.FORBIDDEN`                        |
-| Any other `OnshapeApiError`      | `internal`         | 502      | Default wording; logged                           |
-| A validator's `HTTPException`    | `internal`         | its own  | Default wording; logged                           |
-| Anything else                    | `internal`         | 500      | Default wording; logged                           |
+| Thrown                           | Kind               | Status   | Message the user sees                                                      |
+| -------------------------------- | ------------------ | -------- | -------------------------------------------------------------------------- |
+| `handledError(message, status)`  | `handled`          | as given | `message`                                                                  |
+| `signInRequiredError(message)`   | `sign-in-required` | 401      | `message`, with a **Sign in** button                                       |
+| `forbiddenError(message)`        | `forbidden`        | 403      | `message`                                                                  |
+| `internalError(message, status)` | `internal`         | as given | The caller's default wording; `message` is logged                          |
+| `OnshapeRateLimitError`          | `handled`          | 429      | `OnshapeFailure.RATE_LIMITED`                                              |
+| `OnshapeApiError` 401            | `sign-in-required` | 401      | `OnshapeFailure.SIGN_IN_EXPIRED`                                           |
+| `OnshapeApiError` 403            | `forbidden`        | 403      | `OnshapeFailure.FORBIDDEN`                                                 |
+| Any other `OnshapeApiError`      | `internal`         | 502      | Default wording; logged                                                    |
+| `OnshapeTimeoutError`            | `internal`         | 504      | Default wording; logged. An insert's is `handled`, worded by `retryInsert` |
+| A validator's `HTTPException`    | `internal`         | its own  | Default wording; logged                                                    |
+| Anything else                    | `internal`         | 500      | Default wording; logged                                                    |
 
 A logged error's body also carries an `errorId`: the request's Ray ID (`cf-ray`),
 or a random id where there is none, as in tests and local dev. It is logged as
-`Server error <errorId>` beside the error and its stack, so a report quoting it
-([feedback.md](./feedback.md)) finds the stack in Workers Logs.
+`Server error <errorId>: <describeError(error)>` beside the error itself, so a
+report quoting it ([feedback.md](./feedback.md)) finds the message, its causes
+and the stack in Workers Logs. The message is spelled into the line because
+Workers Logs keeps an `Error` argument's stack frames and drops its
+`Name: message` line, and never shows its `cause`: a failed query is a Drizzle
+error whose cause is D1's. `runInBackground` and `retryInsert` log the same
+way.
+
+An Onshape refusal the user is told about in our own words (401, 403, 429) is
+logged as a warning, `Onshape refused <method> <path>: <Onshape's message>`,
+since Onshape's reason appears nowhere else.
 
 On the client, `apiGet`/`apiPost`/`apiDelete` throw an `AppError` holding that
 body and the request that failed (`FailedRequest`: method, path without the
@@ -89,8 +103,8 @@ the error behind it, `internal` message included; a failed load shown as
 beside **Send a report**. See [feedback.md](./feedback.md). Images use
 `loadImage`, which throws `ImageLoadError` with only the status.
 
-A tab opened before a deploy fails its next lazy import, since the deploy
-removed the old build's chunks. Vite reports that as `vite:preloadError`, and
+A tab opened two deploys back fails its next lazy import, since only the
+previous release's chunks are kept. Vite reports that as `vite:preloadError`, and
 `reloadOnStaleBuild` reloads the tab to fetch the new build, at most once in
 10 s (`sessionStorage`), so a chunk still missing after the reload reaches the
 crash page.
@@ -115,17 +129,21 @@ If it keeps happening, send a report."
 
 ## Retries and timeouts
 
-| Where                           | Setting                            | Policy                                                                 |
-| ------------------------------- | ---------------------------------- | ---------------------------------------------------------------------- |
-| Any Onshape request             | `REQUEST_TIMEOUT_MS`               | Aborts after 60 s                                                      |
-| Steps calling Onshape           | `ONSHAPE_STEP_RETRIES`             | 1 retry after 2 s; a 429 waits its `Retry-After` plus 0–20 s of jitter |
-| Load thumbnail steps            | `THUMBNAIL_RETRIES`                | 3 retries after 10, 20, 40 s; a 429 as above                           |
-| Configuration renders           | `RENDER_RETRIES`                   | 30 retries every 2 s; a 429 waits its `Retry-After` plus jitter        |
-| A reload waiting its turn       | `TURN_INTERVAL`                    | Checks the library again every 30 s                                    |
-| Client queries                  | `queryClient` default              | 2 retries, none for an `AppError` that isn't `internal`                |
-| Stored thumbnails on the client | `STORED_RETRIES`                   | 1 retry                                                                |
-| Waiting on a render             | `RENDER_TIMEOUT_MS`                | Gives up after 60 s without the image                                  |
-| Push socket                     | `FIRST_RETRY_MS` → `LAST_RETRY_MS` | Reconnects after 1 s, doubling to 30 s                                 |
+| Where                           | Setting                            | Policy                                                                                  |
+| ------------------------------- | ---------------------------------- | --------------------------------------------------------------------------------------- |
+| Any Onshape request             | `REQUEST_TIMEOUT_MS`               | Aborts after 60 s                                                                       |
+| An insert's Onshape call        | `INSERT_RETRY`                     | Aborts after 60 s; 1 retry after 1 s on a 5xx, none on a timeout, a 4xx or a 429        |
+| An insert after a disconnect    | `finishEvenIfDisconnected`         | Keeps running up to 30 s past the client leaving, so Onshape's insert is still recorded |
+| Steps calling Onshape           | `ONSHAPE_STEP_RETRIES`             | 1 retry after 2 s; a 429 waits its `Retry-After` plus 0–20 s of jitter                  |
+| Load thumbnail steps            | `THUMBNAIL_RETRIES`                | 3 retries after 10, 20, 40 s; a 429 as above                                            |
+| Configuration renders           | `RENDER_RETRIES`                   | 30 retries every 2 s; a 429 waits its `Retry-After` plus jitter                         |
+| A reload waiting its turn       | `TURN_INTERVAL`                    | Checks the library again every 30 s                                                     |
+| Client queries                  | `queryClient` default              | 2 retries after 1 and 2 s, none for an `AppError` that isn't `internal`                 |
+| A library's cache version       | `LIBRARY_VERSION_RETRIES`          | 5 retries after 1, 2, 4, 8 and 16 s, none for an `AppError` that isn't `internal`       |
+| D1 reads                        | D1's own                           | D1 retries a read-only query twice on a retryable error; the app adds none              |
+| Stored thumbnails on the client | `STORED_RETRIES`                   | 1 retry                                                                                 |
+| Waiting on a render             | `RENDER_TIMEOUT_MS`                | Gives up after 60 s without the image                                                   |
+| Push socket                     | `FIRST_RETRY_MS` → `LAST_RETRY_MS` | Reconnects after 1 s, doubling to 30 s                                                  |
 
 Workflows multiply a retry's delay by its backoff curve, so every policy returns
 its own delay from a function and sets `backoff: "constant"`.
@@ -156,22 +174,22 @@ which is how a loading toast turns into its result.
 
 The flows that use them:
 
-| Action                        | Toast id                                                                               | While                          | Then                                                                                                     |
-| ----------------------------- | -------------------------------------------------------------------------------------- | ------------------------------ | -------------------------------------------------------------------------------------------------------- |
-| Insert                        | per insertable                                                                         | "Inserting {name}..."          | "Successfully inserted {name}." (and "…created a Fasten mate." or "…fastened it to {n} circular edges.") |
-| Add document                  | `add-group`                                                                            | "Adding document..."           | "Added {name}."                                                                                          |
-| Reload thumbnail              | `reload-thumbnail`                                                                     | "Reloading thumbnail..."       | "Thumbnail reloaded."                                                                                    |
-| Update references             | `update-references`                                                                    | "Updating references..."       | "Updated references."                                                                                    |
-| Show or hide elements         | `set-visibility`                                                                       | "Showing/Hiding element(s)..." | "Element(s) shown/hidden."                                                                               |
-| Toggle insert and fasten      | per insertable                                                                         | loading                        | success                                                                                                  |
-| Save indexing changes         | per insertable                                                                         | info: "Reindexing part..."     | "Successfully indexed part."                                                                             |
-| Set or refresh the admin team | none                                                                                   | —                              | "Admin team set/refreshed: {n} members."                                                                 |
-| Reload documents / approve    | none                                                                                   | —                              | info: "Reloading {n} documents..."                                                                       |
-| Save favorite configuration   | none                                                                                   | —                              | "Favorite default configuration set."                                                                    |
-| Link a document               | none                                                                                   | —                              | "Successfully linked {document} - {workspace}."                                                          |
-| Link all suggested parents    | none                                                                                   | —                              | "Linked {count} documents."                                                                              |
-| Refresh the version manager   | none                                                                                   | the button's spinner           | "Refreshed linked documents."                                                                            |
-| Tips                          | `quick-insert-tip`, `thumbnail-wait-tip`, `fasten-circular-edges-tip`, sign-in preview | —                              | info, 8 s                                                                                                |
+| Action                        | Toast id                                                           | While                                                         | Then                                                            |
+| ----------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------- | --------------------------------------------------------------- |
+| Insert                        | per insertable                                                     | "Inserting {name}...", after 15 s "Still inserting {name}. …" | "Successfully inserted {name}." (and "…created a Fasten mate.") |
+| Add document                  | `add-group`                                                        | "Adding document..."                                          | "Added {name}."                                                 |
+| Reload thumbnail              | `reload-thumbnail`                                                 | "Reloading thumbnail..."                                      | "Thumbnail reloaded."                                           |
+| Update references             | `update-references`                                                | "Updating references..."                                      | "Updated references."                                           |
+| Show or hide elements         | `set-visibility`                                                   | "Showing/Hiding element(s)..."                                | "Element(s) shown/hidden."                                      |
+| Toggle insert and fasten      | per insertable                                                     | loading                                                       | success                                                         |
+| Save indexing changes         | per insertable                                                     | info: "Reindexing part..."                                    | "Successfully indexed part."                                    |
+| Set or refresh the admin team | none                                                               | —                                                             | "Admin team set/refreshed: {n} members."                        |
+| Reload documents / approve    | none                                                               | —                                                             | info: "Reloading {n} documents..."                              |
+| Save favorite configuration   | none                                                               | —                                                             | "Favorite default configuration set."                           |
+| Link a document               | none                                                               | —                                                             | "Successfully linked {document} - {workspace}."                 |
+| Link all suggested parents    | none                                                               | —                                                             | "Linked {count} documents."                                     |
+| Refresh the Version Manager   | none                                                               | the button's spinner                                          | "Refreshed linked documents."                                   |
+| Tips                          | `thumbnail-wait-tip`, `fasten-circular-edges-tip`, sign-in preview | —                                                             | info, 8 s                                                       |
 
 Loading toasts are for work the user watches; background work gets an info
 toast and then shows its progress where it happens (a group's spinner, a job
@@ -184,13 +202,15 @@ One `ClientRelay` Durable Object holds every client's WebSocket
 (`GET /api/push?library=<id>`), hibernating so idle sockets cost nothing, and
 tags each with the library it shows.
 
-| Message        | Sent by                                              | To                       | The client                                                     |
-| -------------- | ---------------------------------------------------- | ------------------------ | -------------------------------------------------------------- |
-| `jobs`         | A reload asked for, claiming, progressing, finishing | That library's sockets   | Sets the job status query (editors only)                       |
-| `library`      | A load that wrote, a shell group, an admin team sync | That library's sockets   | `refreshLibrary()`, which moves to the new cache version       |
-| `thumbnail`    | Each stored render size                              | Every socket             | Refetches rows that missed that render; wakes a waiting render |
-| `version-job`  | A push or pull starting, and the workflow ending it  | That workspace's sockets | Sets the run's status query                                    |
-| `assembly-job` | A fastener run starting, each step, and its end      | That workspace's sockets | Refetches the run's status, if it's this page's assembly       |
+| Message               | Sent by                                              | To                       | The client                                                     |
+| --------------------- | ---------------------------------------------------- | ------------------------ | -------------------------------------------------------------- |
+| `jobs`                | A reload asked for, claiming, progressing, finishing | That library's sockets   | Sets the job status query (editors only)                       |
+| `library`             | A load that wrote, a shell group, an admin team sync | That library's sockets   | `refreshLibrary()`, which moves to the new cache version       |
+| `thumbnail`           | Each stored render size                              | Every socket             | Refetches rows that missed that render; wakes a waiting render |
+| `version-job`         | A push or pull starting, and the workflow ending it  | That workspace's sockets | Sets the run's status query                                    |
+| `assembly-job`        | A fastener run starting, each step, and its end      | That workspace's sockets | Refetches the run's status, if it's this page's assembly       |
+| `featurescripts`      | A FeatureScripts load that wrote                     | Every socket             | Refetches the FeatureScripts' cache version                    |
+| `featurescripts-load` | A FeatureScripts load starting or ending             | Every socket             | Refetches the owner's load status                              |
 
 A socket is tagged with the library it shows and, where Onshape launched the app
 in one, the workspace it was launched in — which is what a `version-job` or `assembly-job` reaches.
@@ -207,10 +227,24 @@ that reconnects refreshes the library, since pushes during the outage are lost.
   Only a success is cached; an error answers `private, no-store`.
 - **Stored thumbnails** are immutable by their url (`v` is the microversion); a
   miss is `no-store`.
-- **Everything else** is `private, no-store`.
+- **Everything else** from `/api` is `private, no-store`.
+- **The bundle.** Vite names every file under `/assets/` by a hash of its
+  contents, and `public/_headers` answers those
+  `public, max-age=31536000, immutable`, so a second visit asks for none of
+  them. `index.html`, which names them, keeps Cloudflare's default
+  `max-age=0, must-revalidate`, so a deploy is picked up on the next load.
+  Each deploy also carries the previous release's `/assets/` files; see
+  **Decisions**.
 - On the client, `useRefreshLibrary` invalidates the library's unversioned
   queries and the version itself; a versioned query's old url is left alone,
   since refetching it would restore the old state.
+
+## Failure and recovery
+
+| Failure                               | Result                                                                                     | Recovery                                                |
+| ------------------------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------- |
+| D1 reads failing for under 30 s       | The library route waits on its cache version's retries; other queries show their own error | The version's retries outlast it, and the library loads |
+| D1 reads failing for longer than that | The library route's loader throws, and the root error component shows the crash page       | Reloading the panel once D1 answers                     |
 
 ## Invariants
 
@@ -231,6 +265,30 @@ that reconnects refreshes the library, since pushes during the outage are lost.
   by a success: one retry two seconds on, then the step fails and says why,
   rather than backing off for minutes. Thumbnails, which Onshape renders in
   the background, keep their own longer policy.
+- **An insert waits 60 s and never retries a timeout.** A call Onshape is
+  slow to answer can still land (see
+  [ONSHAPE.md](../ONSHAPE.md#calling-the-api)), and a retry after 60 s would
+  keep someone watching the toast waiting two minutes. A timeout answers
+  `handled` 504 with the caller's message (`INSERT_TIMED_OUT` for a part),
+  asking for a report if the part doesn't appear; the use goes unrecorded. The
+  client's loading toast says Onshape is slow after 15 s (`SLOW_INSERT_MS`), so
+  the wait doesn't look stuck. A 5xx is still retried, as nothing says it
+  inserted.
+- **The cache version retries for half a minute; D1 reads aren't retried on
+  the server.** The library route awaits the version, so its failure is the
+  crash page, where any other query's is one section's error. D1 already
+  retries a read twice, so a read that still fails is an outage longer than a
+  request should wait: the client's backoff spans it without holding a Worker
+  open.
+- **Hashed bundle files are cached for a year, and a deploy keeps the last
+  release's.** A file's name changes with its contents, so a cached one is
+  never out of date. A tab opened before a deploy still lazy-loads the old
+  build's chunks, so `.github/workflows/deploy.yml` ships the previous
+  release's `/assets/` beside the new ones, as Cloudflare advises for version
+  skew; it carries them in the Actions cache, saved only after a deploy
+  succeeds. A tab two releases old, or one whose release's cache GitHub has
+  evicted (seven days unused), still misses, and `reloadOnStaleBuild` reloads
+  it.
 - **One push hub.** Pushes are few and small; one instance keeps fan-out simple.
 - **Errors by kind, not status.** The client decides wording from `kind`, so a
   status can change without changing what the user reads.

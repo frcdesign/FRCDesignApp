@@ -4,6 +4,7 @@ export { RenderThumbnailWorkflow } from "./features/thumbnails/render-workflow";
 export { ClientRelay } from "./features/push/client-relay";
 export { VersionManagerWorkflow } from "./features/version-manager/workflow";
 export { AutoAssemblyWorkflow } from "./features/auto-assembly/workflow";
+export { LoadFeatureScriptsWorkflow } from "./features/featurescripts/workflow";
 import { createApp } from "./app";
 import { productionAuth } from "./features/auth/request-auth";
 import type { AppBindings } from "./lib/context";

@@ -66,10 +66,13 @@ export function partUrl(path: ElementPath, overrides?: PartialSelection) {
     return url;
 }
 
+/** Searches every library, for a report whose topic is the app's rather than one library's. */
+export const ANY_LIBRARY = "any";
+
 /** Undefined when the part isn't in `libraryId`, so a report can't name another library's. */
 export async function findReportedPart(
     db: Db,
-    libraryId: LibraryId,
+    libraryId: LibraryId | typeof ANY_LIBRARY,
     insertableId: string,
     requested: PartialSelection | undefined
 ): Promise<FoundPart | undefined> {
@@ -91,7 +94,9 @@ export async function findReportedPart(
         .where(
             and(
                 eq(insertables.id, insertableId),
-                eq(insertables.libraryId, libraryId)
+                libraryId === ANY_LIBRARY
+                    ? undefined
+                    : eq(insertables.libraryId, libraryId)
             )
         )
         .get();

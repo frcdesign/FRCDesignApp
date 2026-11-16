@@ -19,9 +19,6 @@ export function VersionManagerTiles({
                 <StatTile
                     label={m.dashboardVersionRuns()}
                     value={totals.runs}
-                    caption={m.dashboardVersionRunsWithFailures({
-                        count: totals.runsWithFailures
-                    })}
                 />
                 <StatTile
                     label={m.dashboardVersionTabsUpdated()}

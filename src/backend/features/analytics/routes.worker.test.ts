@@ -5,6 +5,8 @@ import { configurations, insertables } from "../../db/schema";
 import {
     dailyAppOpens,
     dailyConfigurationMetrics,
+    dailyFeatureScriptMetrics,
+    dailyFeatureScriptUsers,
     dailyInsertableMetrics,
     dailyInsertableUsers,
     dailyMetrics,
@@ -28,6 +30,7 @@ import {
     seedTestData
 } from "../../../__test_utils__";
 import { getDb } from "../../db/client";
+import { featureScripts } from "../featurescripts/schema";
 import { createApp } from "../../app";
 import { EventType, UseSource, UseTarget } from "./usage";
 import { LibraryId } from "../library/library-id";
@@ -37,6 +40,7 @@ import {
 } from "../configurations/contract";
 import {
     type DailyUsePoint,
+    type FeatureScriptUsageOut,
     type OverviewUsageOut,
     type ReportSummary,
     type UseSourceUsage,
@@ -180,6 +184,8 @@ const OVERVIEW_AREAS = [
     "series",
     "sources",
     "version-manager",
+    "featurescripts",
+    "health",
     "reports"
 ];
 
@@ -293,7 +299,6 @@ describe("analytics routes", () => {
             expect(body.totals).toMatchObject({
                 uses: 10,
                 favoriteUses: 4,
-                fastenInserts: 3,
                 quickInserts: 6,
                 fastenableInserts: 5,
                 preselectedInserts: 2,
@@ -310,11 +315,6 @@ describe("analytics routes", () => {
                 appOpens: 0,
                 activeUsers: 0,
                 favoriteUses: 4,
-                fastenInserts: 3,
-                quickInserts: 6,
-                fastenableInserts: 5,
-                preselectedInserts: 2,
-                autoAssemblyInserts: 1,
                 targets: {
                     [UseTarget.ASSEMBLY]: 5,
                     [UseTarget.PART_STUDIO]: 5,
@@ -520,6 +520,31 @@ describe("analytics routes", () => {
             expect(bySource[UseSource.RECENTS]).toMatchObject({
                 count: 0
             });
+            // Only imported history has it, so a range without any leaves it out.
+            expect(bySource[UseSource.UNKNOWN]).toBeUndefined();
+        });
+
+        it("lists imported uses with no recorded source when the range has them", async () => {
+            await db.insert(dailySourceMetrics).values({
+                day: "2026-03-01",
+                libraryId: TEST_LIBRARY_ID,
+                source: UseSource.UNKNOWN,
+                count: 4,
+                quickInsertCount: 1
+            });
+
+            const res = await anonymousGet(
+                "/api/analytics/overview/sources?from=2026-03-01&to=2026-03-31"
+            );
+            const body: UseSourceUsage[] = await res.json();
+
+            expect(
+                body.find((row) => row.source === UseSource.UNKNOWN)
+            ).toEqual({
+                source: UseSource.UNKNOWN,
+                count: 4,
+                quickInsertCount: 1
+            });
         });
 
         it("scopes the source breakdown to the range", async () => {
@@ -587,6 +612,58 @@ describe("analytics routes", () => {
             const body: LibrarySummaryOut = await res.json();
 
             expect(body.totals.uses).toBe(2);
+        });
+    });
+
+    describe("GET /analytics/overview/featurescripts", () => {
+        it("breaks the range's adds down by feature", async () => {
+            await db.insert(featureScripts).values(
+                ["robotFrame", "robotBelt"].map((featureType) => ({
+                    elementId: `e-${featureType}`,
+                    microversionId: "mv-1",
+                    featureType,
+                    name: featureType === "robotFrame" ? "Frame" : "Belt",
+                    description: ""
+                }))
+            );
+            await db.insert(dailyFeatureScriptMetrics).values([
+                { day: "2026-06-01", featureType: "robotFrame", adds: 3 },
+                { day: "2026-06-02", featureType: "robotFrame", adds: 2 },
+                { day: "2026-06-01", featureType: "robotGone", adds: 1 },
+                { day: "2025-01-01", featureType: "robotBelt", adds: 9 }
+            ]);
+            await db.insert(dailyFeatureScriptUsers).values([
+                { day: "2026-06-01", featureType: "robotFrame", userId: "a" },
+                { day: "2026-06-02", featureType: "robotFrame", userId: "a" },
+                { day: "2026-06-02", featureType: "robotFrame", userId: "b" },
+                { day: "2026-06-01", featureType: "robotGone", userId: "a" },
+                { day: "2025-01-01", featureType: "robotBelt", userId: "c" }
+            ]);
+
+            const res = await anonymousGet(
+                "/api/analytics/overview/featurescripts?from=2026-05-01&to=2026-07-01"
+            );
+            const body: FeatureScriptUsageOut = await res.json();
+
+            expect(body).toEqual({
+                adds: 6,
+                users: 2,
+                features: [
+                    {
+                        featureType: "robotFrame",
+                        name: "Frame",
+                        adds: 5,
+                        users: 2
+                    },
+                    { featureType: "robotGone", adds: 1, users: 1 },
+                    {
+                        featureType: "robotBelt",
+                        name: "Belt",
+                        adds: 0,
+                        users: 0
+                    }
+                ]
+            });
         });
     });
 
@@ -1135,6 +1212,25 @@ describe("analytics routes", () => {
                 insertableCount: 1,
                 errorCount: 1,
                 healthyItems: 1
+            });
+        });
+
+        it("counts the visible parts by kind on the overview", async () => {
+            await seedPartStudio(db);
+            await seedAssembly(db);
+            await db.update(insertables).set({ isVisible: true });
+            await seedPartStudio(db, {
+                id: "hidden",
+                elementId: "hidden-element"
+            });
+
+            const res = await anonymousGet("/api/analytics/overview/health");
+            const body: LibraryHealthCounts = await res.json();
+
+            expect(body).toMatchObject({
+                insertableCount: 2,
+                partStudioCount: 1,
+                assemblyCount: 1
             });
         });
 

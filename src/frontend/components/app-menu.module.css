@@ -7,3 +7,10 @@
     overflow-y: auto;
     overscroll-behavior: contain;
 }
+
+/* Taller than the panel, a menu scrolls inside itself rather than growing the page. */
+.capped {
+    max-height: calc(100dvh - 10px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}

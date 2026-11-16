@@ -31,7 +31,7 @@ import {
 } from "../../load/parse-configuration-records";
 import { ElementType } from "../../../lib/onshape/element-type";
 import type { IndexingSettings } from "../../build-checker/contract";
-import { UseSource } from "../../analytics/usage";
+import { CLIENT_USE_SOURCES, UseSource } from "../../analytics/usage";
 import { trackInsert } from "../../analytics/tracking";
 import { recordRecentInsert } from "../../recents/store";
 import { DerivedFeature } from "../../../lib/onshape/objects/derive-feature";
@@ -41,6 +41,8 @@ import {
     addAssemblyFeature
 } from "../../../lib/onshape/endpoints/assemblies";
 import { PartType } from "../../../lib/onshape/endpoints/documents";
+import { INSERT_TIMED_OUT, retryInsert } from "../../../lib/onshape/retry";
+import { finishEvenIfDisconnected } from "../../../lib/background";
 import {
     onshapeOverrides,
     partStudioInsertOverrides
@@ -276,11 +278,7 @@ const insertBody = z.object({
     isFavorite: z.boolean().default(false),
     isQuickInsert: z.boolean().default(false),
     // Defaulted so an older client can't fail the tracking batch on NOT NULL.
-    // An Auto Assembly run records its own inserts
-    source: z
-        .enum(UseSource)
-        .exclude(["AUTO_ASSEMBLY"])
-        .default(UseSource.BROWSE)
+    source: z.enum(CLIENT_USE_SOURCES).default(UseSource.BROWSE)
 });
 
 const addToAssemblyBody = insertBody
@@ -300,80 +298,93 @@ insertableRoutes.post(
     "/add-to-part-studio" + insertableRoute(),
     requireSignInMiddleware,
     validate("json", insertBody),
-    async (c) => {
-        const onshapeApi = await c.var.getOnshapeApi();
-        const insertableId = getInsertableParam(c);
-        const body = c.req.valid("json");
-        const { targetPath } = body;
+    // Onshape may get the insert even if the panel goes away, so record it too.
+    (c) =>
+        finishEvenIfDisconnected(
+            c,
+            (async () => {
+                const onshapeApi = await c.var.getOnshapeApi();
+                const insertableId = getInsertableParam(c);
+                const body = c.req.valid("json");
+                const { targetPath } = body;
 
-        const db = getDb(c.env.DB);
-        const row = await db
-            .select({
-                documentId: insertables.documentId,
-                versionId: insertables.versionId,
-                elementId: insertables.elementId,
-                name: insertables.name,
-                microversionId: insertables.microversionId,
-                libraryId: insertables.libraryId,
-                fastenInfo: insertables.fastenInfo
-            })
-            .from(insertables)
-            .where(eq(insertables.id, insertableId))
-            .get();
+                const db = getDb(c.env.DB);
+                const row = await db
+                    .select({
+                        documentId: insertables.documentId,
+                        versionId: insertables.versionId,
+                        elementId: insertables.elementId,
+                        name: insertables.name,
+                        microversionId: insertables.microversionId,
+                        libraryId: insertables.libraryId,
+                        fastenInfo: insertables.fastenInfo
+                    })
+                    .from(insertables)
+                    .where(eq(insertables.id, insertableId))
+                    .get();
 
-        if (!row) {
-            throw internalError("Insertable not found", HttpStatus.NOT_FOUND);
-        }
+                if (!row) {
+                    throw internalError(
+                        "Insertable not found",
+                        HttpStatus.NOT_FOUND
+                    );
+                }
 
-        const sourcePath = toElementPath(row);
+                const sourcePath = toElementPath(row);
 
-        const { selection, parameters } = await readSelection(
-            db,
-            insertableId,
-            body.selection
-        );
+                const { selection, parameters } = await readSelection(
+                    db,
+                    insertableId,
+                    body.selection
+                );
 
-        const feature = new DerivedFeature(
-            row.name,
-            sourcePath,
-            row.microversionId,
-            row.fastenInfo !== null,
-            selection,
-            parameters
-        );
+                const feature = new DerivedFeature(
+                    row.name,
+                    sourcePath,
+                    row.microversionId,
+                    row.fastenInfo !== null,
+                    selection,
+                    parameters
+                );
 
-        const result = await addPartStudioFeature(
-            onshapeApi,
-            targetPath,
-            feature.getFeature()
-        );
+                const result = await retryInsert(
+                    (timeoutMs) =>
+                        addPartStudioFeature(
+                            onshapeApi,
+                            targetPath,
+                            feature.getFeature(),
+                            timeoutMs
+                        ),
+                    INSERT_TIMED_OUT
+                );
 
-        await recordRecentInsert(c, {
-            libraryId: row.libraryId,
-            insertableId,
-            selection,
-            parameters
-        });
-        await trackInsert(c, {
-            libraryId: row.libraryId,
-            path: sourcePath,
-            insertableId,
-            targetElementType: ElementType.PART_STUDIO,
-            selection,
-            parameters,
-            isFavorite: body.isFavorite,
-            isQuickInsert: body.isQuickInsert,
-            source: body.source,
-            // Insert-and-fasten is only offered for assembly targets.
-            fasten: false,
-            fastenable: row.fastenInfo !== null,
-            preselected: false
-        });
+                await recordRecentInsert(c, {
+                    libraryId: row.libraryId,
+                    insertableId,
+                    selection,
+                    parameters
+                });
+                await trackInsert(c, {
+                    libraryId: row.libraryId,
+                    path: sourcePath,
+                    insertableId,
+                    targetElementType: ElementType.PART_STUDIO,
+                    selection,
+                    parameters,
+                    isFavorite: body.isFavorite,
+                    isQuickInsert: body.isQuickInsert,
+                    source: body.source,
+                    // Insert-and-fasten is only offered for assembly targets.
+                    fasten: false,
+                    fastenable: row.fastenInfo !== null,
+                    preselected: false
+                });
 
-        return c.json({
-            featureId: result.feature?.featureId
-        } satisfies InsertOut);
-    }
+                return c.json({
+                    featureId: result.feature?.featureId
+                } satisfies InsertOut);
+            })()
+        )
 );
 
 /** POST /api/add-to-assembly/insertable/:insertableId */
@@ -381,183 +392,202 @@ insertableRoutes.post(
     "/add-to-assembly" + insertableRoute(),
     requireSignInMiddleware,
     validate("json", addToAssemblyBody),
-    async (c) => {
-        const onshapeApi = await c.var.getOnshapeApi();
-        const insertableId = getInsertableParam(c);
-        const body = c.req.valid("json");
-        const { targetPath } = body;
+    // Onshape may get the insert even if the panel goes away, so record it too.
+    (c) =>
+        finishEvenIfDisconnected(
+            c,
+            (async () => {
+                const onshapeApi = await c.var.getOnshapeApi();
+                const insertableId = getInsertableParam(c);
+                const body = c.req.valid("json");
+                const { targetPath } = body;
 
-        const db = getDb(c.env.DB);
+                const db = getDb(c.env.DB);
 
-        // Single select for all insertable fields needed
-        const row = await db
-            .select({
-                documentId: insertables.documentId,
-                versionId: insertables.versionId,
-                elementId: insertables.elementId,
-                libraryId: insertables.libraryId,
-                name: insertables.name,
-                elementType: insertables.elementType,
-                isOpenComposite: insertables.isOpenComposite,
-                fastenInfo: insertables.fastenInfo
-            })
-            .from(insertables)
-            .where(eq(insertables.id, insertableId))
-            .get();
+                // Single select for all insertable fields needed
+                const row = await db
+                    .select({
+                        documentId: insertables.documentId,
+                        versionId: insertables.versionId,
+                        elementId: insertables.elementId,
+                        libraryId: insertables.libraryId,
+                        name: insertables.name,
+                        elementType: insertables.elementType,
+                        isOpenComposite: insertables.isOpenComposite,
+                        fastenInfo: insertables.fastenInfo
+                    })
+                    .from(insertables)
+                    .where(eq(insertables.id, insertableId))
+                    .get();
 
-        if (!row) {
-            throw internalError("Insertable not found", HttpStatus.NOT_FOUND);
-        }
-
-        const sourcePath = toElementPath(row);
-
-        const partTypes = row.isOpenComposite
-            ? [PartType.COMPOSITE_PARTS]
-            : [PartType.PARTS, PartType.COMPOSITE_PARTS];
-
-        const { selection, parameters } = await readSelection(
-            db,
-            insertableId,
-            body.selection
-        );
-
-        // Only the overrides: a whole selection can exceed what Onshape accepts.
-        const configuration =
-            selection &&
-            encodeConfiguration(
-                row.elementType === ElementType.PART_STUDIO
-                    ? partStudioInsertOverrides(selection, parameters)
-                    : onshapeOverrides(selection, parameters)
-            );
-
-        // Resolved here, since the marker moves whenever someone drags it.
-        const transform = body.insertLocationId
-            ? await getInsertLocationTransform(
-                  onshapeApi,
-                  targetPath,
-                  body.insertLocationId
-              )
-            : undefined;
-
-        // Every path below records once, an insert per instance it placed.
-        const track = (fasten: boolean, instances = 1, preselected = false) =>
-            trackInsert(
-                c,
-                {
-                    libraryId: row.libraryId,
-                    path: sourcePath,
-                    insertableId,
-                    targetElementType: ElementType.ASSEMBLY,
-                    selection,
-                    parameters,
-                    isFavorite: body.isFavorite,
-                    isQuickInsert: body.isQuickInsert,
-                    source: body.source,
-                    fasten,
-                    fastenable: row.fastenInfo !== null,
-                    preselected
-                },
-                instances
-            );
-
-        // Read before inserting, so picks with no circular edge insert nothing.
-        const fastensToPicks =
-            body.fasten && row.fastenInfo !== null && body.targets.length > 0;
-        const edges = fastensToPicks
-            ? (
-                  await indexHoles(
-                      onshapeApi,
-                      c.env.KV,
-                      targetPath,
-                      body.targets,
-                      body.excluded,
-                      await getFastenerSet(getDb(c.env.DB))
-                  )
-              ).circularEdges
-            : [];
-        if (fastensToPicks && edges.length === 0) {
-            throw handledError(
-                "No circular edges were found in what was selected.",
-                HttpStatus.BAD_REQUEST
-            );
-        }
-        const insert = () =>
-            addElementToAssembly(
-                onshapeApi,
-                targetPath,
-                sourcePath,
-                row.elementType,
-                {
-                    configuration,
-                    partTypes,
-                    transform
+                if (!row) {
+                    throw internalError(
+                        "Insertable not found",
+                        HttpStatus.NOT_FOUND
+                    );
                 }
-            );
-        const result = await insert();
-        let instances = 1;
-        const insertAnother = async () => {
-            const inserted = await insert();
-            instances++;
-            return inserted;
-        };
 
-        // The part is in the assembly whatever the fasten does.
-        await recordRecentInsert(c, {
-            libraryId: row.libraryId,
-            insertableId,
-            selection,
-            parameters
-        });
+                const sourcePath = toElementPath(row);
 
-        if (!body.fasten) {
-            await track(false);
-            return c.json({} satisfies InsertOut);
-        }
+                const partTypes = row.isOpenComposite
+                    ? [PartType.COMPOSITE_PARTS]
+                    : [PartType.PARTS, PartType.COMPOSITE_PARTS];
 
-        const fastenInfo = row.fastenInfo;
-        if (!fastenInfo) {
-            await track(false);
-            throw handledError(
-                `${row.name} does not support insert and fasten.`,
-                HttpStatus.BAD_REQUEST
-            );
-        }
+                const { selection, parameters } = await readSelection(
+                    db,
+                    insertableId,
+                    body.selection
+                );
 
-        const fastenQuery = (instancePath: string[]) =>
-            getFastenQuery(row.elementType, instancePath, fastenInfo);
-        // Mates named after the part, as its configuration names it
-        const stored = await readStoredParts(db, insertableId);
-        const name = stored ? partName(stored, selection) : row.name;
+                // Only the overrides: a whole selection can exceed what Onshape accepts.
+                const configuration =
+                    selection &&
+                    encodeConfiguration(
+                        row.elementType === ElementType.PART_STUDIO
+                            ? partStudioInsertOverrides(selection, parameters)
+                            : onshapeOverrides(selection, parameters)
+                    );
 
-        try {
-            if (edges.length > 0) {
-                await fastenToCircularEdges(onshapeApi, targetPath, {
-                    name,
-                    inserted: result,
-                    insert: insertAnother,
-                    fastenQuery,
-                    edges
+                // Resolved here, since the marker moves whenever someone drags it.
+                const transform = body.insertLocationId
+                    ? await getInsertLocationTransform(
+                          onshapeApi,
+                          targetPath,
+                          body.insertLocationId
+                      )
+                    : undefined;
+
+                // Every path below records once, an insert per instance it placed.
+                const track = (
+                    fasten: boolean,
+                    instances = 1,
+                    preselected = false
+                ) =>
+                    trackInsert(
+                        c,
+                        {
+                            libraryId: row.libraryId,
+                            path: sourcePath,
+                            insertableId,
+                            targetElementType: ElementType.ASSEMBLY,
+                            selection,
+                            parameters,
+                            isFavorite: body.isFavorite,
+                            isQuickInsert: body.isQuickInsert,
+                            source: body.source,
+                            fasten,
+                            fastenable: row.fastenInfo !== null,
+                            preselected
+                        },
+                        instances
+                    );
+
+                // Read before inserting, so picks with no circular edge insert nothing.
+                const fastensToPicks =
+                    body.fasten &&
+                    row.fastenInfo !== null &&
+                    body.targets.length > 0;
+                const edges = fastensToPicks
+                    ? (
+                          await indexHoles(
+                              onshapeApi,
+                              c.env.KV,
+                              targetPath,
+                              body.targets,
+                              body.excluded,
+                              await getFastenerSet(getDb(c.env.DB))
+                          )
+                      ).circularEdges
+                    : [];
+                if (fastensToPicks && edges.length === 0) {
+                    throw handledError(
+                        "No circular edges were found in what was selected.",
+                        HttpStatus.BAD_REQUEST
+                    );
+                }
+                const insert = () =>
+                    retryInsert(
+                        (timeoutMs) =>
+                            addElementToAssembly(
+                                onshapeApi,
+                                targetPath,
+                                sourcePath,
+                                row.elementType,
+                                {
+                                    configuration,
+                                    partTypes,
+                                    transform,
+                                    timeoutMs
+                                }
+                            ),
+                        INSERT_TIMED_OUT
+                    );
+                const result = await insert();
+                let instances = 1;
+                const insertAnother = async () => {
+                    const inserted = await insert();
+                    instances++;
+                    return inserted;
+                };
+
+                // The part is in the assembly whatever the fasten does.
+                await recordRecentInsert(c, {
+                    libraryId: row.libraryId,
+                    insertableId,
+                    selection,
+                    parameters
                 });
-                await track(true, instances, true);
-                await markHintSeen(c, Hint.FASTENED_TO_CIRCULAR_EDGES);
-                return c.json({
-                    fastenedCount: edges.length
-                } satisfies InsertOut);
-            }
 
-            const fastenResult = await addAssemblyFeature(
-                onshapeApi,
-                targetPath,
-                fastenMate(name, [fastenQuery(getInstancePath(result))])
-            );
-            await track(true);
-            return c.json({
-                featureId: fastenResult.feature.featureId
-            } satisfies InsertOut);
-        } catch (error) {
-            // What was inserted stays in the assembly whatever failed after it.
-            await track(false, instances);
-            throw error;
-        }
-    }
+                if (!body.fasten) {
+                    await track(false);
+                    return c.json({} satisfies InsertOut);
+                }
+
+                const fastenInfo = row.fastenInfo;
+                if (!fastenInfo) {
+                    await track(false);
+                    throw handledError(
+                        `${row.name} does not support insert and fasten.`,
+                        HttpStatus.BAD_REQUEST
+                    );
+                }
+
+                const fastenQuery = (instancePath: string[]) =>
+                    getFastenQuery(row.elementType, instancePath, fastenInfo);
+                // Mates named after the part, as its configuration names it
+                const stored = await readStoredParts(db, insertableId);
+                const name = stored ? partName(stored, selection) : row.name;
+
+                try {
+                    if (edges.length > 0) {
+                        await fastenToCircularEdges(onshapeApi, targetPath, {
+                            name,
+                            inserted: result,
+                            insert: insertAnother,
+                            fastenQuery,
+                            edges
+                        });
+                        await track(true, instances, true);
+                        await markHintSeen(c, Hint.FASTENED_TO_CIRCULAR_EDGES);
+                        return c.json({
+                            fastenedCount: edges.length
+                        } satisfies InsertOut);
+                    }
+
+                    const fastenResult = await addAssemblyFeature(
+                        onshapeApi,
+                        targetPath,
+                        fastenMate(name, [fastenQuery(getInstancePath(result))])
+                    );
+                    await track(true);
+                    return c.json({
+                        featureId: fastenResult.feature.featureId
+                    } satisfies InsertOut);
+                } catch (error) {
+                    // What was inserted stays in the assembly whatever failed after it.
+                    await track(false, instances);
+                    throw error;
+                }
+            })()
+        )
 );

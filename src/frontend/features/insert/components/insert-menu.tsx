@@ -12,8 +12,6 @@ import {
 import { MenuTitle, type MenuTitleProps } from "../../../components/app-title";
 import { useAppModal } from "../../../components/open-app-modal";
 import {
-    QUICK_INSERT_WINDOW_MS,
-    showQuickInsertTip,
     useFastenCircularEdgesTip,
     useSignInPreviewTip,
     useThumbnailWaitTip
@@ -97,8 +95,6 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
     const canFasten = useCanFasten(insertable);
     // What the preview stops following for a signed-out caller.
     const [isEdited, setIsEdited] = useState(false);
-    // Cleared by an edit, or once the menu has been up long enough.
-    const [canShowQuickInsertTip, setCanShowQuickInsertTip] = useState(true);
     // No ConfigurationWrapper reports a part with no parameters, but the title needs its record.
     const soleRecord = useConfigurationQuery(
         insertable.id,
@@ -114,7 +110,6 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
 
     const onEdit = useCallback(() => {
         setIsEdited(true);
-        setCanShowQuickInsertTip(false);
     }, []);
 
     // So a relaunch reopens the configuration on screen.
@@ -124,14 +119,6 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
             onSelectionChange?.(report.selection);
         }
     }, [report, onSelectionChange]);
-
-    useEffect(() => {
-        const timer = setTimeout(
-            () => setCanShowQuickInsertTip(false),
-            QUICK_INSERT_WINDOW_MS
-        );
-        return () => clearTimeout(timer);
-    }, []);
 
     let parameters: ReactNode = null;
     if (insertable.isConfigurable) {
@@ -188,7 +175,6 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
                 report={report}
                 onResetSelection={setSelection}
                 configurationKey={configurationKey}
-                canShowQuickInsertTip={canShowQuickInsertTip}
                 source={source}
                 onInsert={() => {
                     onInsert();
@@ -207,8 +193,6 @@ interface InsertMenuFooterProps {
     report: SelectionReport | undefined;
     onResetSelection: (selection: PartialSelection) => void;
     configurationKey: ConfigurationKey;
-    /** Whether an insert now is worth pointing out a right-click for. */
-    canShowQuickInsertTip: boolean;
     /** Where the insert began, which the menu and the buttons both record. */
     source: UseSource;
     onInsert: () => void;
@@ -223,7 +207,6 @@ function InsertMenuFooter(props: InsertMenuFooterProps): ReactNode {
         report,
         onResetSelection,
         configurationKey,
-        canShowQuickInsertTip,
         source,
         onInsert
     } = props;
@@ -283,7 +266,6 @@ function InsertMenuFooter(props: InsertMenuFooterProps): ReactNode {
             <InsertButtons
                 insertable={insertable}
                 selection={selection}
-                canShowQuickInsertTip={canShowQuickInsertTip}
                 isFavorite={favorite !== undefined}
                 source={source}
                 onInsert={onInsert}
@@ -299,8 +281,6 @@ function InsertMenuFooter(props: InsertMenuFooterProps): ReactNode {
 }
 
 interface InsertButtonsProps {
-    /** Whether an insert now is worth pointing out a right-click for. */
-    canShowQuickInsertTip: boolean;
     insertable: InsertableOut;
     selection?: PartialSelection;
     isFavorite: boolean;
@@ -309,14 +289,7 @@ interface InsertButtonsProps {
 }
 
 function InsertButtons(props: InsertButtonsProps): ReactNode {
-    const {
-        insertable,
-        selection,
-        canShowQuickInsertTip,
-        isFavorite,
-        source,
-        onInsert
-    } = props;
+    const { insertable, selection, isFavorite, source, onInsert } = props;
 
     const targetElementType = useTargetElementType();
     const insertMutation = useInsertMutation(insertable, selection, {
@@ -335,18 +308,13 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
 
     const handleClick = useCallback(() => {
         insertMutation.mutate(canFasten && fasten);
-        if (canShowQuickInsertTip) {
-            showQuickInsertTip();
-        } else {
-            showFastenCircularEdgesTip(canFasten && fasten);
-        }
+        showFastenCircularEdgesTip(canFasten && fasten);
         onInsert();
     }, [
         insertMutation,
         onInsert,
         canFasten,
         fasten,
-        canShowQuickInsertTip,
         showFastenCircularEdgesTip
     ]);
 

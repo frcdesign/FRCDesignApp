@@ -8,7 +8,9 @@ export enum PushType {
     LIBRARY = "library",
     THUMBNAIL = "thumbnail",
     VERSION_JOB = "version-job",
-    ASSEMBLY_JOB = "assembly-job"
+    ASSEMBLY_JOB = "assembly-job",
+    FEATURESCRIPTS = "featurescripts",
+    FEATURESCRIPTS_LOAD = "featurescripts-load"
 }
 
 /** A library's load jobs started or finished. */
@@ -46,7 +48,19 @@ export interface AssemblyJobPush {
     assemblyKey: string;
 }
 
+/** A load of the FeatureScripts wrote, so their cache version moved. */
+export interface FeatureScriptsPush {
+    type: PushType.FEATURESCRIPTS;
+}
+
+/** A load of the FeatureScripts started or ended. */
+export interface FeatureScriptsLoadPush {
+    type: PushType.FEATURESCRIPTS_LOAD;
+}
+
 export type PushMessage =
+    | FeatureScriptsPush
+    | FeatureScriptsLoadPush
     | JobsPush
     | LibraryPush
     | ThumbnailPush

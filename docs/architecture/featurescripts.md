@@ -1,0 +1,827 @@
+# FeatureScripts
+
+**Status: built, but for the dashboard's own FeatureScripts page**, which is
+still the design below.
+
+## Purpose
+
+A tab of the app, beside the libraries, that lists the released FeatureScripts
+in the public frontend document (robot-code's `frontend` in `[tool.fs]`),
+grouped by category: the folder each is in there, such as Lightening, Basic
+operations or Parts. It shows each one by its icon and name, lets a
+signed-in person favorite it, opens it onto
+its example Part Studio's thumbnail as a hero image, adds its feature to the
+open Part Studio in one click, opens its Feature Studio or its source on
+GitHub, and takes feedback on it, as a part's **Report an issue** does. What it
+knows of each feature comes from one file robot-code's release writes into the
+frontend document, [the manifest](#the-manifest). A feature is added from the
+frontend document's latest version; the manifest, its example and its icon
+are read from the frontend workspace, so the owner can edit them there without
+cutting a version.
+
+It is its own area, not a library. A library is many documents of parts,
+curated by an admin team, with configurations, and is measured in uses of
+parts. FeatureScripts are one document, released by the owner from robot-code,
+with no configurations, and are measured in features added. They share the
+infrastructure underneath, made generic where it is library-shaped today (see
+[Shared infrastructure](#shared-infrastructure)), and none of the library's
+tables, metrics or pages.
+
+It is not:
+
+- **Documentation.** A feature shows its own `"Feature Type Description"`,
+  without its credit line. Documentation in the app is a later project, and
+  `featurescripts.description` is where it would hang from.
+- **The custom toolbar.** Onshape refuses every toolbar call from the app's
+  token ([ONSHAPE.md](../ONSHAPE.md#custom-toolbar)), so the app adds a feature
+  to a Part Studio rather than a tool to someone's toolbar.
+- **Beta releases.** Only `frontend` is loaded, never `frontend_beta`.
+- **Assembly features.** Every released feature is a Part Studio feature.
+
+## Code map
+
+`src/backend/features/featurescripts/routes.ts`
+
+```text
+GET    /api/featurescripts-version           the cache version keying the list
+GET    /api/featurescripts?v=                every feature, the same for every caller, immutable under its version
+GET    /api/featurescripts/icon/:elementId   a feature's icon from R2, by ?v=<microversion>, sandboxed
+GET    /api/featurescripts/favorites         the caller's favorites, oldest first
+POST   /api/featurescripts/:featureId/favorite
+DELETE /api/featurescripts/:featureId/favorite
+POST   /api/featurescripts/:featureId/visibility    owner: shows or hides it, bumping the cache version
+POST   /api/featurescripts/:featureId/add    adds it to the Part Studio in the body
+GET    /api/featurescripts/stats             owner: each feature's adds, users and favorites, all time
+GET    /api/featurescripts/load-status       owner: how the last load is going or went
+POST   /api/featurescripts/reload            owner: loads the workspace and latest version now, as the owner
+```
+
+`src/backend/features/featurescripts/store.ts`
+
+```ts
+function getFeatureScriptsOut(db: Db): Promise<FeatureScriptsOut>;
+function getCacheVersion(db: Db): Promise<number>;
+function iconKey(elementId: string, microversionId: string): string;
+function iconUrl(elementId: string, microversionId: string): string;
+```
+
+`src/backend/features/featurescripts/workflow.ts`
+
+```ts
+// Loads the frontend document: the workspace's manifest, examples and icons, and the latest version's studios; one run at a time.
+class LoadFeatureScriptsWorkflow extends WorkflowEntrypoint<
+    AppBindings,
+    LoadFeatureScriptsParams
+> {}
+```
+
+`src/backend/features/featurescripts/load-claim.ts`
+
+```ts
+interface LoadFeatureScriptsParams {
+    /** Absent for a webhook's run. */
+    sessionId?: string;
+    /** Reloads every feature, unchanged or not. */
+    force: boolean;
+}
+function requestFeatureScriptsLoad(
+    env: AppBindings,
+    params: LoadFeatureScriptsParams
+): Promise<void>;
+// KV's `featurescripts-load`: the run holding the load; false while a live one does.
+function claimLoad(env: AppBindings, instanceId: string): Promise<boolean>;
+function releaseLoad(env: AppBindings, instanceId: string): Promise<void>;
+```
+
+`src/backend/features/featurescripts/load-status.ts`
+
+```ts
+// KV's `featurescripts-load-status`: the last load's FeatureScriptsLoadStatus.
+function getLoadStatus(
+    env: AppBindings
+): Promise<FeatureScriptsLoadStatus | undefined>;
+// Replaces it and pushes `featurescripts-load` to every client.
+function reportLoadStatus(
+    env: AppBindings,
+    status: FeatureScriptsLoadStatus
+): Promise<void>;
+```
+
+`src/backend/features/featurescripts/manifest.ts`
+
+```ts
+// The manifest tab, "featurescripts.json" in any folder; one at the top level wins.
+function findManifestTab(contents: DocumentContents): Tab | undefined;
+// Refuses a file of another schema version, or one that doesn't parse.
+function parseManifest(json: unknown): FeatureScriptsManifest;
+// The feature's example Part Studio: see "Finding the example".
+function findExample(
+    contents: DocumentContents,
+    studioElementId: string,
+    featureName: string
+): Tab | undefined;
+// The outermost folder holding a tab; undefined at the top level.
+function categoryOf(
+    contents: DocumentContents,
+    elementId: string
+): string | undefined;
+// Each tab's position in tab-bar order, which sorts the list.
+function tabOrder(contents: DocumentContents): Map<string, number>;
+```
+
+The manifest's shape is in [The manifest](#the-manifest).
+
+`src/backend/lib/onshape/endpoints/blobs.ts`
+
+```ts
+function downloadBlob(client: OnshapeApi, path: ElementPath): Promise<Response>;
+```
+
+`src/backend/lib/onshape/objects/custom-feature.ts`
+
+```ts
+// A custom feature at its defaults; the client opens its dialog for the rest.
+class CustomFeature {
+    constructor(
+        featureType: string,
+        featureName: string,
+        sourcePath: ElementPath,
+        microversionId: string
+    );
+    getFeature(): object;
+}
+```
+
+`src/backend/features/featurescripts/contract.ts`
+
+```ts
+interface FeatureScriptsOut {
+    /** Absent before the first load. */
+    documentId?: string;
+    /** The frontend version features are added from, which **Get FeatureScript** opens. */
+    versionId?: string;
+    /** The frontend workspace examples are read from, which **Open example** opens. */
+    workspaceId?: string;
+    /** In the frontend document's tab order. */
+    features: FeatureScriptOut[];
+}
+
+interface FeatureScriptOut {
+    id: string;
+    /** The frontend Feature Studio's tab, which **Get FeatureScript** opens. */
+    elementId: string;
+    name: string;
+    description: string;
+    /** The frontend document's folder it is in; absent at the top level. */
+    category?: string;
+    /** Shown to everyone; the owner sees a hidden one too, marked. */
+    isVisible: boolean;
+    /** Absent without an icon tab. */
+    iconUrl?: string;
+    exampleElementId?: string;
+    /** Absent without an example. */
+    thumbnailUrls?: ThumbnailUrls;
+    /** e.g. "1.3.0", from the manifest; shown to the owner alone. */
+    releaseVersion?: string;
+    /** The released file on GitHub, at its release's tag. */
+    sourceUrl?: string;
+    /** Shown to the owner alone. */
+    problems: FeatureScriptProblem[];
+}
+
+enum FeatureScriptProblem {
+    NO_EXAMPLE = "no-example",
+    NO_ICON = "no-icon",
+    LOAD_FAILED = "load-failed"
+}
+
+// Left out of everyone's list but the owner's.
+function isHidden(feature: FeatureScriptOut): boolean;
+
+const featureScriptVisibilityBody: ZodObject; // isVisible
+
+const addFeatureScriptBody: ZodObject; // targetPath, a Part Studio in a workspace
+
+interface AddFeatureScriptOut {
+    /** The feature to open in the Part Studio. */
+    featureId?: string;
+}
+```
+
+`src/frontend/features/featurescripts/queries.ts`
+
+```ts
+function useFeatureScriptsQuery(): UseQueryResult<FeatureScriptsOut>;
+// Posts the add, then sends Onshape `openFeatureDialog` for the new feature.
+function useAddFeatureScriptMutation(
+    feature: FeatureScriptOut
+): UseMutationResult<AddFeatureScriptOut>;
+// Not offered standalone; disabled, saying why, in an assembly.
+function useAddAvailability(): AddAvailability;
+function useExampleUrl(feature: FeatureScriptOut): string | undefined;
+function useIsOwner(): boolean;
+function useFeatureScriptFavoritesQuery(): UseQueryResult<FeatureScriptFavoritesOut>;
+// Shown at once, and put right by the refetch either way.
+function useToggleFavoriteMutation(
+    feature: FeatureScriptOut
+): UseMutationResult<unknown, Error, boolean>;
+
+type AddAvailability =
+    | { offered: false }
+    | { offered: true; disabledReason?: string };
+```
+
+`src/frontend/features/featurescripts/open-featurescript-menu.tsx`
+
+```ts
+// The popup, opened as the insert menu is, titled with the icon and name.
+function openFeatureScriptMenu(feature: FeatureScriptOut): void;
+```
+
+`src/frontend/features/featurescripts/categories.ts`
+
+```ts
+// In the folders' order in the document, the uncategorized last.
+function groupByCategory(features: FeatureScriptOut[]): FeatureScriptCategory[];
+
+interface FeatureScriptCategory {
+    /** The frontend document's folder; undefined for the features at its top level. */
+    name?: string;
+    features: FeatureScriptOut[];
+}
+```
+
+Under `src/frontend/features/featurescripts/components/`:
+
+- `featurescript-list.tsx` — Favorites and the category sections, filtered
+  by `featurescript-search-bar.tsx`, the navbar's search, through the
+  `useFeatureScriptsSearch` store (`src/frontend/features/featurescripts/search.ts`).
+- `featurescript-favorite-button.tsx` — the heart. Favoriting has no menu
+  item: the heart is on every row and in the popup.
+- `featurescript-menu-items.tsx` — `FeatureScriptMenuItems`, the one menu a
+  row's ⋯ and right-click and the popup's ⋯ share: only what no button beside
+  it does, **Get FeatureScript**, **Open example** and **View code**, the
+  popup's leaving out **Open example**, its own button. Adding and favoriting
+  are the buttons'.
+- `featurescript-card.tsx` — a row: the icon inline before the name and the
+  owner's card, then, in `ItemRow`'s `actions`, an outlined **Add** and the
+  heart, and last the ⋯ menu.
+- `featurescript-menu.tsx` — the popup a row opens: the example's thumbnail
+  as a hero image across the top, the whole description, and a footer with
+  the heart, the owner's card and a ⋯, as the insert menu's has, then **Open
+  example** and **Add to Part Studio**.
+- `featurescript-add-button.tsx` — the row's outlined **Add**
+  (`RowActionButton`, in `src/frontend/components/row-action-button.tsx`) or
+  the popup's filled **Add to Part Studio**.
+- `featurescript-status.tsx` — the owner's card, built from a part's admin
+  card's own pieces (`CardSections`, `CardSection`, `SwitchRow`, `Stat`): a
+  status icon beside the name (an eye struck through when hidden, else the
+  worst problem's) opening a hover card with the same sections: **Build
+  checks**, each problem as a tinted callout with how to fix it, shown only
+  when there is one; **Settings**, with **Visible to users** and the
+  **Version**; and **Usage**, with adds, users and favorites from
+  `GET /api/featurescripts/stats`, fetched only while it is open. The sections
+  open and close with the admin card's, as one setting. Nothing for anyone
+  else.
+- `featurescript-icon.tsx` — the icon as an `<img>`, or the generic puzzle
+  piece.
+- `featurescripts-reload-button.tsx` and `featurescripts-load-callout.tsx` —
+  the owner's **Reload** and, above it, the last load as a `Callout`, both in
+  the settings menu's admin settings under FRCDesignApp. The callout spins
+  while a load runs; says the version and how many features it kept, or that
+  nothing had changed since the last load; warns when some features failed; and on a
+  failure offers **Details**: the version, the times and the error.
+
+The tab is `UtilityTab.FEATURESCRIPTS`: `src/frontend/routes/app/featurescripts/route.tsx`
+loads the version and the list, and `index.tsx` under it shows
+`FeatureScriptList`.
+
+## Storage
+
+**D1**, in `src/backend/features/featurescripts/schema.ts` (nothing outside the area reads
+them, and they hold no foreign key into the rest; added to
+`drizzle.config.ts`):
+
+- `featurescripts_document` — one row: `document_id`, the loaded
+  `version_id` features are added from, the `workspace_id` the manifest,
+  examples and icons were read from (null until a load sets it), and
+  `cache_version` (bumped by every load that wrote).
+- `featurescripts` — one row per manifest entry whose Feature Studio the
+  loaded version has:
+
+| Column                    | What it holds                                                                              |
+| ------------------------- | ------------------------------------------------------------------------------------------ |
+| `id`                      | Random, kept across loads for the same `element_id`, so analytics and urls stay stable     |
+| `element_id`              | The frontend Feature Studio's tab                                                          |
+| `microversion_id`         | Its microversion in the version, which goes into the namespace a Part Studio imports it by |
+| `feature_type`            | From the manifest: the exported constant, e.g. `robotFrame`, a Part Studio's type          |
+| `name`                    | From the manifest: the Feature Type Name, e.g. `Robot frame`, never the tab name           |
+| `description`             | From the manifest, its credit already cut by robot-code                                    |
+| `release_version`         | From the manifest, e.g. `1.3.0`; shown to the owner alone                                  |
+| `source_url`              | From the manifest: the released file on GitHub at its release's tag                        |
+| `example_element_id`      | The feature's example Part Studio in the workspace (`findExample`); null without one       |
+| `example_microversion_id` | Its microversion, which names its thumbnail; null with it                                  |
+| `icon_element_id`         | The icon tab the manifest names; null when it names none                                   |
+| `icon_microversion_id`    | Its microversion, which names its R2 object; null with it                                  |
+| `thumbnail_urls`          | As `insertables`'; null without an example                                                 |
+| `problems`                | `FeatureScriptProblem[]`                                                                   |
+| `category`                | The folder holding the Feature Studio in the workspace; null at its top level              |
+| `is_visible`              | The owner's choice, true for a new feature; a load never writes it                         |
+| `sort_order`              | The tab order in the workspace                                                             |
+
+- `featurescript_favorites` — `user_id`, `featurescript_id` (referencing
+  `featurescripts.id`, cascading, so a feature gone from the document takes
+  its favorites with it) and `created_at`; one row per person and feature,
+  kept until unfavorited.
+
+**R2**:
+
+- the example's thumbnail, under the existing
+  `thumbnails/default/{elementId}/{microversionId}/{size}`, with the example's
+  element and microversion;
+- the icon, `featurescript-icons/{elementId}/{microversionId}.svg`, written by
+  the load that finds it and deleted by the load that orphans it.
+
+**KV**:
+
+- `featurescripts-load` — the run holding the load, a day as a backstop, as
+  `library-reload:` is for a library.
+- `featurescripts-load-status` — the last load's `FeatureScriptsLoadStatus`,
+  for the owner's callout, kept 30 days. Diagnostic only: nothing reads it to
+  decide what to load.
+
+**Onshape**: the manifest, `featurescripts.json`, an image-and-file (blob)
+tab in the frontend workspace, in any folder, written by robot-code's release
+and edited by hand; see [The manifest](#the-manifest).
+
+**Webhooks**: one `onshape_webhooks` row, subject
+`WebhookSubject.FEATURESCRIPTS`, subject id the frontend document's id.
+
+**Configuration**: `FEATURESCRIPTS_DOCUMENT_ID`, the frontend document, in
+`wrangler.jsonc`'s vars; the binding `LOAD_FEATURESCRIPTS_WORKFLOW`.
+
+## Flows
+
+### Releasing (robot-code)
+
+`fs release` keeps the manifest whole, so the app pairs nothing by name and
+reads one file for every feature:
+
+1. `fs check` requires a released feature's Feature Type Name to be the name
+   `feature_name_for` makes of its tab (`robotFrame.fs` → `Robot frame`), so
+   the version names and the example's name agree with the feature's.
+2. After pushing the frontend studio, the release looks for the feature's
+   example in the frontend workspace as the app does
+   ([Finding the example](#finding-the-example)), and creates an empty Part
+   Studio named `<Feature Type Name>` if there is none, saying so: "Created
+   Robot frame; model an example in it before publishing."
+3. `--publish` refuses while that example was created by this same release,
+   so an empty example is never published. `fs sync-versions` publishes it
+   once it's modeled.
+4. It writes the feature's icon, the `.svg` its `"Icon"` imports (`fs gen`'s
+   output, e.g. `robotFrameIcon.svg`), to an image tab named
+   `<Feature Type Name> icon.svg`, creating it on the first release and
+   replacing its contents when the icon changed (`upload_image`). A feature
+   with no `"Icon"` gets none.
+5. It reads `featurescripts.json` from the frontend workspace, puts the
+   feature's entry in it — replacing the one with the same `studioElementId`,
+   or adding one — and writes it back, creating the tab on the first release.
+   The entry's icon is the tab step 4 found or made, and its version the one
+   this release is cutting, so the frontend version holds the manifest that
+   describes it. The example isn't in it: the app finds it by name and place,
+   so a Part Studio renamed or moved by hand is found where it now is.
+6. `fs deprecate` renames the example `DEPRECATED <Feature Type Name>` when it
+   is named for the feature and no other released feature's example is it,
+   and the icon `DEPRECATED <Feature Type Name> icon.svg` alongside its
+   studio, and removes its entry from the manifest.
+
+The API can't make or move folders, so a first release lands its studio at the
+top level, under **Other**, until the owner files it into its category's
+folder by hand, once.
+
+### Finding the example
+
+`findExample` reads the workspace's contents, whose folder tree is in tab-bar
+order, and skips any Part Studio named or foldered `DEPRECATED`:
+
+1. A Part Studio named the feature's Feature Type Name, in any case
+   ("Multi extrude" for Multi extrude). With more than one, the first after
+   the Feature Studio in its folder, else the first in tab order.
+2. Otherwise, the first Part Studio after the Feature Studio in its folder:
+   features sharing one example sit before it, as Multi extrude and Multi
+   revolve before "Multi extrude". The folder is the tab's own, and the top
+   level counts as one.
+3. Otherwise, none: `NO_EXAMPLE`.
+
+A Feature Studio missing from the tree (see `docs/ONSHAPE.md`, Contents) has no
+place, so only step 1 can find its example.
+
+### The manifest
+
+`featurescripts.json`, anywhere in the frontend document, is the whole
+contract between robot-code and the app: everything the app shows of a feature
+but its category (a folder) and its example (a Part Studio found by name and
+place).
+Written by `fs release` and `fs deprecate`, and by the owner by hand in the
+workspace; the app only reads it, from the workspace. The app takes the
+blob tab of that name at the top level if there is one, else the first in
+tab-bar order in any folder (`findManifestTab`).
+
+```json
+{
+    "schemaVersion": 1,
+    "features": [
+        {
+            "studioElementId": "0f49cec93d41f796943a8662",
+            "featureType": "robotFrame",
+            "name": "Robot frame",
+            "description": "Add tube, channel, angle, or extrusion along an edge, or extrude it from a point.",
+            "version": "1.3.0",
+            "iconElementId": "…",
+            "sourceUrl": "https://github.com/robot-education/robot-code/blob/robotFrame/v1.3.0/featurescripts/released/frame/robotFrame.fs"
+        }
+    ]
+}
+```
+
+| Field             | What it is                                                                                                               |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `schemaVersion`   | Bumped by robot-code when a field's meaning changes; the app refuses one it doesn't know rather than guess               |
+| `studioElementId` | The frontend Feature Studio's tab; what an entry is keyed by                                                             |
+| `featureType`     | The constant `defineFeature` is exported as, read from the source                                                        |
+| `name`            | The Feature Type Name                                                                                                    |
+| `description`     | `"Feature Type Description"` with `CREDIT` cut off and each `<br>` a line break                                          |
+| `version`         | The release's version, without the `v`                                                                                   |
+| `iconElementId`   | The icon tab; null for a feature with no `"Icon"`                                                                        |
+| `sourceUrl`       | The file at its release's tag (`release_tag`, e.g. `robotFrame/v1.3.0`), whose path is the studio's in `fs-studios.json` |
+
+The tag is made when the release is final, after the manifest is written; the
+url names it ahead, as `release_tag` names it the same way, so it works from
+the moment the release is.
+
+### Loading — `LoadFeatureScriptsWorkflow`
+
+Started by the webhook for a new frontend version, and by the owner's
+**Reload** (under FRCDesignApp in the admin settings), which is how an edit to
+the workspace's manifest, examples or icons is picked up. A version is final
+once it's in the frontend document, so a new version loads at once, with no
+approval. Nothing loads while `FEATURESCRIPTS_DOCUMENT_ID` is unset.
+
+1. `claim-{turn}`: takes the load (`claimLoad`), waiting 30 seconds a turn
+   while a live run holds it, as a library reload does.
+2. `document`, `version`: the document, for its default workspace, and its
+   latest version, which features are added from.
+3. `read-stored`: the loaded version and workspace, and the rows.
+4. `version-contents`, `workspace-contents`: each one's tabs, for each tab's
+   microversion, folder and place.
+5. `manifest`: `findManifestTab` in the workspace, then
+   `GET /blobelements/d/{did}/w/{wid}/e/{eid}`, then `parseManifest`. A
+   workspace without one fails the load; one that doesn't parse fails it
+   without retrying. Either changes nothing.
+6. Pairs each entry with its Feature Studio in the version, and in the
+   workspace its example (`findExample`, deprecated tabs left out; see
+   [Finding the example](#finding-the-example)), its icon tab, its category
+   (`categoryOf`) and its place (`tabOrder`). An entry whose studio the
+   version doesn't have, as a first release not yet published, is logged and
+   left out of the list.
+7. Selects the entries that are new, whose studio's, example's or icon's tab
+   or microversion changed, or that failed last time; every one when forced.
+8. Per selected entry, under the run's limiters, from the workspace:
+    - `thumbnail-{element}-{microversion}`: the example's, stored by
+      `uploadThumbnailsStep` under the example's element and microversion,
+      once for every feature sharing it. No example: `NO_EXAMPLE`, and the
+      popup shows the app's empty state in its place.
+    - `icon-{element}-{microversion}`: the icon tab's file, stored in R2 as
+      `image/svg+xml`. No icon named: `NO_ICON`, and the card shows the
+      generic FeatureScript icon.
+    - An icon the manifest names that the workspace doesn't have, or a
+      thumbnail or icon that failed, is `LOAD_FAILED`, which the next load
+      retries.
+9. Ends here, registering the webhook, when the version and workspace are
+   the ones loaded and every row is as stored (`isUnchanged`), unless forced.
+10. `save`: one batch — the rows the manifest no longer lists deleted, every
+    listed row upserted by `element_id` (keeping its `id` and `is_visible`),
+    and the document row with its version, workspace and bumped
+    `cache_version`.
+11. `push`: `featurescripts-changed` (`PushType.FEATURESCRIPTS`) to every
+    client, which refetches the cache version.
+12. `delete-stale`: thumbnails of examples no row names, through
+    `deleteStaleThumbnails` with the rows' examples as `alsoLive`, and icons
+    no row names, each past an hour's grace. Never fatal.
+13. `register-webhook`: `ensureWebhook` for the document, subject
+    `WebhookSubject.FEATURESCRIPTS`. Never fatal.
+14. `release`: always, so the next load can start.
+
+The run reports its status as it goes (`reportLoadStatus`), each report a
+step: `report-running` once it holds the load; `report-done` after step 13,
+`loaded` with the features kept and how many failed, or `up-to-date` when
+step 9 ended it; and `report-failed` when anything above throws, with the
+version once step 2 read it and the error's message, before the run fails.
+With `FEATURESCRIPTS_DOCUMENT_ID` unset, `report-unset` records that failure
+and the run ends.
+
+Onshape steps retry as a library's do (`ONSHAPE_STEP_RETRIES`, and
+`uploadThumbnailsStep`'s own). It reads Onshape as the owner when the owner
+asked, and otherwise with `getBackgroundOnshapeApi` for no library, which is
+the owner's session; never a library team's.
+
+### Browsing
+
+1. **FeatureScripts** sits in the page picker under Utilities, offered
+   everywhere: browsing needs no document. Its page has no library search row
+   or insert location, and themes the app in `AppColor.FEATURESCRIPTS`.
+2. The route reads `GET /api/featurescripts-version`, then
+   `GET /api/featurescripts?v=`, which answers every feature in tab order with
+   its problems, the same for every caller, so it is cached as a library is.
+   The client leaves out the features the owner hid (`isHidden`) unless the
+   owner is looking. A favorite of a hidden feature is kept, and left out of
+   the list with it.
+3. `FeatureScriptList` shows **Favorites** first, when the signed-in caller
+   has any, then one section per category (`groupByCategory`), in the order
+   the folders come in the document, and **Other** last for the features at
+   its top level. Each section opens and closes on its own; one a new load
+   adds starts open.
+4. The search box, in the navbar's second row where a library's is, filters
+   the list on the client, every word against the name and the description,
+   which the rows don't show but the popup does: it is a few dozen features,
+   not an index's worth.
+   While searching, Favorites is left out, so each match shows once, in its
+   category.
+5. The heart on a row, its ⋯ menu, and the popup's favorites or unfavorites
+   the feature, shown at once and put right by the refetch of
+   `GET /api/featurescripts/favorites`. Signed out, there is no heart and no
+   Favorites.
+6. Each card shows the feature's icon inline before its name, at the size
+   of a line of text. `/api/featurescripts/icon/:elementId` serves it from R2
+   as `image/svg+xml`, immutable under its microversion, with
+   `Content-Security-Policy: sandbox`, and the client shows it in an `<img>`,
+   so nothing in it runs.
+7. Each row's outlined **Add** adds the feature in one click, as below. Its
+   ⋯ menu also opens the Feature Studio in the loaded version (**Get
+   FeatureScript**), for anyone who would rather add it to their toolbar
+   Onshape's own way, and its source on GitHub (**View code**).
+8. To the owner, each row and the popup carry the status card
+   (`FeatureScriptStatus`), in the admin card's sections: **Build checks**,
+   **Settings** (**Visible to users**, which posts to the visibility route,
+   and the release's **Version**) and **Usage**.
+9. A click on the row opens the popup (`openFeatureScriptMenu`), sized and
+   titled as the insert menu is: the example's large thumbnail as a hero
+   image across the top (or, without an example, a `SectionNotice` with the
+   theme's puzzle piece), then the whole description, and the
+   footer. **Add to Part Studio** there closes the popup once sent, so the
+   feature's dialog in Onshape is what shows.
+
+### Adding a feature — `POST /api/featurescripts/:featureId/add`
+
+1. Signed in; the body names the Part Studio (`targetPath`, a workspace).
+2. Reads the feature and the loaded version.
+3. Posts a `CustomFeature` to the Part Studio's features
+   (`addPartStudioFeature`, under `retryInsert`, finished by
+   `finishEvenIfDisconnected`): `featureType` the constant, `namespace`
+   `d{did}::v{vid}::e{eid}::m{mvid}` of the Feature Studio in the loaded
+   version, no parameters.
+4. Answers with the new feature's id. The client sends Onshape's
+   `openFeatureDialog` client message for it (`sendOpenFeatureMessage`, as an
+   insert does for its derive), so the feature's dialog opens for its
+   selections, and toasts that it was added.
+5. In the background, records a `FEATURE_ADD` event.
+
+Standalone, where there is nothing to add to, no add is offered, as no insert
+is. In an assembly the row's **Add**, the popup's **Add to Part Studio** and the
+menu item are disabled, the buttons saying on hover that FeatureScripts can only
+be added to Part Studios.
+
+### Opening the example
+
+**Open example** opens the example Part Studio in the workspace it was read
+from, in a new browser tab. It calls nothing.
+
+### Feedback
+
+A FeatureScript report is a source of the one feedback form
+([feedback.md](./feedback.md)), as a part report is, posted to Discord by
+`POST /api/feedback` with the same rate limit and diagnostics.
+
+1. **Report an issue**, last in a row's ⋯ and right-click menu and in the
+   popup's ⋯, opens the form (`openFeatureScriptReport`) titled **Report issue
+   with** the feature, with the topic `FeedbackTopic.FEATURESCRIPTS` fixed.
+2. It offers bug (a feature that won't add, or builds wrong, is one), feature
+   request, kudos and other, as the app's topics do
+   ([feedback.md](./feedback.md)). `suggestTitle` fills the
+   title as for a part: "Bug: Robot frame".
+3. The body carries `featureScript: { featureScriptId }`. The server reads the
+   feature (`findReportedFeatureScript`), refusing one that isn't loaded, and
+   the post names it with its version, links its Feature Studio in the loaded
+   version, and links its source.
+4. General feedback offers **FeatureScripts** as an area too, with an optional
+   **FeatureScript** under it, for a report about one feature or none.
+5. The post goes to `DiscordForum.FEATURESCRIPTS`, whose webhook secret is
+   `DISCORD_FEATURESCRIPTS_WEBHOOK_URL`; unset, the topic refuses reports as
+   any other does. The forum holds one topic and takes no errors, so a
+   thread's one tag is its type's. A failed add's **Report** goes to the
+   app's forum, as any error's does.
+
+## Analytics
+
+Adding a feature is not a use: it isn't a part, so it counts toward no
+library's uses, users or part counts. It is its own event,
+`EventType.FEATURE_ADD`, with `libraryId` null, as a version run is.
+
+- **Columns**, decided in `logged-event.ts` beside `NOT_A_USE`:
+  `featureType`, the feature's constant, and in the element columns its
+  Feature Studio's path in the loaded version. `NOT_A_FEATURE_ADD` nulls
+  `featureType` for every other event. `trackFeatureAdd` records one once
+  Onshape accepted the feature. A report naming a FeatureScript is a `REPORT`
+  event that sets `featureType` too, so reports can be counted per feature.
+- **Reports** roll up into `daily_report_metrics` as every report does, under
+  the FeatureScripts topic.
+- **Rollups**, in `rollupWrites`: `daily_featurescript_metrics` (day, feature
+  type → adds) and `daily_featurescript_users` (day, feature type, user), in
+  `src/backend/features/analytics/schema.ts`, so distinct users
+  per feature and in total come from rollups, never from scanning events.
+  Keyed by feature type, which never changes for a released feature, so a
+  feature's history survives its row being replaced.
+- **The owner's card** reads them, and the favorites table, through
+  `GET /api/featurescripts/stats`: each feature's adds, distinct users and
+  favorites, all time.
+- **Dashboard**: a **FeatureScripts** section on the overview
+  (`GET /api/analytics/overview/featurescripts`, drawn by
+  `src/frontend/features/dashboard/featurescript-usage.tsx`): adds and distinct
+  users over the range, and a row per feature in the document with its adds,
+  users and share of adds, unused ones at zero. A feature added in the range
+  but since removed is listed by its constant. Still to come: a comparison
+  against the previous season, adds per day, and a **FeatureScripts** page that
+  adds each feature's reports.
+
+## User-facing strings
+
+[strings/featurescripts.md](../strings/featurescripts.md).
+
+## Shared infrastructure
+
+What this area reuses, and what each needed to stop assuming a library.
+
+| Piece                                                             | What it does for FeatureScripts                                                              |
+| ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `ensureWebhook`, the delivery route                               | A `FEATURESCRIPTS` subject, registered like a document's; its `createversion` starts a load  |
+| `getBackgroundOnshapeApi`                                         | Called with no libraries, so only the owner's session lends itself                           |
+| `ONSHAPE_STEP_RETRIES`, `uploadThumbnailsStep`, `prefixSteps`     | Used as they are; `uploadThumbnailsStep` takes only a step and a limiter                     |
+| The claim                                                         | The area's own, `load-claim.ts`: one run, no groups to queue or report                       |
+| `thumbnailKey`, `putThumbnail`, `uploadThumbnails`, serving       | Used as they are, keyed by element and microversion                                          |
+| `deleteStaleThumbnails`                                           | Takes `alsoLive`, the subjects its caller points at beyond the libraries' rows               |
+| `retryInsert`, `addPartStudioFeature`, `finishEvenIfDisconnected` | Used as they are                                                                             |
+| `ClientRelay`                                                     | Two more messages, `PushType.FEATURESCRIPTS` and `FEATURESCRIPTS_LOAD`, sent to every client |
+| `record` in analytics                                             | `FEATURE_ADD`, with its own columns and rollups                                              |
+| The feedback form, `POST /api/feedback`                           | A `FEATURESCRIPT` source, topic and forum, and `featureScript` beside `part` in the body     |
+
+Favorites are the area's own, since a library's reference insertables and
+carry a configuration a feature doesn't have; they reuse the library's heart
+(`FavoriteIcon`, `UnfavoriteIcon`). Recents stay the library's: a list this
+short has little use for them.
+
+## Invariants
+
+- A feature is added from the version loaded, never from a workspace, so
+  what's added is what was released.
+- The manifest is the list: a feature is shown only when the workspace's
+  manifest names it and the loaded version has its Feature Studio, with the name, type, description, version, source and
+  icon it gives. The app never writes the manifest.
+- An example is a Part Studio in the **frontend workspace**, found by
+  `findExample` alone, and an icon the tab the manifest names there. Only the
+  Feature Studio a Part Studio adds comes from the version.
+- The credit line is never shown: robot-code cuts it before writing the
+  description.
+- An icon is only ever shown as an image, never inlined into the page.
+- One load runs at a time, and only the run holding the load releases it.
+- An example's thumbnail is stored under the example's element and
+  microversion, and is live while a `featurescripts` row names it.
+- A feature add is never a use: it writes no library rollup, and a use never
+  writes a FeatureScripts rollup.
+- A feature add is recorded once, in the background, after Onshape accepted
+  it.
+- A load reads Onshape as the owner, its own session or a borrowed one, and
+  never as a library's team.
+- A feature's category is the folder it is in, in the workspace; nothing
+  else sets it.
+- Favorites are a person's own: every favorite route answers for the caller
+  alone, and the list is never cached.
+- Only the owner shows or hides a feature, and a load never writes
+  `is_visible`, so a choice outlasts every reload. Hiding one bumps the cache
+  version, so no cached list still shows it.
+
+## Failure and recovery
+
+| What goes wrong                                        | What happens                                        | What puts it right                                       |
+| ------------------------------------------------------ | --------------------------------------------------- | -------------------------------------------------------- |
+| An example is renamed, moved or deleted                | `NO_EXAMPLE`, or the next Part Studio in its folder | Name it for the feature, or move it after it; **Reload** |
+| An example is left empty                               | A blank thumbnail                                   | Model it; **Reload**                                     |
+| A release before icons has none in the frontend        | `NO_ICON`; the generic icon                         | Its next release writes it                               |
+| A thumbnail or an icon fails past its retries          | `LOAD_FAILED` on that feature; the rest save        | **Reload**                                               |
+| The workspace has no manifest, or one that won't parse | The load fails; the last load stays shown           | Release again, or fix it by hand; **Reload**             |
+| Any load fails                                         | `report-failed` keeps its error for the owner       | The FRCDesignApp settings' callout; **Details** shows it |
+| An entry names an icon the workspace lacks             | `LOAD_FAILED` on that feature                       | Release it again                                         |
+| An entry's studio isn't in the latest version yet      | Left out of the list                                | Publish the release (`fs sync-versions`)                 |
+| Onshape cancels or deactivates the webhook             | New versions don't load                             | The next **Reload** registers it                         |
+| No owner session to borrow                             | A webhook's load fails                              | The owner opens the app                                  |
+| Onshape refuses the feature at its defaults            | The add fails, toasted                              | Unverified; see the open questions                       |
+
+## Decisions
+
+- **The manifest may be filed in a folder.** The owner keeps it with the
+  icons, and a load that looked only at the top level failed once it was
+  moved. One at the top level still wins, so a copy kept in a folder never
+  shadows it.
+- **Its own area, on shared plumbing.** A library's tables, metrics and pages
+  assume parts: configurations, admin teams, uses. FeatureScripts are measured
+  and shown differently, so they get their own tables, event and pages, and the
+  plumbing both need is made generic once rather than built twice.
+- **New versions, not edits, and no approval.** The webhook listens for
+  `onshape.model.lifecycle.createversion` rather than `changed`: a release is
+  final only once its frontend version exists, and it was reviewed in
+  robot-code before that. So a new version loads at once. An edit to the
+  workspace waits for the owner's **Reload**: modeling an example is many
+  edits, and each load would render its thumbnail again.
+- **The manifest, examples and icons from the workspace; the feature from the
+  version.** What a Part Studio adds has to be a version, and is what was
+  released. What describes it — the manifest's text, the example, the icon,
+  the folders — the owner tweaks by hand, and reading it from a version made
+  every tweak cost a version of the frontend document that changed no
+  feature. So the manifest can run ahead of the version: a release not yet
+  published shows its new description and version number while the old
+  release is still what's added. A first release not yet published has no
+  studio in the version and stays out of the list.
+- **A manifest the release writes.** robot-code already knows everything the
+  app shows: each feature's constant, name, description, version, file and
+  the tabs it made. Writing that into the frontend document as it releases
+  makes the version the app loads carry its own description, read in one call,
+  where reading each studio's featurespecs and parsing versions from version
+  names would take a call per feature. It lives in the document rather than
+  on GitHub, so a version and the file describing it can't disagree.
+- **A claim of its own, not the library's moved to `lib/`.** A library's
+  claim queues groups and reports their progress to editors; this load has
+  one document and nothing to report, so a few lines of its own read more
+  plainly than a shared loop with options for both.
+- **Examples by name and place, not in the manifest.** An example is named for
+  its feature, and one shared by several sits after them in their folder; the
+  owner sets both by hand in Onshape. With an id in the manifest, each example
+  would need a release to record it, and a remade or swapped example another.
+- **The version to the owner alone.** The panel shows users what a feature
+  does, not which release is loaded; the owner checks it in the card.
+- **The description, for now, without the credit, in the popup.** `"Feature
+Type Description"` is already written for every released feature, and is
+  what Onshape shows in its own tooltip. Its credit line is for Onshape's
+  tooltip, where a feature sits among everyone's; in the app every feature has
+  the same author. Rows show the name alone, so a list reads at a glance.
+- **The icon in a tab of its own, made by release.** The icon lives in the
+  backend document, behind the frontend studio's import, where reaching it
+  would mean reading and parsing two studios' code. A tab the release writes,
+  named in the manifest, is one call.
+- **A thumbnail as the hero, an icon in the list.** A list of features reads
+  by name, and the icon is what Onshape's own toolbar shows beside one; the
+  example is what a feature does, worth the space only once one is chosen.
+- **A menu holds what no button does.** Adding and favoriting each have a
+  button on the row and in the popup, so their menus leave them out rather
+  than offer the same action twice.
+- **Feedback through the one form.** A FeatureScript report differs from a
+  part's only in what it names, so it is a source of the same form and route,
+  and is rate limited and counted with every other report.
+- **Added at defaults, then opened.** The API can add a feature only whole,
+  so it is added at its defaults, failing until its selections are made, and
+  the client then opens its dialog with `openFeatureDialog`, which leaves the
+  person where clicking the feature in Onshape's toolbar would.
+- **Filtered on the client.** A few dozen features need no search index.
+- **Categories from the document's folders.** The frontend document is what
+  people browse in Onshape too, and its folders already sort it; reading them
+  keeps one arrangement for both, with no list of categories to keep in step in
+  either repo. Filing a new feature is a step by hand, since the API can't
+  move tabs into folders.
+- **The owner's controls in a card, not a menu.** A part's admin card already
+  gathers what an editor can see and change about it behind one icon; the
+  same shape keeps the switch, the version and the problems together, and
+  out of a user's way.
+- **Hiding keeps favorites.** A library's hide removes the part from everyone's
+  favorites; a FeatureScript's leaves them, only left out of the list while
+  hidden, so showing it again loses nothing. A new feature starts shown: a
+  release is already reviewed in robot-code.
+- **Favorites without a configuration or an order.** A feature has nothing to
+  configure, and a list this short is ordered well enough by when each was
+  favorited.
+- **Opens aren't counted.** Only an add is recorded; counting how often a
+  feature's popup is opened would need a call from the client for each,
+  and can be added beside `FEATURE_ADD` if adds alone don't say enough.
+
+## Open questions
+
+Each wants a check from the testbench before building on it, and an entry in
+[ONSHAPE.md](../ONSHAPE.md) once answered:
+
+- Whether `POST /partstudios/.../features` accepts a custom feature with no
+  parameters, filling its defaults, as it does for std features.
+- That `GET /blobelements/...` answers a blob tab's file as uploaded, both
+  the manifest's JSON and an icon's SVG.
+- Whether adding a feature this way puts it in the document's or the user's
+  toolbar.
+- That `openFeatureDialog` opens a custom feature added at its defaults, as it
+  does a derive.
+
+_Last reviewed: 2026-11-12_

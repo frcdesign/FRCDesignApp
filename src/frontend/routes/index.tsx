@@ -15,7 +15,7 @@ export const Route = createFileRoute("/")({
     beforeLoad: ({ search }) => {
         const { tabId, groupId } = getUiState();
         // A utility page the launch gives nothing to act on is not resumed
-        // into: the version manager would send them straight back here.
+        // into: it would open on a notice saying so.
         const resumable =
             tabId && (isLibraryTab(tabId) || canResume(tabId, search));
         const tab = resumable ? tabId : DEFAULT_LIBRARY;
@@ -51,11 +51,13 @@ function utilityRoute(tab: UtilityTab) {
             return "/app/version-manager" as const;
         case UtilityTab.AUTO_ASSEMBLY:
             return "/app/auto-assembly" as const;
+        case UtilityTab.FEATURESCRIPTS:
+            return "/app/featurescripts" as const;
     }
 }
 
 /**
- * Whether a utility page has what it acts on. The version manager acts on the
+ * Whether a utility page has what it acts on. The Version Manager acts on the
  * workspace Onshape launched the app in, and Auto Assembly on its tab; neither
  * has a page without one.
  */
@@ -69,5 +71,8 @@ function canResume(tab: UtilityTab, search: Record<string, unknown>): boolean {
             return (
                 toTargetElement(OnshapeLaunchType.parse(search)) !== undefined
             );
+        // Browsing needs nothing; adding says why it can't.
+        case UtilityTab.FEATURESCRIPTS:
+            return true;
     }
 }

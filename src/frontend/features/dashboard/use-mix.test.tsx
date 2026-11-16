@@ -14,7 +14,6 @@ const TOTALS: AnalyticsTotals = {
     uniqueUsers: 1,
     favoriteUses: 0,
     quickInserts: 5,
-    fastenInserts: 8,
     fastenableInserts: 10,
     preselectedInserts: 2,
     autoAssemblyInserts: 3,

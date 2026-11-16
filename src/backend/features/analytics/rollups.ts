@@ -7,9 +7,11 @@ import { EventType, USE_EVENT_TYPES, UseSource } from "./usage";
 import { ElementType } from "../../lib/onshape/element-type";
 import { VersionJobOutcome } from "../version-manager/contract";
 import {
+    asFeatureAdd,
     asUse,
     asReport,
     asVersionRun,
+    type LoggedFeatureAdd,
     type LoggedUse,
     type LoggedReport,
     type LoggedVersionRun
@@ -26,6 +28,8 @@ import {
     dailyUserActivity,
     dailyReportMetrics,
     dailyVersionMetrics,
+    dailyFeatureScriptMetrics,
+    dailyFeatureScriptUsers,
     insertableStats,
     userStats,
     type LoggedEvent
@@ -43,6 +47,11 @@ export function rollupWrites(
     const run = asVersionRun(event);
     if (run) {
         return [countVersionRunDay(db, run)];
+    }
+    // Not a use: a feature is no library's part.
+    const add = asFeatureAdd(event);
+    if (add) {
+        return [countFeatureAdd(db, add), markFeatureUser(db, add)];
     }
     if (event.type === EventType.APP_OPEN) {
         return [countAppOpenDay(db, event)];
@@ -74,6 +83,30 @@ export function rollupWrites(
         countPartLifetime(db, use),
         ...countValues(db, use, parameters)
     ];
+}
+
+function countFeatureAdd(db: Db, add: LoggedFeatureAdd) {
+    return db
+        .insert(dailyFeatureScriptMetrics)
+        .values({ day: add.day, featureType: add.featureType, adds: 1 })
+        .onConflictDoUpdate({
+            target: [
+                dailyFeatureScriptMetrics.day,
+                dailyFeatureScriptMetrics.featureType
+            ],
+            set: { adds: increment(dailyFeatureScriptMetrics.adds) }
+        });
+}
+
+function markFeatureUser(db: Db, add: LoggedFeatureAdd) {
+    return db
+        .insert(dailyFeatureScriptUsers)
+        .values({
+            day: add.day,
+            featureType: add.featureType,
+            userId: add.userId
+        })
+        .onConflictDoNothing();
 }
 
 /** A day's pushes and pulls, and what they moved. */

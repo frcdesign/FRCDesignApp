@@ -9,7 +9,9 @@ import { getDb } from "../../db/client";
 import { configurations, insertables } from "../../db/schema";
 import type {
     DailyUsePoint,
+    FeatureScriptUsageOut,
     InsertableReportOut,
+    LibraryHealthCounts,
     OverviewUsageOut,
     LibrarySummaryOut,
     PartUsageOut,
@@ -20,9 +22,8 @@ import type {
 } from "./contract";
 import { ParameterType } from "../configurations/contract";
 import { usesPerMonth } from "./measures";
-import { getGrowth } from "./growth";
+import { getGrowthFor } from "./growth";
 import { toElementPath } from "../../lib/onshape/path";
-import { toReportingDay } from "./day";
 import { getHealthCounts } from "./health";
 import { buildParameterUsage } from "./parameter-usage";
 import {
@@ -47,6 +48,7 @@ import {
     toTargets
 } from "./metric-queries";
 import { getReportedParts, getReportSummary } from "./report-queries";
+import { getFeatureScriptUsage } from "./featurescript-queries";
 import { libraryTopic } from "../feedback/contract";
 import {
     clampRange,
@@ -75,7 +77,7 @@ analyticsRoutes.get(
         const [totals, metricSeries, growth] = await Promise.all([
             getTotals(db, undefined, range),
             getMetricSeries(db, range),
-            getGrowth(db, toReportingDay(Date.now()), trackingSince)
+            getGrowthFor(db, requested, trackingSince)
         ]);
         return c.json({
             totals,
@@ -122,6 +124,23 @@ analyticsRoutes.get(
     }
 );
 
+/** GET /api/analytics/overview/featurescripts */
+analyticsRoutes.get(
+    "/analytics/overview/featurescripts",
+    validate("query", rangeQuery),
+    async (c) => {
+        const db = getDb(c.env.DB);
+        const usage = await getFeatureScriptUsage(db, c.req.valid("query"));
+        return c.json(usage satisfies FeatureScriptUsageOut);
+    }
+);
+
+/** GET /api/analytics/overview/health — every library's together, standing now. */
+analyticsRoutes.get("/analytics/overview/health", async (c) => {
+    const db = getDb(c.env.DB);
+    return c.json((await getHealthCounts(db)) satisfies LibraryHealthCounts);
+});
+
 /** GET /api/analytics/overview/reports */
 analyticsRoutes.get(
     "/analytics/overview/reports",
@@ -148,12 +167,7 @@ analyticsRoutes.get(
             await Promise.all([
                 getTotals(db, libraryId, range),
                 getMetricSeries(db, range, libraryId),
-                getGrowth(
-                    db,
-                    toReportingDay(Date.now()),
-                    trackingSince,
-                    libraryId
-                ),
+                getGrowthFor(db, requested, trackingSince, libraryId),
                 getReportSummary(db, requested, libraryTopic(libraryId)),
                 getReportedParts(db, libraryId, requested)
             ]);

@@ -1,7 +1,7 @@
 {
     "version": "6",
     "dialect": "sqlite",
-    "id": "e88ffbb6-5768-4b2c-879d-8f46b3889301",
+    "id": "7e47641a-ad7d-4327-b439-d7e69b19f7bf",
     "prevId": "37bb4e4c-1e83-444b-a08a-499eff6b6112",
     "tables": {
         "configurations": {
@@ -143,75 +143,6 @@
                 }
             },
             "compositePrimaryKeys": {},
-            "uniqueConstraints": {},
-            "checkConstraints": {}
-        },
-        "generated_sets": {
-            "name": "generated_sets",
-            "columns": {
-                "library_id": {
-                    "name": "library_id",
-                    "type": "text",
-                    "primaryKey": false,
-                    "notNull": true,
-                    "autoincrement": false
-                },
-                "set": {
-                    "name": "set",
-                    "type": "text",
-                    "primaryKey": false,
-                    "notNull": true,
-                    "autoincrement": false
-                },
-                "group_id": {
-                    "name": "group_id",
-                    "type": "text",
-                    "primaryKey": false,
-                    "notNull": true,
-                    "autoincrement": false
-                },
-                "features": {
-                    "name": "features",
-                    "type": "text",
-                    "primaryKey": false,
-                    "notNull": true,
-                    "autoincrement": false
-                },
-                "catalog": {
-                    "name": "catalog",
-                    "type": "text",
-                    "primaryKey": false,
-                    "notNull": true,
-                    "autoincrement": false
-                }
-            },
-            "indexes": {},
-            "foreignKeys": {
-                "generated_sets_library_id_libraries_id_fk": {
-                    "name": "generated_sets_library_id_libraries_id_fk",
-                    "tableFrom": "generated_sets",
-                    "tableTo": "libraries",
-                    "columnsFrom": ["library_id"],
-                    "columnsTo": ["id"],
-                    "onDelete": "no action",
-                    "onUpdate": "no action"
-                },
-                "generated_sets_group_id_groups_id_fk": {
-                    "name": "generated_sets_group_id_groups_id_fk",
-                    "tableFrom": "generated_sets",
-                    "tableTo": "groups",
-                    "columnsFrom": ["group_id"],
-                    "columnsTo": ["id"],
-                    "onDelete": "cascade",
-                    "onUpdate": "no action"
-                }
-            },
-            "compositePrimaryKeys": {
-                "generated_sets_library_id_set_pk": {
-                    "columns": ["library_id", "set"],
-                    "name": "generated_sets_library_id_set_pk"
-                }
-            },
             "uniqueConstraints": {},
             "checkConstraints": {}
         },
@@ -491,14 +422,6 @@
                     "primaryKey": false,
                     "notNull": false,
                     "autoincrement": false
-                },
-                "is_generated": {
-                    "name": "is_generated",
-                    "type": "integer",
-                    "primaryKey": false,
-                    "notNull": true,
-                    "autoincrement": false,
-                    "default": false
                 },
                 "build_issues": {
                     "name": "build_issues",
@@ -877,6 +800,79 @@
             "uniqueConstraints": {},
             "checkConstraints": {}
         },
+        "daily_featurescript_metrics": {
+            "name": "daily_featurescript_metrics",
+            "columns": {
+                "day": {
+                    "name": "day",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "feature_type": {
+                    "name": "feature_type",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "adds": {
+                    "name": "adds",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false,
+                    "default": 0
+                }
+            },
+            "indexes": {},
+            "foreignKeys": {},
+            "compositePrimaryKeys": {
+                "daily_featurescript_metrics_day_feature_type_pk": {
+                    "columns": ["day", "feature_type"],
+                    "name": "daily_featurescript_metrics_day_feature_type_pk"
+                }
+            },
+            "uniqueConstraints": {},
+            "checkConstraints": {}
+        },
+        "daily_featurescript_users": {
+            "name": "daily_featurescript_users",
+            "columns": {
+                "day": {
+                    "name": "day",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "feature_type": {
+                    "name": "feature_type",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "user_id": {
+                    "name": "user_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                }
+            },
+            "indexes": {},
+            "foreignKeys": {},
+            "compositePrimaryKeys": {
+                "daily_featurescript_users_day_feature_type_user_id_pk": {
+                    "columns": ["day", "feature_type", "user_id"],
+                    "name": "daily_featurescript_users_day_feature_type_user_id_pk"
+                }
+            },
+            "uniqueConstraints": {},
+            "checkConstraints": {}
+        },
         "daily_insertable_metrics": {
             "name": "daily_insertable_metrics",
             "columns": {
@@ -1032,30 +1028,6 @@
                 },
                 "quick_insert_count": {
                     "name": "quick_insert_count",
-                    "type": "integer",
-                    "primaryKey": false,
-                    "notNull": true,
-                    "autoincrement": false,
-                    "default": 0
-                },
-                "fastenable_count": {
-                    "name": "fastenable_count",
-                    "type": "integer",
-                    "primaryKey": false,
-                    "notNull": true,
-                    "autoincrement": false,
-                    "default": 0
-                },
-                "preselected_count": {
-                    "name": "preselected_count",
-                    "type": "integer",
-                    "primaryKey": false,
-                    "notNull": true,
-                    "autoincrement": false,
-                    "default": 0
-                },
-                "auto_assembly_count": {
-                    "name": "auto_assembly_count",
                     "type": "integer",
                     "primaryKey": false,
                     "notNull": true,
@@ -1484,20 +1456,6 @@
                     "notNull": false,
                     "autoincrement": false
                 },
-                "fastenable": {
-                    "name": "fastenable",
-                    "type": "integer",
-                    "primaryKey": false,
-                    "notNull": false,
-                    "autoincrement": false
-                },
-                "preselected": {
-                    "name": "preselected",
-                    "type": "integer",
-                    "primaryKey": false,
-                    "notNull": false,
-                    "autoincrement": false
-                },
                 "version_kind": {
                     "name": "version_kind",
                     "type": "text",
@@ -1571,6 +1529,13 @@
                 "report_team_number": {
                     "name": "report_team_number",
                     "type": "integer",
+                    "primaryKey": false,
+                    "notNull": false,
+                    "autoincrement": false
+                },
+                "feature_type": {
+                    "name": "feature_type",
+                    "type": "text",
                     "primaryKey": false,
                     "notNull": false,
                     "autoincrement": false
@@ -1764,6 +1729,222 @@
                     "isUnique": true
                 }
             },
+            "foreignKeys": {},
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {},
+            "checkConstraints": {}
+        },
+        "featurescript_favorites": {
+            "name": "featurescript_favorites",
+            "columns": {
+                "user_id": {
+                    "name": "user_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "featurescript_id": {
+                    "name": "featurescript_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "created_at": {
+                    "name": "created_at",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                }
+            },
+            "indexes": {},
+            "foreignKeys": {
+                "featurescript_favorites_featurescript_id_featurescripts_id_fk": {
+                    "name": "featurescript_favorites_featurescript_id_featurescripts_id_fk",
+                    "tableFrom": "featurescript_favorites",
+                    "tableTo": "featurescripts",
+                    "columnsFrom": ["featurescript_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                }
+            },
+            "compositePrimaryKeys": {
+                "featurescript_favorites_user_id_featurescript_id_pk": {
+                    "columns": ["user_id", "featurescript_id"],
+                    "name": "featurescript_favorites_user_id_featurescript_id_pk"
+                }
+            },
+            "uniqueConstraints": {},
+            "checkConstraints": {}
+        },
+        "featurescripts": {
+            "name": "featurescripts",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "text",
+                    "primaryKey": true,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "element_id": {
+                    "name": "element_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "microversion_id": {
+                    "name": "microversion_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "feature_type": {
+                    "name": "feature_type",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "name": {
+                    "name": "name",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "description": {
+                    "name": "description",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "category": {
+                    "name": "category",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false,
+                    "autoincrement": false
+                },
+                "release_version": {
+                    "name": "release_version",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false,
+                    "autoincrement": false
+                },
+                "source_url": {
+                    "name": "source_url",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false,
+                    "autoincrement": false
+                },
+                "is_visible": {
+                    "name": "is_visible",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false,
+                    "default": true
+                },
+                "example_element_id": {
+                    "name": "example_element_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false,
+                    "autoincrement": false
+                },
+                "example_microversion_id": {
+                    "name": "example_microversion_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false,
+                    "autoincrement": false
+                },
+                "icon_element_id": {
+                    "name": "icon_element_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false,
+                    "autoincrement": false
+                },
+                "icon_microversion_id": {
+                    "name": "icon_microversion_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false,
+                    "autoincrement": false
+                },
+                "thumbnail_urls": {
+                    "name": "thumbnail_urls",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false,
+                    "autoincrement": false
+                },
+                "problems": {
+                    "name": "problems",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false,
+                    "default": "'[]'"
+                },
+                "sort_order": {
+                    "name": "sort_order",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false,
+                    "default": 0
+                }
+            },
+            "indexes": {
+                "featurescripts_element_id_unique": {
+                    "name": "featurescripts_element_id_unique",
+                    "columns": ["element_id"],
+                    "isUnique": true
+                }
+            },
+            "foreignKeys": {},
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {},
+            "checkConstraints": {}
+        },
+        "featurescripts_document": {
+            "name": "featurescripts_document",
+            "columns": {
+                "document_id": {
+                    "name": "document_id",
+                    "type": "text",
+                    "primaryKey": true,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "version_id": {
+                    "name": "version_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "cache_version": {
+                    "name": "cache_version",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false,
+                    "default": 0
+                }
+            },
+            "indexes": {},
             "foreignKeys": {},
             "compositePrimaryKeys": {},
             "uniqueConstraints": {},

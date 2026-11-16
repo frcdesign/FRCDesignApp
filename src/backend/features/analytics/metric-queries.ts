@@ -60,7 +60,6 @@ export async function getTotals(
         uniqueUsers: uniqueUsers?.value ?? 0,
         favoriteUses: Number(uses?.favorites ?? 0),
         quickInserts: Number(uses?.quickInserts ?? 0),
-        fastenInserts: Number(uses?.fastens ?? 0),
         fastenableInserts: Number(uses?.fastenables ?? 0),
         preselectedInserts: Number(uses?.preselected ?? 0),
         autoAssemblyInserts: Number(uses?.autoAssemblys ?? 0),
@@ -99,7 +98,6 @@ function countMetrics(db: Db, libraryId?: LibraryId, range?: DayRange) {
         .select({
             total: sum(dailyMetrics.count),
             favorites: sum(dailyMetrics.favoriteCount),
-            fastens: sum(dailyMetrics.fastenCount),
             quickInserts: sum(dailyMetrics.quickInsertCount),
             fastenables: sum(dailyMetrics.fastenableCount),
             preselected: sum(dailyMetrics.preselectedCount),
@@ -234,7 +232,7 @@ function countFavorites(db: Db, libraryId?: LibraryId) {
         .get();
 }
 
-/** Daily insert mix (favorites / fasten / quick insert) across the range. */
+/** Who was active, scoped as the caller asked. */
 function activityFilters(range: DayRange, libraryId?: LibraryId) {
     return scopeFilters(dailyUserActivity, libraryId, range);
 }
@@ -250,12 +248,7 @@ function countMetricsByDay(db: Db, range: DayRange, libraryId?: LibraryId) {
         .select({
             day: dailyMetrics.day,
             total: sum(dailyMetrics.count),
-            favoriteUses: sum(dailyMetrics.favoriteCount),
-            fastenInserts: sum(dailyMetrics.fastenCount),
-            quickInserts: sum(dailyMetrics.quickInsertCount),
-            fastenableInserts: sum(dailyMetrics.fastenableCount),
-            preselectedInserts: sum(dailyMetrics.preselectedCount),
-            autoAssemblyInserts: sum(dailyMetrics.autoAssemblyCount)
+            favoriteUses: sum(dailyMetrics.favoriteCount)
         })
         .from(dailyMetrics)
         .where(and(...filters))
@@ -323,11 +316,6 @@ export async function getMetricSeries(
             appOpens: 0,
             activeUsers: 0,
             favoriteUses: 0,
-            quickInserts: 0,
-            fastenInserts: 0,
-            fastenableInserts: 0,
-            preselectedInserts: 0,
-            autoAssemblyInserts: 0,
             targets: emptyTargets()
         };
         byDay.set(day, created);
@@ -338,11 +326,6 @@ export async function getMetricSeries(
         const point = pointFor(row.day);
         point.uses = Number(row.total ?? 0);
         point.favoriteUses = Number(row.favoriteUses ?? 0);
-        point.fastenInserts = Number(row.fastenInserts ?? 0);
-        point.quickInserts = Number(row.quickInserts ?? 0);
-        point.fastenableInserts = Number(row.fastenableInserts ?? 0);
-        point.preselectedInserts = Number(row.preselectedInserts ?? 0);
-        point.autoAssemblyInserts = Number(row.autoAssemblyInserts ?? 0);
     }
     for (const row of openRows) {
         pointFor(row.day).appOpens = Number(row.total ?? 0);
@@ -390,12 +373,17 @@ export async function getSources(
     const rows = await countBySource(db, range, libraryId);
 
     const bySource = new Map(rows.map((row) => [row.source, row]));
-    // Every source is listed, so one nobody uses reads as a zero, not a gap.
-    return Object.values(UseSource).map((source) => ({
-        source,
-        count: Number(bySource.get(source)?.count ?? 0),
-        quickInsertCount: Number(bySource.get(source)?.quickInsertCount ?? 0)
-    }));
+    // Every source is listed, so one nobody uses reads as a zero, not a gap;
+    // `UNKNOWN` only when the range reaches the imported history.
+    return Object.values(UseSource)
+        .map((source) => ({
+            source,
+            count: Number(bySource.get(source)?.count ?? 0),
+            quickInsertCount: Number(
+                bySource.get(source)?.quickInsertCount ?? 0
+            )
+        }))
+        .filter((row) => row.source !== UseSource.UNKNOWN || row.count > 0);
 }
 
 function countUsesByLibraryDay(db: Db, range: DayRange, libraryId?: LibraryId) {
@@ -440,7 +428,7 @@ export async function getSeries(
     return [...byDay.values()].sort((a, b) => a.day.localeCompare(b.day));
 }
 
-/** The version manager's totals over a range, and what is linked right now. */
+/** The Version Manager's totals over a range, and what is linked right now. */
 export async function getVersionManagerTotals(
     db: Db,
     range: DayRange
@@ -449,8 +437,6 @@ export async function getVersionManagerTotals(
         db
             .select({
                 runs: sum(dailyVersionMetrics.runs),
-                partialRuns: sum(dailyVersionMetrics.partialRuns),
-                failedRuns: sum(dailyVersionMetrics.failedRuns),
                 createdVersions: sum(dailyVersionMetrics.createdVersions),
                 updatedElements: sum(dailyVersionMetrics.updatedElements)
             })
@@ -467,8 +453,6 @@ export async function getVersionManagerTotals(
 
     return {
         runs: Number(totals?.runs ?? 0),
-        runsWithFailures:
-            Number(totals?.partialRuns ?? 0) + Number(totals?.failedRuns ?? 0),
         createdVersions: Number(totals?.createdVersions ?? 0),
         updatedElements: Number(totals?.updatedElements ?? 0),
         links: links?.value ?? 0

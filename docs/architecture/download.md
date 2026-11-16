@@ -2,9 +2,10 @@
 
 ## Purpose
 
-Someone browsing the library outside Onshape — the standalone app — downloads
-a part as a STEP file, in the configuration on screen. Inside Onshape the part
-is inserted instead, and the panel offers no download.
+Someone browsing the library downloads a part as a STEP file, in the
+configuration on screen. Outside Onshape — the standalone app — it is the insert
+menu's main action. Inside Onshape the part is inserted instead, and the
+download is an item in the part's menu.
 
 It is not an insert ([configurations.md](./configurations.md) covers how a
 selection is sent to Onshape), though analytics counts both as uses of the part
@@ -22,6 +23,20 @@ In the order a download runs.
 function DownloadStepButton(props: DownloadStepButtonProps): ReactNode;
 
 interface DownloadStepButtonProps extends DownloadArgs {
+    insertable: InsertableOut;
+    selection?: PartialSelection;
+}
+```
+
+`src/frontend/features/download/components/download-step-menu-section.tsx`
+
+```ts
+// Inside Onshape only: the Download section of a part's menu.
+function DownloadStepMenuSection(
+    props: DownloadStepMenuSectionProps
+): ReactNode;
+
+interface DownloadStepMenuSectionProps extends DownloadArgs {
     insertable: InsertableOut;
     selection?: PartialSelection;
 }
@@ -142,10 +157,12 @@ its rollups ([analytics.md](./analytics.md)).
 
 ### Downloading
 
-1. The insert menu's footer shows **Download STEP** when the app isn't
-   connected to Onshape (`useIsConnectedToOnshape`). Signed out, it reads
-   **Sign in to download** and starts sign-in, which returns to the same url,
-   so the menu reopens on the same configuration.
+1. Standalone (`useIsConnectedToOnshape` false), the insert menu's footer
+   shows **Download STEP**. Inside Onshape, a part's menu — on its card, its
+   recent, or the insert menu's ⋯ — has a **Download** section with the same
+   item. Signed out, either reads **Sign in to download** and starts sign-in,
+   which returns to the same url, so the menu reopens on the same
+   configuration.
 2. `POST /api/step-export/insertable/:insertableId` makes the selection whole
    (`readSelection`), and starts an Onshape translation of the version-pinned
    tab to STEP under the caller's session: its overrides
@@ -180,7 +197,8 @@ In [strings/download.md](../strings/download.md).
 
 ## Invariants
 
-- The download is offered only outside Onshape.
+- The download is the insert menu's footer button only outside Onshape;
+  inside, the footer inserts, and the download is a menu item.
 - An export runs under the caller's own session, never a background one, so
   Onshape's permissions on the document are the caller's.
 - The export is of the version-pinned tab, at the whole selection's overrides,
@@ -213,8 +231,11 @@ In [strings/download.md](../strings/download.md).
   the button show progress.
 - **Streamed through the Worker.** Onshape's external data needs the caller's
   token, which never leaves KV, so the browser can't fetch it directly.
+- **A menu item inside Onshape.** Inserting is what the panel is for, so the
+  footer keeps to it; a STEP file is still wanted there, for a simulator or a
+  supplier, and the part's menu is where the other secondary actions are.
 - **No cache.** Exports are per caller, and caching one in R2 would serve it
   without Onshape's permission check. A shared cache is the step to take if
   anonymous downloads are wanted.
 
-_Last reviewed: 2026-11-06_
+_Last reviewed: 2026-11-11_

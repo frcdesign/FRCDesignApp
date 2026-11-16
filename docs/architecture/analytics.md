@@ -3,7 +3,7 @@
 ## Purpose
 
 Records how the libraries are used — each **use** of a part, an insert into
-Onshape or a download from the standalone app, and each launch from Onshape —
+Onshape or a STEP download, and each launch from Onshape —
 and how often people report problems, and shows it on a public dashboard: totals and trends, per-library health,
 which parts and configuration options are used, and which aren't. It exists so
 the library team can see what to maintain and what to cut.
@@ -22,15 +22,20 @@ imports
 /** Bump when the columns' meaning changes. */
 const EVENT_SCHEMA_VERSION = 3;
 
+/** Rows imported from the legacy app's log; see Imported history. */
+const LEGACY_SCHEMA_VERSION = 0;
+
 enum EventType {
     INSERT = "insert",
-    /** A part exported to a file from the standalone app; see `features/download`. */
+    /** A part exported to a STEP file; see `features/download`. */
     DOWNLOAD = "download",
     APP_OPEN = "app_open",
     /** One finished push or pull; see `features/version-manager`. */
     VERSION_RUN = "version_run",
     /** One report posted to Discord; see `features/feedback`. */
-    REPORT = "report"
+    REPORT = "report",
+    /** One FeatureScript added to a Part Studio; see `features/featurescripts`. Not a use. */
+    FEATURE_ADD = "feature_add"
 }
 
 /** A use is an insert or a download: each counts toward a part's usage. */
@@ -57,8 +62,13 @@ enum UseSource {
     FAVORITES = "favorites",
     RECENTS = "recents",
     /** An Auto Assembly run, which inserts a part per fastener it places. */
-    AUTO_ASSEMBLY = "auto_assembly"
+    AUTO_ASSEMBLY = "auto_assembly",
+    /** Imported from the legacy app's log, which never recorded where a use started. */
+    UNKNOWN = "unknown"
 }
+
+/** What a client may send: the import is the only writer of `UNKNOWN`. */
+const CLIENT_USE_SOURCES: readonly UseSource[];
 ```
 
 `src/backend/features/analytics/tracking.ts`, called by the routes and the
@@ -209,6 +219,7 @@ which columns each kind of event sets
 ```ts
 // Each narrows a row to its kind; undefined for any other.
 function asUse(event: LoggedEvent): LoggedUse | undefined;
+function asFeatureAdd(event: LoggedEvent): LoggedFeatureAdd | undefined;
 function asVersionRun(event: LoggedEvent): LoggedVersionRun | undefined;
 function asReport(event: LoggedEvent): LoggedReport | undefined;
 
@@ -263,6 +274,7 @@ const NOT_A_USE: UseColumns;
 const NO_ELEMENT: ElementColumns;
 const NOT_A_VERSION_RUN: VersionRunColumns;
 const NOT_A_REPORT: ReportColumns;
+const NOT_A_FEATURE_ADD: FeatureAddColumns;
 
 /** A logged insert or download, whose own columns a reader can then count on. */
 type LoggedUse = LoggedEvent & {
@@ -314,6 +326,8 @@ GET /api/analytics/overview/usage                                   OverviewUsag
 GET /api/analytics/overview/series                                  DailyUsePoint[], per library
 GET /api/analytics/overview/sources                                 UseSourceUsage[]
 GET /api/analytics/overview/version-manager                         VersionManagerTotals
+GET /api/analytics/overview/featurescripts                          FeatureScriptUsageOut
+GET /api/analytics/overview/health                                  LibraryHealthCounts, every library's
 GET /api/analytics/overview/reports                                 ReportSummary
 GET /api/analytics/summary/library/:libraryId                       LibrarySummaryOut
 GET /api/analytics/health/library/:libraryId?v=                     LibraryHealthCounts, cached by the library's version
@@ -324,7 +338,8 @@ GET /api/analytics/insertable/library/:libraryId/element/:elementId InsertableRe
 ```
 
 `src/backend/features/analytics/metric-queries.ts`, `growth.ts`,
-`part-queries.ts` and `report-queries.ts`, the reads behind them
+`part-queries.ts`, `report-queries.ts` and `featurescript-queries.ts`, the
+reads behind them
 
 ```ts
 async function getTotals(
@@ -352,6 +367,11 @@ async function getVersionManagerTotals(
     db: Db,
     range: DayRange
 ): Promise<VersionManagerTotals>;
+// Every feature in the document, at zero if unused, and any added since removed.
+async function getFeatureScriptUsage(
+    db: Db,
+    range: DayRange
+): Promise<FeatureScriptUsageOut>;
 // Who was about each day: library activity unioned with app opens.
 function activeUserRows(db: Db, range: DayRange, libraryId?: LibraryId);
 // How many of them over the whole range: a union of ids, which dedupes them.
@@ -360,6 +380,13 @@ async function countActiveUsers(
     range: DayRange,
     libraryId?: LibraryId
 ): Promise<number>;
+// All time compares seasons; a shorter range, as many days just before it.
+function getGrowthFor(
+    db: Db,
+    requested: DayRange,
+    trackingSince: string | undefined,
+    libraryId?: LibraryId
+): Promise<GrowthOut>;
 // Season to date against the same stretch of the season before.
 async function getGrowth(
     db: Db,
@@ -399,10 +426,11 @@ async function getReportedParts(
     libraryId: LibraryId,
     range: DayRange
 ): Promise<ReportedPartOut[]>;
-// `health.ts`: build-issue counts, hidden elements left out.
+// `health.ts`: build-issue and part counts, hidden elements left out; every
+// library's together without a `libraryId`.
 async function getHealthCounts(
     db: Db,
-    libraryId: LibraryId
+    libraryId?: LibraryId
 ): Promise<LibraryHealthCounts>;
 
 interface PartRow {
@@ -470,9 +498,6 @@ type UseTargets = Record<UseTarget, number>;
 
 function emptyTargets(): UseTargets;
 
-/** The uses that went into Onshape: quick insert's denominator. */
-function insertsOf(targets: UseTargets): number;
-
 /** Lifetime counts, either overall or scoped to one library. */
 interface AnalyticsTotals {
     /** Inserts and downloads; `targets` splits them. */
@@ -482,11 +507,9 @@ interface AnalyticsTotals {
     uniqueUsers: number;
     /** A subset of `uses`. */
     favoriteUses: number;
-    /** A subset of the inserts; see {@link insertsOf}. */
+    /** A subset of the inserts, from a row's own Insert or Derive button. */
     quickInserts: number;
-    /** Onshape only offers fasten on assemblies, so compare to that entry of `targets`. */
-    fastenInserts: number;
-    /** Into an assembly, of a part offering insert and fasten; the base of the next two. */
+    /** Into an assembly, of a part offering insert and fasten when it was inserted; the base of the next two. */
     fastenableInserts: number;
     /** Fastened to edges or faces picked in Onshape beforehand. */
     preselectedInserts: number;
@@ -512,12 +535,6 @@ interface DailyMetricPoint {
     /** Distinct users active that day; not summable across days. */
     activeUsers: number;
     favoriteUses: number;
-    quickInserts: number;
-    fastenInserts: number;
-    fastenableInserts: number;
-    preselectedInserts: number;
-    autoAssemblyInserts: number;
-    /** That day's uses by target; the assembly entry is fasten's denominator. */
     targets: UseTargets;
 }
 
@@ -525,7 +542,7 @@ interface DailyMetricPoint {
 interface UseSourceUsage {
     source: UseSource;
     count: number;
-    /** How many of those used the context-menu quick insert. */
+    /** How many of those were quick inserts, from a row's own Insert or Derive button. */
     quickInsertCount: number;
 }
 
@@ -533,6 +550,9 @@ interface UseSourceUsage {
 interface LibraryHealthCounts {
     groupCount: number;
     insertableCount: number;
+    /** The two split `insertableCount` by the kind of tab. */
+    partStudioCount: number;
+    assemblyCount: number;
     errorCount: number;
     warningCount: number;
     healthyItems: number;
@@ -587,12 +607,10 @@ interface LibrarySummaryOut {
     to: string;
 }
 
-/** What the version manager has done, and how much is linked to do it with. */
+/** What the Version Manager has done, and how much is linked to do it with. */
 interface VersionManagerTotals {
     /** Pushes and pulls together. */
     runs: number;
-    /** Runs with a step that failed, partway or entirely. */
-    runsWithFailures: number;
     /** Tabs whose references the app repointed. */
     updatedElements: number;
     createdVersions: number;
@@ -619,6 +637,25 @@ interface ReportedPartOut {
 interface ReportSummary {
     /** Every report over the range; only the kinds that happened are listed. */
     counts: ReportCount[];
+}
+
+/** One FeatureScript's adds over the range. */
+interface FeatureScriptUsage {
+    /** The feature's constant, which never changes once released. */
+    featureType: string;
+    /** Absent for a feature no longer in the frontend document. */
+    name?: string;
+    adds: number;
+    users: number;
+}
+
+/** FeatureScripts added over the range, in total and per feature. */
+interface FeatureScriptUsageOut {
+    adds: number;
+    /** Distinct over the range, so not the sum of the features'. */
+    users: number;
+    /** Every feature in the document, at zero if unused, most added first. */
+    features: FeatureScriptUsage[];
 }
 
 /** The overview's headline numbers, and the series its trends are drawn from. */
@@ -704,6 +741,14 @@ interface InsertableReportOut {
 }
 ```
 
+`scripts/migrate-analytics/`, run once: the legacy app's log, from BigQuery
+into `events` and the rollups; see Imported history
+
+```text
+export.py      BigQuery to JSONL, one row per logged insert or app open
+build-sql.ts   JSONL to SQL files, each a run of days applied as one import
+```
+
 `src/backend/features/download/routes.ts` and `src/backend/features/entry/routes.ts`,
 two of the routes that record
 
@@ -722,6 +767,7 @@ function getOverviewUsageQuery(range: DayRange);
 function getOverviewSeriesQuery(range: DayRange);
 function getOverviewSourcesQuery(range: DayRange);
 function getVersionManagerQuery(range: DayRange);
+function getOverviewFeatureScriptsQuery(range: DayRange);
 function getOverviewReportsQuery(range: DayRange);
 function getLibrarySummaryQuery(libraryId: LibraryId, range: DayRange);
 function getPartsQuery(libraryId: LibraryId, range: DayRange);
@@ -741,6 +787,7 @@ function getInsertableReportQuery(
     range: DayRange
 );
 function getHealthQuery(libraryId: LibraryId, cacheVersion: number);
+function getOverviewHealthQuery();
 // The first failure among several queries, else the first still loading.
 function firstPending(
     queries: UseQueryResult<unknown>[]
@@ -789,12 +836,7 @@ function rangeValue(
     metric: MetricDefinition
 ): number;
 
-type MetricKey =
-    | "uses"
-    | "fastenFraction"
-    | "quickFraction"
-    | "assemblyFraction"
-    | "downloadFraction";
+type MetricKey = "uses" | "assemblyFraction";
 
 interface MetricDefinition {
     key: MetricKey;
@@ -802,21 +844,15 @@ interface MetricDefinition {
     /** Percentages divide by `denominator`; counts leave it undefined. */
     numerator: (point: DailyMetricPoint) => number;
     denominator?: (point: DailyMetricPoint) => number;
-    /** The all-time figure, shown as context beneath the range value. */
-    lifetimeValue: (totals: AnalyticsTotals) => number;
-    lifetimeDenominator?: (totals: AnalyticsTotals) => number;
     /** What the detail chart's y-axis is measuring. */
     detailLabel: string;
 }
 ```
 
-| Metric             | Counts                | Divided by            |
-| ------------------ | --------------------- | --------------------- |
-| `uses`             | Inserts and downloads | —                     |
-| `quickFraction`    | Quick inserts         | Inserts (`insertsOf`) |
-| `fastenFraction`   | Inserts that fastened | Uses into an assembly |
-| `assemblyFraction` | Uses into an assembly | Every use             |
-| `downloadFraction` | Downloads             | Every use             |
+| Metric             | Counts                | Divided by |
+| ------------------ | --------------------- | ---------- |
+| `uses`             | Inserts and downloads | —          |
+| `assemblyFraction` | Uses into an assembly | Every use  |
 
 `src/frontend/features/dashboard/use-mix.tsx`, the breakdowns
 
@@ -848,7 +884,7 @@ Named, not copied: `AppContext` and `AppBindings` (`src/backend/lib/context.ts`)
 `Db` (`src/backend/db/client.ts`), `ElementPath` and `InstanceType`
 (`src/backend/lib/onshape/path.ts`), `ElementType`, `LibraryId`, `Selection`
 and `ConfigurationParameter` ([configurations.md](./configurations.md)), the
-version manager's `VersionJobKind`, `VersionJobOutcome`, `VersionJobStatus`,
+Version Manager's `VersionJobKind`, `VersionJobOutcome`, `VersionJobStatus`,
 `PushScopeKind` and `PullScopeKind` ([version-manager.md](./version-manager.md)),
 and feedback's `FeedbackTopic`, `FeedbackCategory` and `FeedbackSource`
 ([feedback.md](./feedback.md)).
@@ -867,20 +903,30 @@ no foreign key crosses between them):
   inserts have source `auto_assembly`; a version run adds its kind,
   scope, whether it was update-only, its outcome, and how many steps failed,
   versions it created and tabs it updated. A report adds its topic, category,
-  source and the team number the reporter gave, and a part report the element
-  path and insertable. Keyed on
+  source and the team number the reporter gave, a part report the element
+  path and insertable, and a report naming a FeatureScript its constant in
+  `feature_type`. A FeatureScript add has its feature's constant in
+  `feature_type`, and its Feature Studio's path in the loaded version in the
+  element columns. Keyed on
   Onshape's element id with no foreign keys, so history survives a reload or a
   re-added tab.
+- Rows imported from the legacy app (see Imported history) have
+  `schema_version` 0 (`LEGACY_SCHEMA_VERSION`), an id of `legacy-` and the
+  Cloud Logging entry's `insert_id`, and `source` `unknown`. Their `instance_id`
+  is the version inserted from; `document_id` and `insertable_id` are filled
+  from the part as it is now, and null for a part since removed. A use credited
+  to a re-created part carries that part's element id and no version.
 - `library_id` is null for an event that belongs to no library: an app open,
   which is the app being opened rather than the page it resumes into, a
   version run, which acts on the Onshape document the app was launched from,
-  and a report about the app itself. A report from somebody signed out has
+  a FeatureScript add, and a report about the app itself or the FeatureScripts. A report from somebody signed out has
   `user_id` `signed-out` (`SIGNED_OUT_USER_ID`).
 - Rollups, each derived from the log alone: `daily_metrics`,
   `daily_target_metrics`, `daily_source_metrics`, `insertable_stats`,
   `daily_insertable_metrics`, `daily_insertable_users`,
   `daily_configuration_metrics`, `daily_user_activity`, `user_stats`,
-  `daily_app_opens`, `daily_version_metrics`, `daily_report_metrics`.
+  `daily_app_opens`, `daily_version_metrics`, `daily_report_metrics`,
+  `daily_featurescript_metrics`, `daily_featurescript_users`.
 - A use writes every library rollup, an insert and a download alike.
   `daily_metrics` keeps a row per event type, so the uses are the sum of the
   `insert` and `download` rows and either can be read alone. Beside its
@@ -896,6 +942,10 @@ no foreign key crosses between them):
 - `daily_version_metrics` is keyed by day: runs, update-only runs, runs that
   partially failed and runs that failed outright, versions created and tabs
   updated.
+- `daily_featurescript_metrics` is keyed by day and feature type: the count of
+  adds. `daily_featurescript_users` holds who added each feature on a day, so
+  distinct users come from rollups. Keyed by the feature's constant, which
+  never changes once released, rather than its row.
 - `daily_report_metrics` is keyed by day, topic, category, source and element
   (empty for a report that names no part): the count of reports. By topic
   rather than library, since the app's topics belong to none.
@@ -923,12 +973,14 @@ no foreign key crosses between them):
    `POST /api/step-export` calls `trackDownload` once Onshape accepts the
    export (see [download.md](./download.md)); `/init`'s
    handoff calls `POST /api/app-open`, which calls `trackAppOpen`; the
-   version manager's workflow calls `trackVersionRun` in its `record-run` step
+   Version Manager's workflow calls `trackVersionRun` in its `record-run` step
    once its run has finished, so a run that failed halfway still records what
    it managed; `POST /api/update-references` records one in the background once
    it has updated a library document's references; `POST /api/feedback` calls `trackReport` once the report is
-   posted to Discord (see [feedback.md](./feedback.md)).
-2. A use, an open and a report are recorded in the background (`runInBackground`),
+   posted to Discord (see [feedback.md](./feedback.md));
+   `POST /api/featurescripts/:featureId/add` calls `trackFeatureAdd` once
+   Onshape accepted the feature (see [featurescripts.md](./featurescripts.md)).
+2. A use, an open, a FeatureScript add and a report are recorded in the background (`runInBackground`),
    after the response; a workflow's step swallows a failure to record. So
    tracking never slows or fails what the user asked for.
 3. The selection is stored canonically (`canonicalValues`), so `5 in` and
@@ -938,13 +990,49 @@ no foreign key crosses between them):
    one query against D1's per-invocation limit however many statements it
    holds.
 
+### Imported history
+
+Before the Worker, the Cloud Run app logged each insert and app open to Cloud
+Logging, tagged `source: frc-design-app-data` and routed to a log bucket that
+BigQuery links as `frc-design-lib.frc_design_app_data`. That log, 2025-11-14 to
+2026-09-23, was imported once by `scripts/migrate-analytics/`:
+
+1. `export.py` reads the inserts and app opens from BigQuery, deduplicated by
+   `insert_id`.
+2. `build-sql.ts` turns each into the `LoggedEvent` `trackInsert` or
+   `trackAppOpen` would have written, and runs it through `rollupWrites` into a
+   scratch SQLite database in the target's schema, so the rollups are the live
+   write path's own.
+3. It writes one SQL file per run of days: the events as plain inserts, then
+   each rollup row as an upsert that merges with what the target holds, as the
+   table's `onConflict` in `rollups.ts` would.
+4. Each file is applied with `wrangler d1 execute --file`, which D1 runs as one
+   import that lands whole or not at all.
+
+The legacy log never recorded where an insert started, so every imported use
+has `UseSource.UNKNOWN`. It logged an enum by its option's name, which is
+matched back to an id against the part's parameters as they are now; a value
+they can no longer place is left out of the selection, and the use still
+counts. Its first weeks named no library; an element held by exactly one library
+says which, and the rest are `frc-design-lib`, the only library then.
+
+Some of the most used parts were re-created as new tabs after the log was
+written, so their logged element ids no longer exist. A logged element the
+library no longer holds is credited to the one part in that library with a
+name it was inserted under, compared case-insensitively; with no such part, or
+more than one, it keeps its own id and counts only in the totals.
+
+`scripts/migrate-analytics/README.md` has the run's numbers.
+
 ### Days and seasons
 
 A day key is the date in `America/New_York`, since US teams work evenings that
 UTC midnight would split. Reports end yesterday: today is still filling, and
-would dip every chart. Growth compares a season's stretch with the same stretch
-of the previous season (`seasons.ts`), since a January–April competition year
-is nothing like a calendar year; between seasons it shows the last complete one.
+would dip every chart. On **All time**, growth compares a season's stretch
+with the same stretch of the previous season (`seasons.ts`), since a
+January–April competition year is nothing like a calendar year; between
+seasons it shows the last complete one. A shorter range is the reader's own
+window, so it is compared with the one just before it, season or not.
 
 ### Reporting
 
@@ -953,16 +1041,28 @@ panel. Its routes read only rollups and return only aggregates:
 
 - **Overview** — one route per area, each fetched by its own query, so every
   section shows as soon as its numbers arrive: **usage** (totals, the metric
-  series behind the headline tiles and the trend tiles, growth), **series**
-  (uses per library per day), **sources**, the **version manager**'s totals,
-  and **reports** by topic and type. Its usage breakdown reads each library's
-  **Parts** report. Under **How people use the app**, the usage route's totals
-  also draw how every insert was made (`InsertMethodBreakdown`) and how a part
-  offering insert and fasten was placed (`FastenMethodBreakdown`).
-- **Library** — its summary, those two breakdowns, health (build issues by severity, hidden elements
-  left out), its parts table, its reports by type, and its most reported parts.
-- **Part** — one element's history, its uses split by target (into an
-  assembly, downloaded), and usage of each configuration option, split per way
+  series behind the headline tiles, growth), **series**
+  (uses per library per day, which the chart plots a day per point up to 90
+  days and a week per point past that, `pickChartGranularity`), **sources**
+  (every source, with "Not recorded" only when the range reaches imported
+  history), **health** (every library's parts by kind and build issues,
+  standing now), the **Version Manager**'s totals, **featurescripts** (adds and
+  distinct users, and each feature's adds and users, every feature in the
+  document listed), and **reports**' totals. Its usage breakdown reads each
+  library's **Parts** report.
+- Under **How people use the app**, beside the sources, the usage route's
+  totals draw two cards:
+    - how every insert was made (`InsertMethodBreakdown`): the insert menu,
+      quick insert or Auto Assembly;
+    - how a part offering insert and fasten was placed
+      (`FastenMethodBreakdown`): inserted normally, fastened to preselected
+      edges, or by Auto Assembly. Its base is `fastenableInserts`, recorded on
+      each event when it happens, so a part given fasten later doesn't
+      undercount it.
+- **Library** — its summary, health (parts, part studios and assemblies, and
+  build issues by severity, hidden elements left out), its parts table, its reports' totals, and its most reported parts.
+- **Part** — one element's history, the share of its uses that went
+  into an assembly, and usage of each configuration option, split per way
   the option is shown (`toParameterInstances`).
 - **Unused** — parts and options at or below a usage threshold.
 
@@ -982,8 +1082,10 @@ open, and reuses an answer for five minutes.
 
 Every page's totals are over the picked range, and two numbers are not: the
 favorites and linked documents standing now, which are state rather than events
-and say so on the tile. The season comparison beside a headline number is shown
-only on **All time**, its own window being a season rather than the picked one.
+and say so on the tile. Beside each headline number is its change
+(`getGrowthFor`): on **All time** against the same stretch of the season
+before, and on any shorter range against as many days just before it. Either
+is withheld while its baseline reaches back before tracking began.
 
 ## Invariants
 
@@ -993,23 +1095,27 @@ only on **All time**, its own window being a season rather than the picked one.
 - Every rollup is derivable from `events` alone, so the rollups can be rebuilt by
   replaying the log.
 - An event without a library writes one rollup and no other:
-  `daily_app_opens` for an open, `daily_version_metrics` for a version run.
+  `daily_app_opens` for an open, `daily_version_metrics` for a version run,
+  and a FeatureScript add its two, `daily_featurescript_metrics` and
+  `daily_featurescript_users`.
   A report writes `daily_report_metrics` alone, with a library or without.
   Every other rollup is keyed by library.
 - An event's columns are decided in `logged-event.ts`; a new column fails to
   compile until each kind of event says what it holds.
 - Values are compared and counted canonically, never by configuration key.
+- `UseSource.UNKNOWN` is written only by the import: a request's `source` is
+  one of `CLIENT_USE_SOURCES`.
 - Changing what a column means bumps `EVENT_SCHEMA_VERSION`.
 - A use is one of `USE_EVENT_TYPES`, and writes every rollup any use writes;
   only its `UseTarget` and the insert-only flags tell the kinds apart. A count
   labelled "uses" sums them all; "inserts" means the uses that went into
-  Onshape (`insertsOf`), which quick insert is measured against.
+  Onshape.
 - A use is one part, inserted or downloaded. An action that places several
   parts — an insert and fasten to several picked edges, an Auto Assembly run —
   records one use per part, and every count of uses sums them, the headline
   numbers included.
-- A share of a choice only a person makes, such as quick insert, divides by
-  the uses that choice was open to, not by every use.
+- A share of a choice only a person makes divides by the uses that choice was
+  open to, not by every use.
 - Every new or major feature records its use here, in the same change
   (`AGENTS.md`, Feature tracking).
 
@@ -1019,6 +1125,8 @@ only on **All time**, its own window being a season rather than the picked one.
 | --------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------- |
 | The tracking write fails                      | That event is lost; what it records is unaffected            | None needed                                                         |
 | A rollup is wrong after a code change         | Dashboard numbers off                                        | Replay `events` through `rollupWrites`; no script does this         |
+| An import file fails part-way                 | D1 rolls the file back; the files before it stay applied     | Apply the same file again                                           |
+| An import file is applied twice               | Refused on its first event's id; nothing counted twice       | None needed                                                         |
 | A range starts before tracking began          | Clamped; growth withheld when its baseline predates tracking | Automatic                                                           |
 | D1 refuses a query, overloaded by queued ones | That section's zero state; the others still show             | Retried twice, then **Try again**; **Send a report** if it persists |
 
@@ -1034,6 +1142,11 @@ only on **All time**, its own window being a season rather than the picked one.
   launched the app from. Attributing it to the library the person happened to
   have open would say more about their last tab than about anything real, so
   `library_id` is null and the run rolls up into a table of its own.
+- **A FeatureScript add is not a use.** A feature is no library's part, so
+  it counts toward no library's uses, users or parts, and rolls up into tables
+  of its own; the owner reads them in each feature's card
+  (`GET /api/featurescripts/stats`), and the overview's FeatureScripts section
+  over the range.
 - **Reports are not activity.** Reporting a library's part is not using it, so
   a report writes no row to `daily_metrics`, `daily_user_activity` or
   `user_stats`, even when it names a library.
@@ -1073,10 +1186,28 @@ only on **All time**, its own window being a season rather than the picked one.
   `daily_app_opens_day_opens_idx` covers summing a range's opens, which the
   primary key's index can't. At a season's volume they take the overview
   page's reads from about 3 s to under 0.4 s.
+- **Imported history keeps its gaps.** The legacy log never said where a use
+  started, so its uses are `UNKNOWN` rather than spread over the sources in
+  today's proportions, which would put a guess beside measured numbers.
+  "Not recorded" shows only for a range that reaches them.
+- **The import has no cut-off date.** The two backends ran side by side for
+  two weeks of September 2026 while DNS moved, but each request reached one of
+  them, so their logs hold different events and the overlap days are summed.
+- **Imported options are matched against today's parameters.** The log kept an
+  option's name, not its id, and only the current parameters survive. A
+  renamed or removed option drops out of that use's selection rather than
+  stopping the import, so a part's total stays right and only that option's
+  tally misses it.
 - **A log plus rollups.** The log keeps everything for replay; rollups keep every
   dashboard read a small indexed query.
 - **Keyed by element, not insertable.** An insertable row is replaced when a tab
   is removed and re-added; its element id is not.
+- **Imported history is credited to re-created parts by name.** The exception
+  to keying by element: a fifth of the legacy log's uses are of tabs since
+  re-created under new element ids, among them the most used parts. Left on
+  their old ids those parts' pages would start in September 2026. The name is
+  matched only within a library and only when one part has it, so a guess is
+  never between parts.
 - **Public aggregates.** The numbers are useful to the community, and nothing
   per-user is exposed.
 - **Fastenable inserts are their own denominator.** Preselection and Auto

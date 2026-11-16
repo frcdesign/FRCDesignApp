@@ -14,14 +14,20 @@ import {
     WebhookEvent
 } from "./registration";
 import { runInBackground } from "../../lib/background";
+import { HttpStatus } from "http-status-ts";
 import {
     LINKED_WORKSPACE_WEBHOOK_ROUTE,
+    readWatchId,
     readWorkspaceDelivery,
     UNITS_WEBHOOK_ROUTE
 } from "./transient";
 import { forgetUnitInfo } from "../configurations/units";
-import { forgetWorkspace } from "../version-manager/workspace-cache";
+import {
+    forgetOnEvent,
+    isCurrentWatch
+} from "../version-manager/workspace-cache";
 import { syncTeamLibraries } from "../admin-team/sync";
+import { requestFeatureScriptsLoad } from "../featurescripts/load-claim";
 
 export const webhookRoutes = getApp();
 
@@ -51,6 +57,8 @@ webhookRoutes.post(WEBHOOK_ROUTE, async (c) => {
             case WebhookEvent.CREATE_VERSION:
                 if (subject === WebhookSubject.DOCUMENT) {
                     await receiveNewVersion(c.env, subjectId);
+                } else if (subject === WebhookSubject.FEATURESCRIPTS) {
+                    await requestFeatureScriptsLoad(c.env, { force: false });
                 }
                 break;
             case WebhookEvent.TEAM_ADD_MEMBER:
@@ -71,7 +79,8 @@ webhookRoutes.post(WEBHOOK_ROUTE, async (c) => {
 
 /**
  * A transient webhook's delivery: a change to the workspace it watches, which
- * drops what is cached of it. Registration and pings only want a 200.
+ * drops what is cached of it, after answering 200 as the main route does.
+ * Registration and pings only want the 200.
  */
 function forgetOnChange(
     forget: (kv: KVNamespace, workspace: InstancePath) => Promise<void>
@@ -83,7 +92,9 @@ function forgetOnChange(
         }
         const { event } = await c.req.json<WebhookNotification>();
         if (!event.startsWith("webhook.")) {
-            await forget(c.env.KV, workspace);
+            await runInBackground(c, `handle ${event}`, () =>
+                forget(c.env.KV, workspace)
+            );
         }
         return c.json({});
     };
@@ -92,8 +103,25 @@ function forgetOnChange(
 /** POST /api/webhooks/units?documentId=&workspaceId= */
 webhookRoutes.post(UNITS_WEBHOOK_ROUTE, forgetOnChange(forgetUnitInfo));
 
-/** POST /api/webhooks/linked-workspace?documentId=&workspaceId= */
-webhookRoutes.post(
-    LINKED_WORKSPACE_WEBHOOK_ROUTE,
-    forgetOnChange(forgetWorkspace)
-);
+/**
+ * POST /api/webhooks/linked-workspace?documentId=&workspaceId=&watch=. A
+ * delivery through any registration but the workspace's current one is
+ * answered 410, so Onshape deactivates the duplicate.
+ */
+webhookRoutes.post(LINKED_WORKSPACE_WEBHOOK_ROUTE, async (c) => {
+    const query = c.req.query();
+    const workspace = readWorkspaceDelivery(query);
+    if (!workspace) {
+        throw forbiddenError("Unrecognized webhook");
+    }
+    if (!(await isCurrentWatch(c.env.KV, workspace, readWatchId(query)))) {
+        return c.body(null, HttpStatus.GONE);
+    }
+    const { event } = await c.req.json<WebhookNotification>();
+    if (!event.startsWith("webhook.")) {
+        await runInBackground(c, `handle ${event}`, () =>
+            forgetOnEvent(c.env.KV, workspace, event)
+        );
+    }
+    return c.json({});
+});

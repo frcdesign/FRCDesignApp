@@ -6,15 +6,20 @@
 /** Bump when the columns' meaning changes. */
 export const EVENT_SCHEMA_VERSION = 3;
 
+/** Rows imported from the legacy app's log; see `scripts/migrate-analytics`. */
+export const LEGACY_SCHEMA_VERSION = 0;
+
 export enum EventType {
     INSERT = "insert",
-    /** A part exported to a file from the standalone app; see `features/download`. */
+    /** A part exported to a STEP file; see `features/download`. */
     DOWNLOAD = "download",
     APP_OPEN = "app_open",
     /** One finished push or pull; see `features/version-manager`. */
     VERSION_RUN = "version_run",
     /** One report posted to Discord; see `features/feedback`. */
-    REPORT = "report"
+    REPORT = "report",
+    /** One FeatureScript added to a Part Studio; see `features/featurescripts`. Not a use. */
+    FEATURE_ADD = "feature_add"
 }
 
 /** A use is an insert or a download: each counts toward a part's usage. */
@@ -41,5 +46,16 @@ export enum UseSource {
     FAVORITES = "favorites",
     RECENTS = "recents",
     /** An Auto Assembly run, which inserts a part per fastener it places. */
-    AUTO_ASSEMBLY = "auto_assembly"
+    AUTO_ASSEMBLY = "auto_assembly",
+    /** Imported from the legacy app's log, which never recorded where a use started. */
+    UNKNOWN = "unknown"
 }
+
+/** What a client may send: the import is the only writer of `UNKNOWN`. */
+export const CLIENT_USE_SOURCES = [
+    UseSource.SEARCH,
+    UseSource.GROUP_SEARCH,
+    UseSource.BROWSE,
+    UseSource.FAVORITES,
+    UseSource.RECENTS
+] as const;

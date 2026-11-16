@@ -1,8 +1,4 @@
-import {
-    insertsOf,
-    type AnalyticsTotals,
-    type DailyMetricPoint
-} from "@backend/features/analytics/contract";
+import type { DailyMetricPoint } from "@backend/features/analytics/contract";
 import { UseTarget } from "@backend/features/analytics/usage";
 import { m } from "../../paraglide/messages";
 import {
@@ -13,12 +9,7 @@ import {
     type Granularity
 } from "./series";
 
-type MetricKey =
-    | "uses"
-    | "fastenFraction"
-    | "quickFraction"
-    | "assemblyFraction"
-    | "downloadFraction";
+type MetricKey = "uses" | "assemblyFraction";
 
 export interface MetricDefinition {
     key: MetricKey;
@@ -26,9 +17,6 @@ export interface MetricDefinition {
     /** Percentages divide by `denominator`; counts leave it undefined. */
     numerator: (point: DailyMetricPoint) => number;
     denominator?: (point: DailyMetricPoint) => number;
-    /** The all-time figure, shown as context beneath the range value. */
-    lifetimeValue: (totals: AnalyticsTotals) => number;
-    lifetimeDenominator?: (totals: AnalyticsTotals) => number;
     /** What the detail chart's y-axis is measuring. */
     detailLabel: string;
 }
@@ -38,45 +26,13 @@ export const METRICS: Record<MetricKey, MetricDefinition> = {
         key: "uses",
         label: m.dashboardMetricUses(),
         numerator: (point) => point.uses,
-        lifetimeValue: (totals) => totals.uses,
         detailLabel: m.dashboardMetricUses()
-    },
-    fastenFraction: {
-        key: "fastenFraction",
-        label: m.dashboardMetricFasten(),
-        numerator: (point) => point.fastenInserts,
-        // Onshape only offers fasten on an assembly target.
-        denominator: (point) => point.targets[UseTarget.ASSEMBLY],
-        lifetimeDenominator: (totals) => totals.targets[UseTarget.ASSEMBLY],
-        lifetimeValue: (totals) => totals.fastenInserts,
-        detailLabel: m.dashboardMetricOfAssemblyInserts()
-    },
-    quickFraction: {
-        key: "quickFraction",
-        label: m.dashboardMetricQuickInsert(),
-        numerator: (point) => point.quickInserts,
-        // Only an insert can be quick, so downloads stay out of the base.
-        denominator: (point) => insertsOf(point.targets),
-        lifetimeDenominator: (totals) => insertsOf(totals.targets),
-        lifetimeValue: (totals) => totals.quickInserts,
-        detailLabel: m.dashboardMetricOfInserts()
     },
     assemblyFraction: {
         key: "assemblyFraction",
         label: m.dashboardMetricIntoAssembly(),
         numerator: (point) => point.targets[UseTarget.ASSEMBLY],
         denominator: (point) => point.uses,
-        lifetimeValue: (totals) => totals.targets[UseTarget.ASSEMBLY],
-        lifetimeDenominator: (totals) => totals.uses,
-        detailLabel: m.dashboardMetricOfUses()
-    },
-    downloadFraction: {
-        key: "downloadFraction",
-        label: m.dashboardMetricDownloaded(),
-        numerator: (point) => point.targets[UseTarget.DOWNLOAD],
-        denominator: (point) => point.uses,
-        lifetimeValue: (totals) => totals.targets[UseTarget.DOWNLOAD],
-        lifetimeDenominator: (totals) => totals.uses,
         detailLabel: m.dashboardMetricOfUses()
     }
 };
@@ -101,7 +57,7 @@ export function rangeTerms(
     return { numerator, denominator };
 }
 
-/** From the sparkline's points, so a tile can't disagree with its chart. */
+/** From the series' points, so a tile can't disagree with a chart of them. */
 function metricValue(
     { numerator, denominator }: MetricTerms,
     metric: MetricDefinition

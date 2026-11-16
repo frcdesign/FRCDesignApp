@@ -11,7 +11,8 @@ import {
     THUMBNAIL_PREFIX,
     parseThumbnailKey,
     parseThumbnailUrl,
-    subjectKey
+    subjectKey,
+    type ThumbnailSubject
 } from "./keys";
 
 /** R2 returns at most this many per call, and takes at most this many to delete. */
@@ -29,6 +30,8 @@ interface StaleThumbnailsScope {
     elementIds: string[];
     /** Drops every configuration render too, for a forced reload to redo. */
     dropRenders?: boolean;
+    /** What the caller points at beyond the libraries' rows, such as FeatureScripts' examples. */
+    alsoLive?: ThumbnailSubject[];
 }
 
 /**
@@ -44,6 +47,9 @@ export async function deleteStaleThumbnails(
 ): Promise<number> {
     const elementIds = [...new Set(scope.elementIds)];
     const live = await liveSubjects(db, scope.documentId, elementIds);
+    for (const subject of scope.alsoLive ?? []) {
+        live.add(subjectKey(subject));
+    }
 
     let deleted = 0;
     for (const elementId of elementIds) {

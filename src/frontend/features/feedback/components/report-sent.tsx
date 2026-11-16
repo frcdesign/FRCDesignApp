@@ -17,12 +17,15 @@ import { m } from "../../../paraglide/messages";
 interface ReportSentProps {
     /** Decides the forum the report went to. */
     topic: FeedbackTopic;
+    /** On the feedback page, where there is nothing to close. */
+    onPage: boolean;
     onClose: () => void;
+    onSendAnother: () => void;
 }
 
 /** Replies happen only in the report's Discord thread, so say where it is. */
 export function ReportSent(props: ReportSentProps): ReactNode {
-    const { topic, onClose } = props;
+    const { topic, onPage, onClose, onSendAnother } = props;
     return (
         <>
             <AppModalBody>
@@ -49,9 +52,15 @@ export function ReportSent(props: ReportSentProps): ReactNode {
                 />
             </AppModalBody>
             <AppModalFooter>
-                <Button variant="default" ml="auto" onClick={onClose}>
-                    {m.feedbackClose()}
-                </Button>
+                {onPage ? (
+                    <Button variant="default" ml="auto" onClick={onSendAnother}>
+                        {m.feedbackSendAnother()}
+                    </Button>
+                ) : (
+                    <Button variant="default" ml="auto" onClick={onClose}>
+                        {m.feedbackClose()}
+                    </Button>
+                )}
             </AppModalFooter>
         </>
     );

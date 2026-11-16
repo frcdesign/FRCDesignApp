@@ -1,0 +1,412 @@
+import { eq } from "drizzle-orm";
+import { env } from "cloudflare:workers";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+    MOCK_ONSHAPE_API,
+    createTestApp,
+    jsonRequest
+} from "../../../__test_utils__";
+import { getDb } from "../../db/client";
+import * as PartStudioEndpoints from "../../lib/onshape/endpoints/part-studios";
+import { INSERT_RETRY } from "../../lib/onshape/retry";
+import {
+    type AddFeatureScriptOut,
+    type FeatureScriptFavoritesOut,
+    FeatureScriptProblem,
+    FeatureScriptsLoadState,
+    type FeatureScriptsLoadStatusOut,
+    type FeatureScriptStatsOut,
+    type FeatureScriptsOut
+} from "./contract";
+import { featureScripts, featureScriptsDocument } from "./schema";
+import { iconKey } from "./store";
+import * as LoadClaim from "./load-claim";
+import { reportLoadStatus } from "./load-status";
+import { AccessLevel } from "../auth/access-level";
+import { events } from "../analytics/schema";
+import { EventType } from "../analytics/usage";
+
+const db = getDb(env.DB);
+
+const targetPath = {
+    documentId: "doc-target",
+    instanceType: "w",
+    instanceId: "w-target",
+    elementId: "target-element"
+};
+
+async function seed() {
+    await db.insert(featureScriptsDocument).values({
+        documentId: "frontend",
+        versionId: "v-1",
+        workspaceId: "w-1",
+        cacheVersion: 3
+    });
+    await db.insert(featureScripts).values([
+        {
+            id: "frame",
+            elementId: "e-frame",
+            microversionId: "mv-frame",
+            featureType: "robotFrame",
+            name: "Robot frame",
+            description: "Add tube along an edge.",
+            exampleElementId: "e-frame-example",
+            exampleMicroversionId: "mv-frame-example",
+            iconElementId: "e-frame-icon",
+            iconMicroversionId: "mv-frame-icon",
+            category: "Parts",
+            releaseVersion: "1.3.0",
+            sourceUrl:
+                "https://github.com/robot-education/robot-code/blob/robotFrame/v1.3.0/featurescripts/released/frame/robotFrame.fs",
+            sortOrder: 1
+        },
+        {
+            id: "belt",
+            elementId: "e-belt",
+            microversionId: "mv-belt",
+            featureType: "robotBelt",
+            name: "Robot belt",
+            description: "Add a belt.",
+            problems: [FeatureScriptProblem.NO_EXAMPLE],
+            sortOrder: 0
+        }
+    ]);
+}
+
+describe("featurescripts routes", () => {
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
+    it("GET /featurescripts-version answers the cache version, 0 before a load", async () => {
+        const app = createTestApp();
+        const before = await app.request(
+            "/api/featurescripts-version",
+            {},
+            env
+        );
+        expect(await before.json()).toEqual({ version: 0 });
+
+        await seed();
+        const after = await app.request("/api/featurescripts-version", {}, env);
+        expect(await after.json()).toEqual({ version: 3 });
+    });
+
+    it("GET /featurescripts lists the features in tab order, without the absent", async () => {
+        await seed();
+        const res = await createTestApp().request(
+            "/api/featurescripts?v=3",
+            {},
+            env
+        );
+        expect(res.status).toBe(200);
+        const body: FeatureScriptsOut = await res.json();
+
+        expect(body.documentId).toBe("frontend");
+        expect(body.versionId).toBe("v-1");
+        expect(body.workspaceId).toBe("w-1");
+        expect(body.features.map((feature) => feature.id)).toEqual([
+            "belt",
+            "frame"
+        ]);
+        expect(body.features[0]).toEqual({
+            id: "belt",
+            elementId: "e-belt",
+            name: "Robot belt",
+            description: "Add a belt.",
+            isVisible: true,
+            problems: [FeatureScriptProblem.NO_EXAMPLE]
+        });
+        expect(body.features[1]).toMatchObject({
+            category: "Parts",
+            releaseVersion: "1.3.0",
+            sourceUrl:
+                "https://github.com/robot-education/robot-code/blob/robotFrame/v1.3.0/featurescripts/released/frame/robotFrame.fs",
+            exampleElementId: "e-frame-example",
+            iconUrl: "/api/featurescripts/icon/e-frame-icon?v=mv-frame-icon",
+            problems: []
+        });
+    });
+
+    it("GET /featurescripts/icon serves the stored SVG sandboxed, and 404s a missing one", async () => {
+        const svg = "<svg xmlns='http://www.w3.org/2000/svg'/>";
+        await env.BLOB.put(iconKey("e-icon", "mv-1"), svg);
+        const app = createTestApp();
+
+        const res = await app.request(
+            "/api/featurescripts/icon/e-icon?v=mv-1",
+            {},
+            env
+        );
+        expect(res.status).toBe(200);
+        expect(res.headers.get("Content-Type")).toBe("image/svg+xml");
+        expect(res.headers.get("Content-Security-Policy")).toBe("sandbox");
+        expect(res.headers.get("Cache-Control")).toContain("immutable");
+        expect(await res.text()).toBe(svg);
+
+        const missing = await app.request(
+            "/api/featurescripts/icon/e-icon?v=mv-2",
+            {},
+            env
+        );
+        expect(missing.status).toBe(404);
+        expect(missing.headers.get("Cache-Control")).toContain("no-store");
+    });
+
+    it("POST /featurescripts/:id/add adds the feature from the loaded version", async () => {
+        await seed();
+        const spy = vi
+            .spyOn(PartStudioEndpoints, "addPartStudioFeature")
+            .mockResolvedValue({ feature: { featureId: "feat-1" } });
+
+        const res = await createTestApp().request(
+            "/api/featurescripts/frame/add",
+            jsonRequest("POST", { targetPath }),
+            env
+        );
+        expect(res.status).toBe(200);
+        expect(await res.json()).toEqual({
+            featureId: "feat-1"
+        } satisfies AddFeatureScriptOut);
+
+        expect(spy).toHaveBeenCalledWith(
+            MOCK_ONSHAPE_API,
+            targetPath,
+            {
+                btType: "BTMFeature-134",
+                featureType: "robotFrame",
+                name: "Robot frame",
+                namespace: "dfrontend::vv-1::ee-frame::mmv-frame",
+                parameters: []
+            },
+            INSERT_RETRY.timeoutMs
+        );
+    });
+
+    it("POST /featurescripts/:id/add refuses a feature that isn't there, and a signed-out caller", async () => {
+        await seed();
+        const spy = vi.spyOn(PartStudioEndpoints, "addPartStudioFeature");
+
+        const missing = await createTestApp().request(
+            "/api/featurescripts/gone/add",
+            jsonRequest("POST", { targetPath }),
+            env
+        );
+        expect(missing.status).toBe(404);
+
+        const signedOut = await createTestApp({
+            signedIn: false,
+            isAuthenticated: false
+        }).request(
+            "/api/featurescripts/frame/add",
+            jsonRequest("POST", { targetPath }),
+            env
+        );
+        expect(signedOut.status).toBe(401);
+        expect(spy).not.toHaveBeenCalled();
+    });
+
+    it("favorites a feature once per caller, lists them oldest first, and unfavorites", async () => {
+        await seed();
+        const alice = createTestApp({ userId: "alice" });
+        const bob = createTestApp({ userId: "bob" });
+        const favorites = async (app: ReturnType<typeof createTestApp>) => {
+            const res = await app.request(
+                "/api/featurescripts/favorites",
+                {},
+                env
+            );
+            expect(res.headers.get("Cache-Control")).toContain("no-store");
+            const body: FeatureScriptFavoritesOut = await res.json();
+            return body.featureScriptIds;
+        };
+
+        for (const id of ["frame", "belt", "frame"]) {
+            const res = await alice.request(
+                `/api/featurescripts/${id}/favorite`,
+                { method: "POST" },
+                env
+            );
+            expect(res.status).toBe(200);
+        }
+        expect(await favorites(alice)).toEqual(["frame", "belt"]);
+        expect(await favorites(bob)).toEqual([]);
+
+        await alice.request(
+            "/api/featurescripts/frame/favorite",
+            { method: "DELETE" },
+            env
+        );
+        expect(await favorites(alice)).toEqual(["belt"]);
+    });
+
+    it("refuses to favorite a feature that isn't there, and a signed-out caller", async () => {
+        await seed();
+        const missing = await createTestApp().request(
+            "/api/featurescripts/gone/favorite",
+            { method: "POST" },
+            env
+        );
+        expect(missing.status).toBe(404);
+
+        const signedOut = await createTestApp({
+            signedIn: false,
+            isAuthenticated: false
+        }).request("/api/featurescripts/favorites", {}, env);
+        expect(signedOut.status).toBe(401);
+    });
+
+    it("drops a feature's favorites with the feature", async () => {
+        await seed();
+        const app = createTestApp();
+        await app.request(
+            "/api/featurescripts/frame/favorite",
+            { method: "POST" },
+            env
+        );
+        await db.delete(featureScripts).where(eq(featureScripts.id, "frame"));
+
+        const res = await app.request("/api/featurescripts/favorites", {}, env);
+        expect(await res.json()).toEqual({ featureScriptIds: [] });
+    });
+
+    it("lets the owner hide a feature, bumping the version the list is cached under", async () => {
+        await seed();
+        const owner = createTestApp({ accessLevel: AccessLevel.OWNER });
+
+        const res = await owner.request(
+            "/api/featurescripts/frame/visibility",
+            jsonRequest("POST", { isVisible: false }),
+            env
+        );
+        expect(res.status).toBe(200);
+
+        const version = await owner.request(
+            "/api/featurescripts-version",
+            {},
+            env
+        );
+        expect(await version.json()).toEqual({ version: 4 });
+        const list = await owner.request("/api/featurescripts?v=4", {}, env);
+        const body: FeatureScriptsOut = await list.json();
+        expect(
+            body.features.find((feature) => feature.id === "frame")
+        ).toMatchObject({ isVisible: false });
+    });
+
+    it("lets the owner alone reload, as themselves", async () => {
+        const load = vi
+            .spyOn(LoadClaim, "requestFeatureScriptsLoad")
+            .mockResolvedValue();
+        const reload = (accessLevel: AccessLevel) => {
+            const init = jsonRequest("POST", {});
+            return createTestApp({ accessLevel }).request(
+                "/api/featurescripts/reload",
+                {
+                    ...init,
+                    headers: {
+                        ...init.headers,
+                        Cookie: "__Host-frc-design-app-session=s"
+                    }
+                },
+                env
+            );
+        };
+
+        expect((await reload(AccessLevel.ADMIN)).status).toBe(403);
+        expect(load).not.toHaveBeenCalled();
+        expect((await reload(AccessLevel.OWNER)).status).toBe(200);
+        expect(load.mock.calls[0][1]).toEqual({ sessionId: "s", force: false });
+    });
+
+    it("refuses visibility to anyone but the owner, and for a feature that isn't there", async () => {
+        await seed();
+        const admin = await createTestApp({
+            accessLevel: AccessLevel.ADMIN
+        }).request(
+            "/api/featurescripts/frame/visibility",
+            jsonRequest("POST", { isVisible: false }),
+            env
+        );
+        expect(admin.status).toBe(403);
+
+        const missing = await createTestApp({
+            accessLevel: AccessLevel.OWNER
+        }).request(
+            "/api/featurescripts/gone/visibility",
+            jsonRequest("POST", { isVisible: false }),
+            env
+        );
+        expect(missing.status).toBe(404);
+    });
+
+    it("records each add as a FeatureScript add, which the owner's stats total", async () => {
+        await seed();
+        vi.spyOn(PartStudioEndpoints, "addPartStudioFeature").mockResolvedValue(
+            { feature: { featureId: "feat-1" } }
+        );
+        const add = (userId: string) =>
+            createTestApp({ userId }).request(
+                "/api/featurescripts/frame/add",
+                jsonRequest("POST", { targetPath }),
+                env
+            );
+        await add("alice");
+        await add("alice");
+        await add("bob");
+        await createTestApp({ userId: "carol" }).request(
+            "/api/featurescripts/belt/favorite",
+            { method: "POST" },
+            env
+        );
+
+        const logged = await db.select().from(events).all();
+        expect(logged).toHaveLength(3);
+        expect(logged[0]).toMatchObject({
+            type: EventType.FEATURE_ADD,
+            libraryId: null,
+            featureType: "robotFrame",
+            documentId: "frontend",
+            instanceId: "v-1",
+            elementId: "e-frame"
+        });
+
+        const res = await createTestApp({
+            accessLevel: AccessLevel.OWNER
+        }).request("/api/featurescripts/stats", {}, env);
+        expect(res.status).toBe(200);
+        expect(await res.json()).toEqual({
+            frame: { adds: 3, users: 2, favorites: 0 },
+            belt: { adds: 0, users: 0, favorites: 1 }
+        } satisfies FeatureScriptStatsOut);
+    });
+
+    it("tells the owner alone how the last load went", async () => {
+        const status = {
+            state: FeatureScriptsLoadState.FAILED,
+            startedAt: 1,
+            finishedAt: 2,
+            error: "No owner session to load FeatureScripts with"
+        };
+        await reportLoadStatus(env, status);
+        const read = (accessLevel: AccessLevel) =>
+            createTestApp({ accessLevel }).request(
+                "/api/featurescripts/load-status",
+                {},
+                env
+            );
+
+        expect((await read(AccessLevel.ADMIN)).status).toBe(403);
+        const res = await read(AccessLevel.OWNER);
+        expect(await res.json<FeatureScriptsLoadStatusOut>()).toEqual({
+            status
+        });
+    });
+
+    it("keeps the stats from anyone but the owner", async () => {
+        const res = await createTestApp({
+            accessLevel: AccessLevel.ADMIN
+        }).request("/api/featurescripts/stats", {}, env);
+        expect(res.status).toBe(403);
+    });
+});

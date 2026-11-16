@@ -9,6 +9,7 @@ import {
     FeedbackTopic,
     libraryTopic
 } from "@backend/features/feedback/contract";
+import { type FeatureScriptOut } from "@backend/features/featurescripts/contract";
 import { type LibraryId } from "@backend/features/library/library-id";
 import { openAppModal } from "../../components/open-app-modal";
 import { AppTitle } from "../../components/app-title";
@@ -23,7 +24,9 @@ import { type ReportedError } from "./diagnostics";
 const REPORT_MODAL_SIZE = 500;
 
 /** The form in settings: anything about the app or a library. */
-export function openFeedbackForm(initialTopic = FeedbackTopic.APP): void {
+export function openFeedbackForm(
+    initialTopic = FeedbackTopic.FRC_DESIGN_LIB
+): void {
     openAppModal({
         title: (
             <AppTitle
@@ -66,11 +69,41 @@ export function openPartReport(
     });
 }
 
+/** From a FeatureScript's menu: about that feature. */
+export function openFeatureScriptReport(feature: FeatureScriptOut): void {
+    openAppModal({
+        title: (
+            <AppTitle
+                title={m.feedbackFeatureScriptReportTitle({
+                    name: feature.name
+                })}
+                icon={<FlagIcon size={IconSize.MEDIUM} />}
+            />
+        ),
+        size: REPORT_MODAL_SIZE,
+        children: (
+            <FeedbackForm
+                initialTopic={FeedbackTopic.FEATURESCRIPTS}
+                source={FeedbackSource.FEATURESCRIPT}
+                featureScript={feature}
+            />
+        )
+    });
+}
+
+interface ErrorReportOptions {
+    /** @default FeedbackTopic.APP */
+    topic?: FeedbackTopic;
+    /** The part the error was about, such as one that failed to insert. */
+    part?: ReportedPartChoice;
+}
+
 /** From an error's Report button, carrying the error. */
 export function openErrorReport(
     error: ReportedError,
-    initialTopic = FeedbackTopic.APP
+    options: ErrorReportOptions = {}
 ): void {
+    const { topic = FeedbackTopic.APP, part } = options;
     openAppModal({
         title: (
             <AppTitle
@@ -81,9 +114,10 @@ export function openErrorReport(
         size: REPORT_MODAL_SIZE,
         children: (
             <FeedbackForm
-                initialTopic={initialTopic}
+                initialTopic={topic}
                 source={FeedbackSource.ERROR}
                 error={error}
+                part={part}
             />
         )
     });

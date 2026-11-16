@@ -16,7 +16,7 @@ export function emptyTargets(): UseTargets {
     ) as UseTargets;
 }
 
-/** The uses that went into Onshape: quick insert's denominator. */
+/** The uses that were inserts: into a Part Studio or an assembly. */
 export function insertsOf(targets: UseTargets): number {
     return targets[UseTarget.PART_STUDIO] + targets[UseTarget.ASSEMBLY];
 }
@@ -30,11 +30,9 @@ export interface AnalyticsTotals {
     uniqueUsers: number;
     /** A subset of `uses`. */
     favoriteUses: number;
-    /** A subset of the inserts; see {@link insertsOf}. */
+    /** A subset of the inserts, from a row's own Insert or Derive button. */
     quickInserts: number;
-    /** Onshape only offers fasten on assemblies, so compare to that entry of `targets`. */
-    fastenInserts: number;
-    /** Into an assembly, of a part offering insert and fasten; the base of the next two. */
+    /** Into an assembly, of a part offering insert and fasten when it was inserted; the base of the next two. */
     fastenableInserts: number;
     /** Fastened to edges or faces picked in Onshape beforehand. */
     preselectedInserts: number;
@@ -60,12 +58,6 @@ export interface DailyMetricPoint {
     /** Distinct users active that day; not summable across days. */
     activeUsers: number;
     favoriteUses: number;
-    quickInserts: number;
-    fastenInserts: number;
-    fastenableInserts: number;
-    preselectedInserts: number;
-    autoAssemblyInserts: number;
-    /** That day's uses by target; the assembly entry is fasten's denominator. */
     targets: UseTargets;
 }
 
@@ -73,7 +65,7 @@ export interface DailyMetricPoint {
 export interface UseSourceUsage {
     source: UseSource;
     count: number;
-    /** How many of those used the context-menu quick insert. */
+    /** How many of those were quick inserts, from a row's own Insert or Derive button. */
     quickInsertCount: number;
 }
 
@@ -81,6 +73,9 @@ export interface UseSourceUsage {
 export interface LibraryHealthCounts {
     groupCount: number;
     insertableCount: number;
+    /** The two split `insertableCount` by the kind of tab. */
+    partStudioCount: number;
+    assemblyCount: number;
     errorCount: number;
     warningCount: number;
     healthyItems: number;
@@ -135,12 +130,10 @@ export interface LibrarySummaryOut {
     to: string;
 }
 
-/** What the version manager has done, and how much is linked to do it with. */
+/** What the Version Manager has done, and how much is linked to do it with. */
 export interface VersionManagerTotals {
     /** Pushes and pulls together. */
     runs: number;
-    /** Runs with a step that failed, partway or entirely. */
-    runsWithFailures: number;
     /** Tabs whose references the app repointed. */
     updatedElements: number;
     createdVersions: number;
@@ -167,6 +160,25 @@ export interface ReportedPartOut {
 export interface ReportSummary {
     /** Every report over the range; only the kinds that happened are listed. */
     counts: ReportCount[];
+}
+
+/** One FeatureScript's adds over the range. */
+export interface FeatureScriptUsage {
+    /** The feature's constant, which never changes once released. */
+    featureType: string;
+    /** Absent for a feature no longer in the frontend document. */
+    name?: string;
+    adds: number;
+    users: number;
+}
+
+/** FeatureScripts added over the range, in total and per feature. */
+export interface FeatureScriptUsageOut {
+    adds: number;
+    /** Distinct over the range, so not the sum of the features'. */
+    users: number;
+    /** Every feature in the document, at zero if unused, most added first. */
+    features: FeatureScriptUsage[];
 }
 
 /** The overview's headline numbers, and the series its trends are drawn from. */

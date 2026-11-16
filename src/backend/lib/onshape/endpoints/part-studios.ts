@@ -10,12 +10,13 @@ import {
 export function addPartStudioFeature(
     client: OnshapeApi,
     partStudioPath: ElementPath,
-    feature: object
+    feature: object,
+    timeoutMs?: number
 ): Promise<OnshapeCreatedFeature> {
     assertInstanceType(partStudioPath, "w");
     return client.post(
         `/partstudios${toElementApiPath(partStudioPath)}/features`,
-        { body: { feature } }
+        { body: { feature }, timeoutMs }
     );
 }
 

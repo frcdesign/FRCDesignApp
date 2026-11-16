@@ -1,15 +1,26 @@
 /** Which library is being shown, and how each one is spelled to the user. */
+import { createContext, use } from "react";
 import { notFound, useMatch, useParams } from "@tanstack/react-router";
 import * as z from "zod";
 import {
     DEFAULT_LIBRARY,
     LibraryId
 } from "@backend/features/library/library-id";
-import { isLibraryTab } from "./app-tab";
-import { getUiState } from "./ui-state";
+
+/** Points what reads the library at another than the one shown, as the admin settings do. */
+export const LibraryIdOverride = createContext<LibraryId | undefined>(
+    undefined
+);
 
 /** Falls back rather than throws, since modals and error components sit outside the library route. */
 export function useLibraryId(): LibraryId {
+    const override = use(LibraryIdOverride);
+    const shown = useShownLibraryId();
+    return override ?? shown ?? DEFAULT_LIBRARY;
+}
+
+/** The library the page shows; undefined on a tab that is not one. */
+export function useShownLibraryId(): LibraryId | undefined {
     const params = useParams({
         from: "/app/library/$libraryId",
         shouldThrow: false
@@ -18,13 +29,7 @@ export function useLibraryId(): LibraryId {
         from: "/dashboard/library/$libraryId",
         shouldThrow: false
     });
-    return params?.libraryId ?? dashboardParams?.libraryId ?? DEFAULT_LIBRARY;
-}
-
-/** The library to show where the url names none: the last one picked. */
-export function getUiLibraryId(): LibraryId {
-    const { tabId } = getUiState();
-    return tabId && isLibraryTab(tabId) ? tabId : DEFAULT_LIBRARY;
+    return params?.libraryId ?? dashboardParams?.libraryId;
 }
 
 const LibraryIdType = z.enum(LibraryId);

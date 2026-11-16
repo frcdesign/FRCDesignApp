@@ -1,4 +1,4 @@
-# Version manager
+# Version Manager
 
 ## Purpose
 
@@ -80,12 +80,18 @@ when a library part asks.
 **KV** `default-workspace:{documentId}` — the document's default workspace,
 which a library group's change count is read from, for a week.
 
+**KV** `linked-workspace-watch:{documentId}|{instanceId}` — the id of the
+workspace's one webhook registration, carried in its delivery url as `watch`,
+for a week.
+
 **KV** `document-permissions:{documentId}:{userId}` — a caller's Onshape
 permission set on a document (`canRead`), for a day. It guards what the routes
 answer from our own storage; see **Decisions**.
 
-All but the default workspace are dropped by the workspace's webhook when it changes —
-permissions for every caller of that document — and by
+The workspace's webhook drops what its event can have changed
+(`forgetOnEvent`): an edit or a new version the change count and tabs, a rename
+the names, a sharing change every caller's permissions on the document. All but
+the default workspace are dropped by
 `POST /api/workspace-links/refresh` — the navbar's refresh button, shown on this
 page alone — for every workspace linked to the caller's, and the caller's own
 document's permissions. A run drops the change
@@ -104,9 +110,12 @@ as a linked workspace is watched.
 
 ### Showing the page
 
-The tab appears only when Onshape launched the app in a workspace
-(`useTargetWorkspace`); `beforeLoad` redirects anyone who reaches the url
-without one.
+The page acts on the workspace Onshape launched the app in
+(`useTargetWorkspace`). Without one it shows a notice instead: that the version
+manager is only available inside Onshape when the app is standalone, or that it
+only works in a workspace when Onshape launched it in a version. Entry does not
+resume into the page without a workspace (`canResume` in
+`src/frontend/routes/index.tsx`).
 
 `GET /api/workspace-links` answers `{ parents, children, documentName }` — the
 last being this workspace's own document, which the page's copy names, and
@@ -332,7 +341,7 @@ part its tab.
    records a version run, and answers how many tabs it moved.
 
 It is no run: no job status, no socket, and no lock against a run from the
-version manager page.
+Version Manager page.
 
 ### Recording a run
 
@@ -386,13 +395,23 @@ color and with its icon, for as long as the status is kept. It cannot be closed,
 
 ### Keeping a linked workspace current
 
-A cache miss on a linked workspace's names registers a transient webhook on it for
-`onshape.model.lifecycle.changed`, `.metadata` and `.createversion`, and
-`onshape.document.lifecycle.shared`, which Onshape sends for sharing and
-unsharing alike. A delivery drops the workspace's cached entries and every
-caller's permissions on its document, so the next panel to open asks Onshape
-again. Onshape
-deletes a transient webhook that goes quiet, so the entries expire as well.
+A cache miss on a linked workspace's names, change count or default workspace
+registers a transient webhook on it for `onshape.model.lifecycle.changed`,
+`.metadata` and `.createversion`, and `onshape.document.lifecycle.shared`, which
+Onshape sends for sharing and unsharing alike — unless
+`linked-workspace-watch:` records one. The record is written first, with a new
+`watch` id that goes in the delivery url, since Onshape checks a registration
+with a delivery before answering; a registration that fails deletes it.
+
+A delivery through any other `watch` id, or none, is answered 410, so Onshape
+deactivates that duplicate. With no record, as when KV has not yet carried a
+new one to the location a delivery reaches, it is taken. Any other delivery is
+answered 200 at once, since Onshape deactivates a webhook whose deliveries
+error; after that `forgetOnEvent` drops what the event can have changed, so the
+next panel to open asks Onshape again. A drop that fails is logged, and the
+entry expires. Onshape deletes a transient webhook that goes quiet, unannounced;
+the record lapses after a week, and the next miss registers a fresh webhook
+and retires the old one.
 
 ## User-facing strings
 
@@ -445,12 +464,20 @@ In [strings/version-manager.md](../strings/version-manager.md).
 | The links form a cycle                   | A recursive push or pull is refused            | Remove a link                                      |
 | A run is already going from here         | The new one is refused, and the UI disables it | Wait for it to finish                              |
 | A webhook Onshape dropped                | A name or count is stale                       | The entry expires, and the next read watches again |
+| A delivery's KV delete fails             | Logged; the delivery is still answered 200     | The entry expires                                  |
 | The socket drops mid-run                 | No result toast                                | The reconnect refetches the run; the callout shows |
 | The suggestions fail to load             | No suggestions show; the links work as before  | Refresh                                            |
 | A suggestion is deleted or unshared      | It is left out; **Link all** skips it          | None needed                                        |
 
 ## Decisions
 
+- **One webhook per linked workspace, named in its url.** Registering on every
+  cache miss, with an edit dropping the names, added a webhook to a workspace
+  each time it was edited and viewed. Each one delivers every event, and the
+  dozens of deliveries arriving together each deleted the same KV keys, which
+  KV refuses past one write per key per second. Onshape gives no way to find a
+  workspace's webhooks by url, so the url carries the registration's id, and a
+  delivery through any other is refused until Onshape deactivates it.
 - **Its own table, no foreign keys.** A link is between two Onshape workspaces.
   Neither has to be in a library, so nothing in the rest of the schema can be
   pointed at.
@@ -461,10 +488,14 @@ In [strings/version-manager.md](../strings/version-manager.md).
   references moved, with nothing to resume from.
 - **Direct push by default.** Cutting versions in somebody else's document is
   the opt-in, not the default.
-- **The row is the form; the menu is the runs.** Rows carry no push or pull
-  button: a list of documents reads as a list, and the buttons competed with the
-  names. Clicking a row opens the form. The menu holds the runs alone —
-  anybody who did not want the defaults is one click from the form already.
+- **The row is the form; its button is the quick run.** Each row the caller
+  can open carries an outlined **Push** or **Pull** (`RowActionButton`), which
+  runs under the form's defaults, and waits, disabled with why, while a run is
+  going. Outlined, it reads as secondary to the name; the library's rows and
+  FeatureScripts carry the same button, so one click does the common thing
+  everywhere. Clicking the row opens the form, and the row's menu holds only
+  the runs no button does — the recursive one and updating references. The
+  section's menu keeps its quick run of every link, which no button does.
 - **Always a new version; updating is its own action.** A push or pull that
   sometimes versions and sometimes does not reads oddly, most of all a pull that
   versions nothing. Moving references without versioning is asked for by name

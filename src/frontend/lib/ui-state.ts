@@ -24,7 +24,7 @@ export enum SectionId {
     FAVORITES = "favorites",
     RECENTS = "recents",
     LIBRARY = "library",
-    /** The version manager's two lists. */
+    /** The Version Manager's two lists. */
     PARENTS = "parents",
     CHILDREN = "children",
     /** The admin card's. */

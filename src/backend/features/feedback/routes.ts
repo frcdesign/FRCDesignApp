@@ -8,10 +8,16 @@ import { cookieNames } from "../auth/cookie-options";
 import { type AccessLevel } from "../auth/access-level";
 import { LibraryId } from "../library/library-id";
 import { trackReport } from "../analytics/tracking";
-import { feedbackBody, type FeedbackOut, topicLibrary } from "./contract";
+import {
+    feedbackBody,
+    type FeedbackOut,
+    FeedbackSource,
+    topicLibrary
+} from "./contract";
 import { getWebhookUrl, reportTagIds } from "./channels";
 import { buildReportMessage, postToDiscord, type Report } from "./discord";
-import { findReportedPart } from "./reported-part";
+import { ANY_LIBRARY, findReportedPart } from "./reported-part";
+import { findReportedFeatureScript } from "./reported-featurescript";
 import { reporterKey, takeReportSlot } from "./rate-limit";
 
 export const feedbackRoutes = getApp();
@@ -60,10 +66,14 @@ feedbackRoutes.post("/feedback", validate("json", feedbackBody), async (c) => {
     const libraryId = topicLibrary(body.topic);
     let part;
     if (body.part) {
-        part = libraryId
+        // The app's forum covers every library, so an error there may name any library's part.
+        const searched =
+            libraryId ??
+            (body.source === FeedbackSource.ERROR ? ANY_LIBRARY : undefined);
+        part = searched
             ? await findReportedPart(
                   getDb(c.env.DB),
-                  libraryId,
+                  searched,
                   body.part.insertableId,
                   body.part.selection
               )
@@ -71,6 +81,20 @@ feedbackRoutes.post("/feedback", validate("json", feedbackBody), async (c) => {
         if (!part) {
             throw internalError(
                 "The reported part isn't in the topic's library",
+                HttpStatus.NOT_FOUND
+            );
+        }
+    }
+
+    let featureScript;
+    if (body.featureScript) {
+        featureScript = await findReportedFeatureScript(
+            getDb(c.env.DB),
+            body.featureScript.featureScriptId
+        );
+        if (!featureScript) {
+            throw internalError(
+                "The reported FeatureScript isn't loaded",
                 HttpStatus.NOT_FOUND
             );
         }
@@ -92,6 +116,7 @@ feedbackRoutes.post("/feedback", validate("json", feedbackBody), async (c) => {
         accessLevels: await readAccessLevels(c),
         userAgent: c.req.header("User-Agent"),
         part,
+        featureScript,
         diagnostics: body.diagnostics,
         createdAt: new Date()
     };
@@ -107,7 +132,8 @@ feedbackRoutes.post("/feedback", validate("json", feedbackBody), async (c) => {
         category: body.category,
         source: body.source,
         teamNumber: body.teamNumber,
-        part
+        part,
+        featureType: featureScript?.featureType
     });
     return c.json({ reportId } satisfies FeedbackOut);
 });

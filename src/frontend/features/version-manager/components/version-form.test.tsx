@@ -1,17 +1,30 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { toWorkspacePath } from "@backend/features/version-manager/contract";
+import {
+    LinkDirection,
+    toWorkspacePath
+} from "@backend/features/version-manager/contract";
 import { renderWithProviders } from "../../../../__test_utils__/render";
 import { VersionForm } from "./version-form";
+import { PushVersionForm } from "./push-version-modal";
 
 const ANSWERED = { isPending: false, data: { name: "V5" } };
 
 // The suggestion as the server answers it; the query's own gating isn't under test.
 let suggested: { isPending: boolean; data?: { name: string } } = ANSWERED;
+const pushMutate = vi.hoisted(() =>
+    vi.fn((_body: unknown, options: { onSuccess: () => void }) =>
+        options.onSuccess()
+    )
+);
 vi.mock("../queries", () => ({
-    useNextVersionNameQuery: () => suggested
+    useNextVersionNameQuery: () => suggested,
+    usePushVersionMutation: () => ({ mutate: pushMutate, isPending: false }),
+    useIsVersionJobRunning: () => false
 }));
+const showQuickRecursiveTip = vi.hoisted(() => vi.fn());
+vi.mock("../tips", () => ({ showQuickRecursiveTip }));
 
 const WORKSPACE = toWorkspacePath("doc", "doc-w");
 
@@ -38,6 +51,8 @@ const nameField = () =>
 
 beforeEach(() => {
     suggested = ANSWERED;
+    pushMutate.mockClear();
+    showQuickRecursiveTip.mockClear();
 });
 
 describe("VersionForm", () => {
@@ -113,5 +128,39 @@ describe("VersionForm", () => {
             name: "Release",
             description: ""
         });
+    });
+});
+
+describe("PushVersionForm", () => {
+    const CHILD = {
+        linkId: "link",
+        workspace: toWorkspacePath("child", "child-w"),
+        isOpenable: true,
+        documentName: "Child"
+    };
+
+    it("points a recursive push at the menu's quick recursive push", async () => {
+        const user = userEvent.setup();
+        renderWithProviders(
+            <PushVersionForm workspace={WORKSPACE} target={CHILD} />
+        );
+
+        await user.click(screen.getByRole("checkbox", { name: /Recursive/ }));
+        await user.click(screen.getByRole("button", { name: "Push" }));
+
+        expect(pushMutate).toHaveBeenCalled();
+        expect(showQuickRecursiveTip).toHaveBeenCalledWith(LinkDirection.CHILD);
+    });
+
+    it("gives a push of one link no tip", async () => {
+        const user = userEvent.setup();
+        renderWithProviders(
+            <PushVersionForm workspace={WORKSPACE} target={CHILD} />
+        );
+
+        await user.click(screen.getByRole("button", { name: "Push" }));
+
+        expect(pushMutate).toHaveBeenCalled();
+        expect(showQuickRecursiveTip).not.toHaveBeenCalled();
     });
 });

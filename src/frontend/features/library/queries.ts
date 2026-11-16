@@ -30,7 +30,7 @@ import {
     libraryDataQueryKey,
     libraryVersionQueryKey
 } from "../../lib/query-keys";
-import { queryClient } from "../../lib/query-client";
+import { queryClient, retryUnexpected } from "../../lib/query-client";
 import { getQueryUpdater } from "../../lib/query-cache";
 import {
     showInfoToast,
@@ -100,6 +100,9 @@ export function useLibraryQuery() {
     return useQuery(getLibraryQuery(libraryId, cacheVersion));
 }
 
+/** With the default backoff of 1, 2, 4, 8 then 16 s, a library outlasts half a minute of failed reads. */
+const LIBRARY_VERSION_RETRIES = 5;
+
 /** A library's cache version, which keys the `?v=` on every request for it. */
 export function getLibraryVersionQuery(libraryId: LibraryId) {
     return queryOptions<number>({
@@ -108,6 +111,8 @@ export function getLibraryVersionQuery(libraryId: LibraryId) {
             apiGet<{ version: number }>(
                 "/library-version" + toLibraryPath(libraryId)
             ).then((result) => result.version),
+        // The library route awaits this, so giving up is the crash page.
+        retry: retryUnexpected(LIBRARY_VERSION_RETRIES),
         // Bumps arrive through the explicit refresh flows, which refetch this.
         staleTime: Infinity
     });

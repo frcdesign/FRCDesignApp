@@ -4,11 +4,11 @@ import { useAccessData } from "../auth/access-level";
 import { apiPost } from "../../lib/api-client";
 import { updateUiState, getUiState, useUiState } from "../../lib/ui-state";
 
-/** Seen while the answer is pending, so a dot never shows and then vanishes. */
+/** Seen while the answer is pending, so a dot never shows and then vanishes; and signed out. */
 export function useHasSeenHint(hint: Hint): boolean {
-    const { seenHints, isPending } = useAccessData();
+    const { seenHints, signedIn, isPending } = useAccessData();
     const seenHere = useUiState((state) => state.seenHints.includes(hint));
-    return isPending || seenHere || seenHints.includes(hint);
+    return isPending || !signedIn || seenHere || seenHints.includes(hint);
 }
 
 /**

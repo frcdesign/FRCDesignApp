@@ -12,7 +12,7 @@ import { ElementType } from "@backend/lib/onshape/element-type";
 import { UseSource } from "@backend/features/analytics/usage";
 import { showLoadingToast, showSuccessToast } from "../../lib/notifications";
 import { queryClient } from "../../lib/query-client";
-import { getAppErrorHandler } from "../../lib/errors";
+import { handleAppError } from "../../lib/errors";
 import { sendOpenFeatureMessage } from "../../lib/messages";
 import { useTargetElement } from "../../lib/onshape-params";
 import { configurationQueryKey, renderQueryPrefix } from "../../lib/query-keys";
@@ -27,6 +27,9 @@ import { markHintSeen } from "../hints/queries";
 import { clearFastenPicks, useFastenPicks } from "./fasten-picks";
 import { toSelectedEntities } from "../../lib/selection";
 import { SelectionMode } from "@backend/features/auto-assembly/contract";
+
+/** Most inserts answer within 10 s; a slower one shouldn't look stuck. */
+const SLOW_INSERT_MS = 15_000;
 
 interface InsertArgs {
     /** Whether the part is favorited — see `source` for where the insert began. */
@@ -116,15 +119,30 @@ export function useInsertMutation(
             const { endpoint, body } = toRequest(fasten);
             await queryClient.cancelQueries({ queryKey: renderQueryPrefix() });
             showLoadingToast(`Inserting ${insertable.name}...`, toastId);
-            return apiPost<InsertOut>(
-                endpoint + toInsertablePath(insertable.id),
-                { body }
+            const slow = setTimeout(
+                () =>
+                    showLoadingToast(
+                        m.insertStillInserting({ name: insertable.name }),
+                        toastId
+                    ),
+                SLOW_INSERT_MS
             );
+            try {
+                return await apiPost<InsertOut>(
+                    endpoint + toInsertablePath(insertable.id),
+                    { body }
+                );
+            } finally {
+                clearTimeout(slow);
+            }
         },
-        onError: getAppErrorHandler(
-            m.insertFailed({ name: insertable.name }),
-            toastId
-        ),
+        onError: (error) =>
+            handleAppError(
+                error,
+                m.insertFailed({ name: insertable.name }),
+                toastId,
+                { part: { insertable, selection } }
+            ),
         onSuccess: (result) => {
             if (target && result.featureId !== undefined) {
                 sendOpenFeatureMessage(target, result.featureId);

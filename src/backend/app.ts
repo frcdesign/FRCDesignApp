@@ -4,6 +4,7 @@ import { buildStatusRoutes } from "./features/build-checker/routes";
 import { configurationRoutes } from "./features/configurations/routes";
 import { appOpenRoutes, entryRoutes } from "./features/entry/routes";
 import { favoriteRoutes } from "./features/favorites/routes";
+import { featureScriptRoutes } from "./features/featurescripts/routes";
 import { recentRoutes } from "./features/recents/routes";
 import { groupRoutes } from "./features/library/groups/routes";
 import { insertLocationRoutes } from "./features/insert-location/routes";
@@ -49,7 +50,8 @@ const apiRoutes = [
     hintRoutes,
     feedbackRoutes,
     autoAssemblyRoutes,
-    downloadRoutes
+    downloadRoutes,
+    featureScriptRoutes
 ];
 
 export function createApp(resolveAuth: AuthResolver) {

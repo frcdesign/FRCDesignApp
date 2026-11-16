@@ -4,6 +4,7 @@ import type { RenderThumbnailParams } from "../features/thumbnails/render-workfl
 import type { ClientRelay } from "../features/push/client-relay";
 import type { VersionJobParams } from "../features/version-manager/workflow";
 import type { AssemblyJobParams } from "../features/auto-assembly/workflow";
+import type { LoadFeatureScriptsParams } from "../features/featurescripts/load-claim";
 import { type AccessLevel } from "../features/auth/access-level";
 import type { LibraryId } from "../features/library/library-id";
 import { type OAuthApi } from "./onshape/client";
@@ -22,6 +23,9 @@ export interface AppBindings {
     VERSION_MANAGER_WORKFLOW: Workflow<VersionJobParams>;
     /** Auto Assembly's inserts, which are chains of Onshape writes; see the workflow. */
     AUTO_ASSEMBLY_WORKFLOW: Workflow<AssemblyJobParams>;
+    LOAD_FEATURESCRIPTS_WORKFLOW: Workflow<LoadFeatureScriptsParams>;
+    /** The frontend document the FeatureScripts tab loads; unset loads nothing. */
+    FEATURESCRIPTS_DOCUMENT_ID?: string;
     /** Relays pushes to open clients; see `features/push`. */
     CLIENT_RELAY: DurableObjectNamespace<ClientRelay>;
     /** Where the app is served, without a trailing slash; see `wrangler.jsonc`. */
@@ -37,6 +41,7 @@ export interface AppBindings {
     /** FRCDesignLib's and MKCad's, which share a channel. */
     DISCORD_FRC_DESIGN_LIB_WEBHOOK_URL?: string;
     DISCORD_CONFIG_LIB_WEBHOOK_URL?: string;
+    DISCORD_FEATURESCRIPTS_WEBHOOK_URL?: string;
 }
 
 interface AppVariables {

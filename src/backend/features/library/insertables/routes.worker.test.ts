@@ -35,8 +35,13 @@ import * as PartStudioEndpoints from "../../../lib/onshape/endpoints/part-studio
 import * as AssemblyEndpoints from "../../../lib/onshape/endpoints/assemblies";
 import * as PartsEndpoints from "../../../lib/onshape/endpoints/parts";
 import * as IndexHoles from "../../auto-assembly/index-holes";
-import { OnshapeRateLimitError } from "../../../lib/onshape/client";
+import {
+    OnshapeApiError,
+    OnshapeRateLimitError,
+    OnshapeTimeoutError
+} from "../../../lib/onshape/client";
 import { OnshapeFailure } from "../../../lib/onshape/failures";
+import { INSERT_RETRY, INSERT_TIMED_OUT } from "../../../lib/onshape/retry";
 import { AUTO_INDEX_THRESHOLD } from "../../configurations/combinations";
 import {
     enumParam,
@@ -264,7 +269,8 @@ describe("insertable routes", () => {
         expect(spy).toHaveBeenCalledWith(
             MOCK_ONSHAPE_API,
             targetPath,
-            expect.anything() // DerivedFeature payload
+            expect.anything(), // DerivedFeature payload
+            INSERT_RETRY.timeoutMs
         );
     });
 
@@ -289,6 +295,24 @@ describe("insertable routes", () => {
 
         const event = await db.select().from(events).get();
         expect(event?.source).toBe(UseSource.GROUP_SEARCH);
+    });
+
+    it("POST /add-to-part-studio refuses the source only imported history has", async () => {
+        await seedPartStudio(db);
+        const spy = vi.spyOn(PartStudioEndpoints, "addPartStudioFeature");
+
+        const res = await createTestApp().request(
+            `/api/add-to-part-studio/insertable/${TEST_PART_STUDIO_ID}`,
+            jsonRequest("POST", {
+                targetPath,
+                isFavorite: false,
+                isQuickInsert: false,
+                source: UseSource.UNKNOWN
+            }),
+            env
+        );
+        expect(res.status).toBe(400);
+        expect(spy).not.toHaveBeenCalled();
     });
 
     it("POST /add-to-part-studio fills the selection it was not given", async () => {
@@ -772,6 +796,37 @@ describe("insertable routes", () => {
             fastenable: true,
             preselected: true
         });
+    });
+
+    it("tries an insert again when Onshape answers 5xx", async () => {
+        await seedAssembly(db);
+        vi.spyOn(console, "warn").mockImplementation(() => undefined);
+        const insert = vi
+            .spyOn(AssemblyEndpoints, "addElementToAssembly")
+            .mockRejectedValueOnce(new OnshapeApiError("boom", 500))
+            .mockResolvedValueOnce({});
+
+        expect((await insertIntoAssembly(false)).status).toBe(200);
+        expect(insert).toHaveBeenCalledTimes(2);
+        expect(await loggedInsert()).toBeDefined();
+    });
+
+    it("words a timed-out insert, without inserting again", async () => {
+        await seedAssembly(db);
+        vi.spyOn(console, "warn").mockImplementation(() => undefined);
+        const insert = vi
+            .spyOn(AssemblyEndpoints, "addElementToAssembly")
+            .mockRejectedValue(new OnshapeTimeoutError(60_000));
+
+        const res = await insertIntoAssembly(false);
+
+        expect(res.status).toBe(504);
+        expect(await res.json()).toMatchObject({
+            kind: "handled",
+            message: INSERT_TIMED_OUT
+        });
+        expect(insert).toHaveBeenCalledTimes(1);
+        expect(insert.mock.calls[0][4]?.timeoutMs).toBe(60_000);
     });
 
     it("POST /indexing indexes and forces the flag on", async () => {

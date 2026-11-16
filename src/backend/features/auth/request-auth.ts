@@ -3,10 +3,8 @@ import { env as processEnv } from "process";
 import { OAuthApi } from "../../lib/onshape/client";
 import { getSessionInfo, getUserId } from "../../lib/onshape/endpoints/users";
 import { type AppContext, type AuthResolver } from "../../lib/context";
-import { eq } from "drizzle-orm";
-import { getDb } from "../../db/client";
-import { libraries } from "../../db/schema";
 import type { LibraryId } from "../library/library-id";
+import { getAdminTeam } from "../admin-team/store";
 import { AccessLevel, hasEditorAccess } from "./access-level";
 import {
     rememberBackgroundSession,
@@ -175,12 +173,8 @@ async function lookUpAccessLevel(
     if (c.env.OWNER_USER_ID && userId === c.env.OWNER_USER_ID) {
         return AccessLevel.OWNER;
     }
-    const library = await getDb(c.env.DB)
-        .select({ adminTeam: libraries.adminTeam })
-        .from(libraries)
-        .where(eq(libraries.id, libraryId))
-        .get();
-    const member = library?.adminTeam.find((entry) => entry.userId === userId);
+    const adminTeam = await getAdminTeam(c.env, libraryId);
+    const member = adminTeam.find((entry) => entry.userId === userId);
     if (!member) {
         return AccessLevel.USER;
     }

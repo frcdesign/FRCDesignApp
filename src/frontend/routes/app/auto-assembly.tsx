@@ -1,15 +1,13 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { Button } from "@mantine/core";
 import { ScrewdriverIcon } from "@phosphor-icons/react";
 import { type ReactNode, useEffect } from "react";
 import { ElementType } from "@backend/lib/onshape/element-type";
-import { PageLoading, PageNotice } from "../../components/app-notice";
+import { PageNotice } from "../../components/app-notice";
 import { AppIcon } from "../../components/app-icon";
 import { UtilityTab } from "../../lib/app-tab";
 import { updateUiState } from "../../lib/ui-state";
-import { getUiLibraryId } from "../../lib/library";
-import { toTargetElement } from "../../lib/onshape-launch";
-import { useOnshapeLaunch, useTargetElement } from "../../lib/onshape-params";
+import { useTargetElement } from "../../lib/onshape-params";
 import { IconSize, PrimaryColor } from "../../lib/style-constants";
 import { useNeedsSignIn } from "../../features/auth/access-level";
 import { startSignIn } from "../../features/auth/sign-in";
@@ -23,17 +21,6 @@ export const Route = createFileRoute("/app/auto-assembly")({
     // Where entry resumes next time, as a library would be.
     onEnter: () => {
         updateUiState({ tabId: UtilityTab.AUTO_ASSEMBLY });
-    },
-    beforeLoad: () => {
-        // The page picker hides this page outside a tab, so this only catches
-        // a url typed or restored by hand.
-        if (!toTargetElement(useOnshapeLaunch.getState())) {
-            throw redirect({
-                to: "/app/library/$libraryId",
-                params: { libraryId: getUiLibraryId() },
-                replace: true
-            });
-        }
     }
 });
 
@@ -52,11 +39,7 @@ function AutoAssemblyPage(): ReactNode {
 
     useEffect(markOpened, [markOpened]);
 
-    if (!target) {
-        // What renders on the way out, `beforeLoad` having redirected.
-        return <PageLoading title={m.autoAssemblyLoading()} />;
-    }
-    if (target.elementType !== ElementType.ASSEMBLY) {
+    if (target?.elementType !== ElementType.ASSEMBLY) {
         return (
             <PageNotice
                 icon={PAGE_ICON}

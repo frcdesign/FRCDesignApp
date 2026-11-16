@@ -54,14 +54,14 @@ describe("DashboardState", () => {
         renderWithProviders(
             <Section
                 load={() => Promise.reject(new Error("Internal Server Error"))}
-                title="Version manager"
+                title="Version Manager"
             />
         );
 
         expect(
             await screen.findByText("Failed to load analytics.")
         ).not.toBeNull();
-        expect(screen.getByText("Version manager")).not.toBeNull();
+        expect(screen.getByText("Version Manager")).not.toBeNull();
     });
 
     it("says what is loading, and shows no error meanwhile", () => {

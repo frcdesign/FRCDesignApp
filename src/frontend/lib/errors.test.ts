@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiErrorKind } from "@backend/lib/api-error";
+import type { InsertableOut } from "@backend/features/library/contract";
 
 const toasts = vi.hoisted(() => ({
     renderNotification: vi.fn(
@@ -44,11 +45,14 @@ describe("handleAppError", () => {
         const action = lastAction()!;
         expect(action.text).toBe("Report");
         action.onClick();
-        expect(openErrorReport).toHaveBeenCalledWith({
-            shown: "Failed to insert Bearing.",
-            kind: ApiErrorKind.INTERNAL,
-            detail: "Onshape request failed: 500"
-        });
+        expect(openErrorReport).toHaveBeenCalledWith(
+            {
+                shown: "Failed to insert Bearing.",
+                kind: ApiErrorKind.INTERNAL,
+                detail: "Onshape request failed: 500"
+            },
+            {}
+        );
     });
 
     it("reports which request failed and the server's id for it, without the query", async () => {
@@ -77,13 +81,32 @@ describe("handleAppError", () => {
         handleAppError(error, "Failed to load the library.");
 
         lastAction()!.onClick();
-        expect(openErrorReport).toHaveBeenCalledWith({
-            shown: "Failed to load the library.",
-            kind: ApiErrorKind.INTERNAL,
-            detail: "Internal Server Error",
-            request: "GET /api/library-data/library/mkcad → 500",
-            errorId: "8f00ba11-IAD"
+        expect(openErrorReport).toHaveBeenCalledWith(
+            {
+                shown: "Failed to load the library.",
+                kind: ApiErrorKind.INTERNAL,
+                detail: "Internal Server Error",
+                request: "GET /api/library-data/library/mkcad → 500",
+                errorId: "8f00ba11-IAD"
+            },
+            {}
+        );
+    });
+
+    it("carries the part a failure was about into the report", () => {
+        const part = {
+            insertable: { id: "ins" } as InsertableOut,
+            selection: { size: "1/2 in" }
+        };
+        handleAppError(new Error("boom"), "Failed to insert.", "toast", {
+            part
         });
+
+        lastAction()!.onClick();
+        expect(openErrorReport).toHaveBeenCalledWith(
+            expect.objectContaining({ shown: "Failed to insert." }),
+            { part }
+        );
     });
 
     it("reports a handled error by the message the user read", () => {
@@ -97,7 +120,8 @@ describe("handleAppError", () => {
 
         lastAction()!.onClick();
         expect(openErrorReport).toHaveBeenCalledWith(
-            expect.objectContaining({ shown: "Rate limit." })
+            expect.objectContaining({ shown: "Rate limit." }),
+            {}
         );
     });
 
@@ -118,7 +142,7 @@ describe("handleAppError", () => {
             new Error("offline"),
             "Failed to send the report.",
             undefined,
-            false
+            { reportable: false }
         );
 
         expect(toasts.showErrorToast).toHaveBeenLastCalledWith(

@@ -47,23 +47,26 @@ describe("hints", () => {
         apiPost.mockClear();
     });
 
-    it.each([
-        ["signed out", false],
-        ["signed in", true]
-    ])(
-        "stay seen when access is refetched without them, %s",
-        async (_, signedIn) => {
-            const user = userEvent.setup();
-            const answer = renderHint(signedIn);
+    it("stay seen when access is refetched without them", async () => {
+        const user = userEvent.setup();
+        const answer = renderHint(true);
 
-            await user.click(screen.getByRole("button", { name: "new" }));
-            // The server's list, before the seen hint has reached it.
-            act(() => {
-                answer([]);
-            });
+        await user.click(screen.getByRole("button", { name: "new" }));
+        // The server's list, before the seen hint has reached it.
+        act(() => {
+            answer([]);
+        });
 
-            expect(screen.getByRole("button", { name: "seen" })).toBeTruthy();
-            expect(apiPost).toHaveBeenCalledTimes(signedIn ? 1 : 0);
-        }
-    );
+        expect(screen.getByRole("button", { name: "seen" })).toBeTruthy();
+        expect(apiPost).toHaveBeenCalledTimes(1);
+    });
+
+    it("point nothing out signed out", async () => {
+        const user = userEvent.setup();
+        renderHint(false);
+
+        await user.click(screen.getByRole("button", { name: "seen" }));
+
+        expect(apiPost).not.toHaveBeenCalled();
+    });
 });

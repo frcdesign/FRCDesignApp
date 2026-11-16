@@ -6,6 +6,16 @@ import { RequireAccessLevel } from "../features/auth/components/require-access";
 import classes from "./app-menu.module.css";
 import { DotIndicator } from "./dot-indicator";
 
+/**
+ * Mantine shifts a menu only sideways, and keeps it touching its target. A
+ * right-click's target is the cursor, so a menu with no room above or below hung
+ * off the screen; this moves it up until it fits.
+ */
+const KEEP_ON_SCREEN = {
+    crossAxis: true,
+    limiter: { fn: ({ x, y }: { x: number; y: number }) => ({ x, y }) }
+};
+
 interface AppContextMenuProps {
     menuItems: ReactNode;
     children: ReactNode;
@@ -54,13 +64,13 @@ export function AppContextMenu(props: AppContextMenuProps): ReactNode {
                 "contextmenu"
             ]}
             position={position}
-            middlewares={{ size: scrollable }}
+            middlewares={{ shift: KEEP_ON_SCREEN, size: scrollable }}
             onClose={onClose}
         >
             {menuChildren}
             <Menu.Dropdown
                 onClick={(event) => event.stopPropagation()}
-                className={scrollable ? classes.scrollable : undefined}
+                className={scrollable ? classes.scrollable : classes.capped}
             >
                 {menuItems}
             </Menu.Dropdown>

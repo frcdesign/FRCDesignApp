@@ -8,34 +8,33 @@ catalog. A **use** is an insert or a download.
 
 ## Headline tiles
 
-| String           | Kind       | Where               | When                          | Review                     |
-| ---------------- | ---------- | ------------------- | ----------------------------- | -------------------------- |
-| "Total uses"     | Tile label | First headline tile | Always; inserts and downloads | **⚑** Now counts downloads |
-| "Total users"    | Tile label | Beside it           | Always                        |                            |
-| "Uses per user"  | Tile label | Beside it           | Always                        |                            |
-| "App sessions"   | Tile label | Beside it           | The overview only             |                            |
-| "Uses over time" | Card title | Under the tiles     | Always                        |                            |
+| String                                    | Kind           | Where                          | When                                                                | Review                                      |
+| ----------------------------------------- | -------------- | ------------------------------ | ------------------------------------------------------------------- | ------------------------------------------- |
+| "Total uses"                              | Tile label     | First headline tile            | Always; inserts and downloads                                       | **⚑** Now counts downloads                  |
+| "Total users"                             | Tile label     | Beside it                      | Always                                                              |                                             |
+| "Uses per user"                           | Tile label     | Beside it                      | Always                                                              |                                             |
+| "App sessions"                            | Tile label     | Beside it                      | The overview only                                                   |                                             |
+| "vs last season" / "vs previous {n} days" | Change caption | Under a headline tile's change | All time / any shorter range; built in `growth.ts`, not the catalog | **⚑** New: shorter ranges now show a change |
+| "Uses over time"                          | Card title     | Under the tiles                | Always                                                              |                                             |
 
 ## How people use the app
 
-On the overview. Each share is a trend tile; the detail is its chart's axis.
+On the overview: where uses started, over the range.
 
-| String                                                                                                                      | Kind              | Where                                                        | When                                                        | Review                                                |
-| --------------------------------------------------------------------------------------------------------------------------- | ----------------- | ------------------------------------------------------------ | ----------------------------------------------------------- | ----------------------------------------------------- |
-| "How people use the app"                                                                                                    | Section title     |                                                              | Always                                                      |                                                       |
-| "Search results" / "Search within a group" / "Browsing a group" / "Favorites list" / "Recently used list" / "Auto Assembly" | Bar labels        | The source breakdown                                         | Always; uses by where they started                          | **⚑** "Auto Assembly" is new                          |
-| "No uses recorded yet."                                                                                                     | Empty notice      | In place of the bars                                         | No use in the range                                         | **⚑** Was "No inserts recorded yet."                  |
-| "Quick insert" / "% of inserts"                                                                                             | Tile label / axis |                                                              | Always                                                      | **⚑** Measured against inserts, leaving downloads out |
-| "Insert and fasten" / "% of assembly inserts"                                                                               | Tile label / axis |                                                              | Always                                                      |                                                       |
-| "Into an assembly" / "% of uses"                                                                                            | Tile label / axis | Also on a part's page                                        | Always                                                      | **⚑** Now a share of every use                        |
-| "Downloaded" / "% of uses"                                                                                                  | Tile label / axis | Also on a part's page                                        | Always                                                      | **⚑** New                                             |
-| "How parts are inserted"                                                                                                    | Card title        | The overview, and a library's page under "How people use it" | Always                                                      | **⚑** New                                             |
-| "Insert menu" / "Quick insert" / "Auto Assembly"                                                                            | Bar labels        | That card                                                    | Always; every insert by how it was made, downloads left out | **⚑** New                                             |
-| "How insert and fasten parts are placed"                                                                                    | Card title        | Beside it                                                    | Always                                                      | **⚑** New                                             |
-| "Inserts into an assembly of a part offering insert and fasten."                                                            | Card description  | Under that title                                             | Always                                                      | **⚑** New                                             |
-| "Inserted normally" / "Fastened to preselected edges" / "Auto Assembly"                                                     | Bar labels        | That card                                                    | Always                                                      | **⚑** New                                             |
-| "None recorded yet."                                                                                                        | Empty notice      | In place of either card's bars                               | Nothing to split in the range                               | **⚑** New                                             |
-| "How people use it"                                                                                                         | Section title     | A library's page, holding the two cards                      | Always                                                      | **⚑** New                                             |
+| String                                                                                                                      | Kind             | Where                                                                      | When                                    | Review                                           |
+| --------------------------------------------------------------------------------------------------------------------------- | ---------------- | -------------------------------------------------------------------------- | --------------------------------------- | ------------------------------------------------ |
+| "How people use the app"                                                                                                    | Section title    |                                                                            | Always                                  |                                                  |
+| "Search results" / "Search within a group" / "Browsing a group" / "Favorites list" / "Recently used list" / "Auto Assembly" | Bar labels       | The source breakdown                                                       | Always; uses by where they started      |                                                  |
+| "Not recorded (legacy data)"                                                                                                | Bar label        | The source breakdown                                                       | The range reaches imported history      | **⚑** Was "Not recorded (before September 2026)" |
+| "No uses recorded yet."                                                                                                     | Empty notice     | In place of the bars                                                       | No use in the range                     | **⚑** Was "No inserts recorded yet."             |
+| "Into an assembly"                                                                                                          | Card label       | A part's page                                                              | Always                                  | **⚑** No longer a tile on the overview           |
+| "How parts are inserted"                                                                                                    | Card title       | Under the source breakdown, and a library's page under "How people use it" | Always                                  |                                                  |
+| "Insert menu" / "Quick insert" / "Auto Assembly"                                                                            | Bar labels       | That card                                                                  | Always; every insert by how it was made |                                                  |
+| "How insert and fasten parts are placed"                                                                                    | Card title       | Beside it                                                                  | Always                                  |                                                  |
+| "Inserts into an assembly of a part offering insert and fasten."                                                            | Card description | Under that title                                                           | Always                                  |                                                  |
+| "Inserted normally" / "Fastened to preselected edges" / "Auto Assembly"                                                     | Bar labels       | That card                                                                  | Always                                  |                                                  |
+| "None recorded yet."                                                                                                        | Empty notice     | In place of either card's bars                                             | Nothing to split in the range           |                                                  |
+| "How people use it"                                                                                                         | Section title    | A library's page, holding the two cards                                    | Always                                  |                                                  |
 
 ## Parts
 
@@ -54,6 +53,18 @@ On the overview. Each share is a trend tile; the detail is its chart's axis.
 | "All libraries"                                          | Breadcrumb     | Above the treemap           | On the overview               |                                                                |
 | "Nothing was used in this range."                        | Empty notice   | In place of the treemap     | No use in the range           | **⚑** Was "Nothing was inserted in this range."                |
 
+## Health
+
+What a library holds and how clean it is, standing now: on a library's page,
+and every library's together on the overview.
+
+| String                                  | Kind          | Where                             | When                       | Review                                    |
+| --------------------------------------- | ------------- | --------------------------------- | -------------------------- | ----------------------------------------- |
+| "Libraries"                             | Section title | The overview                      | Always                     | **⚑** New                                 |
+| "Parts" / "Part Studios" / "Assemblies" | Tile labels   | First row                         | Always; visible parts only | **⚑** Part Studios and Assemblies are new |
+| "{share} of parts"                      | Tile caption  | Under Part Studios and Assemblies | Always                     | **⚑** New                                 |
+| "Healthy" / "Errors" / "Warnings"       | Tile labels   | Second row                        | Always                     |                                           |
+
 ## Every section
 
 | String                                    | Kind                   | Where                           | When                                                        | Review    |
@@ -62,16 +73,15 @@ On the overview. Each share is a trend tile; the detail is its chart's axis.
 | "If the problem persists, send a report." | Zero state description | Under it                        | Same; shared with the app's other section errors            |           |
 | "Try again" / "Send a report"             | Buttons                | Under it                        | Same; Try again refetches that section alone                | **⚑** New |
 
-## Version manager
+## Version Manager
 
 On the overview.
 
-| String                                                 | Kind          | Where       | When   | Review |
-| ------------------------------------------------------ | ------------- | ----------- | ------ | ------ |
-| "Version manager"                                      | Section title |             | Always |        |
-| "Runs" / "Tabs updated" / "Versions created" / "Links" | Tile labels   |             | Always |        |
-| "{n} with failures"                                    | Tile caption  | Under Runs  | Always |        |
-| "Right now"                                            | Tile caption  | Under Links | Always |        |
+| String                                                 | Kind          | Where       | When   | Review                      |
+| ------------------------------------------------------ | ------------- | ----------- | ------ | --------------------------- |
+| "Version Manager"                                      | Section title |             | Always | **⚑** Was "Version manager" |
+| "Runs" / "Tabs updated" / "Versions created" / "Links" | Tile labels   |             | Always |                             |
+| "Right now"                                            | Tile caption  | Under Links | Always |                             |
 
 ## Low usage
 

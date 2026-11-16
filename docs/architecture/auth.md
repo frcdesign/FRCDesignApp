@@ -25,11 +25,13 @@ team, plus one owner set by configuration.
 | `src/backend/features/hints/store.ts`                       | Which features' dots a user has seen, carried by `/api/access-data`                |
 | `src/backend/features/hints/routes.ts`                      | `POST /api/seen-hints`, sent by `useMarkHintSeen` once a feature is opened         |
 | `src/backend/features/admin-team/`                          | The owner sets a library's admin team; members are synced from Onshape             |
+| `src/backend/features/admin-team/store.ts`                  | `getAdminTeam`, `saveAdminTeam`: the members, in D1 and copied to KV               |
 | `src/backend/features/entry/routes.ts`                      | `/init`, where Onshape launches the app                                            |
 | `src/backend/features/entry/document-access.ts`             | `findAccessProblem`: whether the grant can edit the document, and why not          |
 | `src/frontend/routes/_pages/document-access.tsx`            | `/document-access`: what to do about a grant that can't                            |
 | `src/backend/lib/context.ts`                                | `AppBindings` (every binding and variable) and `bindAuth`                          |
 | `src/frontend/features/auth/access-level.ts`                | `useAccessData`: the server's level and the level the app is viewed as             |
+| `src/frontend/lib/library.ts`                               | `useLibraryId`: the library a read is for; `LibraryIdOverride` points it elsewhere |
 | `src/frontend/features/auth/components/require-access.tsx`  | `RequireAccessLevel`, `RequireSignIn`: render children only past the guard         |
 | `wrangler.jsonc`                                            | Per-environment vars and bindings                                                  |
 
@@ -47,9 +49,12 @@ team, plus one owner set by configuration.
   admin team member (admins and editors), by user id, plus one reserved id for
   the dev override's user.
   chose and its synced members (`isTeamAdmin` per member).
+- **KV** `admin-team:` — by library id, a copy of `libraries.adminTeam` for one
+  hour. `saveAdminTeam` writes it with every sync, and `getAdminTeam` refills
+  it from D1 on a miss.
 - **KV** `seen-hints:` — by user id, the features (`Hint`) whose blue dot and
   **New** badge the user no longer needs, recorded by `POST /api/seen-hints`
-  once the feature has been opened: the version manager's page on showing, an
+  once the feature has been opened: the Version Manager's page on showing, an
   insert menu's ⋯ menu offering **Set
   default configuration** on closing, and a part's menu (on its card or in the
   insert menu) offering **Report an issue** on closing. Fastening an insert to
@@ -57,8 +62,9 @@ team, plus one owner set by configuration.
   shows it at once. Kept until deleted; losing it only shows a dot again.
 - **localStorage** (`ui-state`): `accessLevel`, the level the app is viewed as;
   `seenHints`, the hints dismissed in this browser. `useHasSeenHint` reads them
-  beside the server's list, so signed out a dot stays gone, and signed in a
-  refetch that reads KV before the dismissal lands can't bring it back.
+  beside the server's list, so a refetch that reads KV before the dismissal
+  lands can't bring a dot back. Signed out, `useHasSeenHint` reads every hint
+  as seen: no dot or **New** badge shows.
 
 ## Flows
 
@@ -172,12 +178,26 @@ query to that library, so naming your own library with another's element finds
 nothing. The owner's level is the same everywhere, so the owner check always
 asks about the default library.
 
+A level is read from the admin team in KV (`getAdminTeam`), so an access check
+makes no D1 read while the copy is there, and still answers when D1 doesn't.
+
 Whenever the owner's or an admin team member's level is checked, their session
 id is saved under `background-session:` so background work can borrow it (see
 [loading.md](./loading.md)).
 
 On the client, `useAccessData` combines the server's level with the level the
-user chose to view the app as, clamped to what the server grants.
+user chose to view the app as, clamped to what the server grants. It reads the
+library `useLibraryId` names, which is the one shown unless a
+`LibraryIdOverride` names another; `useEveryLibraryAccess` answers for every
+library at once.
+
+The settings menu's **Admin settings** are partitioned by **Settings for**: a
+library, or **FRCDesignApp** for what belongs to none (the FeatureScripts
+reload and the testbench). It offers each library the viewed level edits, plus
+FRCDesignApp for the owner, and opens on the library shown, or on FRCDesignApp
+from any other tab. A library's settings render under `LibraryIdOverride`, so
+each of them and each guard reads that library's access. The section and the
+**Access level** choices follow the highest access held in any library.
 
 ## Environment variables
 
@@ -189,9 +209,11 @@ user chose to view the app as, clamped to what the server grants.
 | `VITE_ACCESS_LEVEL_OVERRIDE`             | `.env`                                           | Server and client                              | Server grants it (dev only); client views the app at it by default                                      |
 | `FORCE_SIGNED_IN`                        | `.env`                                           | `request-auth.ts`                              | Dev only: signed in as a fake user with no Onshape session                                              |
 | `APP_URL`                                | `wrangler.jsonc` vars; `.env` to override in dev | `onshape-oauth.ts`, webhooks, `vite.config.ts` | Where the app is served: the OAuth redirect uri, every webhook url, and the host the dev server accepts |
-| `DISCORD_APP_WEBHOOK_URL`                | Secret per environment; `.env` locally           | `feedback/channels.ts`                         | Discord webhook for reports about the app and the version manager; unset refuses them                   |
+| `FEATURESCRIPTS_DOCUMENT_ID`             | `wrangler.jsonc` vars                            | `featurescripts/workflow.ts`                   | The frontend document the FeatureScripts tab loads; unset loads nothing                                 |
+| `DISCORD_APP_WEBHOOK_URL`                | Secret per environment; `.env` locally           | `feedback/channels.ts`                         | Discord webhook for reports about the app and the Version Manager; unset refuses them                   |
 | `DISCORD_FRC_DESIGN_LIB_WEBHOOK_URL`     | Secret per environment; `.env` locally           | `feedback/channels.ts`                         | The same, for FRCDesignLib and MKCad                                                                    |
 | `DISCORD_CONFIG_LIB_WEBHOOK_URL`         | Secret per environment; `.env` locally           | `feedback/channels.ts`                         | The same, for ConfigLib                                                                                 |
+| `DISCORD_FEATURESCRIPTS_WEBHOOK_URL`     | Secret per environment; `.env` locally           | `feedback/channels.ts`                         | The same, for FeatureScripts                                                                            |
 
 `README.md` also lists `API_ACCESS_KEY` and `API_SECRET_KEY`, which no code
 reads.
@@ -209,6 +231,8 @@ declared in `wrangler.jsonc` per environment and typed in `AppBindings`. Run
   sends an older one first and `getCookie` reads the first, so one would hide
   the session: the caller signs in and still reads as signed out.
 - A session is only created by a completed sign-in, with a fresh id.
+- `libraries.adminTeam` is written only by `saveAdminTeam`, which writes the KV
+  copy with it.
 - Access is decided on the server per library; the client's viewed level only
   hides UI and can never exceed the server's.
 - Every elevated route checks the library the resource belongs to, not one the
@@ -241,6 +265,11 @@ missing.
 
 ## Decisions
 
+- **Access reads the admin team from KV, not D1.** Every `/api/access-data` and
+  every guard asks for it, and D1 failing made each of them fail with it. KV
+  lags a write by up to a minute, so someone removed from a team keeps their
+  level that long after the sync; the hour's expiry bounds a copy that a write
+  missed.
 - **Sign in as the session's enterprise.** OAuth's `company_id` takes an
   enterprise's id alone, and the session company is exactly that: Onshape
   fills it in for an enterprise and sends `cad` everywhere else. Asking for the

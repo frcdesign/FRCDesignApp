@@ -1,7 +1,11 @@
 import type { ErrorHandler } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { HttpStatus } from "http-status-ts";
-import { OnshapeApiError, OnshapeRateLimitError } from "./onshape/client";
+import {
+    OnshapeApiError,
+    OnshapeRateLimitError,
+    OnshapeTimeoutError
+} from "./onshape/client";
 import { OnshapeFailure } from "./onshape/failures";
 import {
     ApiError,
@@ -12,11 +16,12 @@ import {
     signInRequiredError
 } from "./api-error";
 import type { AppContext, AppContextEnv } from "./context";
+import { describeError } from "./error-text";
 
 /** The Ray ID, which Workers Logs filters on, so a report quoting it finds the stack; tests and local dev have none. */
 function logServerError(c: AppContext, error: unknown): string {
     const errorId = c.req.header("cf-ray") ?? crypto.randomUUID();
-    console.error(`Server error ${errorId}`, error);
+    console.error(`Server error ${errorId}: ${describeError(error)}`, error);
     return errorId;
 }
 
@@ -47,11 +52,26 @@ export const errorHandler: ErrorHandler<AppContextEnv> = (err, c) => {
     if (err instanceof OnshapeApiError) {
         const apiError = fromOnshapeError(err);
         if (apiError.body.kind !== ApiErrorKind.INTERNAL) {
+            // The user reads our wording; Onshape's own reason is only here.
+            console.warn(
+                `Onshape refused ${c.req.method} ${c.req.path}: ${describeError(err)}`
+            );
             return c.json(apiError.body, apiError.status);
         }
         return c.json(
             { ...apiError.body, errorId: logServerError(c, err) },
             apiError.status
+        );
+    }
+    // Said as itself, so a report can tell Onshape being slow from our own failure.
+    if (err instanceof OnshapeTimeoutError) {
+        return c.json(
+            {
+                kind: ApiErrorKind.INTERNAL,
+                message: err.message,
+                errorId: logServerError(c, err)
+            },
+            HttpStatus.GATEWAY_TIMEOUT
         );
     }
     // A validator rejecting a malformed request: our bug, not the user's.

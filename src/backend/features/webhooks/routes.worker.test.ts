@@ -12,6 +12,7 @@ import { groups, onshapeWebhooks, WebhookSubject } from "../../db/schema";
 import * as Jobs from "../load/jobs";
 import * as Holds from "../load/holds";
 import { WebhookEvent } from "./registration";
+import * as FeatureScriptsLoad from "../featurescripts/load-claim";
 
 const db = getDb(env.DB);
 const DOCUMENT = `doc-${TEST_GROUP_ID}`;
@@ -61,6 +62,68 @@ describe("receiving a webhook", () => {
         expect(res.status).toBe(200);
     });
 
+    it.each(["linked-workspace", "units"])(
+        "answers a %s delivery 200 even when forgetting fails",
+        async (route) => {
+            vi.spyOn(env.KV, "delete").mockRejectedValue(
+                new Error("KV DELETE failed: 429 Too Many Requests")
+            );
+            vi.spyOn(env.KV, "list").mockRejectedValue(new Error("KV down"));
+            const logged = vi
+                .spyOn(console, "error")
+                .mockImplementation(() => undefined);
+
+            const res = await createTestApp().request(
+                `http://localhost/api/webhooks/${route}?documentId=d&workspaceId=w&watch=w1`,
+                jsonRequest("POST", {
+                    event: "onshape.model.lifecycle.changed"
+                }),
+                env
+            );
+
+            expect(res.status).toBe(200);
+            expect(logged).toHaveBeenCalled();
+        }
+    );
+
+    it.each([
+        ["one registered before watch ids", ""],
+        ["a duplicate", "&watch=older"]
+    ])(
+        "turns away a linked workspace's delivery through %s, so Onshape retires it",
+        async (_name, watch) => {
+            await env.KV.put(
+                "linked-workspace-watch:d|w",
+                JSON.stringify({ watchId: "current" })
+            );
+
+            const res = await createTestApp().request(
+                `http://localhost/api/webhooks/linked-workspace?documentId=d&workspaceId=w${watch}`,
+                jsonRequest("POST", {
+                    event: "onshape.model.lifecycle.changed"
+                }),
+                env
+            );
+
+            expect(res.status).toBe(410);
+        }
+    );
+
+    it("keeps a linked workspace's names through an edit", async () => {
+        await env.KV.put("linked-workspace:d|w", JSON.stringify({}));
+        await env.KV.put("linked-workspace-changes:d|w", "{}");
+
+        const res = await createTestApp().request(
+            "http://localhost/api/webhooks/linked-workspace?documentId=d&workspaceId=w&watch=w1",
+            jsonRequest("POST", { event: "onshape.model.lifecycle.changed" }),
+            env
+        );
+
+        expect(res.status).toBe(200);
+        expect(await env.KV.get("linked-workspace:d|w")).not.toBeNull();
+        expect(await env.KV.get("linked-workspace-changes:d|w")).toBeNull();
+    });
+
     // Registration fails unless Onshape's own check is answered.
     it("answers Onshape's registration check", async () => {
         const token = await registered(WebhookSubject.DOCUMENT, DOCUMENT);
@@ -90,6 +153,22 @@ describe("receiving a webhook", () => {
             ])
         );
         expect(load).not.toHaveBeenCalled();
+    });
+
+    it("loads the FeatureScripts on a new version of their document", async () => {
+        const token = await registered(
+            WebhookSubject.FEATURESCRIPTS,
+            "frontend"
+        );
+        const load = vi
+            .spyOn(FeatureScriptsLoad, "requestFeatureScriptsLoad")
+            .mockResolvedValue();
+        const hold = vi.spyOn(Holds, "receiveNewVersion");
+
+        await deliver({ event: WebhookEvent.CREATE_VERSION }, token);
+
+        expect(load).toHaveBeenCalledWith(expect.anything(), { force: false });
+        expect(hold).not.toHaveBeenCalled();
     });
 
     // So the next load of the document registers a new one.

@@ -41,6 +41,7 @@ function subjectParams(
 ) {
     switch (subject) {
         case WebhookSubject.DOCUMENT:
+        case WebhookSubject.FEATURESCRIPTS:
             return {
                 documentId: subjectId,
                 events: [WebhookEvent.CREATE_VERSION]

@@ -85,7 +85,7 @@ beforeEach(async () => {
 
 afterEach(() => vi.restoreAllMocks());
 
-describe("version manager routes", () => {
+describe("Version Manager routes", () => {
     it("shows a run only to somebody who may read the document", async () => {
         grant({});
         const res = await app.request(
@@ -255,7 +255,7 @@ describe("version manager routes", () => {
         expect(Permissions.getPermissions).toHaveBeenCalledOnce();
 
         const delivery = await app.request(
-            `/api/webhooks/linked-workspace?documentId=${ROOT.documentId}&workspaceId=${ROOT.instanceId}`,
+            `/api/webhooks/linked-workspace?documentId=${ROOT.documentId}&workspaceId=${ROOT.instanceId}&watch=w1`,
             // As Onshape sent it when a document was shared with someone.
             jsonRequest("POST", {
                 event: "onshape.document.lifecycle.shared",

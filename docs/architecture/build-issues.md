@@ -353,7 +353,7 @@ Admin settings start open; Configuration starts closed.
 2. Hovering it opens the card: name, element type, version age and severity
    badges, then the sections, each folding on its own: Mantine's unstyled
    accordion, whose whole header is the toggle. A section's own buttons sit
-   beside that toggle, before the chevron, as on the version manager's page
+   beside that toggle, before the chevron, as on the Version Manager's page
    sections, since a button cannot nest in a button. A closed section is
    unmounted, so Usage fetches nothing until opened.
 3. **Build checks** lists one callout per issue. One that blames a

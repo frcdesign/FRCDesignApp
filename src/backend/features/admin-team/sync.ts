@@ -9,6 +9,7 @@ import { bumpLibraryVersion } from "../library/db";
 import type { LibraryId } from "../library/library-id";
 import { pushLibraryChanged } from "../push/notify";
 import { getBackgroundOnshapeApi } from "../auth/background-sessions";
+import { saveAdminTeam } from "./store";
 
 export async function syncAdminTeam(
     env: AppBindings,
@@ -24,15 +25,14 @@ export async function syncAdminTeam(
     const teamId = library?.adminTeamId;
     const members = teamId ? await getTeamMembers(onshapeApi, teamId) : [];
 
-    await db
-        .update(libraries)
-        .set({
-            adminTeam: members.map((member) => ({
-                userId: member.member.id,
-                isTeamAdmin: member.admin
-            }))
-        })
-        .where(eq(libraries.id, libraryId));
+    await saveAdminTeam(
+        env,
+        libraryId,
+        members.map((member) => ({
+            userId: member.member.id,
+            isTeamAdmin: member.admin
+        }))
+    );
 
     await bumpLibraryVersion(db, libraryId);
     await pushLibraryChanged(env, libraryId);

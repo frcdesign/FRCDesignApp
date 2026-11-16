@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TestbenchRouteImport } from './routes/testbench'
+import { Route as FeedbackRouteImport } from './routes/feedback'
 import { Route as DashboardRouteRouteImport } from './routes/dashboard/route'
 import { Route as AppRouteRouteImport } from './routes/app/route'
 import { Route as IndexRouteImport } from './routes/index'
@@ -25,6 +26,8 @@ import { Route as PagesGrantDeniedRouteImport } from './routes/_pages/grant-deni
 import { Route as PagesDocumentAccessRouteImport } from './routes/_pages/document-access'
 import { Route as PagesCookieErrorRouteImport } from './routes/_pages/cookie-error'
 import { Route as PagesBetaCompleteRouteImport } from './routes/_pages/beta-complete'
+import { Route as AppFeaturescriptsRouteRouteImport } from './routes/app/featurescripts/route'
+import { Route as AppFeaturescriptsIndexRouteImport } from './routes/app/featurescripts/index'
 import { Route as DashboardLibraryLibraryIdRouteRouteImport } from './routes/dashboard/library/$libraryId/route'
 import { Route as AppLibraryLibraryIdRouteRouteImport } from './routes/app/library/$libraryId/route'
 import { Route as DashboardLibraryLibraryIdIndexRouteImport } from './routes/dashboard/library/$libraryId/index'
@@ -36,6 +39,11 @@ import { Route as AppLibraryLibraryIdGroupsGroupIdRouteImport } from './routes/a
 const TestbenchRoute = TestbenchRouteImport.update({
   id: '/testbench',
   path: '/testbench',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FeedbackRoute = FeedbackRouteImport.update({
+  id: '/feedback',
+  path: '/feedback',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRouteRoute = DashboardRouteRouteImport.update({
@@ -113,6 +121,16 @@ const PagesBetaCompleteRoute = PagesBetaCompleteRouteImport.update({
   path: '/beta-complete',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppFeaturescriptsRouteRoute = AppFeaturescriptsRouteRouteImport.update({
+  id: '/featurescripts',
+  path: '/featurescripts',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppFeaturescriptsIndexRoute = AppFeaturescriptsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppFeaturescriptsRouteRoute,
+} as any)
 const DashboardLibraryLibraryIdRouteRoute =
   DashboardLibraryLibraryIdRouteRouteImport.update({
     id: '/library/$libraryId',
@@ -160,7 +178,9 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRouteRouteWithChildren
   '/dashboard': typeof DashboardRouteRouteWithChildren
+  '/feedback': typeof FeedbackRoute
   '/testbench': typeof TestbenchRoute
+  '/app/featurescripts': typeof AppFeaturescriptsRouteRouteWithChildren
   '/beta-complete': typeof PagesBetaCompleteRoute
   '/cookie-error': typeof PagesCookieErrorRoute
   '/document-access': typeof PagesDocumentAccessRoute
@@ -175,6 +195,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/': typeof DashboardIndexRoute
   '/app/library/$libraryId': typeof AppLibraryLibraryIdRouteRouteWithChildren
   '/dashboard/library/$libraryId': typeof DashboardLibraryLibraryIdRouteRouteWithChildren
+  '/app/featurescripts/': typeof AppFeaturescriptsIndexRoute
   '/dashboard/library/$libraryId/part': typeof DashboardLibraryLibraryIdPartRoute
   '/dashboard/library/$libraryId/unused': typeof DashboardLibraryLibraryIdUnusedRoute
   '/app/library/$libraryId/': typeof AppLibraryLibraryIdIndexRoute
@@ -184,6 +205,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/app': typeof AppRouteRouteWithChildren
+  '/feedback': typeof FeedbackRoute
   '/testbench': typeof TestbenchRoute
   '/beta-complete': typeof PagesBetaCompleteRoute
   '/cookie-error': typeof PagesCookieErrorRoute
@@ -197,6 +219,7 @@ export interface FileRoutesByTo {
   '/app/auto-assembly': typeof AppAutoAssemblyRoute
   '/app/version-manager': typeof AppVersionManagerRoute
   '/dashboard': typeof DashboardIndexRoute
+  '/app/featurescripts': typeof AppFeaturescriptsIndexRoute
   '/dashboard/library/$libraryId/part': typeof DashboardLibraryLibraryIdPartRoute
   '/dashboard/library/$libraryId/unused': typeof DashboardLibraryLibraryIdUnusedRoute
   '/app/library/$libraryId': typeof AppLibraryLibraryIdIndexRoute
@@ -208,7 +231,9 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/app': typeof AppRouteRouteWithChildren
   '/dashboard': typeof DashboardRouteRouteWithChildren
+  '/feedback': typeof FeedbackRoute
   '/testbench': typeof TestbenchRoute
+  '/app/featurescripts': typeof AppFeaturescriptsRouteRouteWithChildren
   '/_pages/beta-complete': typeof PagesBetaCompleteRoute
   '/_pages/cookie-error': typeof PagesCookieErrorRoute
   '/_pages/document-access': typeof PagesDocumentAccessRoute
@@ -223,6 +248,7 @@ export interface FileRoutesById {
   '/dashboard/': typeof DashboardIndexRoute
   '/app/library/$libraryId': typeof AppLibraryLibraryIdRouteRouteWithChildren
   '/dashboard/library/$libraryId': typeof DashboardLibraryLibraryIdRouteRouteWithChildren
+  '/app/featurescripts/': typeof AppFeaturescriptsIndexRoute
   '/dashboard/library/$libraryId/part': typeof DashboardLibraryLibraryIdPartRoute
   '/dashboard/library/$libraryId/unused': typeof DashboardLibraryLibraryIdUnusedRoute
   '/app/library/$libraryId/': typeof AppLibraryLibraryIdIndexRoute
@@ -235,7 +261,9 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/dashboard'
+    | '/feedback'
     | '/testbench'
+    | '/app/featurescripts'
     | '/beta-complete'
     | '/cookie-error'
     | '/document-access'
@@ -250,6 +278,7 @@ export interface FileRouteTypes {
     | '/dashboard/'
     | '/app/library/$libraryId'
     | '/dashboard/library/$libraryId'
+    | '/app/featurescripts/'
     | '/dashboard/library/$libraryId/part'
     | '/dashboard/library/$libraryId/unused'
     | '/app/library/$libraryId/'
@@ -259,6 +288,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/app'
+    | '/feedback'
     | '/testbench'
     | '/beta-complete'
     | '/cookie-error'
@@ -272,6 +302,7 @@ export interface FileRouteTypes {
     | '/app/auto-assembly'
     | '/app/version-manager'
     | '/dashboard'
+    | '/app/featurescripts'
     | '/dashboard/library/$libraryId/part'
     | '/dashboard/library/$libraryId/unused'
     | '/app/library/$libraryId'
@@ -282,7 +313,9 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/dashboard'
+    | '/feedback'
     | '/testbench'
+    | '/app/featurescripts'
     | '/_pages/beta-complete'
     | '/_pages/cookie-error'
     | '/_pages/document-access'
@@ -297,6 +330,7 @@ export interface FileRouteTypes {
     | '/dashboard/'
     | '/app/library/$libraryId'
     | '/dashboard/library/$libraryId'
+    | '/app/featurescripts/'
     | '/dashboard/library/$libraryId/part'
     | '/dashboard/library/$libraryId/unused'
     | '/app/library/$libraryId/'
@@ -308,6 +342,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRouteRoute: typeof AppRouteRouteWithChildren
   DashboardRouteRoute: typeof DashboardRouteRouteWithChildren
+  FeedbackRoute: typeof FeedbackRoute
   TestbenchRoute: typeof TestbenchRoute
   PagesBetaCompleteRoute: typeof PagesBetaCompleteRoute
   PagesCookieErrorRoute: typeof PagesCookieErrorRoute
@@ -327,6 +362,13 @@ declare module '@tanstack/react-router' {
       path: '/testbench'
       fullPath: '/testbench'
       preLoaderRoute: typeof TestbenchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/feedback': {
+      id: '/feedback'
+      path: '/feedback'
+      fullPath: '/feedback'
+      preLoaderRoute: typeof FeedbackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -434,6 +476,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PagesBetaCompleteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/app/featurescripts': {
+      id: '/app/featurescripts'
+      path: '/featurescripts'
+      fullPath: '/app/featurescripts'
+      preLoaderRoute: typeof AppFeaturescriptsRouteRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/app/featurescripts/': {
+      id: '/app/featurescripts/'
+      path: '/'
+      fullPath: '/app/featurescripts/'
+      preLoaderRoute: typeof AppFeaturescriptsIndexRouteImport
+      parentRoute: typeof AppFeaturescriptsRouteRoute
+    }
     '/dashboard/library/$libraryId': {
       id: '/dashboard/library/$libraryId'
       path: '/library/$libraryId'
@@ -486,6 +542,20 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AppFeaturescriptsRouteRouteChildren {
+  AppFeaturescriptsIndexRoute: typeof AppFeaturescriptsIndexRoute
+}
+
+const AppFeaturescriptsRouteRouteChildren: AppFeaturescriptsRouteRouteChildren =
+  {
+    AppFeaturescriptsIndexRoute: AppFeaturescriptsIndexRoute,
+  }
+
+const AppFeaturescriptsRouteRouteWithChildren =
+  AppFeaturescriptsRouteRoute._addFileChildren(
+    AppFeaturescriptsRouteRouteChildren,
+  )
+
 interface AppLibraryLibraryIdRouteRouteChildren {
   AppLibraryLibraryIdIndexRoute: typeof AppLibraryLibraryIdIndexRoute
   AppLibraryLibraryIdGroupsGroupIdRoute: typeof AppLibraryLibraryIdGroupsGroupIdRoute
@@ -504,12 +574,14 @@ const AppLibraryLibraryIdRouteRouteWithChildren =
   )
 
 interface AppRouteRouteChildren {
+  AppFeaturescriptsRouteRoute: typeof AppFeaturescriptsRouteRouteWithChildren
   AppAutoAssemblyRoute: typeof AppAutoAssemblyRoute
   AppVersionManagerRoute: typeof AppVersionManagerRoute
   AppLibraryLibraryIdRouteRoute: typeof AppLibraryLibraryIdRouteRouteWithChildren
 }
 
 const AppRouteRouteChildren: AppRouteRouteChildren = {
+  AppFeaturescriptsRouteRoute: AppFeaturescriptsRouteRouteWithChildren,
   AppAutoAssemblyRoute: AppAutoAssemblyRoute,
   AppVersionManagerRoute: AppVersionManagerRoute,
   AppLibraryLibraryIdRouteRoute: AppLibraryLibraryIdRouteRouteWithChildren,
@@ -556,6 +628,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRouteRoute: AppRouteRouteWithChildren,
   DashboardRouteRoute: DashboardRouteRouteWithChildren,
+  FeedbackRoute: FeedbackRoute,
   TestbenchRoute: TestbenchRoute,
   PagesBetaCompleteRoute: PagesBetaCompleteRoute,
   PagesCookieErrorRoute: PagesCookieErrorRoute,

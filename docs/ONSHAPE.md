@@ -187,7 +187,8 @@ the app makes of them.
 - **Onshape drops a webhook without saying so.** A registration whose
   `webhook.register` ping fails is cancelled, and one whose deliveries error or
   stall is deactivated. Asking for it then answers 404 — _observed_. So
-  deliveries are answered with a 200 at once, and the work done after.
+  deliveries are answered with a 200 at once, and the work done after. That a
+  delivery answered 410 deactivates it, as an error does, is _unverified_.
 - **Deliveries are not signed** — _observed_. The url carries a token, and
   a forged delivery can at most cause a refetch.
 - **Events the app relies on** — names _documented_, behavior _observed_:
@@ -203,6 +204,9 @@ the app makes of them.
       webhook itself.
 - `options.collapseEvents` merges a burst of the same event into fewer
   deliveries — _documented_ as a field, its effect _observed_.
+- **Each webhook delivers on its own.** Several registered on one workspace
+  with the same url each deliver every event, within milliseconds of each
+  other — _observed_ (2026-11-13, dozens on one workspace).
 
 ## Calling the API
 
@@ -232,6 +236,27 @@ errors.
     doesn't spend another's — _unverified_, the owner's understanding. The
     window they refill over is _unverified_; checking again an hour later would
     tell.
+
+- **Inserts often take several seconds** — _observed_ in Workers Logs for the
+  week to 2026-11-09, as the whole insert request's wall time, which includes
+  reading the insert location and building a fasten mate:
+
+    | Succeeded          | Median | Over 5 s | Over 10 s | Over 20 s | Over 30 s |
+    | ------------------ | ------ | -------- | --------- | --------- | --------- |
+    | Into an assembly   | 1.3 s  | 12.5%    | 4.6%      | 1.0%      | 0.3%      |
+    | Into a Part Studio | 3.0 s  | 33%      | 15%       | 2.6%      | 0.7%      |
+
+    About 1% of insert requests went the full 60 s without an answer, and none
+    answered 5xx. Whether a 5xx means nothing was inserted is _unverified_.
+
+- **An insert can land after the app stops waiting** — _observed_
+  2026-11-16: four inserts of the same mecanum wheel into one assembly, a few
+  seconds apart, were each called twice, neither call answered within 20 s,
+  and the assembly got four wheels, not eight. So one call of each pair landed
+  and the other didn't; which one, and why not both, is _unverified_. At least
+  six of that part's inserts in the week before went unanswered twice too.
+  Inserts into one assembly seem to wait on each other, so
+  several in a row each take as long as those before it — _unverified_.
 
 - **Internal endpoints** — the ones Onshape's own web client calls, such as the
   custom toolbar's — are served at `/api/v14` — _observed_. Whether the same
