@@ -49,8 +49,8 @@ team, plus one owner set by configuration.
   chose and its synced members (`isTeamAdmin` per member).
 - **KV** `seen-hints:` — by user id, the features (`Hint`) whose blue dot and
   **New** badge the user no longer needs, recorded by `POST /api/seen-hints`
-  once the feature has been opened: the version manager's page on showing, the
-  insert location's card on closing, an insert menu's ⋯ menu offering **Set
+  once the feature has been opened: the version manager's page on showing, an
+  insert menu's ⋯ menu offering **Set
   default configuration** on closing, and a part's menu (on its card or in the
   insert menu) offering **Report an issue** on closing. Fastening an insert to
   circular edges is recorded by the insert request itself, and `markHintSeen`

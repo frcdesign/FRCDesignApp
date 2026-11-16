@@ -11,6 +11,7 @@ import { pickKey } from "./picked";
 
 const ALREADY_FASTENED = "This hole already has a screw and will be ignored.";
 const SOME_FASTENED = "Some holes already have screws and will be ignored.";
+const NO_HOLE_OF_SIZE = "No holes in this face fit the screw.";
 
 type Problem = Omit<PickProblem, "key">;
 
@@ -33,6 +34,7 @@ function holeProblem(planned: PlannedHole | undefined): Problem | undefined {
                   }
                 : undefined;
         case HoleStatus.FASTENED:
+        case HoleStatus.SKIPPED:
             return undefined;
         case HoleStatus.NO_FIT:
             return error(planned.reason ?? "This hole can't be fastened.");
@@ -49,6 +51,14 @@ function plannedProblem(
 ): Problem | undefined {
     if (!plans) {
         return undefined;
+    }
+    // A face's holes made for another size are left out
+    const all = edges;
+    edges = all.filter(
+        (edge) => plans.get(edge)?.status !== HoleStatus.SKIPPED
+    );
+    if (all.length > 0 && edges.length === 0) {
+        return error(NO_HOLE_OF_SIZE);
     }
     const problems = edges.flatMap((edge) => {
         const problem = holeProblem(plans.get(edge));
@@ -78,6 +88,19 @@ function plannedProblem(
             ? `${worst.length} of ${edges.length} holes can't be fastened`
             : `${worst.length} of ${edges.length} holes have a warning`;
     return { ...worst[0], message: `${counted}: ${worst[0].message}` };
+}
+
+/** The size the first hole picked is made for, in the order picked: a target's, else a screw's to update. */
+export function pickedHoleSize(
+    request: Pick<PickCheckIn, "targets" | "replaced">,
+    indexed: IndexedHoles,
+    planned: PlannedHole[]
+): string | undefined {
+    const plans = new Map(planned.map((hole) => [hole.key, hole]));
+    return [...request.targets, ...request.replaced]
+        .flatMap((pick) => indexed.pickEdges[pickKey(pick)] ?? [])
+        .map((edge) => plans.get(edge)?.madeFor)
+        .find((size) => size !== undefined);
 }
 
 /** Plans are left out when there are no options to plan with. */

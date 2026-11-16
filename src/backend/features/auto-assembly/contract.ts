@@ -106,6 +106,8 @@ export interface PickProblem {
 
 export interface PickCheckOut {
     problems: PickProblem[];
+    /** The size the first picked hole is made for: what Size follows until it's chosen by hand. */
+    holeSize?: string;
 }
 
 /** Which of the form's lists a pick was made in. */
@@ -128,7 +130,9 @@ export enum HoleStatus {
     /** A library screw is already in it. */
     FASTENED = "fastened",
     /** Nothing in the catalog fits, or reaches far enough within the maximum length. */
-    NO_FIT = "no-fit"
+    NO_FIT = "no-fit",
+    /** A hole in a face picked, made for another size than the run's screw: left alone. */
+    SKIPPED = "skipped"
 }
 
 /** How a fastener ends. */
@@ -147,6 +151,8 @@ export interface PlannedHole {
     status: HoleStatus;
     /** Why it can't be fastened, in words, when it can't. */
     reason?: string;
+    /** The screw size the hole is made for, where it's one the catalog has. */
+    madeFor?: string;
     /** What's off about how it's fastened, in words: a screw that doesn't fit as it should, or no nut. */
     warning?: string;
     end?: HoleEnd;

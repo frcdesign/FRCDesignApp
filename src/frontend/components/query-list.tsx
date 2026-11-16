@@ -11,19 +11,20 @@ import { XIcon } from "@phosphor-icons/react";
 import { useEffect, useRef, type ReactNode } from "react";
 import {
     sendHighlightMessage,
-    sendMessageBubble,
     sendSelectionRequest,
     sendStopRequestMessage,
+    showFocused,
     type HighlightedEntity,
     type SelectionFilter
 } from "../lib/messages";
 import { useTargetElement } from "../lib/onshape-params";
 import {
     bumpLayout,
-    focusedPicks,
     heldPicks,
     holdPicks,
+    nameList,
     onPick,
+    onResume,
     selectionKey,
     useOnshapeSelection,
     without,
@@ -32,13 +33,12 @@ import {
 import { IconSize, StatusColor } from "../lib/style-constants";
 import { Status, STATUS_COLOR } from "../lib/status";
 import { m } from "../paraglide/messages";
+import { showInfoToast } from "../lib/notifications";
 
 interface QueryListProps {
     /** Unique on the page: which list takes picks. */
     id: string;
     label: string;
-    /** What to pick, in Onshape's message bubble when it's focused and when something else is picked. */
-    prompt: string;
     entities: OnshapeSelection[];
     onChange: (entities: OnshapeSelection[]) => void;
     /** Which picks it takes; the rest are refused. */
@@ -51,11 +51,13 @@ interface QueryListProps {
     rowSection?: (entity: OnshapeSelection) => ReactNode;
     /** Takes picks whenever no list does, as a form's first list should. */
     autoFocus?: boolean;
+    /** Red while it has no picks, as Onshape marks a required query. */
+    required?: boolean;
     /** What's wrong with a row: shown under it, in its status's color. */
     problem?: (entity: OnshapeSelection) => RowProblem | undefined;
     /** Whether the rows' problems are being worked out, shown by a spinner beside Clear. */
     isChecking?: boolean;
-    /** Takes picks from what the Onshape window has selected without limiting or prompting for them, until clicked. */
+    /** Takes picks from what the Onshape window has selected without limiting them, until clicked. */
     isPassive?: boolean;
 }
 
@@ -87,8 +89,9 @@ function defaultName(entity: OnshapeSelection, index: number): string {
  * the person finishes selecting.
  *
  * On focus, when a list is shown or hidden, and once its picks are cleared,
- * the focused list puts its prompt in Onshape's bubble and asks for the filter
- * or, holding picks, lights them up. A highlight cancels the filter, and a
+ * the focused list asks for the filter or, holding picks, lights them up. It
+ * sends Onshape no message for its bubble, which would fall out of step with
+ * the panel. A highlight cancels the filter, and a
  * request clears what the window shows, so hovering a row highlights its
  * entity alone, leaving lights the focused list's picks up, and the filter is
  * off until the list is clicked again. A passive list does none of this until
@@ -98,7 +101,6 @@ export function QueryList(props: QueryListProps): ReactNode {
     const {
         id,
         label,
-        prompt,
         entities,
         onChange,
         accepts,
@@ -106,6 +108,7 @@ export function QueryList(props: QueryListProps): ReactNode {
         describe = defaultName,
         rowSection,
         autoFocus = false,
+        required = false,
         problem,
         isChecking = false,
         isPassive = false
@@ -125,34 +128,38 @@ export function QueryList(props: QueryListProps): ReactNode {
 
     useEffect(
         () =>
-            onPick(id, ({ added, removed, isHighlightCleared }) => {
-                const kept = without(entities, removed);
-                const keys = new Set(kept.map(selectionKey));
-                const taken = added.filter(
-                    (entity) =>
-                        accepts(entity) && !keys.has(selectionKey(entity))
-                );
-                if (
-                    target &&
-                    isLimiting &&
-                    added.some((entity) => !accepts(entity))
-                ) {
-                    sendMessageBubble(target, prompt);
-                }
-                if (target && isHighlightCleared) {
-                    sendHighlightMessage(
-                        target,
-                        [...kept, ...taken].map(toHighlighted)
+            onPick(
+                id,
+                ({ added, removed, isHighlightCleared, isDeselectRefused }) => {
+                    const kept = without(entities, removed);
+                    const keys = new Set(kept.map(selectionKey));
+                    const taken = added.filter(
+                        (entity) =>
+                            accepts(entity) && !keys.has(selectionKey(entity))
                     );
+                    // Kept, so the window shows them again
+                    if (target && (isHighlightCleared || isDeselectRefused)) {
+                        sendHighlightMessage(
+                            target,
+                            [...kept, ...taken].map(toHighlighted)
+                        );
+                    }
+                    if (isDeselectRefused) {
+                        showInfoToast(m.queryListDeselectRefused(), {
+                            id: "query-list-deselect-refused"
+                        });
+                    }
+                    if (taken.length > 0 || kept.length !== entities.length) {
+                        onChange([...kept, ...taken]);
+                    }
                 }
-                if (taken.length > 0 || kept.length !== entities.length) {
-                    onChange([...kept, ...taken]);
-                }
-            }),
-        [id, entities, onChange, accepts, target, prompt, isLimiting]
+            ),
+        [id, entities, onChange, accepts, target]
     );
 
     useEffect(() => holdPicks(id, entities), [id, entities]);
+
+    useEffect(() => nameList(id, label), [id, label]);
 
     useEffect(() => {
         bumpLayout();
@@ -182,13 +189,16 @@ export function QueryList(props: QueryListProps): ReactNode {
         [id]
     );
 
+    // A click starts selecting whatever the list holds; focused otherwise, it lights its picks up
+    const startsSelecting = useRef(false);
     useEffect(() => {
         if (!target || !isFocused || !isLimiting) {
             return;
         }
-        sendMessageBubble(target, prompt);
         const picks = heldPicks(id);
-        if (picks.length > 0) {
+        const isStarted = startsSelecting.current;
+        startsSelecting.current = false;
+        if (picks.length > 0 && !isStarted) {
             sendHighlightMessage(target, picks.map(toHighlighted));
         } else {
             selectionRequest.current = sendSelectionRequest(target, filter);
@@ -199,25 +209,40 @@ export function QueryList(props: QueryListProps): ReactNode {
                 selectionRequest.current = undefined;
             }
         };
-    }, [target, isFocused, filter, prompt, id, layout, isLimiting]);
+    }, [target, isFocused, filter, id, layout, isLimiting]);
+
+    useEffect(
+        () =>
+            onResume(id, () => {
+                if (target) {
+                    selectionRequest.current = sendSelectionRequest(
+                        target,
+                        filter
+                    );
+                }
+            }),
+        [id, target, filter]
+    );
 
     // Cleared, by Clear, its last row's removal or the form, it asks for picks again
     const wasEmpty = useRef(isEmpty);
     useEffect(() => {
         if (target && isFocused && isLimiting && isEmpty && !wasEmpty.current) {
-            sendMessageBubble(target, prompt);
             selectionRequest.current = sendSelectionRequest(target, filter);
         }
         wasEmpty.current = isEmpty;
-    }, [target, isFocused, isEmpty, prompt, filter, isLimiting]);
+    }, [target, isFocused, isEmpty, filter, isLimiting]);
 
     const focus = () => {
-        useOnshapeSelection.getState().activate(id);
-        // Newly limiting, the focus effect asks; already, a highlight has cancelled the request since
-        if (target && isFocused && isLimiting) {
-            sendMessageBubble(target, prompt);
-            selectionRequest.current = sendSelectionRequest(target, filter);
+        // Newly limiting, the focus effect asks; already, a highlight may have paused the request since
+        if (isFocused && isLimiting) {
+            if (target) {
+                selectionRequest.current = sendSelectionRequest(target, filter);
+            }
+        } else {
+            startsSelecting.current = true;
         }
+        useOnshapeSelection.getState().activate(id);
     };
 
     const show = (picks: OnshapeSelection[]) => {
@@ -228,16 +253,26 @@ export function QueryList(props: QueryListProps): ReactNode {
 
     const highlight = (entity: OnshapeSelection) => show([entity]);
 
-    // Back to the focused list's picks, whichever list the rows were in
-    const unhighlight = () => show(focusedPicks());
+    // Back to the focused list, whichever list the rows were in: selecting again, or its picks lit up
+    const unhighlight = () => {
+        if (target) {
+            showFocused(target);
+        }
+    };
 
     const remove = (entity: OnshapeSelection) => {
         const rest = without(entities, [entity]);
-        show(isFocused ? rest : focusedPicks());
+        if (isFocused) {
+            show(rest);
+        } else {
+            unhighlight();
+        }
         onChange(rest);
     };
 
     const clear = () => onChange([]);
+
+    const isMissing = required && isEmpty;
 
     return (
         <Stack gap={4}>
@@ -250,11 +285,18 @@ export function QueryList(props: QueryListProps): ReactNode {
                     cursor: "pointer",
                     borderColor: isFocused
                         ? "var(--mantine-primary-color-filled)"
-                        : undefined
+                        : isMissing
+                          ? `var(--mantine-color-${StatusColor.ERROR}-filled)`
+                          : undefined
                 }}
             >
                 {entities.length === 0 ? (
-                    <Text size="sm" px={4} py={2}>
+                    <Text
+                        size="sm"
+                        px={4}
+                        py={2}
+                        c={isMissing ? StatusColor.ERROR : undefined}
+                    >
                         {label}
                     </Text>
                 ) : (

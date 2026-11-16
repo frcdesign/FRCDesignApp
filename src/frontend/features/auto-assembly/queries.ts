@@ -76,6 +76,8 @@ const PICK_CHECK_DELAY_MS = 600;
 export interface PickProblems {
     /** Each pick's problem, by its row key. */
     problems: Map<string, RowProblem>;
+    /** The size the first hole picked is made for. */
+    holeSize?: string;
     /** Whether a check is waiting for the picks to settle, or going. */
     isChecking: boolean;
 }
@@ -87,7 +89,7 @@ export interface PickProblems {
 export function usePickProblems(body: PickCheckIn | undefined): PickProblems {
     const isSignedIn = useIsSignedIn();
     const [settled] = useDebouncedValue(body, PICK_CHECK_DELAY_MS);
-    const { data, isFetching } = useQuery<PickCheckOut>({
+    const { data, isFetching, isPlaceholderData } = useQuery<PickCheckOut>({
         queryKey: pickCheckQueryKey(settled),
         queryFn:
             settled && isSignedIn
@@ -110,6 +112,8 @@ export function usePickProblems(body: PickCheckIn | undefined): PickProblems {
     );
     return {
         problems,
+        // The last picks' hole is no guide to these
+        holeSize: isPlaceholderData ? undefined : data?.holeSize,
         isChecking:
             isSignedIn && body !== undefined && (settled !== body || isFetching)
     };

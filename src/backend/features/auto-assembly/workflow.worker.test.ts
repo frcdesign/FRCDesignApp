@@ -7,7 +7,6 @@ import {
     ASSEMBLY,
     BODY,
     DEFINITION,
-    fs,
     plateScan
 } from "../../../__test_utils__/auto-assembly-fixtures";
 import * as RequestAuth from "../auth/request-auth";
@@ -58,32 +57,6 @@ async function run(
     return getJobStatus(env, ASSEMBLY);
 }
 
-/** A washer: its hole from z = 0 up to its thickness. */
-const WASHER_SCAN = fs.map({
-    parts: fs.map({
-        W: fs.map({
-            holes: fs.array([
-                fs.map({
-                    faceId: fs.string("WF"),
-                    origin: fs.vector([0, 0, 0]),
-                    direction: fs.vector([0, 0, 1]),
-                    radius: fs.number(0.003),
-                    start: fs.number(0),
-                    end: fs.number(0.001),
-                    closedAtStart: fs.boolean(false),
-                    closedAtEnd: fs.boolean(false),
-                    threaded: fs.boolean(false),
-                    edges: fs.array([
-                        fs.map({ id: fs.string("W-bottom"), at: fs.number(0) }),
-                        fs.map({ id: fs.string("W-top"), at: fs.number(0.001) })
-                    ])
-                })
-            ])
-        })
-    }),
-    circles: fs.array([])
-});
-
 let mates: string[];
 
 beforeEach(async () => {
@@ -118,16 +91,14 @@ beforeEach(async () => {
         (_client, path, script) =>
             Promise.resolve({
                 result:
-                    path.elementId === "washerStudio"
-                        ? WASHER_SCAN
-                        : path.elementId === "topStudio"
-                          ? plateScan(
-                                "TOP",
-                                script.includes('qTransient("TOP-top")')
-                                    ? ["TOP-top"]
-                                    : []
-                            )
-                          : plateScan("BOTTOM")
+                    path.elementId === "topStudio"
+                        ? plateScan(
+                              "TOP",
+                              script.includes('qTransient("TOP-top")')
+                                  ? ["TOP-top"]
+                                  : []
+                          )
+                        : plateScan("BOTTOM")
             })
     );
     // The assembly as read to index it, then with the parts inserted
@@ -223,11 +194,11 @@ describe("AutoAssemblyWorkflow", () => {
         // The screw on the first washer's top edge
         expect(mates[1]).toContain('"featureId":"screwMC"');
         expect(mates[1]).toContain(
-            '"deterministicIds":["W-top"],"path":["part0"]'
+            '"featureId":"washerTopMC","path":["part0"]'
         );
         expect(mates[2]).toContain('"deterministicIds":["BOTTOM-bottom"]');
         expect(mates[3]).toContain(
-            '"deterministicIds":["W-top"],"path":["part2"]'
+            '"featureId":"washerTopMC","path":["part2"]'
         );
     });
 

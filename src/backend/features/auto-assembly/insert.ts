@@ -1,13 +1,12 @@
 /**
  * Putting planned holes' parts into the assembly: where each goes, what it's
  * fastened to, and the Onshape bodies that insert and fasten it. A washer is
- * fastened to the hole's edge and its screw or nut to the washer's top edge,
- * so any washer fits.
+ * fastened to the hole's edge and its screw or nut to the washer's top
+ * connector, so any washer fits.
  */
-import { type OnshapeApi } from "../../lib/onshape/client";
 import { PartType } from "../../lib/onshape/endpoints/documents";
 import {
-    type EdgeReference,
+    fastenMate,
     fastenMateToCircularEdge,
     partStudioMateConnectorQuery
 } from "../../lib/onshape/objects/assembly-features";
@@ -24,7 +23,6 @@ import { type Catalog, getWasher } from "./catalog";
 import { HoleStatus, RunPartRole } from "./contract";
 import { add, frameTransform, scale, type Vec3 } from "./geometry";
 import { type HolePlan, type MateEdge } from "./planner";
-import { scanStudio, type ScannedParts, type StudioSource } from "./scan";
 import {
     FastenerKind,
     type FastenerSet,
@@ -202,93 +200,30 @@ export function insertGroups(
     });
 }
 
-/** The washer studio at its release, in one configuration: what its top edge is read from. */
-export function washerSource(
-    set: FastenerSet,
-    configuration: Selection
-): StudioSource {
-    const { location } = set.studios[FastenerKind.WASHER];
-    const encoded = encodeConfiguration(configuration);
-    return {
-        path: {
-            documentId: location.documentId,
-            instanceType: "v",
-            instanceId: location.versionId,
-            elementId: location.elementId
-        },
-        configuration: encoded,
-        key: `${location.documentId}|v|${location.versionId}|${location.elementId}|${encoded}`
-    };
-}
-
-/** A washer's top edge: the circular edge of its hole farthest up its Z axis, where what sits on it seats. */
-export function washerTopEdge(parts: ScannedParts): string | undefined {
-    const edges = Object.values(parts).flatMap((part) =>
-        part.holes.flatMap((hole) =>
-            hole.edges.map((edge) => ({
-                id: edge.id,
-                z: hole.origin[2] + hole.direction[2] * edge.at
-            }))
-        )
-    );
-    return edges.sort((a, b) => b.z - a.z)[0]?.id;
-}
-
-/** Each placed washer's top edge, by its index in the placements; one scan per configuration, cached. */
-export async function washerTopEdges(
-    client: OnshapeApi,
-    kv: KVNamespace,
-    set: FastenerSet,
-    parts: PartPlacement[]
-): Promise<Record<number, string>> {
-    const byConfiguration = new Map<string, string | undefined>();
-    const edges: Record<number, string> = {};
-    for (const [index, part] of parts.entries()) {
-        if (part.kind !== FastenerKind.WASHER) {
-            continue;
-        }
-        const source = washerSource(set, part.configuration);
-        if (!byConfiguration.has(source.key)) {
-            const scan = await scanStudio(client, kv, source, {
-                edges: [],
-                faces: [],
-                planes: []
-            });
-            byConfiguration.set(source.key, washerTopEdge(scan.parts));
-        }
-        const edge = byConfiguration.get(source.key);
-        if (edge) {
-            edges[index] = edge;
-        }
-    }
-    return edges;
-}
-
-/** The fasten mate holding one inserted part where it sits; undefined when what it sits on can't be named. */
+/**
+ * The fasten mate holding one inserted part where it sits: on a hole's edge,
+ * or a washer's top connector. Undefined when the washer wasn't inserted.
+ */
 export function partMate(
     part: PartPlacement,
     path: string[],
     connectorId: string,
     paths: (string[] | undefined)[],
-    washerEdges: Record<number, string>
+    washerTopConnectorId: string
 ): object | undefined {
-    let seat: EdgeReference;
+    const own = partStudioMateConnectorQuery(connectorId, path);
     if ("edge" in part.seat) {
-        seat = {
+        return fastenMateToCircularEdge(part.name, own, {
             deterministicId: part.seat.edge.edgeId,
             path: part.seat.edge.occurrencePath
-        };
-    } else {
-        const washerPath = paths[part.seat.washer];
-        const edge = washerEdges[part.seat.washer];
-        if (!washerPath || !edge) {
-            return undefined;
-        }
-        seat = { deterministicId: edge, path: washerPath };
+        });
     }
-    return fastenMateToCircularEdge(
-        part.name,
-        partStudioMateConnectorQuery(connectorId, path),
-        seat
-    );
+    const washerPath = paths[part.seat.washer];
+    if (!washerPath) {
+        return undefined;
+    }
+    return fastenMate(part.name, [
+        own,
+        partStudioMateConnectorQuery(washerTopConnectorId, washerPath)
+    ]);
 }

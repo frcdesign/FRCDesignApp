@@ -3,6 +3,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { type Db } from "../../db/client";
 import { configurations, insertables } from "../../db/schema";
 import { getGeneratedSet } from "../generated-parts/store";
+import { type GeneratedFeature } from "../generated-parts/manifest";
 import { LibraryId } from "../library/library-id";
 import { catalogSchema } from "./catalog";
 import {
@@ -70,7 +71,11 @@ export async function getFastenerSet(
                 versionId: row.versionId,
                 elementId: row.elementId
             },
-            mateConnectorId: row.fastenInfo?.mateConnectorId
+            mateConnectorId: row.fastenInfo?.mateConnectorId,
+            topMateConnectorId: topConnectorId(
+                row.fastenInfo?.mateConnectorId,
+                stored.features[kind]
+            )
         };
     }
     if (!Object.values(FastenerKind).every((kind) => studios[kind])) {
@@ -80,6 +85,21 @@ export async function getFastenerSet(
         catalog: catalog.data,
         studios: studios as Record<FastenerKind, FastenerStudio>
     };
+}
+
+/** The feature's top connector, named as a fasten mate names its other: `<featureId>.<id>`. */
+function topConnectorId(
+    mateConnectorId: string | undefined,
+    feature: GeneratedFeature | undefined
+): string | undefined {
+    const bottom = feature?.mateConnector && `.${feature.mateConnector}`;
+    if (!mateConnectorId || !bottom || !feature.topMateConnector) {
+        return undefined;
+    }
+    if (!mateConnectorId.endsWith(bottom)) {
+        return undefined;
+    }
+    return `${mateConnectorId.slice(0, -bottom.length)}.${feature.topMateConnector}`;
 }
 
 function isKind(key: string | undefined): key is FastenerKind {

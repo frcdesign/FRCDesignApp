@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, screen } from "@testing-library/react";
+import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
     AssemblyJobState,
@@ -20,14 +20,16 @@ import {
 import { apiPost } from "../../../lib/api-client";
 import {
     FASTENER_SET_QUERY_KEY,
-    assemblyJobQueryKey
+    assemblyJobQueryKey,
+    pickCheckQueryKey
 } from "../../../lib/query-keys";
 import { FASTENER_SET } from "../../../../__test_utils__/fastener-set";
 import {
+    toSelectedEntities,
     useOnshapeSelection,
     type OnshapeSelection
 } from "../../../lib/selection";
-import { defaultChoices } from "../options";
+import { defaultChoices, fastenerOptions, settleChoices } from "../options";
 import { useAutoAssemblyStore } from "../store";
 import { useOnshapeLaunch } from "../../../lib/onshape-params";
 import { AutoAssemblyPanel } from "./auto-assembly-panel";
@@ -95,7 +97,8 @@ beforeEach(() => {
         targets: [],
         excluded: [],
         replaced: [],
-        stopFace: []
+        stopFace: [],
+        isSizeChosen: false
     });
 });
 
@@ -158,17 +161,18 @@ describe("AutoAssemblyPanel", () => {
         expect(useAutoAssemblyStore.getState().targets).toEqual([]);
     });
 
-    it("replaces the screws picked, selected by Screws", async () => {
+    it("replaces the screws picked, selected by Existing screws", async () => {
         renderPanel();
-        await choose("Select by", "Screws");
+        await choose("Select by", "Existing screws");
         // Screws to replace is the only list, so it takes picks
         expect(
             screen.queryByText("Circular edges", { selector: "p" })
         ).toBeNull();
         select({ ...face("S"), entityType: "BODY" });
         expect(screen.getByText("Screw 1")).toBeTruthy();
+        expect(screen.queryByRole("button", { name: "Insert" })).toBeNull();
 
-        await userEvent.click(insertButton());
+        await userEvent.click(screen.getByRole("button", { name: "Replace" }));
         expect(apiPost).toHaveBeenCalledWith("/auto-assembly/insert", {
             body: expect.objectContaining({
                 selectionMode: SelectionMode.SCREWS,
@@ -268,12 +272,85 @@ describe("AutoAssemblyPanel", () => {
         expect(screen.queryByLabelText("Fully threaded")).toBeNull();
     });
 
-    it("asks what to fasten with before what to fasten", () => {
+    it("sizes the screw by the first hole picked, until Size is chosen by hand", async () => {
+        const queryClient = createTestQueryClient();
+        renderPanel(queryClient);
+        await userEvent.click(
+            screen.getByText("Circular edges", { selector: "p" })
+        );
+        select({ ...face("E"), entityType: "EDGE" });
+        // What the panel sends the check, answered as a 1/4-20 hole
+        const settled = settleChoices(
+            FASTENER_SET,
+            useAutoAssemblyStore.getState()
+        );
+        queryClient.setQueryData(
+            pickCheckQueryKey({
+                assembly: ASSEMBLY,
+                selectionMode: SelectionMode.LOCATIONS,
+                targets: toSelectedEntities(
+                    useAutoAssemblyStore.getState().targets
+                ),
+                excluded: [],
+                replaced: [],
+                options: fastenerOptions(settled)
+            }),
+            { problems: [], holeSize: "QUARTER_20" }
+        );
+        await waitFor(() =>
+            expect(useAutoAssemblyStore.getState().screw.size).toBe(
+                "QUARTER_20"
+            )
+        );
+
+        await choose("Size", "#8-32");
+        useAutoAssemblyStore.getState().followHoleSize("QUARTER_20");
+        expect(useAutoAssemblyStore.getState().screw.size).toBe("NO_8_32");
+
+        // Free to follow again once a run starts
+        useAutoAssemblyStore.getState().finishRun();
+        useAutoAssemblyStore.getState().followHoleSize("QUARTER_20");
+        expect(useAutoAssemblyStore.getState().screw.size).toBe("QUARTER_20");
+    });
+
+    it("asks what to fasten before what to fasten with, each group folding from its header", async () => {
         renderPanel();
-        const headings = screen
-            .getAllByRole("heading")
-            .map((heading) => heading.textContent);
-        expect(headings).toEqual(["Fastener", "Selections"]);
+        const titles = [
+            "Selections",
+            "Fastener",
+            "Length",
+            "Add screw washer",
+            "Add nut",
+            "Add nut washer"
+        ].map((title) => screen.getByText(title, { selector: "p, label" }));
+        titles
+            .slice(1)
+            .forEach((title, index) =>
+                expect(
+                    titles[index].compareDocumentPosition(title) &
+                        Node.DOCUMENT_POSITION_FOLLOWING
+                ).toBeTruthy()
+            );
+
+        // Folded, its rows are hidden, not gone
+        const sizing = () =>
+            screen.queryByRole("textbox", { name: "Sizing" }) ??
+            screen.queryByRole("combobox", { name: "Sizing" });
+        expect(sizing()).toBeTruthy();
+        await userEvent.click(screen.getByText("Fastener", { selector: "p" }));
+        expect(sizing()).toBeNull();
+    });
+
+    it("ticks a group by its title, without folding it", async () => {
+        renderPanel();
+        const nut = () =>
+            screen.getByRole<HTMLInputElement>("checkbox", { name: "Add nut" });
+        const wasAdded = nut().checked;
+        await userEvent.click(
+            screen.getByText("Add nut", { selector: "label" })
+        );
+        expect(nut().checked).toBe(!wasAdded);
+        expect(useAutoAssemblyStore.getState().added.nut).toBe(!wasAdded);
     });
 
     it("has no screw washer under a flat head", () => {
@@ -282,7 +359,7 @@ describe("AutoAssemblyPanel", () => {
         expect(screen.queryByText("Add screw washer")).toBeNull();
     });
 
-    it("stops an automatic screw by the condition chosen, asked in the Fastener group, and a manual one not at all", async () => {
+    it("stops an automatic screw by the condition chosen, asked in its own group, and a manual one not at all", async () => {
         renderPanel();
         expect(screen.queryByLabelText("Max length")).toBeNull();
         expect(screen.getByLabelText("Max thread depth")).toBeTruthy();

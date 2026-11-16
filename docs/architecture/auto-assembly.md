@@ -74,8 +74,10 @@ interface SelectionState {
 interface SelectionChange {
     added: OnshapeSelection[];
     removed: OnshapeSelection[];
-    /** Onshape cleared a highlight the app made, as a click in its window does, so nothing is removed. */
+    /** Onshape cleared a highlight the app made, as a click in its window does. */
     isHighlightCleared: boolean;
+    /** Someone deselected part of a highlight the app made, which the list keeps. */
+    isDeselectRefused: boolean;
 }
 
 type PickHandler = (change: SelectionChange) => void;
@@ -84,8 +86,6 @@ interface QueryListProps {
     /** Unique on the page: which list takes picks. */
     id: string;
     label: string;
-    /** What to pick, in Onshape's message bubble when it's focused and when something else is picked. */
-    prompt: string;
     entities: OnshapeSelection[];
     onChange: (entities: OnshapeSelection[]) => void;
     /** Which picks it takes; the rest are refused. */
@@ -98,11 +98,13 @@ interface QueryListProps {
     rowSection?: (entity: OnshapeSelection) => ReactNode;
     /** Takes picks whenever no list does, as a form's first list should. */
     autoFocus?: boolean;
+    /** Red while it has no picks, as Onshape marks a required query. */
+    required?: boolean;
     /** What's wrong with a row: shown under it, in its status's color. */
     problem?: (entity: OnshapeSelection) => RowProblem | undefined;
     /** Whether the rows' problems are being worked out, shown by a spinner beside Clear. */
     isChecking?: boolean;
-    /** Takes picks from what the Onshape window has selected without limiting or prompting for them, until clicked. */
+    /** Takes picks from what the Onshape window has selected without limiting them, until clicked. */
     isPassive?: boolean;
 }
 
@@ -131,9 +133,15 @@ function fastenerOptions(settled: SettledChoices): FastenerOptions;
 interface AutoAssemblyState extends Choices {
     targets: OnshapeSelection[];
     excluded: OnshapeSelection[];
+    /** Whether Size was chosen by hand since the last run; until then it follows the first hole picked. */
+    isSizeChosen: boolean;
     setForm: (id: FormInput, value: string) => void;
     setMode: (mode: FastenerMode) => void;
     setScrew: (id: string, value: string) => void;
+    /** Size as the hole picked is made for, unless it was chosen by hand. */
+    followHoleSize: (size: string) => void;
+    /** Picks cleared and Size free to follow holes again, after a run starts. */
+    finishRun: () => void;
     setPart: (part: Part, id: string, value: string) => void;
     setAdded: (part: Part, added: boolean) => void;
     setTargets: (targets: OnshapeSelection[]) => void;
@@ -178,15 +186,15 @@ enum Part {
 
 `src/frontend/features/auto-assembly/components/auto-assembly-panel.tsx`,
 `src/frontend/features/auto-assembly/components/fastener-options-form.tsx`,
-`src/frontend/features/auto-assembly/components/parameter-group.tsx` and
+`src/frontend/components/parameter-group.tsx` and
 `src/frontend/components/parameter-input.tsx`
 
 ```ts
 // The last run, the Selections group, the options, and Insert.
 function AutoAssemblyPanel(props: AutoAssemblyPanelProps): ReactNode;
-// The Fastener group, a group per washer and the nut, and the stop condition.
+// The Fastener and Length groups, and a group per washer and the nut.
 function FastenerOptionsForm(props: FastenerOptionsFormProps): ReactNode;
-// Onshape's parameter groups, opened or driven by a checkbox.
+// Onshape's parameter groups, as unstyled accordions: each folds from its header, and may be driven by a checkbox its title ticks.
 function ParameterGroup(props: ParameterGroupProps): ReactNode;
 
 interface AutoAssemblyPanelProps {
@@ -199,7 +207,7 @@ interface FastenerOptionsFormProps {
 
 interface ParameterGroupProps {
     title: string;
-    /** A checkbox in its header, which shows its rows while ticked. */
+    /** A checkbox in its header, as an Onshape feature's: unticked, its rows are gone. */
     checked?: boolean;
     onCheckedChange?: (checked: boolean) => void;
     children?: ReactNode;
@@ -339,6 +347,8 @@ interface PlannedHole {
     status: HoleStatus;
     /** Why it can't be fastened, in words, when it can't. */
     reason?: string;
+    /** The screw size the hole is made for, where it's one the catalog has. */
+    madeFor?: string;
     /** What's off about how it's fastened, in words: a screw that doesn't fit as it should, or no nut. */
     warning?: string;
     end?: HoleEnd;
@@ -406,7 +416,9 @@ enum HoleStatus {
     /** A library screw is already in it. */
     FASTENED = "fastened",
     /** Nothing in the catalog fits, or reaches far enough within the maximum length. */
-    NO_FIT = "no-fit"
+    NO_FIT = "no-fit",
+    /** A hole in a face picked, made for another size than the run's screw: left alone. */
+    SKIPPED = "skipped"
 }
 
 enum HoleEnd {
@@ -587,8 +599,18 @@ function planHoles(
     placed: PlacedScrew[],
     options: FastenerOptions,
     catalog: Catalog,
-    stopPlane?: AssemblyPlane
+    context?: PlanContext
 ): HolePlan[];
+// The size a hole is made for: its threads, or the size it's a clearance or tap drill of.
+function holeSize(
+    hole: AssemblyHole,
+    catalog: Catalog
+): CatalogSize | undefined;
+
+interface PlanContext {
+    /** The plane `StopCondition.FACE` stops at. */
+    stopPlane?: AssemblyPlane;
+}
 function getLengths(
     catalog: Catalog,
     vendor: string,
@@ -634,6 +656,8 @@ interface AssemblyCircularEdge {
     /** Unit, out of the part: a fastener goes in against it. */
     normal: Vec3;
     radius: number;
+    /** One of a face's circular edges, rather than one picked itself. */
+    isFromFace?: boolean;
 }
 
 interface AssemblyHole {
@@ -705,6 +729,8 @@ interface FastenerStudio {
     location: StudioLocation;
     /** What a fasten mate names its mate connector by, as the studio's load found it. */
     mateConnectorId?: string;
+    /** What a fasten mate names the connector on its top by, where a screw or nut sits on a washer. */
+    topMateConnectorId?: string;
 }
 
 interface CatalogVendor {
@@ -826,18 +852,13 @@ function insertGroups(
     set: FastenerSet,
     parts: PartPlacement[]
 ): { instances: object[]; transform: number[] }[];
-async function washerTopEdges(
-    client: OnshapeApi,
-    kv: KVNamespace,
-    set: FastenerSet,
-    parts: PartPlacement[]
-): Promise<Record<number, string>>;
+// On a hole's edge, or a washer's top connector.
 function partMate(
     part: PartPlacement,
     path: string[],
     connectorId: string,
     paths: (string[] | undefined)[],
-    washerEdges: Record<number, string>
+    washerTopConnectorId: string
 ): object | undefined;
 
 interface PartPlacement {
@@ -965,16 +986,18 @@ closes the menu and switches to the page.
    and from Onshape is logged at debug level ("Sent to Onshape", "Received from
    Onshape"), and `window.sendToOnshape(message)` sends one by hand from the
    browser console, addressed to the launching element.
-2. Clicking a `QueryList` focuses it (one at a time, `useOnshapeSelection`) and
-   shows its prompt in Onshape's bubble. A form's first list is `autoFocus`:
+2. Clicking a `QueryList` focuses it (one at a time, `useOnshapeSelection`)
+   and starts selecting with it, whatever it holds. A form's first list is
+   `autoFocus`:
    focused on mount, and again whenever no list is, as when the focused list
    unmounts; here that's **Faces** or **Circular edges**. Once the person
    finishes selecting (below), no list is focused until one is clicked. A
-   passive list (`isPassive`) listens without limiting or prompting until it's
+   passive list (`isPassive`) listens without limiting picks until it's
    clicked (`activate`), and listens again once the person finishes. The focused list adds
-   what's picked of the kind it takes, drops what's deselected, and repeats its
-   prompt in the bubble for anything else picked. The panel shows no prompt of
-   its own. With no list focused, the selection is ignored. A list is named
+   what's picked of the kind it takes, and drops what's deselected. No list
+   sends Onshape a message for its bubble: the bubble falls out of step with the
+   panel, since nothing clears it when the focused list changes. With no list
+   focused, the selection is ignored. A list is named
    inside its box, as Onshape's query parameters are. While the background
    check works out its rows' problems, a spinner shows beside **Clear**
    (`isChecking`).
@@ -988,29 +1011,39 @@ closes the menu and switches to the page.
    window's selection, and Onshape shows what's picked under it, so nothing is
    sent as picks arrive. As a list is focused, as any list shows or hides
    (`bumpLayout`), and once its picks are cleared (by **Clear**, removing its
-   last row, or the form), the focused list puts its prompt in the bubble
-   again and asks for the filter, or, holding picks, lights them up instead.
+   last row, or the form), the focused list asks for the filter again, or,
+   holding picks and not clicked, lights them up instead.
    Losing focus or unmounting sends
    `stopRequest`. Every stop names the request it ends by its `messageId`,
    which Onshape answers as `stoppedRequestId`.
 
-    While a request is live (`filtering`), a bar along the bottom of the panel
-    says selections are filtered (`SelectionBar`). Its **Finish selecting**
-    button unfocuses the list (`finishSelecting`), which stops the request.
+    While a request is live (`filtering`), Mantine's `ActionBar` floats over
+    the bottom of the panel naming the list limiting picks
+    (`SelectingActionBar`, `listLabel`). Its **Stop selecting** button, and
+    its close button, unfocus the list (`finishSelecting`), which stops the
+    request.
 
 4. Hovering a row, in any list, lights its entity up alone
    (`requestSelectionHighlight`, which makes it what the Onshape window shows
    selected, each with its own message id). Moving between rows lights each
-   alone; leaving the rows lights the focused list's picks up
-   (`focusedPicks`), or nothing with no list focused. Removing a row lights
-   the rest up. A highlight cancels any pending selection request, and a
-   request clears what the window shows, so the filter stays off after a
-   hover until the focused list is clicked again, which asks for it again.
-5. A click in the Onshape window clears a highlight, which reads as every
-   highlighted entity deselected at once. Until Onshape can resume a selection,
-   a change after a highlight that removes more than one entity removes
-   nothing (`isHighlightCleared`): the focused list keeps its picks, takes
-   any new one, and lights them all up again.
+   alone. A highlight cancels a pending selection request in Onshape, so a
+   hover pauses selecting without ending it: the action bar stays, and
+   leaving the rows sends the focused list's request again
+   (`showFocused`, `resumeSelecting`). A focused list that isn't selecting has
+   its picks lit up instead, and nothing lights up with no list focused.
+   Removing a row lights the rest up.
+5. While the window shows the app's highlight (`isHighlighted`), its
+   selection messages never remove picks, and what the app highlighted since
+   its last request (`highlightedKeys`) is never taken as a pick. Onshape can
+   answer a fast mouse's highlights late and out of order, which would read
+   as picks deselected and others picked. A click in its window that clears
+   the highlight (`isHighlightCleared`) keeps the picks, takes any new one,
+   and lights them all up again, until Onshape can resume a selection.
+   Deselecting part of the highlight in Onshape is refused the same way
+   (`isDeselectRefused`): the list keeps the pick, lights its picks up again,
+   and a toast says why. It counts as a deselection only when some of the
+   highlight left, nothing came, and the highlight is more than a second old,
+   so Onshape's own late answers don't.
 
 ### The form
 
@@ -1019,26 +1052,42 @@ The panel first reads the fasteners the library loaded (`useFastenerSetQuery`,
 loaded them it says so, and offers nothing to insert.
 
 The panel is a `ParameterGrid` of the configuration dialog's own inputs
-(`ParameterInput`), in groups under plain headings (`ParameterGroup`):
+(`ParameterInput`), in groups (`ParameterGroup`), as an Onshape feature
+dialog's are. A group is an unstyled accordion, like `AppSection`'s:
 
-1. **Fastener**: Program, then the screw studio's Vendor, Size, Head and
-   Finish, then _Sizing_ in place of its Length: **Automatic** (the default)
+- Its whole header row highlights on hover and folds the group.
+- The chevron sits at the row's end.
+- A checkbox sits beside the title, not in a button. Clicking the title ticks
+  the checkbox rather than folding.
+
+The groups:
+
+1. **Selections**, first, so the picks can decide the screw: _Select by_
+   (Circular edges, the default, Faces, or Existing screws), and its query
+   lists, the first focused.
+2. **Fastener**: Program, then the screw studio's Vendor, Size, Head and
+   Finish. Then comes _Sizing_ in place of its Length: **Automatic** (the default)
    picks a length for each hole, and **Manual** shows the studio's Length, and,
-   beside a length sold both ways, its Fully threaded. Sized automatically, it
-   goes on with _Stop condition_ (**All holes**, the default; **Max length**
-   with _Max length_; or **Face** with _Face to stop at_, a query list of one
-   planar face, where a new pick takes the old one's place), then _Max thread
-   depth_.
-2. **Add screw washer**, **Add nut** and **Add nut washer**, each a group its
-   checkbox shows: the washer or nut studio's parameters but its Size, which is
+   beside a length sold both ways, its Fully threaded.
+3. **Length**, only when sized automatically: _Stop condition_ (**All holes**,
+   the default; **Max length** with _Max length_; or **Face** with _Face to
+   stop at_), then _Max thread depth_. _Face to stop at_ is a query list of one
+   planar face, where a new pick takes the old one's place. It's required:
+   red while empty.
+4. **Add screw washer**, **Add nut** and **Add nut washer**, each a group its
+   checkbox drives, whose rows are there only while ticked: the washer or nut studio's parameters but its Size, which is
    the screw's. A washer's Vendor offers those making it in that size, and is
    left out under a Generic screw, whose washers are Generic; a nut has none,
    since one vendor makes them all. Like every studio input, a washer's Type and
    Finish show only where there's a choice, so a Generic washer, one in each
    size, shows its checkbox alone. The screw washer is gone under a countersunk
    head, and the nut washer without a nut.
-3. **Selections**, last: _Select by_ (Circular edges, the default, Faces, or
-   Screws), and its query lists, the first focused.
+
+Size follows the holes picked, as an Onshape feature's editing logic sets one
+input from another. Each check answers the size the first hole picked is made
+for (`holeSize`), and the panel sets Size to it (`followHoleSize`). It stops
+once Size is chosen by hand (`isSizeChosen`). A run starting frees it again
+(`finishRun`).
 
 The studios' parameters are their configurations as Onshape answers them,
 parsed by `parseOnshapeConfiguration`, so their options show as the Part
@@ -1060,12 +1109,13 @@ _Select by_ decides what the picks are:
   is skipped.
 - **Faces** — every circular edge of each planar face is a hole to fasten;
   _Edges to exclude_ takes the edges of holes in them to leave out.
-- **Screws** — _Screws to update_ takes library screws already in the
+- **Existing screws** — _Screws to update_ takes library screws already in the
   assembly, as whole solid parts (`SOLID_BODIES`), each row named "Screw {n}";
   the run decides which picks are screws.
 
 A run takes one kind: only the lists Select by shows are sent, and changing
-Select by clears every pick. Insert needs a pick, and, under the Face stop
+Select by clears every pick. The button reads Replace for existing screws and
+Insert otherwise. It needs a pick, and, under the Face stop
 condition, a face to stop at; manual sizing sends **All holes**, whatever the
 hidden stop condition says.
 
@@ -1089,6 +1139,8 @@ options (`planHoles`), and answers each pick's problem (`pickProblems` in
 `check.ts`, keyed by `pickKey`, as the client keys its rows):
 
 - a target that gave no circular edge: why, as a run reports it;
+- a face none of whose holes is made for the screw's size, as an error. A
+  face's holes of another size are left out of the rest;
 - a hole that won't plan ready, as an error: its plan's reason; a face, how
   many of its holes won't, and the first reason;
 - a hole that plans ready with a warning, as a warning; a face, how many of its
@@ -1098,6 +1150,10 @@ options (`planHoles`), and answers each pick's problem (`pickProblems` in
 - a hole to skip that isn't a hole in the faces picked;
 - a screw to update that isn't one, or whose hole won't plan ready;
 - a face to stop at whose part is gone, or that isn't planar.
+
+It also answers `holeSize`: the size the first hole picked is made for, from
+the targets, then the screws to update (`pickedHoleSize`). Size follows it in
+the form.
 
 Nothing picked asks Onshape nothing. FTC, or parts the catalog doesn't make,
 is checked without planning. The last check's marks stay while the next goes,
@@ -1156,9 +1212,14 @@ recorded with why, and the steps after it are skipped.
        head:
         1. A library screw already on its axis, seated there: **fastened**.
         2. Every hole on the axis, nearest first. The first must start at the
-           circular edge (or within a flat head's countersink of it), and be at
-           least the size's major diameter across.
-        3. Follow the holes (`followStack`): into a hole tapped for the size
+           circular edge (or within a flat head's countersink of it).
+        3. The size the first hole is made for (`holeSize`): its threads'
+           size, else the size it's a clearance of (from the major diameter to
+           a little past free clearance), else the size it's a tap drill of.
+           Every plan from here carries it (`madeFor`). A face's hole made for
+           another size is **skipped**.
+        4. The first hole must be at least the screw's major diameter across.
+        5. Follow the holes (`followStack`): into a hole tapped for the size
            (threads, or a hole at its tap drill narrower than the screw), to the
            bottom of a blind hole, or out the far side, across any gap. **All
            holes** stops past the vendor's longest screw; **Max length** past
@@ -1166,9 +1227,9 @@ recorded with why, and the steps after it are skipped.
            the axis meets the face's plane, no farther than the longest screw,
            and gives a hole whose axis meets it behind the circular edge, or
            never, no screw.
-        4. Washers (`chooseWashers`): the screw washer chosen, never under a
+        6. Washers (`chooseWashers`): the screw washer chosen, never under a
            flat head; the nut washer only under a nut.
-        5. Length (`pickScrew`), from the lengths the vendor makes the size
+        7. Length (`pickScrew`), from the lengths the vendor makes the size
            and head in, in the finish chosen (`getLengths`; within the maximum
            length under **Max length**), partly threaded; preset, only the chosen
            length, fully threaded if chosen:
@@ -1188,7 +1249,7 @@ recorded with why, and the steps after it are skipped.
               bottoms out; past the maximum thread depth; or too short, and how
               far it goes in. Lengths in messages are inches for FRC and
               millimetres for FTC (`formatDistance`).
-        6. The nut chosen, only out the far side, with the far side's circular
+        8. The nut chosen, only out the far side, with the far side's circular
            edge and its radius.
     7. Stores each hole's plan with the status, and each pick with the problem
        the check would mark it with (`runPicks`, from `pickProblems`). With any
@@ -1210,18 +1271,15 @@ recorded with why, and the steps after it are skipped.
    answers it, then, once fastening ends, whether it was mated.
 4. **Fasten parts**:
     1. Takes each studio's mate connector id from its load
-       (`FastenerStudio.mateConnectorId`, the insertable's fasten info); with
-       one missing, the step fails.
-    2. Scans the washer studio in each configuration placed, for its top edge
-       (`washerTopEdge`): its hole's circular edge farthest up its Z axis
-       (`washer-edges`).
-    3. Adds one fasten mate per part, one at a time (`mate-{n}`): its mate
-       connector to an implicit connector at the center of what it sits on
-       (`fastenMateToCircularEdge`, as insert and fasten mates). A washer is
-       fastened to its stack's hole edge, and the screw or nut on it to the
-       washer's top edge; without a washer, the screw or nut is fastened to the
-       hole edge itself.
-    4. With fewer parts fastened than inserted, the step finishes with a
+       (`FastenerStudio.mateConnectorId`, the insertable's fasten info), and
+       the washer's top connector (`topMateConnectorId`, from the manifest).
+       With one missing, the step fails.
+    2. Adds one fasten mate per part, one at a time (`mate-{n}`). A washer,
+       or a screw or nut on no washer, is fastened to an implicit connector at
+       the center of its hole's edge (`fastenMateToCircularEdge`, as insert and
+       fasten mates). A screw or nut on a washer is fastened to the washer's
+       top connector, connector to connector.
+    3. With fewer parts fastened than inserted, the step finishes with a
        warning saying how many sit unmated.
 5. **Record inserts** (`record-inserts`), once fastening has ended however it
    ended: each part inserted is recorded as an insert from its studio's
@@ -1274,8 +1332,8 @@ In [strings/auto-assembly.md](../strings/auto-assembly.md).
   its vendor makes.
 - A hole's parts are two stacks, each held together by its own mates: a washer
   is fastened to its stack's hole edge, the screw or nut on it to the washer's
-  top edge, and without a washer the screw or nut to the hole edge. No mate has
-  an offset, and any washer fits. The studios have no Washer input.
+  top connector, and without a washer the screw or nut to the hole edge. No mate
+  has an offset, and any washer fits. The studios have no Washer input.
 - Every ready hole gets its own parts and mates, a hole with a warning
   included; a hole with an error gets none.
 - A pick's problem in a run is the one the check marks it with: both come from
@@ -1323,6 +1381,10 @@ In [strings/auto-assembly.md](../strings/auto-assembly.md).
   highlighted, which would empty the focused list. Taking a change that
   removes more than one entity at once as that click is a stopgap until
   Onshape offers a way to resume one.
+- **A washer's top is a mate connector.** The washer's feature makes one on
+  its top face, which the manifest names. A screw or nut fastens to it
+  directly, so nothing has to find the washer's top edge by scanning its Part
+  Studio, which broke mates and cost an Onshape call per configuration.
 - **A hole with a screw already is a warning, not an error.** The run leaves
   it alone and fastens the rest of the face, so there's nothing to fix.
 - **Picks are checked as they're made, in Onshape.** Whether an edge is a
@@ -1411,9 +1473,11 @@ In [strings/auto-assembly.md](../strings/auto-assembly.md).
 - **Sizing is its own input.** Automatic and Manual are a choice of their own
   beside the screw's Length, so switching back is in sight whatever length is
   chosen.
-- **The size is chosen, even in automatic mode.** A clearance hole fits more
+- **One size per run, set from the first hole.** A clearance hole fits more
   than one size, and a hole at 0.201" is both #10's clearance and 1/4-20's tap
-  drill; the person knows which they meant. Automatic picks the length.
+  drill, so a per-hole size can guess wrong. Size follows the first hole picked
+  until it's chosen by hand, the way Onshape's editing logic fills one input
+  from another. The person sees the guess and can change it.
 - **Every scan is sent the picked ids, not a `queries` body.** The lambda is
   wrapped to build its queries from `qTransient`, whose form std documents.
 

@@ -1,5 +1,5 @@
 import { Button, Stack } from "@mantine/core";
-import { type ReactNode, useMemo } from "react";
+import { type ReactNode, useEffect, useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { Program } from "@backend/features/auto-assembly/catalog";
 import {
@@ -47,7 +47,10 @@ import { useAutoAssemblyStore } from "../store";
 import { FastenerOptionsForm, FormInputRow } from "./fastener-options-form";
 import { LastRunCallout } from "./last-run-callout";
 import { m } from "../../../paraglide/messages";
-import { FullWidthRow, ParameterGroup } from "./parameter-group";
+import {
+    FullWidthRow,
+    ParameterGroup
+} from "../../../components/parameter-group";
 
 interface AutoAssemblyPanelProps {
     assembly: ElementPath;
@@ -102,6 +105,10 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
     const setTargets = useAutoAssemblyStore((state) => state.setTargets);
     const setExcluded = useAutoAssemblyStore((state) => state.setExcluded);
     const setReplaced = useAutoAssemblyStore((state) => state.setReplaced);
+    const followHoleSize = useAutoAssemblyStore(
+        (state) => state.followHoleSize
+    );
+    const finishRun = useAutoAssemblyStore((state) => state.finishRun);
     const { data: job } = useAssemblyJobQuery(assembly);
     const insertMutation = useInsertMutation(assembly);
     const settled = useMemo(() => settleChoices(set, choices), [set, choices]);
@@ -138,7 +145,14 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
                   },
         [assembly, mode, isFtc, settled, picks, pickCount]
     );
-    const { problems, isChecking } = usePickProblems(checkBody);
+    const { problems, holeSize, isChecking } = usePickProblems(checkBody);
+
+    // Size follows the first hole picked until it's chosen by hand, as an Onshape feature's editing logic does
+    useEffect(() => {
+        if (holeSize) {
+            followHoleSize(holeSize);
+        }
+    }, [holeSize, followHoleSize]);
 
     const isRunning = job?.state === AssemblyJobState.RUNNING;
     const problem = (entity: OnshapeSelection) =>
@@ -151,24 +165,13 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
             ...picks,
             options: fastenerOptions(settled)
         };
-        insertMutation.mutate(body, {
-            onSuccess: () => {
-                setTargets([]);
-                setExcluded([]);
-                setReplaced([]);
-            }
-        });
+        insertMutation.mutate(body, { onSuccess: finishRun });
     };
 
     return (
         <Stack gap="md" p="md">
             <LastRunCallout assembly={assembly} />
             <ParameterGrid>
-                <FastenerOptionsForm
-                    settled={settled}
-                    problem={problem}
-                    isChecking={isChecking}
-                />
                 <ParameterGroup title={m.autoAssemblySelections()}>
                     <FormInputRow id={FormInput.SELECT_BY} settled={settled} />
                     {mode === SelectionMode.FACES && (
@@ -178,7 +181,6 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
                                     id="auto-assembly-faces"
                                     autoFocus
                                     label={m.autoAssemblyFaces()}
-                                    prompt={m.autoAssemblyFacesPrompt()}
                                     entities={targets}
                                     onChange={setTargets}
                                     accepts={isFace}
@@ -191,7 +193,6 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
                                 <QueryList
                                     id="auto-assembly-excluded"
                                     label={m.autoAssemblyEdgesToExclude()}
-                                    prompt={m.autoAssemblyEdgesToExcludePrompt()}
                                     entities={excluded}
                                     onChange={setExcluded}
                                     accepts={isEdge}
@@ -208,7 +209,6 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
                                 id="auto-assembly-locations"
                                 autoFocus
                                 label={m.autoAssemblyCircularEdges()}
-                                prompt={m.autoAssemblyCircularEdgesPrompt()}
                                 entities={targets}
                                 onChange={setTargets}
                                 accepts={isEdge}
@@ -224,7 +224,6 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
                                 id="auto-assembly-replaced"
                                 autoFocus
                                 label={m.autoAssemblyScrewsToUpdate()}
-                                prompt={m.autoAssemblyScrewsToUpdatePrompt()}
                                 entities={replaced}
                                 onChange={setReplaced}
                                 accepts={isBody}
@@ -238,6 +237,11 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
                         </FullWidthRow>
                     )}
                 </ParameterGroup>
+                <FastenerOptionsForm
+                    settled={settled}
+                    problem={problem}
+                    isChecking={isChecking}
+                />
             </ParameterGrid>
             <Button
                 disabled={
@@ -250,7 +254,7 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
                 loading={insertMutation.isPending}
                 onClick={insert}
             >
-                {m.autoAssemblyInsert()}
+                {isScrews ? m.autoAssemblyReplace() : m.autoAssemblyInsert()}
             </Button>
         </Stack>
     );

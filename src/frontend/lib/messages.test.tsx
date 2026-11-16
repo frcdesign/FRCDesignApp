@@ -57,7 +57,8 @@ describe("useMessageListener", () => {
         expect(picked).toHaveBeenCalledWith({
             added: picks,
             removed: [],
-            isHighlightCleared: false
+            isHighlightCleared: false,
+            isDeselectRefused: false
         });
     });
 
@@ -67,7 +68,8 @@ describe("useMessageListener", () => {
         expect(picked).toHaveBeenLastCalledWith({
             added: [],
             removed: picks,
-            isHighlightCleared: false
+            isHighlightCleared: false,
+            isDeselectRefused: false
         });
     });
 
@@ -84,17 +86,19 @@ describe("useMessageListener", () => {
         expect(picked).toHaveBeenLastCalledWith({
             added: picks,
             removed: [],
-            isHighlightCleared: false
+            isHighlightCleared: false,
+            isDeselectRefused: false
         });
         answer([]);
         expect(picked).toHaveBeenLastCalledWith({
             added: [],
             removed: picks,
-            isHighlightCleared: false
+            isHighlightCleared: false,
+            isDeselectRefused: false
         });
     });
 
-    it("follows a highlight's answers too, past what it lit up", () => {
+    it("follows a highlight's answers too, taking the window cleared as clearing the highlight", () => {
         const answer = (rest: object) =>
             post({
                 messageName: "REQUESTED_SELECTION_HIGHLIGHT",
@@ -110,8 +114,9 @@ describe("useMessageListener", () => {
         answer({ selections: [] });
         expect(picked).toHaveBeenCalledWith({
             added: [],
-            removed: picks,
-            isHighlightCleared: false
+            removed: [],
+            isHighlightCleared: true,
+            isDeselectRefused: false
         });
     });
 
@@ -129,7 +134,29 @@ describe("useMessageListener", () => {
         expect(picked).toHaveBeenCalledWith({
             added: [],
             removed: [],
-            isHighlightCleared: true
+            isHighlightCleared: true,
+            isDeselectRefused: false
+        });
+    });
+
+    it("refuses a deselection from a highlight well after it's shown", () => {
+        const both = [edge, { ...edge, selectionId: "JHE" }];
+        expectSelection(
+            both.map(({ entityType, selectionId, occurrencePath }) => ({
+                entityType,
+                selectionId,
+                occurrencePath
+            }))
+        );
+        post({ messageName: "SELECTION", selections: both });
+        // A person takes a while; Onshape's own answers come at once
+        useOnshapeSelection.setState({ highlightedAt: 0 });
+        post({ messageName: "SELECTION", selections: [edge] });
+        expect(picked).toHaveBeenLastCalledWith({
+            added: [],
+            removed: [],
+            isHighlightCleared: false,
+            isDeselectRefused: true
         });
     });
 
@@ -165,7 +192,7 @@ describe("useMessageListener", () => {
         });
     });
 
-    it("takes nothing that a highlight made Onshape select", () => {
+    it("takes nothing that a highlight made Onshape select, nor drops what leaves it", () => {
         post({ messageName: "SELECTION", selections: [edge] });
         picked.mockClear();
         expectSelection(picks);
@@ -174,11 +201,14 @@ describe("useMessageListener", () => {
         post({ messageName: "SELECTION", selections: [edge] });
         expect(picked).not.toHaveBeenCalled();
 
+        // Shown again, as a late answer to it would: not a pick
         post({ messageName: "SELECTION", selections: [] });
-        expect(picked).toHaveBeenCalledWith({
+        post({ messageName: "SELECTION", selections: [edge] });
+        expect(picked).toHaveBeenLastCalledWith({
             added: [],
-            removed: picks,
-            isHighlightCleared: false
+            removed: [],
+            isHighlightCleared: false,
+            isDeselectRefused: false
         });
     });
 });

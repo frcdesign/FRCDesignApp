@@ -13,6 +13,7 @@ import {
 import {
     type AssemblyCircularEdge,
     type AssemblyHole,
+    holeSize,
     planHoles,
     type PlacedScrew
 } from "./planner";
@@ -276,7 +277,12 @@ describe("planHoles", () => {
                     [],
                     options({ stop: StopCondition.FACE }),
                     FASTENER_SET.catalog,
-                    { point: [1, 1, -depth * INCH], normal: [0, 0, 1] }
+                    {
+                        stopPlane: {
+                            point: [1, 1, -depth * INCH],
+                            normal: [0, 0, 1]
+                        }
+                    }
                 );
                 return only.planned;
             };
@@ -296,6 +302,57 @@ describe("planHoles", () => {
             const { planned } = plan(deep);
             expect(planned.status).toBe(HoleStatus.NO_FIT);
             expect(planned.reason).toMatch(/maximum length/);
+        });
+    });
+
+    describe("hole sizes", () => {
+        const sizeOf = (diameter: number, extra: Partial<AssemblyHole> = {}) =>
+            holeSize(
+                hole("top", 0, 0.25, diameter, extra),
+                FASTENER_SET.catalog
+            )?.id;
+
+        it("takes a hole for the size it's a clearance, threads or tap drill of", () => {
+            expect(sizeOf(0.201)).toBe("NO_10_32");
+            expect(sizeOf(0.196)).toBe("NO_10_32");
+            expect(sizeOf(0.257)).toBe("QUARTER_20");
+            // #10-32's tap drill, which is too small for a #6's clearance
+            expect(sizeOf(0.159)).toBe("NO_10_32");
+            expect(
+                sizeOf(0.15, { threaded: true, majorDiameter: 0.19 * INCH })
+            ).toBe("NO_10_32");
+            expect(sizeOf(0.5)).toBeUndefined();
+        });
+
+        const fromFace = (holes: AssemblyHole[]) => {
+            const [only] = planHoles(
+                [{ ...CIRCULAR_EDGE, isFromFace: true }],
+                holes,
+                [],
+                options(),
+                FASTENER_SET.catalog
+            );
+            return only.planned;
+        };
+        const quarter = [
+            hole("top", 0, 0.25, 0.257),
+            hole("bottom", 0.25, 0.5, 0.257)
+        ];
+
+        it("skips a face's hole made for another size", () => {
+            expect(fromFace(quarter).status).toBe(HoleStatus.SKIPPED);
+            expect(fromFace(TWO_PLATES).status).toBe(HoleStatus.READY);
+            expect(fromFace([hole("top", 0, 0.25, 0.5)]).status).toBe(
+                HoleStatus.SKIPPED
+            );
+        });
+
+        it("tags each plan with the size its hole is made for", () => {
+            expect(fromFace(quarter).madeFor).toBe("QUARTER_20");
+            expect(fromFace(TWO_PLATES).madeFor).toBe("NO_10_32");
+            expect(fromFace([hole("top", 0, 0.25, 0.5)]).madeFor).toBe(
+                undefined
+            );
         });
     });
 

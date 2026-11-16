@@ -49,7 +49,8 @@ async function storeStudios(kinds = Object.values(FastenerKind)) {
             versionId: "libv",
             isGenerated: true,
             fastenInfo: {
-                mateConnectorId: `${kind}MC`,
+                // As a load names what the studio's feature made
+                mateConnectorId: `${kind}-feature.mateConnector`,
                 mateLocation: MateLocation.Feature,
                 path: []
             }
@@ -70,7 +71,27 @@ describe("getFastenerSet", () => {
     it("reads the catalog a load stored and each kind's loaded studio", async () => {
         await storeCatalog();
         await storeStudios();
-        expect(await getFastenerSet(db, TEST_LIBRARY_ID)).toEqual(FASTENER_SET);
+        const studios = Object.fromEntries(
+            Object.values(FastenerKind).map((kind) => {
+                const studio = FASTENER_SET.studios[kind];
+                return [
+                    kind,
+                    {
+                        ...studio,
+                        mateConnectorId: `${kind}-feature.mateConnector`,
+                        // The washer's top connector, under the same feature
+                        topMateConnectorId:
+                            kind === FastenerKind.WASHER
+                                ? "washer-feature.topMateConnector"
+                                : undefined
+                    }
+                ];
+            })
+        );
+        expect(await getFastenerSet(db, TEST_LIBRARY_ID)).toEqual({
+            ...FASTENER_SET,
+            studios
+        });
     });
 
     it("is undefined until a load has stored the catalog and every studio", async () => {
@@ -105,7 +126,8 @@ describe("getFastenerSet", () => {
             {
                 elementId: "washerStudio",
                 type: "fastenerWasher",
-                mateConnector: "mateConnector"
+                mateConnector: "mateConnector",
+                topMateConnector: "topMateConnector"
             }
         ]);
     });

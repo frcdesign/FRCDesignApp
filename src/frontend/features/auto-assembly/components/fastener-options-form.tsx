@@ -33,7 +33,10 @@ import {
     SIZING_PARAMETER
 } from "../parameters";
 import { useAutoAssemblyStore } from "../store";
-import { FullWidthRow, ParameterGroup } from "./parameter-group";
+import {
+    FullWidthRow,
+    ParameterGroup
+} from "../../../components/parameter-group";
 import { m } from "../../../paraglide/messages";
 
 interface FormInputRowProps {
@@ -64,8 +67,8 @@ interface FastenerOptionsFormProps {
 }
 
 /**
- * Which fastener goes in each hole, in a `ParameterGrid`: the screw and,
- * sized automatically, where it stops, then a group for each washer and the nut.
+ * Which fastener goes in each hole, in a `ParameterGrid`: the screw, where an
+ * automatic screw stops, then a group for each washer and the nut.
  */
 export function FastenerOptionsForm(
     props: FastenerOptionsFormProps
@@ -84,20 +87,18 @@ export function FastenerOptionsForm(
                         </Text>
                     </FullWidthRow>
                 ) : (
-                    <>
-                        <ScrewInputs settled={settled} />
-                        {settled.mode === FastenerMode.AUTOMATIC && (
-                            <StopInputs
-                                settled={settled}
-                                problem={problem}
-                                isChecking={isChecking}
-                            />
-                        )}
-                    </>
+                    <ScrewInputs settled={settled} />
                 )}
             </ParameterGroup>
             {!isFtc && (
                 <>
+                    {settled.mode === FastenerMode.AUTOMATIC && (
+                        <StopGroup
+                            settled={settled}
+                            problem={problem}
+                            isChecking={isChecking}
+                        />
+                    )}
                     {!isCountersunk(settled.set, settled.screw.head) && (
                         <PartGroup
                             part={Part.SCREW_WASHER}
@@ -255,14 +256,14 @@ function PartGroup(props: PartGroupProps): ReactNode {
     );
 }
 
-interface StopInputsProps {
+interface StopGroupProps {
     settled: SettledChoices;
     problem: (entity: OnshapeSelection) => RowProblem | undefined;
     isChecking: boolean;
 }
 
 /** Where an automatic screw stops, and how deep into threads it goes. */
-function StopInputs(props: StopInputsProps): ReactNode {
+function StopGroup(props: StopGroupProps): ReactNode {
     const { settled, problem, isChecking } = props;
     const stopFace = useAutoAssemblyStore((state) => state.stopFace);
     const setStopFace = useAutoAssemblyStore((state) => state.setStopFace);
@@ -270,7 +271,7 @@ function StopInputs(props: StopInputsProps): ReactNode {
         settled.form[FormInput.STOP] === StopCondition.MAX_LENGTH;
     const isFace = settled.form[FormInput.STOP] === StopCondition.FACE;
     return (
-        <>
+        <ParameterGroup title={m.autoAssemblyLength()}>
             <FormInputRow id={FormInput.STOP} settled={settled} />
             {isMaxLength && (
                 <FormInputRow id={FormInput.MAX_LENGTH} settled={settled} />
@@ -280,17 +281,17 @@ function StopInputs(props: StopInputsProps): ReactNode {
                     <QueryList
                         id="auto-assembly-stop-face"
                         label={m.autoAssemblyStopFaceList()}
-                        prompt={m.autoAssemblyStopFacePrompt()}
                         entities={stopFace}
                         onChange={setStopFace}
                         accepts={isFaceSelection}
                         filter={PLANAR_FACES}
                         problem={problem}
                         isChecking={isChecking}
+                        required
                     />
                 </FullWidthRow>
             )}
             <FormInputRow id={FormInput.MAX_THREAD_DEPTH} settled={settled} />
-        </>
+        </ParameterGroup>
     );
 }

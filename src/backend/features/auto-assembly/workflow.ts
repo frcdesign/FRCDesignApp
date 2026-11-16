@@ -43,15 +43,14 @@ import {
     runFailure
 } from "./failures";
 import { getFastenerSet } from "./fastener-set";
-import { type FastenerSet } from "./studios";
+import { FastenerKind, type FastenerSet } from "./studios";
 import { indexHoles } from "./index-holes";
 import {
     insertGroups,
     type PartPlacement,
     partMate,
     namePlacements,
-    placements,
-    washerTopEdges
+    placements
 } from "./insert";
 import { reportJob } from "./jobs";
 import { recordRunInserts } from "./track-inserts";
@@ -170,7 +169,7 @@ async function runSteps(ctx: RunContext, request: AutoAssemblyIn) {
                 indexed.placed,
                 request.options,
                 set.catalog,
-                indexed.stopPlane
+                { stopPlane: indexed.stopPlane }
             );
             return {
                 plans,
@@ -309,21 +308,29 @@ async function fastenParts(
     paths: (string[] | null)[],
     mated: Set<number>
 ): Promise<void> {
-    if (parts.some((part) => !set.studios[part.kind].mateConnectorId)) {
+    const washerTop = set.studios[FastenerKind.WASHER].topMateConnectorId;
+    const isOnWasher = parts.some((part) => "washer" in part.seat);
+    if (
+        parts.some((part) => !set.studios[part.kind].mateConnectorId) ||
+        (isOnWasher && !washerTop)
+    ) {
         throw runFailure(
             "A fastener's studio has no mate connector to fasten by. Reload its group."
         );
     }
-    const washerEdges = await run("washer-edges", isTransient, (client) =>
-        washerTopEdges(client, ctx.env.KV, set, parts)
-    );
     const insertedPaths = paths.map((path) => path ?? undefined);
     for (const [index, part] of parts.entries()) {
         const path = insertedPaths[index];
         const connector = set.studios[part.kind].mateConnectorId;
         const mate =
             path && connector
-                ? partMate(part, path, connector, insertedPaths, washerEdges)
+                ? partMate(
+                      part,
+                      path,
+                      connector,
+                      insertedPaths,
+                      washerTop ?? ""
+                  )
                 : undefined;
         if (!mate) {
             continue;

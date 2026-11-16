@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { pickProblems } from "./check";
+import { pickedHoleSize, pickProblems } from "./check";
 import {
     HoleStatus,
     type PlannedHole,
@@ -101,6 +101,37 @@ describe("pickProblems", () => {
         ]);
     });
 
+    it("leaves out a face's holes of another size, but not when they're all it has", () => {
+        const problems = pickProblems(
+            {
+                targets: [
+                    pick("F", SelectedEntityType.FACE),
+                    pick("G", SelectedEntityType.FACE)
+                ],
+                excluded: [],
+                replaced: []
+            },
+            indexed({
+                pickEdges: {
+                    "plate|F": ["plate|F1", "plate|F2"],
+                    "plate|G": ["plate|G1"]
+                }
+            }),
+            [
+                ready("plate|F1"),
+                { key: "plate|F2", status: HoleStatus.SKIPPED },
+                { key: "plate|G1", status: HoleStatus.SKIPPED }
+            ]
+        );
+        expect(problems).toEqual([
+            {
+                key: "plate|G",
+                message: "No holes in this face fit the screw.",
+                severity: ProblemSeverity.ERROR
+            }
+        ]);
+    });
+
     it("plans nothing without options, so only picks giving no hole are marked", () => {
         expect(
             pickProblems(
@@ -198,5 +229,44 @@ describe("pickProblems", () => {
                 severity: ProblemSeverity.WARNING
             }
         ]);
+    });
+});
+
+describe("pickedHoleSize", () => {
+    it("is the first hole picked's size, in pick order, passing holes made for none", () => {
+        const holes = indexed({
+            pickEdges: {
+                "plate|F": ["plate|F1", "plate|F2"],
+                "plate|S": ["plate|S"]
+            }
+        });
+        const planned = [
+            ready("plate|F1"),
+            { ...ready("plate|F2"), madeFor: "NO_8_32" },
+            { ...ready("plate|S"), madeFor: "QUARTER_20" }
+        ];
+        expect(
+            pickedHoleSize(
+                {
+                    targets: [pick("F", SelectedEntityType.FACE)],
+                    replaced: [pick("S", SelectedEntityType.BODY)]
+                },
+                holes,
+                planned
+            )
+        ).toBe("NO_8_32");
+        expect(
+            pickedHoleSize(
+                {
+                    targets: [],
+                    replaced: [pick("S", SelectedEntityType.BODY)]
+                },
+                holes,
+                planned
+            )
+        ).toBe("QUARTER_20");
+        expect(
+            pickedHoleSize({ targets: [], replaced: [] }, holes, planned)
+        ).toBeUndefined();
     });
 });

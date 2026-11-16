@@ -96,6 +96,8 @@ export interface SelectionChange {
      * so nothing is removed and the list shows its picks again.
      */
     isHighlightCleared: boolean;
+    /** Someone deselected part of a highlight the app made, which the list keeps: Onshape can't resume a selection that way. */
+    isDeselectRefused: boolean;
 }
 
 type PickHandler = (change: SelectionChange) => void;
@@ -114,9 +116,17 @@ interface SelectionState {
     awaited?: { keys: string; until: number };
     /** Whether the window shows a highlight the app asked for, since its last selection request. */
     isHighlighted: boolean;
+    /** What the app has highlighted since its last selection request, by `selectionKey`. */
+    highlightedKeys: string[];
+    /** When the app last asked for a highlight, in epoch milliseconds. */
+    highlightedAt: number;
     /** Counts query lists mounting and unmounting, so the focused one asks Onshape for picks again. */
     layout: number;
-    /** The selection request limiting what the Onshape window lets be picked, by its message id. */
+    /**
+     * The selection request the person is selecting with, by its message id.
+     * A hover's highlight pauses it in Onshape, and leaving the rows sends it
+     * again (`resumeSelecting`), so it lasts until stopped.
+     */
     filtering?: string;
     /** The list a person clicked, which limits picks even when it's passive. */
     active?: string;
@@ -130,7 +140,7 @@ interface SelectionState {
     finishSelecting: () => void;
 }
 
-/** A list shown or hidden: the focused list's prompt and request go again. */
+/** A list shown or hidden: the focused list asks for picks again. */
 export function bumpLayout(): void {
     useOnshapeSelection.setState((state) => ({ layout: state.layout + 1 }));
 }
@@ -144,10 +154,15 @@ function keysOf(selection: OnshapeSelection[]): string {
 
 /** Says the app made the Onshape window show `selection`, rather than someone picking it. */
 export function expectSelection(selection: OnshapeSelection[]): void {
-    useOnshapeSelection.setState({
+    useOnshapeSelection.setState((state) => ({
         awaited: { keys: keysOf(selection), until: Date.now() + AWAIT_MS },
-        isHighlighted: selection.length > 0
-    });
+        isHighlighted: selection.length > 0,
+        highlightedAt: Date.now(),
+        highlightedKeys: [
+            ...state.highlightedKeys,
+            ...selection.map(selectionKey)
+        ]
+    }));
 }
 
 /** A selection request clears the window's selection, which says so only if there was one. */
@@ -155,7 +170,7 @@ export function expectCleared(): void {
     if (useOnshapeSelection.getState().shown.length > 0) {
         expectSelection([]);
     }
-    useOnshapeSelection.setState({ isHighlighted: false });
+    useOnshapeSelection.setState({ isHighlighted: false, highlightedKeys: [] });
 }
 
 /** `selections` less any in `removed`. */
@@ -190,9 +205,41 @@ export function holdPicks(
     };
 }
 
+/** Each mounted query list's label, for saying which one limits picks. */
+const labels = new Map<string, string>();
+
+export function nameList(listId: string, label: string): () => void {
+    labels.set(listId, label);
+    return () => {
+        labels.delete(listId);
+    };
+}
+
+export function listLabel(listId: string | undefined): string | undefined {
+    return listId === undefined ? undefined : labels.get(listId);
+}
+
 /** A list's picks, as it last held them. */
 export function heldPicks(listId: string): OnshapeSelection[] {
     return picksByList.get(listId) ?? [];
+}
+
+/** Each mounted query list's way to send its selection request again, by its id. */
+const resumers = new Map<string, () => void>();
+
+export function onResume(listId: string, resume: () => void): () => void {
+    resumers.set(listId, resume);
+    return () => {
+        resumers.delete(listId);
+    };
+}
+
+/** The focused list sends its selection request again, which a highlight paused. */
+export function resumeSelecting(): void {
+    const { focused } = useOnshapeSelection.getState();
+    if (focused !== undefined) {
+        resumers.get(focused)?.();
+    }
 }
 
 /** The focused list's picks; none with no list focused. */
@@ -204,10 +251,19 @@ export function focusedPicks(): OnshapeSelection[] {
 export const useOnshapeSelection = create<SelectionState>()((set, get) => ({
     shown: [],
     isHighlighted: false,
+    highlightedKeys: [],
+    highlightedAt: 0,
     layout: 0,
     isFinished: false,
     receive: (selection) => {
-        const { shown: previous, awaited, focused, isHighlighted } = get();
+        const {
+            shown: previous,
+            awaited,
+            focused,
+            isHighlighted,
+            highlightedKeys,
+            highlightedAt
+        } = get();
         set({ shown: selection });
         if (awaited) {
             if (
@@ -218,16 +274,39 @@ export const useOnshapeSelection = create<SelectionState>()((set, get) => ({
             }
             return;
         }
-        if (focused) {
-            const removed = without(previous, selection);
-            // Until Onshape can resume a selection, a click after a highlight clears it all
-            const isHighlightCleared = isHighlighted && removed.length > 1;
-            handlers.get(focused)?.({
-                added: without(selection, previous),
-                removed: isHighlightCleared ? [] : removed,
-                isHighlightCleared
-            });
+        if (!focused) {
+            return;
         }
+        const added = without(selection, previous);
+        const removed = without(previous, selection);
+        if (!isHighlighted) {
+            handlers.get(focused)?.({
+                added,
+                removed,
+                isHighlightCleared: false,
+                isDeselectRefused: false
+            });
+            return;
+        }
+        // While the window shows the app's highlight, what leaves it is the highlight changing (or a late answer to
+        // an earlier one), not a deselection; and what the app highlighted isn't a pick
+        const highlighted = new Set(highlightedKeys);
+        const isOwn = (entity: OnshapeSelection) =>
+            highlighted.has(selectionKey(entity));
+        // Some of the highlight left and nothing came, well after the app asked for it: a person deselecting
+        const isDeselect =
+            removed.length > 0 &&
+            added.length === 0 &&
+            selection.length > 0 &&
+            selection.every(isOwn) &&
+            Date.now() - highlightedAt > AWAIT_MS;
+        handlers.get(focused)?.({
+            added: added.filter((entity) => !isOwn(entity)),
+            removed: [],
+            // Until Onshape can resume a selection, a click in its window after a highlight clears it all
+            isHighlightCleared: removed.length > 0 && !selection.some(isOwn),
+            isDeselectRefused: isDeselect
+        });
     },
     focus: (listId) =>
         set({ focused: listId, active: undefined, isFinished: false }),

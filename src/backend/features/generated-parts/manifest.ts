@@ -29,6 +29,7 @@ export type GeneratedRecord = z.infer<typeof recordSchema>;
 const studioSchema = z.object({
     feature: z.string(),
     mateConnector: z.string().optional(),
+    topMateConnector: z.string().optional(),
     elementId: z.string(),
     records: z.array(recordSchema)
 });
@@ -54,6 +55,8 @@ export interface GeneratedFeature {
     elementId: string;
     type: string;
     mateConnector?: string;
+    /** A second connector, on its top, where another part sits on it, as a screw on a washer. */
+    topMateConnector?: string;
 }
 
 /** One studio of a released manifest, as small as a step can return. */
@@ -154,7 +157,10 @@ export function releasedCatalog(
                 {
                     elementId: studio.elementId,
                     type: studio.feature,
-                    mateConnector: studio.mateConnector
+                    mateConnector: studio.mateConnector,
+                    ...(studio.topMateConnector
+                        ? { topMateConnector: studio.topMateConnector }
+                        : {})
                 }
             ])
         ),

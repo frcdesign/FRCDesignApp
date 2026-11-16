@@ -10,11 +10,10 @@ import {
     useOnshapeSelection,
     type OnshapeSelection
 } from "../lib/selection";
+import * as Notifications from "../lib/notifications";
 import { Status } from "../lib/status";
 import { QueryList } from "./query-list";
-import { SelectionBar } from "./selection-bar";
-
-const PROMPT = "Select edges.";
+import { SelectingActionBar } from "./selecting-action-bar";
 
 function Harness() {
     const [entities, setEntities] = useState<OnshapeSelection[]>([]);
@@ -22,7 +21,6 @@ function Harness() {
         <QueryList
             id="holes"
             label="Holes"
-            prompt={PROMPT}
             entities={entities}
             onChange={setEntities}
             accepts={(entity) => entity.entityType === "EDGE"}
@@ -77,13 +75,9 @@ describe("QueryList", () => {
         expect(screen.getByText("Holes")).toBeTruthy();
 
         await userEvent.click(screen.getByText("Holes"));
-        // Said in Onshape, not under the list
-        expect(screen.queryByText(PROMPT)).toBeNull();
-        expect(messages).toContainEqual(
-            expect.objectContaining({
-                messageName: "showMessageBubble",
-                message: PROMPT
-            })
+        // Onshape's bubble is never sent: it falls out of step with the panel
+        expect(messages).not.toContainEqual(
+            expect.objectContaining({ messageName: "showMessageBubble" })
         );
 
         // The request clears what the window showed
@@ -93,17 +87,12 @@ describe("QueryList", () => {
         expect(screen.queryByText("Edge 2")).toBeNull();
     });
 
-    it("refuses picks it doesn't take, saying what it wants", async () => {
+    it("refuses picks it doesn't take, saying nothing to Onshape", async () => {
         renderWithProviders(<Harness />);
         await userEvent.click(screen.getByText("Holes"));
         messages = [];
         select({ ...edge("F"), entityType: "FACE" });
-        expect(messages).toContainEqual(
-            expect.objectContaining({
-                messageName: "showMessageBubble",
-                message: PROMPT
-            })
-        );
+        expect(messages).toEqual([]);
         expect(screen.queryByText("Face 1")).toBeNull();
     });
 
@@ -114,7 +103,6 @@ describe("QueryList", () => {
                 <QueryList
                     id="faces"
                     label="Faces"
-                    prompt="Select faces."
                     entities={[]}
                     onChange={() => undefined}
                     accepts={() => true}
@@ -146,15 +134,10 @@ describe("QueryList", () => {
         const names = messages.map(
             (message) => (message as { messageName: string }).messageName
         );
-        expect(names).toEqual([
-            "stopRequest",
-            "showMessageBubble",
-            "requestSelection"
-        ]);
+        expect(names).toEqual(["stopRequest", "requestSelection"]);
         // The edges' request, by its id
         expect(messages[0]).toMatchObject({ messageId });
-        expect(messages[1]).toMatchObject({ message: "Select faces." });
-        expect(messages[2]).toMatchObject({
+        expect(messages[1]).toMatchObject({
             entityTypeSpecifier: ["FACE"],
             geometryTypeSpecifier: ["PLANE"]
         });
@@ -199,8 +182,13 @@ describe("QueryList", () => {
         expect(messages).toEqual([]);
     });
 
-    it("lights its picks up once the mouse leaves its rows, and limits picks again when clicked", async () => {
-        renderWithProviders(<Harness />);
+    it("pauses selecting while a row is hovered, and selects again once the mouse leaves", async () => {
+        renderWithProviders(
+            <>
+                <Harness />
+                <SelectingActionBar />
+            </>
+        );
         await userEvent.click(screen.getByText("Holes"));
         select(edge("A"), edge("B"));
         const row = screen.getByText("Edge 1").parentElement!;
@@ -209,6 +197,40 @@ describe("QueryList", () => {
             messageName: "requestSelectionHighlight",
             selections: [{ selectionId: "A" }]
         });
+        // Still selecting: the bar stays
+        expect(screen.getByText("Selecting: Holes")).toBeTruthy();
+
+        messages = [];
+        await userEvent.unhover(row);
+        expect(messages).toEqual([
+            expect.objectContaining({
+                messageName: "requestSelection",
+                entityTypeSpecifier: ["EDGE"]
+            })
+        ]);
+    });
+
+    it("lights its picks up once the mouse leaves its rows when it isn't selecting", async () => {
+        const AutoFocused = () => {
+            const [entities, setEntities] = useState(() => [
+                edge("A"),
+                edge("B")
+            ]);
+            return (
+                <QueryList
+                    id="holes"
+                    label="Holes"
+                    entities={entities}
+                    onChange={setEntities}
+                    accepts={() => true}
+                    filter={CIRCULAR_EDGES}
+                    autoFocus
+                />
+            );
+        };
+        renderWithProviders(<AutoFocused />);
+        const row = screen.getByText("Edge 1").parentElement!;
+        await userEvent.hover(row);
 
         messages = [];
         await userEvent.unhover(row);
@@ -222,15 +244,9 @@ describe("QueryList", () => {
             })
         ]);
 
-        // What Onshape shows for the highlight isn't a pick
-        act(() => useOnshapeSelection.getState().receive([]));
-        act(() =>
-            useOnshapeSelection.getState().receive([edge("A"), edge("B")])
-        );
-        expect(screen.getByText("Edge 2")).toBeTruthy();
-
+        // A click starts selecting, picks and all
         messages = [];
-        await userEvent.click(screen.getByText("Edge 2"));
+        await userEvent.click(screen.getByText("Holes"));
         expect(messages).toContainEqual(
             expect.objectContaining({
                 messageName: "requestSelection",
@@ -239,14 +255,13 @@ describe("QueryList", () => {
         );
     });
 
-    it("lights the focused list's picks up after a row of another list", async () => {
+    it("selects with the focused list again after a row of another list", async () => {
         function Other() {
             const [entities, setEntities] = useState(() => [edge("X")]);
             return (
                 <QueryList
                     id="other"
                     label="Other"
-                    prompt="Other"
                     entities={entities}
                     onChange={setEntities}
                     accepts={() => true}
@@ -272,8 +287,8 @@ describe("QueryList", () => {
         await userEvent.unhover(other);
         expect(messages).toEqual([
             expect.objectContaining({
-                messageName: "requestSelectionHighlight",
-                selections: [expect.objectContaining({ selectionId: "A" })]
+                messageName: "requestSelection",
+                entityTypeSpecifier: ["EDGE"]
             })
         ]);
     });
@@ -288,7 +303,7 @@ describe("QueryList", () => {
         expect(screen.getByText("Edge 1")).toBeTruthy();
     });
 
-    it("clears the Onshape window's selection with its picks, prompting and limiting picks again", async () => {
+    it("clears the Onshape window's selection with its picks, limiting picks again", async () => {
         renderWithProviders(<Harness />);
         await userEvent.click(screen.getByText("Holes"));
         select(edge("A"));
@@ -298,17 +313,13 @@ describe("QueryList", () => {
         expect(screen.queryByText("Edge 1")).toBeNull();
         expect(messages).toEqual([
             expect.objectContaining({
-                messageName: "showMessageBubble",
-                message: PROMPT
-            }),
-            expect.objectContaining({
                 messageName: "requestSelection",
                 entityTypeSpecifier: ["EDGE"]
             })
         ]);
     });
 
-    it("prompts again as lists show and hide, lighting its picks up if it has some", async () => {
+    it("lights its picks up again as lists show and hide", async () => {
         const Toggled = () => {
             const [shown, setShown] = useState(false);
             return (
@@ -319,7 +330,6 @@ describe("QueryList", () => {
                         <QueryList
                             id="faces"
                             label="Faces"
-                            prompt="Select faces."
                             entities={[]}
                             onChange={() => undefined}
                             accepts={() => true}
@@ -337,24 +347,33 @@ describe("QueryList", () => {
         await userEvent.click(screen.getByText("Toggle"));
         expect(messages).toContainEqual(
             expect.objectContaining({
-                messageName: "showMessageBubble",
-                message: PROMPT
-            })
-        );
-        expect(messages).toContainEqual(
-            expect.objectContaining({
                 messageName: "requestSelectionHighlight",
                 selections: [expect.objectContaining({ selectionId: "A" })]
             })
         );
     });
 
-    it("keeps its picks when a click in Onshape clears a highlight of them, lighting them up again", async () => {
-        renderWithProviders(<Harness />);
-        await userEvent.click(screen.getByText("Holes"));
-        select(edge("A"), edge("B"));
-        // Lit up as the mouse leaves its rows
-        await userEvent.unhover(screen.getByText("Edge 1"));
+    it("keeps its picks when a click in Onshape clears a highlight of them, lighting them up again", () => {
+        const AutoFocused = () => {
+            const [entities, setEntities] = useState(() => [
+                edge("A"),
+                edge("B")
+            ]);
+            return (
+                <QueryList
+                    id="holes"
+                    label="Holes"
+                    entities={entities}
+                    onChange={setEntities}
+                    accepts={() => true}
+                    filter={CIRCULAR_EDGES}
+                    autoFocus
+                />
+            );
+        };
+        // Focused with picks, it lights them up, which Onshape answers
+        renderWithProviders(<AutoFocused />);
+        act(() => useOnshapeSelection.getState().receive([]));
         act(() =>
             useOnshapeSelection.getState().receive([edge("A"), edge("B")])
         );
@@ -373,6 +392,68 @@ describe("QueryList", () => {
         );
     });
 
+    it("refuses a pick deselected from its highlight, showing it again and saying why", () => {
+        const toast = vi.spyOn(Notifications, "showInfoToast");
+        const AutoFocused = () => {
+            const [entities, setEntities] = useState(() => [
+                edge("A"),
+                edge("B")
+            ]);
+            return (
+                <QueryList
+                    id="holes"
+                    label="Holes"
+                    entities={entities}
+                    onChange={setEntities}
+                    accepts={() => true}
+                    filter={CIRCULAR_EDGES}
+                    autoFocus
+                />
+            );
+        };
+        // Focused with picks, it lights them up, which Onshape answers
+        renderWithProviders(<AutoFocused />);
+        const { receive } = useOnshapeSelection.getState();
+        act(() => receive([]));
+        act(() => receive([edge("A"), edge("B")]));
+
+        // Deselected in Onshape, a while later
+        useOnshapeSelection.setState({ highlightedAt: 0 });
+        messages = [];
+        act(() => receive([edge("A")]));
+        expect(screen.getByText("Edge 2")).toBeTruthy();
+        expect(messages).toContainEqual(
+            expect.objectContaining({
+                messageName: "requestSelectionHighlight",
+                selections: [
+                    expect.objectContaining({ selectionId: "A" }),
+                    expect.objectContaining({ selectionId: "B" })
+                ]
+            })
+        );
+        expect(toast).toHaveBeenCalledWith(
+            "Due to Onshape limitations, deselecting via the graphics window is not possible after resuming a selection.",
+            expect.anything()
+        );
+    });
+
+    it("keeps its picks however late Onshape answers the highlights of a fast mouse", async () => {
+        renderWithProviders(<Harness />);
+        await userEvent.click(screen.getByText("Holes"));
+        select(edge("A"), edge("B"));
+        await userEvent.hover(screen.getByText("Edge 1").parentElement!);
+        await userEvent.hover(screen.getByText("Edge 2").parentElement!);
+
+        // Answers to both highlights, the first arriving last
+        const { receive } = useOnshapeSelection.getState();
+        act(() => receive([]));
+        act(() => receive([edge("B")]));
+        act(() => receive([edge("A")]));
+        act(() => receive([edge("B")]));
+        expect(screen.getByText("Edge 1")).toBeTruthy();
+        expect(screen.getByText("Edge 2")).toBeTruthy();
+    });
+
     it("shows a bar while it limits picks, whose button finishes selecting until a list is clicked", async () => {
         const AutoFocused = () => {
             const [entities, setEntities] = useState<OnshapeSelection[]>([]);
@@ -381,35 +462,34 @@ describe("QueryList", () => {
                     <QueryList
                         id="holes"
                         label="Holes"
-                        prompt={PROMPT}
                         entities={entities}
                         onChange={setEntities}
                         accepts={() => true}
                         filter={CIRCULAR_EDGES}
                         autoFocus
                     />
-                    <SelectionBar />
+                    <SelectingActionBar />
                 </>
             );
         };
         renderWithProviders(<AutoFocused />);
-        expect(screen.getByText("Selections are filtered.")).toBeTruthy();
+        expect(screen.getByText("Selecting: Holes")).toBeTruthy();
 
         messages = [];
         await userEvent.click(
-            screen.getByRole("button", { name: "Finish selecting" })
+            screen.getByRole("button", { name: "Stop selecting" })
         );
         expect(messages).toEqual([
             expect.objectContaining({ messageName: "stopRequest" })
         ]);
-        expect(screen.queryByText("Selections are filtered.")).toBeNull();
+        expect(screen.queryByText("Selecting: Holes")).toBeNull();
         // The first list stays unfocused, so picks go nowhere
         expect(useOnshapeSelection.getState().focused).toBeUndefined();
         select(edge("A"));
         expect(screen.queryByText("Edge 1")).toBeNull();
 
         await userEvent.click(screen.getByText("Holes"));
-        expect(screen.getByText("Selections are filtered.")).toBeTruthy();
+        expect(screen.getByText("Selecting: Holes")).toBeTruthy();
     });
 
     it("takes picks passively until clicked, and listens again once selecting finishes", async () => {
@@ -420,7 +500,6 @@ describe("QueryList", () => {
                     <QueryList
                         id="holes"
                         label="Holes"
-                        prompt={PROMPT}
                         entities={entities}
                         onChange={setEntities}
                         accepts={(entity) => entity.entityType === "EDGE"}
@@ -428,7 +507,7 @@ describe("QueryList", () => {
                         autoFocus
                         isPassive
                     />
-                    <SelectionBar />
+                    <SelectingActionBar />
                 </>
             );
         };
@@ -440,24 +519,18 @@ describe("QueryList", () => {
         expect(messages).not.toContainEqual(
             expect.objectContaining({ messageName: "requestSelection" })
         );
-        expect(messages).not.toContainEqual(
-            expect.objectContaining({ messageName: "showMessageBubble" })
-        );
-        expect(screen.queryByText("Selections are filtered.")).toBeNull();
+        expect(screen.queryByText("Selecting: Holes")).toBeNull();
 
         await userEvent.click(screen.getByText("Holes"));
         expect(messages).toContainEqual(
-            expect.objectContaining({
-                messageName: "showMessageBubble",
-                message: PROMPT
-            })
+            expect.objectContaining({ messageName: "requestSelection" })
         );
-        expect(screen.getByText("Selections are filtered.")).toBeTruthy();
+        expect(screen.getByText("Selecting: Holes")).toBeTruthy();
 
         await userEvent.click(
-            screen.getByRole("button", { name: "Finish selecting" })
+            screen.getByRole("button", { name: "Stop selecting" })
         );
-        expect(screen.queryByText("Selections are filtered.")).toBeNull();
+        expect(screen.queryByText("Selecting: Holes")).toBeNull();
         // Listening again: the request it stops cleared the window
         act(() => useOnshapeSelection.getState().receive([]));
         select(edge("B"));
@@ -469,7 +542,6 @@ describe("QueryList", () => {
             <QueryList
                 id="holes"
                 label="Holes"
-                prompt={PROMPT}
                 entities={[edge("A")]}
                 onChange={() => undefined}
                 accepts={() => true}
@@ -487,7 +559,6 @@ describe("QueryList", () => {
                 <QueryList
                     id="other"
                     label="Other"
-                    prompt="Other"
                     entities={[]}
                     onChange={() => undefined}
                     accepts={() => true}
@@ -510,7 +581,6 @@ describe("QueryList", () => {
             <QueryList
                 id={id}
                 label={id}
-                prompt={id}
                 entities={[]}
                 onChange={() => undefined}
                 accepts={() => true}
@@ -541,7 +611,6 @@ describe("QueryList", () => {
             <QueryList
                 id="checked"
                 label="Checked"
-                prompt="Select edges."
                 entities={[edge("A"), edge("B"), edge("C")]}
                 onChange={() => undefined}
                 accepts={() => true}

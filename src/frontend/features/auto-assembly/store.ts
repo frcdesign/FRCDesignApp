@@ -14,9 +14,15 @@ interface AutoAssemblyState extends Choices {
     replaced: OnshapeSelection[];
     /** The planar face the Face stop condition stops at: one at most. */
     stopFace: OnshapeSelection[];
+    /** Whether Size was chosen by hand since the last run; until then it follows the first hole picked. */
+    isSizeChosen: boolean;
     setForm: (id: FormInput, value: string) => void;
     setMode: (mode: FastenerMode) => void;
     setScrew: (id: string, value: string) => void;
+    /** Size as the hole picked is made for, unless it was chosen by hand. */
+    followHoleSize: (size: string) => void;
+    /** Picks cleared and Size free to follow holes again, after a run starts. */
+    finishRun: () => void;
     setPart: (part: Part, id: string, value: string) => void;
     setAdded: (part: Part, added: boolean) => void;
     setTargets: (targets: OnshapeSelection[]) => void;
@@ -46,6 +52,7 @@ export const useAutoAssemblyStore = create<AutoAssemblyState>()(
             excluded: [],
             replaced: [],
             stopFace: [],
+            isSizeChosen: false,
             setForm: (id, value) =>
                 set((state) => ({
                     form: { ...state.form, [id]: value },
@@ -61,8 +68,27 @@ export const useAutoAssemblyStore = create<AutoAssemblyState>()(
                     // A new vendor's washers and nuts, where it makes them
                     ...(id === StudioInput.VENDOR
                         ? { parts: withVendor(state.parts, value) }
-                        : {})
+                        : {}),
+                    ...(id === StudioInput.SIZE ? { isSizeChosen: true } : {})
                 })),
+            followHoleSize: (size) =>
+                set((state) =>
+                    state.isSizeChosen || state.screw[StudioInput.SIZE] === size
+                        ? {}
+                        : {
+                              screw: {
+                                  ...state.screw,
+                                  [StudioInput.SIZE]: size
+                              }
+                          }
+                ),
+            finishRun: () =>
+                set({
+                    targets: [],
+                    excluded: [],
+                    replaced: [],
+                    isSizeChosen: false
+                }),
             setPart: (part, id, value) =>
                 set((state) => ({
                     parts: {

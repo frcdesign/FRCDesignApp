@@ -265,7 +265,10 @@ export function toAssemblyCircularEdges(
                     occurrence.transform,
                     circularEdge.normal
                 ),
-                radius: circularEdge.radius
+                radius: circularEdge.radius,
+                ...(entity.entityType === SelectedEntityType.FACE
+                    ? { isFromFace: true }
+                    : {})
             });
         }
     }

@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { skipToken, useMutation, useQuery } from "@tanstack/react-query";
 import { ElementType } from "@backend/lib/onshape/element-type";
 import { type InsertLocationOut } from "@backend/features/insert-location/contract";
@@ -8,7 +9,7 @@ import { useTargetElement } from "../../lib/onshape-params";
 import { useIsSignedIn } from "../auth/access-level";
 import { queryClient } from "../../lib/query-client";
 import { insertLocationQueryKey } from "../../lib/query-keys";
-import { showSuccessToast } from "../../lib/notifications";
+import { m } from "../../paraglide/messages";
 
 /** Only an assembly has one; a derive places itself. */
 export function useInsertLocationTarget(): TargetElement | undefined {
@@ -44,6 +45,26 @@ export function useInsertLocationId(): string | undefined {
     return useInsertLocationQuery(target).data?.instanceId;
 }
 
+/** Where a new part lands in the open assembly. */
+export interface InsertLocation {
+    target: TargetElement;
+    /** The marker's instance, or nothing when the assembly has none. */
+    instanceId?: string;
+}
+
+/** Undefined outside an assembly, and until the answer is in. */
+export function useInsertLocation(): InsertLocation | undefined {
+    const target = useInsertLocationTarget();
+    const { data, isPending, isError } = useInsertLocationQuery(target);
+    return useMemo(
+        () =>
+            !target || isPending || isError
+                ? undefined
+                : { target, instanceId: data?.instanceId },
+        [target, isPending, isError, data?.instanceId]
+    );
+}
+
 /** Adds the connector to the assembly, and takes the answer as the new state. */
 export function useAddInsertLocationMutation(target: TargetElement) {
     return useMutation({
@@ -52,12 +73,9 @@ export function useAddInsertLocationMutation(target: TargetElement) {
             apiPost<InsertLocationOut>("/insert-location", {
                 body: { targetPath: target }
             }),
-        onSuccess: (result) => {
-            queryClient.setQueryData(insertLocationQueryKey(target), result);
-            showSuccessToast("Added an insert location.");
-        },
-        onError: getAppErrorHandler(
-            "Unexpectedly failed to add an insert location."
-        )
+        // The button that added it shows it added
+        onSuccess: (result) =>
+            queryClient.setQueryData(insertLocationQueryKey(target), result),
+        onError: getAppErrorHandler(m.insertLocationAddFailed())
     });
 }

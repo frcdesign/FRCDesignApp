@@ -25,6 +25,7 @@ import { AdminMenuSection, MenuSection } from "../../../components/app-menu";
 import { ReloadThumbnailMenuItem } from "./reload-thumbnail-item";
 import { UpdateReferencesMenuItem } from "./update-references-item";
 import { InsertableChangesBadge } from "./changes-badges";
+import { FastenMark } from "../../insert/components/fasten-mark";
 import { QuickInsertItems } from "../../insert/components/quick-insert-items";
 import { ConfigurationHoverCard } from "../../insert/components/configuration-hover-card";
 import { openCannotDeriveAssemblyAlert } from "../../../components/alerts";
@@ -120,6 +121,7 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
                             selection={hitSelection}
                         />
                     )}
+                    <FastenMark insertable={insertable} />
                     <InsertableChangesBadge insertable={insertable} />
                     <InsertableStatusBadge
                         insertableId={insertable.id}

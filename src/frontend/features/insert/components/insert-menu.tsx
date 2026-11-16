@@ -43,11 +43,12 @@ import { RequireSignIn } from "../../auth/components/require-access";
 import { useIsSignedIn } from "../../auth/access-level";
 import { Hint } from "@backend/features/hints/contract";
 import { useHasSeenHint, useMarkHintSeen } from "../../hints/queries";
-import { useTargetElementType } from "../insert-hooks";
+import { useCanFasten, useTargetElementType } from "../insert-hooks";
 import { UseSource } from "@backend/features/analytics/usage";
-import { InsertLocationStatus } from "../../insert-location/components/insert-location-status";
-import { InfoCheckbox } from "../../../components/info-checkbox";
-import { FastenCircularEdgesStatus } from "./fasten-circular-edges-status";
+import { FastenSection } from "./fasten-section";
+import { ParameterGrid } from "../../../components/parameter-input";
+import { ParameterGroup } from "../../../components/parameter-group";
+import { m } from "../../../paraglide/messages";
 import { DownloadStepButton } from "../../download/components/download-step-button";
 
 interface UseMenuTitleProps extends Omit<MenuTitleProps, "name"> {
@@ -93,6 +94,7 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
         props.initialConfigurationKey ??
         DEFAULT_CONFIGURATION_KEY;
     useThumbnailWaitTip(configurationKey);
+    const canFasten = useCanFasten(insertable);
     // What the preview stops following for a signed-out caller.
     const [isEdited, setIsEdited] = useState(false);
     // Cleared by an edit, or once the menu has been up long enough.
@@ -164,7 +166,21 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
                     />
                 </Stack>
             </AppModalTop>
-            <AppModalBody>{parameters}</AppModalBody>
+            <AppModalBody>
+                {canFasten ? (
+                    // Beside Fasten, the configuration is a group of its own
+                    <ParameterGrid>
+                        {parameters && (
+                            <ParameterGroup title={m.insertMenuConfiguration()}>
+                                {parameters}
+                            </ParameterGroup>
+                        )}
+                        <FastenSection insertable={insertable} />
+                    </ParameterGrid>
+                ) : (
+                    parameters
+                )}
+            </AppModalBody>
             <InsertMenuFooter
                 insertable={insertable}
                 favorite={favorite}
@@ -315,8 +331,7 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
         insertable.microversionId
     );
 
-    const canFasten =
-        insertable.supportsFasten && targetElementType === ElementType.ASSEMBLY;
+    const canFasten = useCanFasten(insertable);
 
     const handleClick = useCallback(() => {
         insertMutation.mutate(canFasten && fasten);
@@ -341,16 +356,6 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
 
     return (
         <Group gap="sm" align="center">
-            <InsertLocationStatus />
-            {canFasten && fasten && <FastenCircularEdgesStatus />}
-            {canFasten && (
-                <InfoCheckbox
-                    label="Fasten"
-                    info="Also create a fasten mate which references the inserted part."
-                    checked={fasten}
-                    onChange={(checked) => updateUiState({ fasten: checked })}
-                />
-            )}
             <Button
                 // Light would put green on pale green.
                 variant="filled"
@@ -359,8 +364,8 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
                 onClick={handleClick}
             >
                 {targetElementType === ElementType.ASSEMBLY
-                    ? "Insert"
-                    : "Derive"}
+                    ? m.insertMenuInsert()
+                    : m.insertMenuDerive()}
             </Button>
         </Group>
     );

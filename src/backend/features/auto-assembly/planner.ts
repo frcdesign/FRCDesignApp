@@ -64,6 +64,8 @@ export interface AssemblyCircularEdge {
     /** Unit, out of the part: a fastener goes in against it. */
     normal: Vec3;
     radius: number;
+    /** One of a face's circular edges, rather than one picked itself. */
+    isFromFace?: boolean;
 }
 
 /** A library screw already in the assembly, from Auto Assembly or not: its origin and Z axis. */
@@ -102,6 +104,12 @@ interface PlanOptions extends FastenerOptions {
     stopPlane?: AssemblyPlane;
 }
 
+/** What a plan takes besides the run's options. */
+export interface PlanContext {
+    /** The plane `StopCondition.FACE` stops at. */
+    stopPlane?: AssemblyPlane;
+}
+
 const INCH = 0.0254;
 
 /** A screw goes at least this many diameters into threads, or as far as they go. */
@@ -116,14 +124,48 @@ export function planHoles(
     placed: PlacedScrew[],
     options: FastenerOptions,
     catalog: Catalog,
-    stopPlane?: AssemblyPlane
+    context: PlanContext = {}
 ): HolePlan[] {
     return circularEdges.map((circularEdge) =>
         planHole(circularEdge, holes, placed, {
             ...options,
             catalog,
-            stopPlane
+            ...context
         })
+    );
+}
+
+/** How far past a size's free clearance a hole is still taken for a clearance hole of it. */
+const CLEARANCE_SLACK_RATIO = 0.03;
+
+/**
+ * The size a hole is made for: the size its threads are, or whose clearance
+ * or tap drill it is. Clearance comes first, since a size's tap drill can be
+ * a smaller size's clearance.
+ */
+export function holeSize(
+    hole: AssemblyHole,
+    catalog: Catalog
+): CatalogSize | undefined {
+    if (hole.threaded && hole.majorDiameter !== undefined) {
+        const major = hole.majorDiameter;
+        return catalog.sizes.find(
+            (size) => Math.abs(size.majorDiameter - major) < LINEAR_TOLERANCE
+        );
+    }
+    const diameter = 2 * hole.radius;
+    const clearance = catalog.sizes.find(
+        (size) =>
+            diameter >= size.majorDiameter - LINEAR_TOLERANCE &&
+            diameter <= size.freeClearanceDiameter * (1 + CLEARANCE_SLACK_RATIO)
+    );
+    return (
+        clearance ??
+        catalog.sizes.find(
+            (size) =>
+                Math.abs(diameter - size.tapDrillDiameter) <=
+                size.tapDrillDiameter * TAP_DRILL_RATIO
+        )
     );
 }
 
@@ -148,20 +190,15 @@ function planHole(
         return plan({ status: HoleStatus.FASTENED });
     }
 
-    const size = getSize(options.catalog, options.screw.size);
-    const head = getHead(options.catalog, options.screw.head)?.sizes[
-        options.screw.size
-    ];
-    if (!size || !head) {
-        return plan({
-            status: HoleStatus.NO_FIT,
-            reason: "The head isn't made in this size."
-        });
-    }
-
     const segments = alongAxis(circularEdge, into, holes);
-    // A flat head's countersink is above its first hole
-    const allowance = head.countersunk ? head.height : 0;
+    // A flat head's countersink is above its first hole, as deep as the head is in any size
+    const heads = Object.values(
+        getHead(options.catalog, options.screw.head)?.sizes ?? {}
+    );
+    const allowance = Math.max(
+        0,
+        ...heads.map((each) => (each.countersunk ? each.height : 0))
+    );
     const first = segments.find(
         (segment) =>
             segment.near <= allowance + LINEAR_TOLERANCE &&
@@ -173,8 +210,27 @@ function planHole(
             reason: "No hole goes into the part from this circular edge."
         });
     }
+
+    const madeFor = holeSize(first.hole, options.catalog)?.id;
+    const sized = (planned: Omit<PlannedHole, "key">): HolePlan =>
+        plan({ ...planned, ...(madeFor ? { madeFor } : {}) });
+    // A face's holes are fastened only where they're made for the screw
+    if (circularEdge.isFromFace && madeFor !== options.screw.size) {
+        return sized({ status: HoleStatus.SKIPPED });
+    }
+
+    const size = getSize(options.catalog, options.screw.size);
+    const head = getHead(options.catalog, options.screw.head)?.sizes[
+        options.screw.size
+    ];
+    if (!size || !head) {
+        return sized({
+            status: HoleStatus.NO_FIT,
+            reason: "The head isn't made in this size."
+        });
+    }
     if (2 * first.hole.radius < size.majorDiameter - LINEAR_TOLERANCE) {
-        return plan({
+        return sized({
             status: HoleStatus.NO_FIT,
             reason: `The hole is too small for a ${size.name} screw.`
         });
@@ -187,7 +243,7 @@ function planHole(
             options.stopPlane &&
             meetsPlane(circularEdge, into, options.stopPlane);
         if (stopAt === undefined || stopAt <= LINEAR_TOLERANCE) {
-            return plan({
+            return sized({
                 status: HoleStatus.NO_FIT,
                 reason: options.stopPlane
                     ? "The face to stop at isn't past this hole along its axis."
@@ -200,7 +256,7 @@ function planHole(
     const washers = chooseWashers(options, head.countersunk, end);
     const picked = pickScrew(options, size, stack, washers);
     if ("error" in picked) {
-        return plan({ status: HoleStatus.NO_FIT, reason: picked.error, end });
+        return sized({ status: HoleStatus.NO_FIT, reason: picked.error, end });
     }
     const planned: Omit<PlannedHole, "key"> = {
         status: HoleStatus.READY,
@@ -213,7 +269,7 @@ function planHole(
 
     const nut = nutChoice(options, end);
     if (!nut) {
-        return plan(planned);
+        return sized(planned);
     }
     const exitEdge = stack.last.edges.find(
         (edge) => Math.abs(edge.t - stack.depth) < LINEAR_TOLERANCE
@@ -221,7 +277,7 @@ function planHole(
     if (!exitEdge) {
         const noNut =
             "No edge on the far side to fasten a nut to, so it gets no nut.";
-        return plan({
+        return sized({
             ...planned,
             warning: planned.warning ? `${planned.warning} ${noNut}` : noNut
         });
@@ -230,6 +286,7 @@ function planHole(
         planned: {
             key: circularEdge.key,
             ...planned,
+            ...(madeFor ? { madeFor } : {}),
             nut,
             ...(washers.end ? { nutWasher: washers.end } : {})
         },

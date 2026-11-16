@@ -31,22 +31,38 @@ export function ParameterGrid(props: ParameterGridProps): ReactNode {
     return <div className={classes.grid}>{props.children}</div>;
 }
 
+interface LabeledRowProps {
+    label: string;
+    /** The id of the control the label is for; none for a row that only shows something. */
+    inputId?: string;
+    children: ReactNode;
+}
+
+/** A row of the grid: a name, then its control. */
+export function LabeledRow(props: LabeledRowProps): ReactNode {
+    const { label, inputId, children } = props;
+    return (
+        <div className={classes.row}>
+            <label className={classes.label} htmlFor={inputId}>
+                {label}
+            </label>
+            {children}
+        </div>
+    );
+}
+
 interface ParameterCellsProps {
     parameter: ConfigurationParameter;
     inputId: string;
     children: ReactNode;
 }
 
-/** A row of the grid: the parameter's name, then its control. */
 function ParameterCells(props: ParameterCellsProps): ReactNode {
     const { parameter, inputId, children } = props;
     return (
-        <div className={classes.row}>
-            <label className={classes.label} htmlFor={inputId}>
-                {parameter.name}
-            </label>
+        <LabeledRow label={parameter.name} inputId={inputId}>
             {children}
-        </div>
+        </LabeledRow>
     );
 }
 
