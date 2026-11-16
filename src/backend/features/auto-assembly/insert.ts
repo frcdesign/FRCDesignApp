@@ -19,6 +19,7 @@ import {
     type StoredParts
 } from "../library/insertables/part-name";
 import { encodeConfiguration } from "../configurations/utils";
+import { type PreviewPart } from "../previews/contract";
 import { type Catalog, getWasher } from "./catalog";
 import { HoleStatus, RunPartRole } from "./contract";
 import { add, frameTransform, scale, type Vec3 } from "./geometry";
@@ -175,6 +176,22 @@ export function placements(
         });
     }
     return parts;
+}
+
+/** Each part as the preview extension draws it, from its studio's loaded version. */
+export function previewParts(
+    set: FastenerSet,
+    parts: PartPlacement[]
+): PreviewPart[] {
+    return parts.map((part) => {
+        const studio = set.studios[part.kind];
+        return {
+            insertableId: studio.insertableId,
+            microversionId: studio.microversionId,
+            configuration: encodeConfiguration(part.configuration),
+            transform: part.transform
+        };
+    });
 }
 
 /** `transformedinstances`' groups: one per part, each landed where it goes. */

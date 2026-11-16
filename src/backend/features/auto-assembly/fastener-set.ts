@@ -42,6 +42,7 @@ export async function getFastenerSet(
             documentId: insertables.documentId,
             versionId: insertables.versionId,
             elementId: insertables.elementId,
+            microversionId: insertables.microversionId,
             fastenInfo: insertables.fastenInfo,
             parameters: configurations.parameters
         })
@@ -65,6 +66,7 @@ export async function getFastenerSet(
         }
         studios[kind] = {
             insertableId: row.insertableId,
+            microversionId: row.microversionId,
             parameters: row.parameters ?? [],
             location: {
                 documentId: row.documentId,

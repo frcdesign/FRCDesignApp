@@ -23,6 +23,7 @@ import { getJobStatus, reportJob } from "./jobs";
 import { indexHoles } from "./index-holes";
 import { planHoles } from "./planner";
 import { pickedHoleSize, pickProblems } from "./check";
+import { placements, previewParts } from "./insert";
 import {
     entitySchema,
     INCONSISTENT_PICK_MESSAGE,
@@ -194,7 +195,7 @@ autoAssemblyRoutes.post(
             options &&
             options.program === Program.FRC &&
             isEveryPartMade(set, options);
-        const planned = canPlan
+        const plans = canPlan
             ? planHoles(
                   indexed.circularEdges,
                   indexed.holes,
@@ -202,12 +203,16 @@ autoAssemblyRoutes.post(
                   options,
                   set.catalog,
                   { stopPlane: indexed.stopPlane }
-              ).map((plan) => plan.planned)
+              )
             : undefined;
+        const planned = plans?.map((plan) => plan.planned);
         const holeSize = planned && pickedHoleSize(request, indexed, planned);
         return c.json({
             problems: pickProblems(request, indexed, planned),
-            ...(holeSize ? { holeSize } : {})
+            ...(holeSize ? { holeSize } : {}),
+            ...(set && plans
+                ? { previews: previewParts(set, placements(set, plans)) }
+                : {})
         } satisfies PickCheckOut);
     }
 );

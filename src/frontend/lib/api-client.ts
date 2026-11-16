@@ -55,6 +55,26 @@ export async function apiGet<T>(
     return handleResponse<T>(response, "GET", path);
 }
 
+/** {@link apiGet} for a binary answer. */
+export async function apiGetBytes(
+    path: string,
+    options?: QueryOptionsWithCacheId
+): Promise<ArrayBuffer> {
+    const response = await fetch(
+        getUrl(path, options?.query, options?.cacheId),
+        { signal: options?.signal }
+    );
+    if (!response.ok) {
+        const json: unknown = await response.json().catch(() => undefined);
+        throw fromApiErrorBody(json, {
+            method: "GET",
+            path: "/api" + path,
+            status: response.status
+        });
+    }
+    return await response.arrayBuffer();
+}
+
 export async function apiGetText(
     path: string,
     options?: QueryOptionsWithCacheId

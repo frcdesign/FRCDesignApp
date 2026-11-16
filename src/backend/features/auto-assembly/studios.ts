@@ -36,6 +36,8 @@ export const FASTENERS = "fasteners";
 export interface FastenerStudio {
     /** Its tab, loaded as an insertable, whose records name what it makes. */
     insertableId: string;
+    /** Its loaded version's, which its preview meshes are made from. */
+    microversionId: string;
     parameters: ConfigurationParameter[];
     location: StudioLocation;
     /** What a fasten mate names its mate connector by, as the studio's load found it. */

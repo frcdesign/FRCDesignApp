@@ -1,3 +1,5 @@
+import { type Selection } from "../../../features/configurations/contract";
+import { encodeQueryConfiguration } from "../../../features/configurations/utils";
 import { OnshapeApi } from "../client";
 import { assertInstanceType } from "../assertions";
 import { ElementPath, toElementApiPath } from "../path";
@@ -55,5 +57,40 @@ export function evaluateFeatureScript(
     return client.post(
         `/partstudios${toElementApiPath(partStudioPath)}/featurescript`,
         { query, body: { script } }
+    );
+}
+
+function configurationQuery(configuration: Selection): Record<string, string> {
+    const encoded = encodeQueryConfiguration(configuration);
+    return encoded ? { configuration: encoded } : {};
+}
+
+/** Every face of every part, as triangles; the shape is in docs/ONSHAPE.md. Metres. */
+export function getTessellatedFaces(
+    client: OnshapeApi,
+    partStudioPath: ElementPath,
+    configuration: Selection
+): Promise<unknown> {
+    return client.get(
+        `/partstudios${toElementApiPath(partStudioPath)}/tessellatedfaces`,
+        {
+            query: {
+                ...configurationQuery(configuration),
+                outputVertexNormals: "true",
+                outputFacetNormals: "true"
+            }
+        }
+    );
+}
+
+/** Every edge of every part, as polylines. Metres. */
+export function getTessellatedEdges(
+    client: OnshapeApi,
+    partStudioPath: ElementPath,
+    configuration: Selection
+): Promise<unknown> {
+    return client.get(
+        `/partstudios${toElementApiPath(partStudioPath)}/tessellatededges`,
+        { query: configurationQuery(configuration) }
     );
 }

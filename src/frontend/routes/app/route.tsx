@@ -1,3 +1,4 @@
+import { usePreviewHandshake } from "../../features/preview/extension";
 import {
     createFileRoute,
     Outlet,
@@ -60,6 +61,7 @@ function App() {
     const { ref: headerRef, height: headerHeight } = useElementSize();
 
     useMessageListener();
+    usePreviewHandshake();
     usePushSync();
     useVersionJobToasts();
     useAssemblyJobToasts();

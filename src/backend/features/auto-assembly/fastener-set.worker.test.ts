@@ -47,6 +47,7 @@ async function storeStudios(kinds = Object.values(FastenerKind)) {
             elementId: `${kind}Studio`,
             documentId: "lib",
             versionId: "libv",
+            microversionId: FASTENER_SET.studios[kind].microversionId,
             isGenerated: true,
             fastenInfo: {
                 // As a load names what the studio's feature made

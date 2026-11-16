@@ -143,7 +143,7 @@ async function findInstance(
     }
 }
 
-interface RenderTarget {
+export interface RenderTarget {
     libraryId: LibraryId;
     path: ElementPath;
     microversionId: string;
@@ -151,7 +151,8 @@ interface RenderTarget {
     parameters: ConfigurationParameter[];
 }
 
-async function renderTargetOf(
+/** The insertable's current version, which is what the library shows. */
+export async function renderTargetOf(
     c: AppContext,
     insertableId: string
 ): Promise<RenderTarget> {

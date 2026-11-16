@@ -1,45 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { FastenerKind } from "./studios";
 import { FASTENER_SET } from "../../../__test_utils__/fastener-set";
-import { HoleEnd, HoleStatus } from "./contract";
-import { partMate, placements } from "./insert";
-import { type HolePlan } from "./planner";
-
-const INCH = 0.0254;
-const WASHER = { vendor: "GENERIC", size: "NO_10_32", type: "OD_1_2_X_0_049" };
-
-const PLAN: HolePlan = {
-    circularEdge: {
-        key: "plate|E",
-        occurrencePath: ["plate"],
-        edgeId: "E",
-        center: [0, 0, 0],
-        normal: [0, 0, 1],
-        radius: 0.0025
-    },
-    planned: {
-        key: "plate|E",
-        status: HoleStatus.READY,
-        end: HoleEnd.THROUGH,
-        depth: 0.5 * INCH,
-        screw: {
-            vendor: "GENERIC",
-            size: "NO_10_32",
-            head: "BUTTON",
-            finish: "BLACK",
-            length: "IN_1",
-            fullyThreaded: "false"
-        },
-        screwWasher: WASHER,
-        nut: { vendor: "MCMASTER", size: "NO_10_32", type: "NYLOCK" },
-        nutWasher: WASHER
-    },
-    exit: {
-        point: [0, 0, -0.5 * INCH],
-        edge: { occurrencePath: ["bottom"], edgeId: "B" },
-        radius: 0.0025
-    }
-};
+import { INCH, PLAN } from "../../../__test_utils__/auto-assembly-fixtures";
+import { HoleStatus } from "./contract";
+import { partMate, placements, previewParts } from "./insert";
 
 describe("placements", () => {
     const parts = placements(FASTENER_SET, [PLAN]);
@@ -136,5 +100,24 @@ describe("partMate", () => {
                 "washer.top"
             )
         ).toBeUndefined();
+    });
+});
+
+describe("previewParts", () => {
+    it("draws each part from its studio's loaded version, where it's placed", () => {
+        const parts = placements(FASTENER_SET, [PLAN]);
+
+        const previews = previewParts(FASTENER_SET, parts);
+
+        expect(previews.map((part) => part.insertableId)).toEqual([
+            "washer-row",
+            "screw-row",
+            "washer-row",
+            "nut-row"
+        ]);
+        const [, screw] = previews;
+        expect(screw.microversionId).toBe("screw-mv");
+        expect(screw.configuration).toContain("length=IN_1");
+        expect(screw.transform).toEqual(parts[1].transform);
     });
 });

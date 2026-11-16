@@ -3,13 +3,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as FastenerSets from "./fastener-set";
 import { FASTENER_SET } from "../../../__test_utils__/fastener-set";
 import { createTestApp, jsonRequest } from "../../../__test_utils__";
-import { ASSEMBLY, BODY } from "../../../__test_utils__/auto-assembly-fixtures";
+import {
+    ASSEMBLY,
+    BODY,
+    PLAN
+} from "../../../__test_utils__/auto-assembly-fixtures";
 import { Program } from "./catalog";
 import {
     AssemblyJobState,
     AssemblyTaskState,
     HoleStatus,
     type AssemblyJobStatus,
+    type PickCheckOut,
     ProblemSeverity,
     SelectedEntityType,
     SelectionMode,
@@ -17,6 +22,7 @@ import {
 } from "./contract";
 import { reportJob } from "./jobs";
 import * as IndexHoles from "./index-holes";
+import * as Planner from "./planner";
 
 const app = createTestApp();
 
@@ -254,8 +260,39 @@ describe("POST /api/auto-assembly/check", () => {
                     message: "Not a circular edge.",
                     severity: ProblemSeverity.ERROR
                 }
-            ]
+            ],
+            previews: []
         });
+    });
+});
+
+describe("POST /api/auto-assembly/check's previews", () => {
+    it("places every part a run would insert", async () => {
+        publish();
+        vi.spyOn(IndexHoles, "indexHoles").mockResolvedValue({
+            circularEdges: [PLAN.circularEdge],
+            holes: [],
+            placed: [],
+            replacements: [],
+            pickEdges: { "top|TOP-top": [PLAN.circularEdge.key] },
+            unfound: []
+        });
+        vi.spyOn(Planner, "planHoles").mockReturnValue([PLAN]);
+
+        const res = await post("/auto-assembly/check", {
+            assembly: ASSEMBLY,
+            selectionMode: SelectionMode.LOCATIONS,
+            targets: BODY.targets,
+            options: BODY.options
+        });
+
+        const body: PickCheckOut = await res.json();
+        expect(body.previews?.map((part) => part.insertableId)).toEqual([
+            "washer-row",
+            "screw-row",
+            "washer-row",
+            "nut-row"
+        ]);
     });
 });
 

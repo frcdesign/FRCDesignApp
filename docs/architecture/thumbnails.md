@@ -121,10 +121,12 @@ group that has never loaded is refused.
 
 `deleteStaleThumbnails` runs after each load saves its group, and when a group
 is deleted. For each element of the document, past and present, it lists both
-prefixes and deletes objects whose `(elementId, microversionId)` no insertable
-row in **any** library names and no group thumbnail url points at. A forced
-reload also deletes every configuration render of the document
-(`dropRenders`), so bad ones are redone.
+prefixes, and the preview meshes' (`previews/`, see
+[previews.md](./previews.md)). It deletes objects whose
+`(elementId, microversionId)` no insertable row in **any** library names and no
+group thumbnail url points at. A forced reload also deletes every
+configuration render and preview mesh of the document (`dropRenders`), so bad
+ones are redone.
 
 ### Onshape calls
 

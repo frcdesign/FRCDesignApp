@@ -1,5 +1,10 @@
 /** Shows a preview in Onshape's graphics window: in its own frame when that works, over it otherwise. */
-import { GhostRenderer } from "./ghost-renderer";
+import {
+    decodePreviewMesh,
+    type PreviewInstance,
+    type PreviewMesh
+} from "@backend/features/previews/contract";
+import { GhostRenderer, type Instance } from "./ghost-renderer";
 import {
     type DrawPass,
     findDepthClearPass,
@@ -9,8 +14,6 @@ import {
     requestDraw,
     viewerContext
 } from "./onshape-viewer";
-import { type PreviewPart } from "./protocol";
-import { buildPreviewMesh, type PreviewMesh } from "./shapes";
 
 /** How long Onshape gets to draw a frame with the preview in it before the overlay takes over. */
 const IN_SCENE_TIMEOUT = 1500;
@@ -32,6 +35,22 @@ interface Scene {
     hasDrawn: boolean;
 }
 
+interface Content {
+    meshes: Map<string, PreviewMesh>;
+    instances: Instance[];
+}
+
+/** Onshape's API writes a transform row-major; WebGL takes it column-major. */
+function toColumnMajor(transform: number[]): Float32Array {
+    const matrix = new Float32Array(16);
+    for (let row = 0; row < 4; row++) {
+        for (let column = 0; column < 4; column++) {
+            matrix[column * 4 + row] = transform[row * 4 + column];
+        }
+    }
+    return matrix;
+}
+
 interface Overlay {
     canvas: HTMLCanvasElement;
     renderer: GhostRenderer;
@@ -39,7 +58,7 @@ interface Overlay {
 }
 
 export class PreviewController {
-    private mesh: PreviewMesh | undefined;
+    private content: Content | undefined;
     private scene: Scene | undefined;
     private overlay: Overlay | undefined;
     private timer: number | undefined;
@@ -49,17 +68,31 @@ export class PreviewController {
         return this.scene ? "scene" : this.overlay ? "overlay" : "none";
     }
 
-    show(parts: PreviewPart[]) {
-        if (parts.length === 0) {
+    /** A mesh this version can't read is left out, with the parts drawn with it. */
+    show(meshes: Record<string, ArrayBuffer>, parts: PreviewInstance[]) {
+        const decoded = new Map<string, PreviewMesh>();
+        for (const [id, buffer] of Object.entries(meshes)) {
+            const mesh = decodePreviewMesh(buffer);
+            if (mesh) {
+                decoded.set(id, mesh);
+            }
+        }
+        const instances = parts
+            .filter((part) => decoded.has(part.mesh))
+            .map((part) => ({
+                mesh: part.mesh,
+                model: toColumnMajor(part.transform)
+            }));
+        if (instances.length === 0) {
             this.clear();
             return;
         }
-        this.mesh = buildPreviewMesh(parts);
+        this.content = { meshes: decoded, instances };
         if (this.scene) {
-            this.scene.renderer.setMesh(this.mesh);
+            this.scene.renderer.setScene(decoded, instances);
             requestDraw(this.scene.viewer);
         } else if (this.overlay) {
-            this.overlay.renderer.setMesh(this.mesh);
+            this.overlay.renderer.setScene(decoded, instances);
         }
         this.sync();
         this.timer ??= window.setInterval(() => {
@@ -68,7 +101,7 @@ export class PreviewController {
     }
 
     clear() {
-        this.mesh = undefined;
+        this.content = undefined;
         window.clearInterval(this.timer);
         this.timer = undefined;
         this.detachScene();
@@ -107,13 +140,14 @@ export class PreviewController {
         const viewer = findViewer();
         const gl = viewer && viewerContext(viewer);
         const pass = viewer && findDepthClearPass(viewer);
-        if (!viewer || !gl || !pass || !this.mesh) {
+        const { content } = this;
+        if (!viewer || !gl || !pass || !content) {
             return;
         }
         let renderer: GhostRenderer | undefined;
         try {
             renderer = new GhostRenderer(gl);
-            renderer.setMesh(this.mesh);
+            renderer.setScene(content.meshes, content.instances);
         } catch (error) {
             renderer?.dispose();
             this.fail(error);
@@ -199,7 +233,8 @@ export class PreviewController {
     }
 
     private startOverlay() {
-        if (this.overlay || !this.mesh) {
+        const { content } = this;
+        if (this.overlay || !content) {
             return;
         }
         const canvas = document.createElement("canvas");
@@ -219,7 +254,7 @@ export class PreviewController {
             return;
         }
         const renderer = new GhostRenderer(gl);
-        renderer.setMesh(this.mesh);
+        renderer.setScene(content.meshes, content.instances);
         document.documentElement.append(canvas);
         const overlay: Overlay = { canvas, renderer, frame: 0 };
         const draw = () => {

@@ -73,8 +73,9 @@ it through the `@backend/*` alias. Imports within a side stay relative.
 
 `src/extension/` is the browser extension that draws previews in Onshape's
 graphics window. It is built on its own (`npm run build:extension`, into
-`dist-extension/`) and imports nothing from either side; `protocol.ts` is its
-contract with the app's panel.
+`dist-extension/`). Like the frontend, it imports only leaf modules from the
+backend, through `@backend/*`; `features/previews/contract.ts` is its contract
+with the app's panel.
 
 Both sides are organized the same way:
 
@@ -207,7 +208,7 @@ and in code; "inserts" means only the ones that went into Onshape.
 `README.md`: thumbnails, configurations, loading, favorites, recents, insert and
 fasten, auth (with access levels and environment variables), search,
 analytics, build issues and the admin card, the version manager, Auto Assembly,
-and generated parts. Each states the area's flows, storage,
+generated parts, and previews. Each states the area's flows, storage,
 **invariants**, failure modes and decisions. Read the area's document before
 changing it, and check the change against its invariants.
 

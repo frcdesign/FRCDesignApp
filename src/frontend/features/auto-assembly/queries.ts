@@ -1,3 +1,4 @@
+import { type PreviewPart } from "@backend/features/previews/contract";
 import {
     keepPreviousData,
     skipToken,
@@ -80,6 +81,8 @@ export interface PickProblems {
     holeSize?: string;
     /** Whether a check is waiting for the picks to settle, or going. */
     isChecking: boolean;
+    /** Every part a run would insert, from the last check; none once nothing is picked. */
+    previews?: PreviewPart[];
 }
 
 /**
@@ -115,7 +118,10 @@ export function usePickProblems(body: PickCheckIn | undefined): PickProblems {
         // The last picks' hole is no guide to these
         holeSize: isPlaceholderData ? undefined : data?.holeSize,
         isChecking:
-            isSignedIn && body !== undefined && (settled !== body || isFetching)
+            isSignedIn &&
+            body !== undefined &&
+            (settled !== body || isFetching),
+        previews: body ? data?.previews : undefined
     };
 }
 

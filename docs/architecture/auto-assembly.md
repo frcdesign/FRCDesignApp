@@ -725,6 +725,8 @@ interface Catalog {
 interface FastenerStudio {
     /** Its tab, loaded as an insertable, whose records name what it makes. */
     insertableId: string;
+    /** Its loaded version's, which its preview meshes are made from. */
+    microversionId: string;
     parameters: ConfigurationParameter[];
     location: StudioLocation;
     /** What a fasten mate names its mate connector by, as the studio's load found it. */
@@ -1155,6 +1157,11 @@ It also answers `holeSize`: the size the first hole picked is made for, from
 the targets, then the screws to update (`pickedHoleSize`). Size follows it in
 the form.
 
+Planned, it answers `previews` too: where each part of each ready hole would
+go, and the mesh to draw it with (`previewParts`). The panel shows them in
+Onshape's view through the preview extension; see
+[previews.md](./previews.md).
+
 Nothing picked asks Onshape nothing. FTC, or parts the catalog doesn't make,
 is checked without planning. The last check's marks stay while the next goes,
 and the same picks and options are checked once. Insert and fasten's lists use
@@ -1443,10 +1450,12 @@ In [strings/auto-assembly.md](../strings/auto-assembly.md).
   API reference. Fastening a screw or nut to the washer under it puts it at the
   washer's thickness whichever washer was chosen, where moving the mate
   connector by a seat washer would fit only that one.
-- **A run, not a request, and no preview.** Indexing a large assembly and
-  mating each part takes many Onshape calls, longer than anyone should wait on
-  a panel; a workflow keeps going when the panel closes, and its stored status
-  says what each hole got. Its plan is the preview.
+- **A run, not a request.** Indexing a large assembly and mating each part
+  takes many Onshape calls, longer than anyone should wait on a panel; a
+  workflow keeps going when the panel closes, and its stored status says what
+  each hole got. The check's plan is what's previewed, through the preview
+  extension ([previews.md](./previews.md)); without it, the plan's marks on the
+  picks are the preview.
 - **The form is the configuration dialog's.** Its studio parameters are the
   Part Studios' configurations as Onshape answers them, rendered and settled by
   the code the insert menu uses, so a vendor's options show as they do in

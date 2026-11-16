@@ -10,6 +10,7 @@ import { insertLocationRoutes } from "./features/insert-location/routes";
 import { insertableRoutes } from "./features/library/insertables/routes";
 import { libraryRoutes } from "./features/library/routes";
 import { thumbnailRoutes } from "./features/thumbnails/routes";
+import { previewRoutes } from "./features/previews/routes";
 import { versionManagerRoutes } from "./features/version-manager/routes";
 import { autoAssemblyRoutes } from "./features/auto-assembly/routes";
 import { webhookRoutes } from "./features/webhooks/routes";
@@ -35,6 +36,7 @@ const apiRoutes = [
     insertLocationRoutes,
     configurationRoutes,
     thumbnailRoutes,
+    previewRoutes,
     favoriteRoutes,
     recentRoutes,
     buildStatusRoutes,

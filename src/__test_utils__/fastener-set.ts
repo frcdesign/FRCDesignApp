@@ -16,6 +16,7 @@ function studio(kind: FastenerKind): FastenerStudio {
     const { configuration } = FASTENERS_MANIFEST.studios[kind];
     return {
         insertableId: `${kind}-row`,
+        microversionId: `${kind}-mv`,
         parameters: parseOnshapeConfiguration({
             ...(configuration as unknown as Omit<
                 OnshapeConfigurationResponse,

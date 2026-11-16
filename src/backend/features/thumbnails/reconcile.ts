@@ -1,7 +1,7 @@
 /**
- * Deletes a document's stored thumbnails nothing points at any more. Nothing
- * else expires them, so an edited or removed element would leave its
- * thumbnails behind for good.
+ * Deletes a document's stored thumbnails and preview meshes nothing points at
+ * any more. Nothing else expires them, so an edited or removed element would
+ * leave them behind for good.
  */
 import { eq, inArray } from "drizzle-orm";
 import { chunkForInArray } from "../../db/chunk";
@@ -11,8 +11,10 @@ import {
     THUMBNAIL_PREFIX,
     parseThumbnailKey,
     parseThumbnailUrl,
-    subjectKey
+    subjectKey,
+    type ThumbnailSubject
 } from "./keys";
+import { parsePreviewKey, PREVIEW_PREFIX } from "../previews/store";
 
 /** R2 returns at most this many per call, and takes at most this many to delete. */
 const R2_BATCH = 1000;
@@ -27,7 +29,7 @@ interface StaleThumbnailsScope {
     documentId: string;
     /** Every element of the document the thumbnails could belong to, past and present. */
     elementIds: string[];
-    /** Drops every configuration render too, for a forced reload to redo. */
+    /** Drops every configuration render and preview too, for a forced reload to redo. */
     dropRenders?: boolean;
 }
 
@@ -47,20 +49,20 @@ export async function deleteStaleThumbnails(
 
     let deleted = 0;
     for (const elementId of elementIds) {
-        for (const kind of ["default", "config"]) {
+        for (const kind of STORED_KINDS) {
             let cursor: string | undefined;
             do {
                 const listed = await bucket.list({
-                    prefix: `${THUMBNAIL_PREFIX}${kind}/${elementId}/`,
+                    prefix: kind.prefix(elementId),
                     limit: R2_BATCH,
                     cursor
                 });
                 const stale = listed.objects
                     .filter((object) => {
-                        if (kind === "config" && scope.dropRenders) {
+                        if (kind.isRender && scope.dropRenders) {
                             return true;
                         }
-                        const subject = parseThumbnailKey(object.key);
+                        const subject = kind.parse(object.key);
                         return (
                             subject &&
                             !live.has(subjectKey(subject)) &&
@@ -78,6 +80,31 @@ export async function deleteStaleThumbnails(
     }
     return deleted;
 }
+
+interface StoredKind {
+    prefix: (elementId: string) => string;
+    parse: (key: string) => ThumbnailSubject | undefined;
+    /** Made on demand for one configuration, which a forced reload drops. */
+    isRender: boolean;
+}
+
+const STORED_KINDS: StoredKind[] = [
+    {
+        prefix: (elementId) => `${THUMBNAIL_PREFIX}default/${elementId}/`,
+        parse: parseThumbnailKey,
+        isRender: false
+    },
+    {
+        prefix: (elementId) => `${THUMBNAIL_PREFIX}config/${elementId}/`,
+        parse: parseThumbnailKey,
+        isRender: true
+    },
+    {
+        prefix: (elementId) => `${PREVIEW_PREFIX}${elementId}/`,
+        parse: parsePreviewKey,
+        isRender: true
+    }
+];
 
 async function liveSubjects(
     db: Db,

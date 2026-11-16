@@ -8,11 +8,14 @@ import { Program } from "@backend/features/auto-assembly/catalog";
 import {
     DEFAULT_MAX_THREAD_DEPTH,
     FastenerMode,
+    HoleEnd,
+    HoleStatus,
     type AutoAssemblyIn,
     SelectedEntityType,
     SelectionMode,
     StopCondition
 } from "@backend/features/auto-assembly/contract";
+import { type HolePlan } from "@backend/features/auto-assembly/planner";
 
 export const INCH = 0.0254;
 
@@ -133,5 +136,45 @@ export const BODY: AutoAssemblyIn = {
         nut: { vendor: "MCMASTER", size: "NO_10_32", type: "NYLOCK" },
         stop: StopCondition.ALL_HOLES,
         maxThreadDepth: DEFAULT_MAX_THREAD_DEPTH
+    }
+};
+
+export const WASHER = {
+    vendor: "GENERIC",
+    size: "NO_10_32",
+    type: "OD_1_2_X_0_049"
+};
+
+/** A through hole planned ready, with a washer under its screw and its nut. */
+export const PLAN: HolePlan = {
+    circularEdge: {
+        key: "plate|E",
+        occurrencePath: ["plate"],
+        edgeId: "E",
+        center: [0, 0, 0],
+        normal: [0, 0, 1],
+        radius: 0.0025
+    },
+    planned: {
+        key: "plate|E",
+        status: HoleStatus.READY,
+        end: HoleEnd.THROUGH,
+        depth: 0.5 * INCH,
+        screw: {
+            vendor: "GENERIC",
+            size: "NO_10_32",
+            head: "BUTTON",
+            finish: "BLACK",
+            length: "IN_1",
+            fullyThreaded: "false"
+        },
+        screwWasher: WASHER,
+        nut: { vendor: "MCMASTER", size: "NO_10_32", type: "NYLOCK" },
+        nutWasher: WASHER
+    },
+    exit: {
+        point: [0, 0, -0.5 * INCH],
+        edge: { occurrencePath: ["bottom"], edgeId: "B" },
+        radius: 0.0025
     }
 };

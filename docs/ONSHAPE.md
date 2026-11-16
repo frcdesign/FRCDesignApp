@@ -138,6 +138,21 @@ the app makes of them.
 - **A workspace's own thumbnail** is served only to an OAuth caller, never to a
   browser fetching it directly — _observed_.
 
+## Tessellation
+
+[previews.md](./architecture/previews.md) makes its meshes from these.
+
+- `GET /partstudios/d/{did}/{wvm}/{wvmid}/e/{eid}/tessellatedfaces` answers
+  every part's faces as triangles, in metres, for a `configuration`; `.../tessellatededges`
+  answers every edge as a polyline — _documented_.
+- **The answer's shape** is _unverified_. The spec gives each body `faces`, each
+  face `facets`, and each facet three `vertices` with a `normal`, or `normals`
+  per vertex with `outputVertexNormals`; or `indices` into the body's
+  `facetPoints`. It writes a point as `{ x, y, z }`, and the bodies under
+  `bodies`. Onshape's own examples write points as `[x, y, z]` and the bodies
+  as a bare array. `toPreviewMesh` reads every one of these, and a mesh it
+  reads nothing from is never stored.
+
 ## Accounts, companies and teams
 
 - **An owner** (`BTOwnerInfo`) is a user (`type: 0`) or a company (`type: 1`).

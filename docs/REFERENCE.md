@@ -48,6 +48,7 @@ R2 is Cloudflare's blob storage. One bucket holds everything the app stores as a
 | --------------- | ------------------------------------------------------------------------- | ------------------------------------------------- |
 | `thumbnails/`   | Rendered thumbnails, by element, microversion and configuration           | Deleted by the load that orphans them             |
 | `search-index/` | Each library's serialized MiniSearch index, under a version for its shape | Rewritten on every index rebuild; built on a miss |
+| `previews/`     | Preview meshes, by element, microversion and configuration                | Deleted with their element's thumbnails           |
 
 Every thumbnail the app shows is served from R2, never fetched from Onshape per view. How they are rendered, keyed, served and cleaned up is in [architecture/thumbnails.md](./architecture/thumbnails.md).
 

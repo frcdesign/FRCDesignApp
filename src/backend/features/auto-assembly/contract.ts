@@ -1,4 +1,5 @@
 /** What Auto Assembly's routes take and answer. A leaf module: the client imports it. */
+import { type PreviewPart } from "../previews/contract";
 import { type ElementPath } from "../../lib/onshape/path";
 import { type Program } from "./catalog";
 import { type PartChoice, type ScrewChoice } from "./studios";
@@ -108,6 +109,8 @@ export interface PickCheckOut {
     problems: PickProblem[];
     /** The size the first picked hole is made for: what Size follows until it's chosen by hand. */
     holeSize?: string;
+    /** Every part a run would insert, where it would go; only when planned. */
+    previews?: PreviewPart[];
 }
 
 /** Which of the form's lists a pick was made in. */

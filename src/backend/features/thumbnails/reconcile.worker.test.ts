@@ -11,6 +11,7 @@ import { ThumbnailSize } from "./contract";
 import { thumbnailKey, thumbnailUrl } from "./keys";
 import { DEFAULT_CONFIGURATION_KEY } from "../configurations/contract";
 import { deleteStaleThumbnails } from "./reconcile";
+import { previewKey } from "../previews/store";
 import { LibraryId } from "../library/library-id";
 
 const ELEMENT = "element-1";
@@ -138,6 +139,31 @@ describe("deleteStaleThumbnails", () => {
     });
 
     // A forced reload redoes them, and may be clearing out bad ones.
+    it("deletes an old version's preview meshes, and drops them with renders", async () => {
+        await seedPartStudio(db, {
+            elementId: ELEMENT,
+            microversionId: LIVE_MICROVERSION
+        });
+        const live = previewKey(ELEMENT, LIVE_MICROVERSION, "size=l");
+        await store(live, previewKey(ELEMENT, OLD_MICROVERSION, "size=l"));
+        const previews = async () =>
+            (await env.BLOB.list({ prefix: "previews/" })).objects.map(
+                (object) => object.key
+            );
+
+        await clean([ELEMENT]);
+        expect(await previews()).toEqual([live]);
+
+        await deleteStaleThumbnails(
+            env.BLOB,
+            db,
+            { documentId: DOCUMENT, elementIds: [ELEMENT], dropRenders: true },
+            undefined,
+            Date.now()
+        );
+        expect(await previews()).toEqual([]);
+    });
+
     it("drops every configuration render when asked to", async () => {
         await seedPartStudio(db, {
             elementId: ELEMENT,

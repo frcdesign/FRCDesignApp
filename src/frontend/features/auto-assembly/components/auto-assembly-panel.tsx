@@ -1,3 +1,4 @@
+import { usePartPreview } from "../../preview/queries";
 import { Button, Stack } from "@mantine/core";
 import { type ReactNode, useEffect, useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
@@ -145,7 +146,9 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
                   },
         [assembly, mode, isFtc, settled, picks, pickCount]
     );
-    const { problems, holeSize, isChecking } = usePickProblems(checkBody);
+    const { problems, holeSize, isChecking, previews } =
+        usePickProblems(checkBody);
+    usePartPreview(previews);
 
     // Size follows the first hole picked until it's chosen by hand, as an Onshape feature's editing logic does
     useEffect(() => {

@@ -146,6 +146,11 @@ export function nextVersionNameQueryKey(workspace: InstancePath | undefined) {
 /** By the assembly's key, so a launch's extra fields don't make a second entry. */
 export const FASTENER_SET_QUERY_KEY = ["fastener-set"];
 
+/** A preview mesh, by `previewMeshId`. */
+export function previewMeshQueryKey(meshId: string) {
+    return ["preview-mesh", meshId];
+}
+
 /** The whole body, so a pick or an option changed is a new check. */
 export function pickCheckQueryKey(body: PickCheckIn | undefined) {
     return ["pick-check", body];
