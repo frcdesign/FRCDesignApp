@@ -22,7 +22,7 @@ import { getFastenerSet } from "./fastener-set";
 import { getJobStatus, reportJob } from "./jobs";
 import { indexHoles } from "./index-holes";
 import { planHoles } from "./planner";
-import { pickProblems } from "./check";
+import { pickedHoleSize, pickProblems } from "./check";
 import {
     entitySchema,
     INCONSISTENT_PICK_MESSAGE,
@@ -32,7 +32,6 @@ import {
 import {
     FastenerKind,
     type FastenerSet,
-    inSize,
     isMade,
     type PartChoice,
     type ScrewChoice
@@ -91,7 +90,6 @@ const optionsSchema = z
         program: z.enum(Program),
         mode: z.enum(FastenerMode),
         screw: screwSchema,
-        matchHoleSize: z.boolean().optional(),
         screwWasher: partSchema.optional(),
         nut: partSchema.optional(),
         nutWasher: partSchema.optional(),
@@ -203,14 +201,13 @@ autoAssemblyRoutes.post(
                   indexed.placed,
                   options,
                   set.catalog,
-                  {
-                      stopPlane: indexed.stopPlane,
-                      inSize: (size) => inSize(set, options, size)
-                  }
+                  { stopPlane: indexed.stopPlane }
               ).map((plan) => plan.planned)
             : undefined;
+        const holeSize = planned && pickedHoleSize(request, indexed, planned);
         return c.json({
-            problems: pickProblems(request, indexed, planned)
+            problems: pickProblems(request, indexed, planned),
+            ...(holeSize ? { holeSize } : {})
         } satisfies PickCheckOut);
     }
 );

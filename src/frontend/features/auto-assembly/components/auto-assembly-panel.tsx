@@ -1,5 +1,5 @@
 import { Button, Stack } from "@mantine/core";
-import { type ReactNode, useMemo } from "react";
+import { type ReactNode, useEffect, useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { Program } from "@backend/features/auto-assembly/catalog";
 import {
@@ -105,6 +105,10 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
     const setTargets = useAutoAssemblyStore((state) => state.setTargets);
     const setExcluded = useAutoAssemblyStore((state) => state.setExcluded);
     const setReplaced = useAutoAssemblyStore((state) => state.setReplaced);
+    const followHoleSize = useAutoAssemblyStore(
+        (state) => state.followHoleSize
+    );
+    const finishRun = useAutoAssemblyStore((state) => state.finishRun);
     const { data: job } = useAssemblyJobQuery(assembly);
     const insertMutation = useInsertMutation(assembly);
     const settled = useMemo(() => settleChoices(set, choices), [set, choices]);
@@ -141,7 +145,14 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
                   },
         [assembly, mode, isFtc, settled, picks, pickCount]
     );
-    const { problems, isChecking } = usePickProblems(checkBody);
+    const { problems, holeSize, isChecking } = usePickProblems(checkBody);
+
+    // Size follows the first hole picked until it's chosen by hand, as an Onshape feature's editing logic does
+    useEffect(() => {
+        if (holeSize) {
+            followHoleSize(holeSize);
+        }
+    }, [holeSize, followHoleSize]);
 
     const isRunning = job?.state === AssemblyJobState.RUNNING;
     const problem = (entity: OnshapeSelection) =>
@@ -154,13 +165,7 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
             ...picks,
             options: fastenerOptions(settled)
         };
-        insertMutation.mutate(body, {
-            onSuccess: () => {
-                setTargets([]);
-                setExcluded([]);
-                setReplaced([]);
-            }
-        });
+        insertMutation.mutate(body, { onSuccess: finishRun });
     };
 
     return (
@@ -249,7 +254,7 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
                 loading={insertMutation.isPending}
                 onClick={insert}
             >
-                {m.autoAssemblyInsert()}
+                {isScrews ? m.autoAssemblyReplace() : m.autoAssemblyInsert()}
             </Button>
         </Stack>
     );

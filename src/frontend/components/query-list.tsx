@@ -51,6 +51,8 @@ interface QueryListProps {
     rowSection?: (entity: OnshapeSelection) => ReactNode;
     /** Takes picks whenever no list does, as a form's first list should. */
     autoFocus?: boolean;
+    /** Red while it has no picks, as Onshape marks a required query. */
+    required?: boolean;
     /** What's wrong with a row: shown under it, in its status's color. */
     problem?: (entity: OnshapeSelection) => RowProblem | undefined;
     /** Whether the rows' problems are being worked out, shown by a spinner beside Clear. */
@@ -106,6 +108,7 @@ export function QueryList(props: QueryListProps): ReactNode {
         describe = defaultName,
         rowSection,
         autoFocus = false,
+        required = false,
         problem,
         isChecking = false,
         isPassive = false
@@ -269,6 +272,8 @@ export function QueryList(props: QueryListProps): ReactNode {
 
     const clear = () => onChange([]);
 
+    const isMissing = required && isEmpty;
+
     return (
         <Stack gap={4}>
             <Paper
@@ -280,11 +285,18 @@ export function QueryList(props: QueryListProps): ReactNode {
                     cursor: "pointer",
                     borderColor: isFocused
                         ? "var(--mantine-primary-color-filled)"
-                        : undefined
+                        : isMissing
+                          ? `var(--mantine-color-${StatusColor.ERROR}-filled)`
+                          : undefined
                 }}
             >
                 {entities.length === 0 ? (
-                    <Text size="sm" px={4} py={2}>
+                    <Text
+                        size="sm"
+                        px={4}
+                        py={2}
+                        c={isMissing ? StatusColor.ERROR : undefined}
+                    >
                         {label}
                     </Text>
                 ) : (

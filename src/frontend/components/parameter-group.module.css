@@ -1,13 +1,22 @@
-/* Its header and rows span the grid. */
-.header,
+/* It spans the grid. */
 .full {
     grid-column: 1 / -1;
 }
 
+/* The page's text color, as `AppSection`'s header keeps it. */
 .header {
-    display: flex;
-    align-items: center;
-    min-height: var(--input-height-sm, rem(36px));
+    min-height: rem(32px);
+    padding-inline: var(--mantine-spacing-xs);
+    color: var(--mantine-color-text);
+}
+
+.title {
+    font-size: var(--mantine-font-size-sm);
+    font-weight: 600;
+}
+
+.content {
+    padding: var(--mantine-spacing-sm) 0 0;
 }
 
 /* Its rows may all be hidden by their conditions, and an empty row would still take a gap */
@@ -16,7 +25,6 @@
 }
 
 .body {
-    grid-column: 1 / -1;
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     gap: var(--mantine-spacing-sm);

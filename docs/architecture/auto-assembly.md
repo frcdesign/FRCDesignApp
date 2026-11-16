@@ -98,6 +98,8 @@ interface QueryListProps {
     rowSection?: (entity: OnshapeSelection) => ReactNode;
     /** Takes picks whenever no list does, as a form's first list should. */
     autoFocus?: boolean;
+    /** Red while it has no picks, as Onshape marks a required query. */
+    required?: boolean;
     /** What's wrong with a row: shown under it, in its status's color. */
     problem?: (entity: OnshapeSelection) => RowProblem | undefined;
     /** Whether the rows' problems are being worked out, shown by a spinner beside Clear. */
@@ -131,9 +133,15 @@ function fastenerOptions(settled: SettledChoices): FastenerOptions;
 interface AutoAssemblyState extends Choices {
     targets: OnshapeSelection[];
     excluded: OnshapeSelection[];
+    /** Whether Size was chosen by hand since the last run; until then it follows the first hole picked. */
+    isSizeChosen: boolean;
     setForm: (id: FormInput, value: string) => void;
     setMode: (mode: FastenerMode) => void;
     setScrew: (id: string, value: string) => void;
+    /** Size as the hole picked is made for, unless it was chosen by hand. */
+    followHoleSize: (size: string) => void;
+    /** Picks cleared and Size free to follow holes again, after a run starts. */
+    finishRun: () => void;
     setPart: (part: Part, id: string, value: string) => void;
     setAdded: (part: Part, added: boolean) => void;
     setTargets: (targets: OnshapeSelection[]) => void;
@@ -164,8 +172,6 @@ interface SettledChoices {
 enum FormInput {
     SELECT_BY = "selectBy",
     PROGRAM = "program",
-    /** Whether each screw is the size its hole is made for, in place of the screw's Size. */
-    MATCH_HOLE_SIZE = "matchHoleSize",
     STOP = "stop",
     MAX_LENGTH = "maxLength",
     MAX_THREAD_DEPTH = "maxThreadDepth"
@@ -186,9 +192,9 @@ enum Part {
 ```ts
 // The last run, the Selections group, the options, and Insert.
 function AutoAssemblyPanel(props: AutoAssemblyPanelProps): ReactNode;
-// The Fastener group, a group per washer and the nut, and the stop condition.
+// The Fastener and Length groups, and a group per washer and the nut.
 function FastenerOptionsForm(props: FastenerOptionsFormProps): ReactNode;
-// Onshape's parameter groups: each folds from its chevron or title, and may be driven by a checkbox.
+// Onshape's parameter groups, as unstyled accordions: each folds from its header, and may be driven by a checkbox its title ticks.
 function ParameterGroup(props: ParameterGroupProps): ReactNode;
 
 interface AutoAssemblyPanelProps {
@@ -243,8 +249,6 @@ interface FastenerOptions {
     mode: FastenerMode;
     /** Its length is the preset's, and automatic picks one in its place. */
     screw: ScrewChoice;
-    /** Each screw is the size its hole is made for, in place of `screw.size`. */
-    matchHoleSize?: boolean;
     /** Under the head; none when absent. */
     screwWasher?: PartChoice;
     /** Where the screw comes out the far side; none when absent. */
@@ -343,6 +347,8 @@ interface PlannedHole {
     status: HoleStatus;
     /** Why it can't be fastened, in words, when it can't. */
     reason?: string;
+    /** The screw size the hole is made for, where it's one the catalog has. */
+    madeFor?: string;
     /** What's off about how it's fastened, in words: a screw that doesn't fit as it should, or no nut. */
     warning?: string;
     end?: HoleEnd;
@@ -600,18 +606,10 @@ function holeSize(
     hole: AssemblyHole,
     catalog: Catalog
 ): CatalogSize | undefined;
-// A run's options for another screw size, each part settled onto what's made in it.
-function inSize(
-    set: FastenerSet,
-    options: FastenerOptions,
-    size: string
-): FastenerOptions;
 
 interface PlanContext {
     /** The plane `StopCondition.FACE` stops at. */
     stopPlane?: AssemblyPlane;
-    /** The run's options for another size, its parts settled onto what's made in it. */
-    inSize?: (size: string) => FastenerOptions;
 }
 function getLengths(
     catalog: Catalog,
@@ -1054,22 +1052,29 @@ The panel first reads the fasteners the library loaded (`useFastenerSetQuery`,
 loaded them it says so, and offers nothing to insert.
 
 The panel is a `ParameterGrid` of the configuration dialog's own inputs
-(`ParameterInput`), in groups (`ParameterGroup`) that fold from their chevron
-or title, as an Onshape feature dialog's do:
+(`ParameterInput`), in groups (`ParameterGroup`), as an Onshape feature
+dialog's are. A group is an unstyled accordion, like `AppSection`'s:
+
+- Its whole header row highlights on hover and folds the group.
+- The chevron sits at the row's end.
+- A checkbox sits beside the title, not in a button. Clicking the title ticks
+  the checkbox rather than folding.
+
+The groups:
 
 1. **Selections**, first, so the picks can decide the screw: _Select by_
-   (Circular edges, the default, Faces, or Screws), and its query lists, the
-   first focused.
+   (Circular edges, the default, Faces, or Existing screws), and its query
+   lists, the first focused.
 2. **Fastener**: Program, then the screw studio's Vendor, Size, Head and
-   Finish. Size offers **From hole** first, which sizes each screw by its hole
-   (`matchHoleSize`). Then comes _Sizing_ in place of its Length: **Automatic** (the default)
+   Finish. Then comes _Sizing_ in place of its Length: **Automatic** (the default)
    picks a length for each hole, and **Manual** shows the studio's Length, and,
-   beside a length sold both ways, its Fully threaded. Sized automatically, it
-   goes on with _Stop condition_ (**All holes**, the default; **Max length**
-   with _Max length_; or **Face** with _Face to stop at_, a query list of one
-   planar face, where a new pick takes the old one's place), then _Max thread
-   depth_.
-3. **Add screw washer**, **Add nut** and **Add nut washer**, each a group its
+   beside a length sold both ways, its Fully threaded.
+3. **Length**, only when sized automatically: _Stop condition_ (**All holes**,
+   the default; **Max length** with _Max length_; or **Face** with _Face to
+   stop at_), then _Max thread depth_. _Face to stop at_ is a query list of one
+   planar face, where a new pick takes the old one's place. It's required:
+   red while empty.
+4. **Add screw washer**, **Add nut** and **Add nut washer**, each a group its
    checkbox drives, whose rows are there only while ticked: the washer or nut studio's parameters but its Size, which is
    the screw's. A washer's Vendor offers those making it in that size, and is
    left out under a Generic screw, whose washers are Generic; a nut has none,
@@ -1077,6 +1082,12 @@ or title, as an Onshape feature dialog's do:
    Finish show only where there's a choice, so a Generic washer, one in each
    size, shows its checkbox alone. The screw washer is gone under a countersunk
    head, and the nut washer without a nut.
+
+Size follows the holes picked, as an Onshape feature's editing logic sets one
+input from another. Each check answers the size the first hole picked is made
+for (`holeSize`), and the panel sets Size to it (`followHoleSize`). It stops
+once Size is chosen by hand (`isSizeChosen`). A run starting frees it again
+(`finishRun`).
 
 The studios' parameters are their configurations as Onshape answers them,
 parsed by `parseOnshapeConfiguration`, so their options show as the Part
@@ -1098,12 +1109,13 @@ _Select by_ decides what the picks are:
   is skipped.
 - **Faces** — every circular edge of each planar face is a hole to fasten;
   _Edges to exclude_ takes the edges of holes in them to leave out.
-- **Screws** — _Screws to update_ takes library screws already in the
+- **Existing screws** — _Screws to update_ takes library screws already in the
   assembly, as whole solid parts (`SOLID_BODIES`), each row named "Screw {n}";
   the run decides which picks are screws.
 
 A run takes one kind: only the lists Select by shows are sent, and changing
-Select by clears every pick. Insert needs a pick, and, under the Face stop
+Select by clears every pick. The button reads Replace for existing screws and
+Insert otherwise. It needs a pick, and, under the Face stop
 condition, a face to stop at; manual sizing sends **All holes**, whatever the
 hidden stop condition says.
 
@@ -1138,6 +1150,10 @@ options (`planHoles`), and answers each pick's problem (`pickProblems` in
 - a hole to skip that isn't a hole in the faces picked;
 - a screw to update that isn't one, or whose hole won't plan ready;
 - a face to stop at whose part is gone, or that isn't planar.
+
+It also answers `holeSize`: the size the first hole picked is made for, from
+the targets, then the screws to update (`pickedHoleSize`). Size follows it in
+the form.
 
 Nothing picked asks Onshape nothing. FTC, or parts the catalog doesn't make,
 is checked without planning. The last check's marks stay while the next goes,
@@ -1200,10 +1216,8 @@ recorded with why, and the steps after it are skipped.
         3. The size the first hole is made for (`holeSize`): its threads'
            size, else the size it's a clearance of (from the major diameter to
            a little past free clearance), else the size it's a tap drill of.
-            - With **From hole**, the screw, washers and nut are that size
-              (`inSize`). A hole made for no size is **no fit**, or
-              **skipped** if it's one of a face's.
-            - Otherwise, a face's hole made for another size is **skipped**.
+           Every plan from here carries it (`madeFor`). A face's hole made for
+           another size is **skipped**.
         4. The first hole must be at least the screw's major diameter across.
         5. Follow the holes (`followStack`): into a hole tapped for the size
            (threads, or a hole at its tap drill narrower than the screw), to the
@@ -1459,9 +1473,11 @@ In [strings/auto-assembly.md](../strings/auto-assembly.md).
 - **Sizing is its own input.** Automatic and Manual are a choice of their own
   beside the screw's Length, so switching back is in sight whatever length is
   chosen.
-- **The size is chosen, even in automatic mode.** A clearance hole fits more
+- **One size per run, set from the first hole.** A clearance hole fits more
   than one size, and a hole at 0.201" is both #10's clearance and 1/4-20's tap
-  drill; the person knows which they meant. Automatic picks the length.
+  drill, so a per-hole size can guess wrong. Size follows the first hole picked
+  until it's chosen by hand, the way Onshape's editing logic fills one input
+  from another. The person sees the guess and can change it.
 - **Every scan is sent the picked ids, not a `queries` body.** The lambda is
   wrapped to build its queries from `qTransient`, whose form std documents.
 

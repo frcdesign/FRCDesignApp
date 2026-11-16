@@ -90,6 +90,19 @@ function plannedProblem(
     return { ...worst[0], message: `${counted}: ${worst[0].message}` };
 }
 
+/** The size the first hole picked is made for, in the order picked: a target's, else a screw's to update. */
+export function pickedHoleSize(
+    request: Pick<PickCheckIn, "targets" | "replaced">,
+    indexed: IndexedHoles,
+    planned: PlannedHole[]
+): string | undefined {
+    const plans = new Map(planned.map((hole) => [hole.key, hole]));
+    return [...request.targets, ...request.replaced]
+        .flatMap((pick) => indexed.pickEdges[pickKey(pick)] ?? [])
+        .map((edge) => plans.get(edge)?.madeFor)
+        .find((size) => size !== undefined);
+}
+
 /** Plans are left out when there are no options to plan with. */
 export function pickProblems(
     request: Pick<

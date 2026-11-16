@@ -161,9 +161,13 @@ describe("fasten picks", () => {
         expect(screen.getByText("Select by")).toBeTruthy();
     });
 
-    it("keeps taking picks while folded from its title", async () => {
+    it("keeps taking picks while folded from its header", async () => {
         renderInMenu(SCREW);
-        await userEvent.click(screen.getByText("Fasten"));
+        const header = screen
+            .getByText("Fasten")
+            .closest("[data-group-header]");
+        await userEvent.click(header as HTMLElement);
+        expect(screen.getByRole("checkbox", { name: "Fasten" })).toBeTruthy();
 
         selectInOnshape(edge("JH1"));
         expect(useFastenPicks.getState().targets).toEqual([edge("JH1")]);

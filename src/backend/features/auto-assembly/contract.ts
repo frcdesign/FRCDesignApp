@@ -29,8 +29,6 @@ export interface FastenerOptions {
     mode: FastenerMode;
     /** Its length is the preset's, and automatic picks one in its place. */
     screw: ScrewChoice;
-    /** Each screw is the size its hole is made for, in place of `screw.size`. */
-    matchHoleSize?: boolean;
     /** Under the head; none when absent. */
     screwWasher?: PartChoice;
     /** Where the screw comes out the far side; none when absent. */
@@ -108,6 +106,8 @@ export interface PickProblem {
 
 export interface PickCheckOut {
     problems: PickProblem[];
+    /** The size the first picked hole is made for: what Size follows until it's chosen by hand. */
+    holeSize?: string;
 }
 
 /** Which of the form's lists a pick was made in. */
@@ -151,6 +151,8 @@ export interface PlannedHole {
     status: HoleStatus;
     /** Why it can't be fastened, in words, when it can't. */
     reason?: string;
+    /** The screw size the hole is made for, where it's one the catalog has. */
+    madeFor?: string;
     /** What's off about how it's fastened, in words: a screw that doesn't fit as it should, or no nut. */
     warning?: string;
     end?: HoleEnd;

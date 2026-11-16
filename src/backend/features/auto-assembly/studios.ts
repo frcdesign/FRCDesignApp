@@ -23,7 +23,6 @@ import {
 } from "../configurations/selection";
 import { type StudioLocation } from "../generated-parts/studios";
 import { type Catalog } from "./catalog";
-import { type FastenerOptions } from "./contract";
 
 export enum FastenerKind {
     SCREW = "screw",
@@ -285,25 +284,4 @@ export function studioConfiguration(
         toSelection({ ...choice }, parameters),
         parameters
     );
-}
-
-/** A run's options for another screw size: the screw and each part settled onto what's made in it. */
-export function inSize(
-    set: FastenerSet,
-    options: FastenerOptions,
-    size: string
-): FastenerOptions {
-    const screw = settleScrew(set, {
-        ...options.screw,
-        [StudioInput.SIZE]: size
-    });
-    const part = (kind: FastenerKind, choice: PartChoice | undefined) =>
-        choice && settlePart(set, kind, { ...choice }, screw);
-    return {
-        ...options,
-        screw,
-        screwWasher: part(FastenerKind.WASHER, options.screwWasher),
-        nut: part(FastenerKind.NUT, options.nut),
-        nutWasher: part(FastenerKind.WASHER, options.nutWasher)
-    };
 }

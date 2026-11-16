@@ -1,14 +1,8 @@
-import {
-    ActionIcon,
-    Checkbox,
-    Collapse,
-    Group,
-    Title,
-    UnstyledButton
-} from "@mantine/core";
-import { CaretDownIcon, CaretRightIcon } from "@phosphor-icons/react";
+import { Accordion, Box, Checkbox, Group, Text } from "@mantine/core";
 import { type ReactNode, useState } from "react";
-import { IconSize, StatusColor } from "../lib/style-constants";
+import { IconSize } from "../lib/style-constants";
+import { SectionChevron } from "./app-section";
+import styles from "../lib/styles.module.css";
 import classes from "./parameter-group.module.css";
 
 interface ParameterGroupProps {
@@ -19,10 +13,12 @@ interface ParameterGroupProps {
     children?: ReactNode;
 }
 
+const ITEM = "group";
+
 /**
- * A titled group of rows in a `ParameterGrid`, folded by its chevron or title
- * as an Onshape feature dialog's groups are. A group driven by a checkbox has
- * its rows only while ticked, and opens when ticked.
+ * A titled group of rows in a `ParameterGrid`, folded from its header as an
+ * Onshape feature dialog's groups are. A group driven by a checkbox has its
+ * rows only while ticked, and opens when ticked; its title ticks it.
  */
 export function ParameterGroup(props: ParameterGroupProps): ReactNode {
     const { title, checked, onCheckedChange, children } = props;
@@ -30,6 +26,7 @@ export function ParameterGroup(props: ParameterGroupProps): ReactNode {
     const hasCheckbox = checked !== undefined;
     const isFoldable = !hasCheckbox || checked;
     const isExpanded = isOpen && isFoldable;
+
     const toggle = () => {
         if (isFoldable) {
             setIsOpen(!isOpen);
@@ -37,47 +34,59 @@ export function ParameterGroup(props: ParameterGroupProps): ReactNode {
     };
 
     return (
-        <>
-            <Group gap="xs" wrap="nowrap" className={classes.header}>
-                <ActionIcon
-                    variant="subtle"
-                    color={StatusColor.NEUTRAL}
-                    size="sm"
-                    disabled={!isFoldable}
+        <Accordion
+            variant="unstyled"
+            value={isExpanded ? ITEM : null}
+            // Hidden by display alone: a folded query list still takes picks, which needs its effects
+            keepMounted
+            keepMountedMode="display-none"
+            transitionDuration={0}
+            className={classes.full}
+            classNames={{ content: classes.content }}
+        >
+            <Accordion.Item value={ITEM}>
+                {/* The whole row folds; a checkbox can't sit in Accordion.Control's button */}
+                <Group
+                    gap="xs"
+                    wrap="nowrap"
+                    className={`${classes.header} ${styles.dividerBottom} ${isFoldable ? "interactive" : ""}`}
                     onClick={toggle}
+                    data-group-header
                 >
-                    {isExpanded ? (
-                        <CaretDownIcon size={IconSize.SMALL} />
+                    {hasCheckbox ? (
+                        // Ticking it, by box or title, doesn't fold the row too
+                        <Box onClick={(event) => event.stopPropagation()}>
+                            <Checkbox
+                                size="xs"
+                                label={title}
+                                checked={checked}
+                                classNames={{ label: classes.title }}
+                                onChange={(event) => {
+                                    setIsOpen(true);
+                                    onCheckedChange?.(
+                                        event.currentTarget.checked
+                                    );
+                                }}
+                            />
+                        </Box>
                     ) : (
-                        <CaretRightIcon size={IconSize.SMALL} />
+                        <Text className={classes.title}>{title}</Text>
                     )}
-                </ActionIcon>
-                {hasCheckbox && (
-                    <Checkbox
-                        aria-label={title}
-                        checked={checked}
-                        onChange={(event) => {
-                            setIsOpen(true);
-                            onCheckedChange?.(event.currentTarget.checked);
-                        }}
-                    />
+                    <Box flex={1} />
+                    {isFoldable && (
+                        <SectionChevron
+                            opened={isExpanded}
+                            size={IconSize.SMALL}
+                        />
+                    )}
+                </Group>
+                {children && isFoldable && (
+                    <Accordion.Panel>
+                        <div className={classes.body}>{children}</div>
+                    </Accordion.Panel>
                 )}
-                <UnstyledButton flex={1} onClick={toggle}>
-                    <Title order={5}>{title}</Title>
-                </UnstyledButton>
-            </Group>
-            {children && isFoldable && (
-                // Hidden by display alone: a folded query list still takes picks, which needs its effects.
-                <Collapse
-                    expanded={isExpanded}
-                    keepMountedMode="display-none"
-                    transitionDuration={0}
-                    className={classes.full}
-                >
-                    <div className={classes.body}>{children}</div>
-                </Collapse>
-            )}
-        </>
+            </Accordion.Item>
+        </Accordion>
     );
 }
 

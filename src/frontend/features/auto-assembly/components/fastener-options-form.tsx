@@ -2,12 +2,9 @@ import { Text } from "@mantine/core";
 import { type ReactNode } from "react";
 import {
     type ConfigurationParameter,
-    type EnumOption,
-    type EnumParameter,
     ParameterType,
     type Selection
 } from "@backend/features/configurations/contract";
-import { getVisibleOptions } from "@backend/features/configurations/utils";
 import { Program } from "@backend/features/auto-assembly/catalog";
 import {
     FastenerMode,
@@ -70,8 +67,8 @@ interface FastenerOptionsFormProps {
 }
 
 /**
- * Which fastener goes in each hole, in a `ParameterGrid`: the screw and,
- * sized automatically, where it stops, then a group for each washer and the nut.
+ * Which fastener goes in each hole, in a `ParameterGrid`: the screw, where an
+ * automatic screw stops, then a group for each washer and the nut.
  */
 export function FastenerOptionsForm(
     props: FastenerOptionsFormProps
@@ -90,20 +87,18 @@ export function FastenerOptionsForm(
                         </Text>
                     </FullWidthRow>
                 ) : (
-                    <>
-                        <ScrewInputs settled={settled} />
-                        {settled.mode === FastenerMode.AUTOMATIC && (
-                            <StopInputs
-                                settled={settled}
-                                problem={problem}
-                                isChecking={isChecking}
-                            />
-                        )}
-                    </>
+                    <ScrewInputs settled={settled} />
                 )}
             </ParameterGroup>
             {!isFtc && (
                 <>
+                    {settled.mode === FastenerMode.AUTOMATIC && (
+                        <StopGroup
+                            settled={settled}
+                            problem={problem}
+                            isChecking={isChecking}
+                        />
+                    )}
                     {!isCountersunk(settled.set, settled.screw.head) && (
                         <PartGroup
                             part={Part.SCREW_WASHER}
@@ -142,11 +137,9 @@ function ScrewInputs(props: ScrewInputsProps): ReactNode {
     const { settled } = props;
     const setScrew = useAutoAssemblyStore((state) => state.setScrew);
     const setMode = useAutoAssemblyStore((state) => state.setMode);
-    const setForm = useAutoAssemblyStore((state) => state.setForm);
 
     const { parameters } = settled.set.studios[FastenerKind.SCREW];
     const selection: Selection = { ...settled.screw };
-    const isFromHole = settled.form[FormInput.MATCH_HOLE_SIZE] === "true";
 
     return (
         <>
@@ -172,41 +165,6 @@ function ScrewInputs(props: ScrewInputsProps): ReactNode {
                 ) {
                     return sizing;
                 }
-                if (
-                    parameter.id === StudioInput.SIZE &&
-                    parameter.type === ParameterType.ENUM
-                ) {
-                    const sizes = withFromHole(
-                        parameter,
-                        getVisibleOptions(parameter, selection, parameters)
-                    );
-                    return (
-                        <ParameterInput
-                            key={parameter.id}
-                            inputId={`screw-${parameter.id}`}
-                            parameter={sizes}
-                            value={isFromHole ? FROM_HOLE : settled.screw.size}
-                            selection={{
-                                [parameter.id]: isFromHole
-                                    ? FROM_HOLE
-                                    : settled.screw.size
-                            }}
-                            parameters={[sizes]}
-                            onValueChange={(value) => {
-                                if (value === undefined) {
-                                    return;
-                                }
-                                setForm(
-                                    FormInput.MATCH_HOLE_SIZE,
-                                    String(value === FROM_HOLE)
-                                );
-                                if (value !== FROM_HOLE) {
-                                    setScrew(parameter.id, value);
-                                }
-                            }}
-                        />
-                    );
-                }
                 return [
                     sizing,
                     <ParameterInput
@@ -224,24 +182,6 @@ function ScrewInputs(props: ScrewInputsProps): ReactNode {
             })}
         </>
     );
-}
-
-/** The Size input's option for sizing each screw by its hole. */
-const FROM_HOLE = "fromHole";
-
-/** The screw's Size with "From hole" first, and only the sizes it shows. */
-function withFromHole(
-    parameter: EnumParameter,
-    visible: EnumOption[]
-): EnumParameter {
-    return {
-        ...parameter,
-        options: [
-            { id: FROM_HOLE, name: m.autoAssemblySizeFromHole() },
-            ...visible
-        ],
-        optionConditions: []
-    };
 }
 
 interface PartGroupProps {
@@ -316,14 +256,14 @@ function PartGroup(props: PartGroupProps): ReactNode {
     );
 }
 
-interface StopInputsProps {
+interface StopGroupProps {
     settled: SettledChoices;
     problem: (entity: OnshapeSelection) => RowProblem | undefined;
     isChecking: boolean;
 }
 
 /** Where an automatic screw stops, and how deep into threads it goes. */
-function StopInputs(props: StopInputsProps): ReactNode {
+function StopGroup(props: StopGroupProps): ReactNode {
     const { settled, problem, isChecking } = props;
     const stopFace = useAutoAssemblyStore((state) => state.stopFace);
     const setStopFace = useAutoAssemblyStore((state) => state.setStopFace);
@@ -331,7 +271,7 @@ function StopInputs(props: StopInputsProps): ReactNode {
         settled.form[FormInput.STOP] === StopCondition.MAX_LENGTH;
     const isFace = settled.form[FormInput.STOP] === StopCondition.FACE;
     return (
-        <>
+        <ParameterGroup title={m.autoAssemblyLength()}>
             <FormInputRow id={FormInput.STOP} settled={settled} />
             {isMaxLength && (
                 <FormInputRow id={FormInput.MAX_LENGTH} settled={settled} />
@@ -347,10 +287,11 @@ function StopInputs(props: StopInputsProps): ReactNode {
                         filter={PLANAR_FACES}
                         problem={problem}
                         isChecking={isChecking}
+                        required
                     />
                 </FullWidthRow>
             )}
             <FormInputRow id={FormInput.MAX_THREAD_DEPTH} settled={settled} />
-        </>
+        </ParameterGroup>
     );
 }

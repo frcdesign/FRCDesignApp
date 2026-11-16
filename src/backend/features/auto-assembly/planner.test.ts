@@ -17,7 +17,7 @@ import {
     planHoles,
     type PlacedScrew
 } from "./planner";
-import { inSize, type PartChoice, type ScrewChoice } from "./studios";
+import { type PartChoice, type ScrewChoice } from "./studios";
 
 const INCH = 0.0254;
 
@@ -324,15 +324,13 @@ describe("planHoles", () => {
             expect(sizeOf(0.5)).toBeUndefined();
         });
 
-        const fromFace = (holes: AssemblyHole[], extra: ExtraOptions = {}) => {
-            const opts = options(extra);
+        const fromFace = (holes: AssemblyHole[]) => {
             const [only] = planHoles(
                 [{ ...CIRCULAR_EDGE, isFromFace: true }],
                 holes,
                 [],
-                opts,
-                FASTENER_SET.catalog,
-                { inSize: (size) => inSize(FASTENER_SET, opts, size) }
+                options(),
+                FASTENER_SET.catalog
             );
             return only.planned;
         };
@@ -349,29 +347,11 @@ describe("planHoles", () => {
             );
         });
 
-        it("sizes each screw, and its nut, by its hole", () => {
-            const planned = fromFace(quarter, { matchHoleSize: true });
-            expect(planned.status).toBe(HoleStatus.READY);
-            expect(planned.screw?.size).toBe("QUARTER_20");
-            expect(planned.nut?.size).toBe("QUARTER_20");
-            expect(
-                fromFace(TWO_PLATES, { matchHoleSize: true }).screw?.size
-            ).toBe("NO_10_32");
-        });
-
-        it("refuses a hole picked itself that no size is made for", () => {
-            const opts = options({ matchHoleSize: true });
-            const [only] = planHoles(
-                [CIRCULAR_EDGE],
-                [hole("top", 0, 0.25, 0.5)],
-                [],
-                opts,
-                FASTENER_SET.catalog,
-                { inSize: (size) => inSize(FASTENER_SET, opts, size) }
-            );
-            expect(only.planned.status).toBe(HoleStatus.NO_FIT);
-            expect(only.planned.reason).toBe(
-                "No screw size is made for this hole."
+        it("tags each plan with the size its hole is made for", () => {
+            expect(fromFace(quarter).madeFor).toBe("QUARTER_20");
+            expect(fromFace(TWO_PLATES).madeFor).toBe("NO_10_32");
+            expect(fromFace([hole("top", 0, 0.25, 0.5)]).madeFor).toBe(
+                undefined
             );
         });
     });

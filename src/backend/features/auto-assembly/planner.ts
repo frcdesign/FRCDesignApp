@@ -102,16 +102,12 @@ interface Segment {
 interface PlanOptions extends FastenerOptions {
     catalog: Catalog;
     stopPlane?: AssemblyPlane;
-    /** The run's options for another size, with `matchHoleSize`. */
-    inSize?: (size: string) => FastenerOptions;
 }
 
 /** What a plan takes besides the run's options. */
 export interface PlanContext {
     /** The plane `StopCondition.FACE` stops at. */
     stopPlane?: AssemblyPlane;
-    /** The run's options for another size, its parts settled onto what's made in it. */
-    inSize?: (size: string) => FastenerOptions;
 }
 
 const INCH = 0.0254;
@@ -215,22 +211,12 @@ function planHole(
         });
     }
 
+    const madeFor = holeSize(first.hole, options.catalog)?.id;
+    const sized = (planned: Omit<PlannedHole, "key">): HolePlan =>
+        plan({ ...planned, ...(madeFor ? { madeFor } : {}) });
     // A face's holes are fastened only where they're made for the screw
-    const madeFor = holeSize(first.hole, options.catalog);
-    if (options.matchHoleSize && options.inSize) {
-        if (!madeFor) {
-            return plan(
-                circularEdge.isFromFace
-                    ? { status: HoleStatus.SKIPPED }
-                    : {
-                          status: HoleStatus.NO_FIT,
-                          reason: "No screw size is made for this hole."
-                      }
-            );
-        }
-        options = { ...options, ...options.inSize(madeFor.id) };
-    } else if (circularEdge.isFromFace && madeFor?.id !== options.screw.size) {
-        return plan({ status: HoleStatus.SKIPPED });
+    if (circularEdge.isFromFace && madeFor !== options.screw.size) {
+        return sized({ status: HoleStatus.SKIPPED });
     }
 
     const size = getSize(options.catalog, options.screw.size);
@@ -238,13 +224,13 @@ function planHole(
         options.screw.size
     ];
     if (!size || !head) {
-        return plan({
+        return sized({
             status: HoleStatus.NO_FIT,
             reason: "The head isn't made in this size."
         });
     }
     if (2 * first.hole.radius < size.majorDiameter - LINEAR_TOLERANCE) {
-        return plan({
+        return sized({
             status: HoleStatus.NO_FIT,
             reason: `The hole is too small for a ${size.name} screw.`
         });
@@ -257,7 +243,7 @@ function planHole(
             options.stopPlane &&
             meetsPlane(circularEdge, into, options.stopPlane);
         if (stopAt === undefined || stopAt <= LINEAR_TOLERANCE) {
-            return plan({
+            return sized({
                 status: HoleStatus.NO_FIT,
                 reason: options.stopPlane
                     ? "The face to stop at isn't past this hole along its axis."
@@ -270,7 +256,7 @@ function planHole(
     const washers = chooseWashers(options, head.countersunk, end);
     const picked = pickScrew(options, size, stack, washers);
     if ("error" in picked) {
-        return plan({ status: HoleStatus.NO_FIT, reason: picked.error, end });
+        return sized({ status: HoleStatus.NO_FIT, reason: picked.error, end });
     }
     const planned: Omit<PlannedHole, "key"> = {
         status: HoleStatus.READY,
@@ -283,7 +269,7 @@ function planHole(
 
     const nut = nutChoice(options, end);
     if (!nut) {
-        return plan(planned);
+        return sized(planned);
     }
     const exitEdge = stack.last.edges.find(
         (edge) => Math.abs(edge.t - stack.depth) < LINEAR_TOLERANCE
@@ -291,7 +277,7 @@ function planHole(
     if (!exitEdge) {
         const noNut =
             "No edge on the far side to fasten a nut to, so it gets no nut.";
-        return plan({
+        return sized({
             ...planned,
             warning: planned.warning ? `${planned.warning} ${noNut}` : noNut
         });
@@ -300,6 +286,7 @@ function planHole(
         planned: {
             key: circularEdge.key,
             ...planned,
+            ...(madeFor ? { madeFor } : {}),
             nut,
             ...(washers.end ? { nutWasher: washers.end } : {})
         },

@@ -316,8 +316,9 @@ enum MateLocation {
       limiting picks, until one is clicked or **Preselection** opens.
     - Hovering a row lights its entity up.
     - The insert menu shows the same picks in its **Fasten** accordion
-      (`FastenSection`), a `ParameterGroup` whose checkbox is `fasten`. Folded
-      from its title, its lists still take picks. While a menu is open
+      (`FastenSection`), a `ParameterGroup` whose checkbox is `fasten`. Its
+      title ticks the checkbox; its header row folds it. Folded, its lists
+      still take picks. While a menu is open
       (`openInsertableId`) the bar unmounts its own lists, since two lists of
       one id would both take picks. Both read `useFastenPicks`.
     - The insert menu's footer shows the insert location's icon only when the
