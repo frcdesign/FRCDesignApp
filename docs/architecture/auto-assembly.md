@@ -1069,8 +1069,9 @@ dialog's are. A group is an unstyled accordion, like `AppSection`'s:
 
 - Its title and chevron are one control, which highlights on hover and folds
   the group. They line up with the rows' edges.
-- A group driven by a checkbox has the checkbox to the left of that control,
-  as its own target. Unticked, the control doesn't fold.
+- A group driven by a checkbox has its title as the checkbox's label, so the
+  title ticks it. Its chevron is a control of its own at the far side, shown
+  while ticked.
 - There's no line under a header.
 
 The groups:

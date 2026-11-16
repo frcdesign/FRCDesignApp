@@ -1,5 +1,4 @@
 import { ReactNode, useMemo } from "react";
-import { Text } from "@mantine/core";
 import { InsertableOut } from "@backend/features/library/contract";
 import {
     type PickCheckIn,
@@ -23,7 +22,6 @@ import {
     selectionKey,
     toSelectedEntities
 } from "../../../lib/selection";
-import { StatusColor } from "../../../lib/style-constants";
 import { updateUiState, useUiState } from "../../../lib/ui-state";
 import { m } from "../../../paraglide/messages";
 import { usePickProblems } from "../../auto-assembly/queries";
@@ -111,7 +109,6 @@ export function FastenPicks(): ReactNode {
 
     const problem = (entity: OnshapeSelection) =>
         problems.get(selectionKey(entity));
-    const description = describeFasten(mode, targets.length);
 
     return (
         <>
@@ -157,30 +154,6 @@ export function FastenPicks(): ReactNode {
                     />
                 </FullWidthRow>
             )}
-            {description && (
-                <FullWidthRow>
-                    <Text size="xs" c={StatusColor.DIMMED}>
-                        {description}
-                    </Text>
-                </FullWidthRow>
-            )}
         </>
     );
-}
-
-/** What the picks will do; nothing before there are any. */
-function describeFasten(
-    mode: SelectionMode,
-    count: number
-): string | undefined {
-    if (count === 0) {
-        return undefined;
-    }
-    if (mode === SelectionMode.FACES) {
-        return m.fastenFacesSome();
-    }
-    if (count === 1) {
-        return m.fastenCircularEdgesOne();
-    }
-    return m.fastenCircularEdgesMany();
 }

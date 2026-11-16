@@ -3,7 +3,7 @@
     grid-column: 1 / -1;
 }
 
-/* Its own target beside the checkbox: the title and chevron, which fold it. */
+/* What folds it: its title and chevron, or beside a checkbox the chevron alone. */
 .control {
     display: flex;
     align-items: center;
@@ -14,6 +14,10 @@
     color: var(--mantine-color-text);
     /* Out by its padding, so its title and chevron line up with the rows' edges */
     margin-inline-end: calc(var(--mantine-spacing-xs) * -1);
+}
+
+.chevronOnly {
+    padding-inline: rem(6px);
 }
 
 .control:first-child {

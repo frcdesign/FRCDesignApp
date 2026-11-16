@@ -304,7 +304,8 @@ enum MateLocation {
    selection each time it changes, and `useOnshapeSelection` hands the focused
    `QueryList` what was added and deselected, as in Auto Assembly.
 2. In an assembly, signed in, a library page's header ends in the context bar
-   (`ContextBar`). Its **Preselection** button counts the picks held.
+   (`ContextBar`). Its **Preselection** button counts the picks held. It
+   carries the plugs icon parts that fasten show, in the primary color.
    **Add insert location** shows beside it while the assembly has none.
    Once it adds one, the button turns green and reads **Insert location
    added** for as long as the bar is up.
@@ -327,7 +328,7 @@ enum MateLocation {
     - The insert menu shows the same picks in its **Fasten** group
       (`FastenSection`), a `ParameterGroup` whose checkbox is `fasten`. The
       part's parameters sit above it in a **Configuration** group. Its
-      checkbox sits to the left of its title, which folds it. Folded, its lists
+      title is its checkbox's label, and its chevron folds it. Folded, its lists
       still take picks. While a menu is open
       (`openInsertableId`) the bar unmounts its own lists, since two lists of
       one id would both take picks. Both read `useFastenPicks`.

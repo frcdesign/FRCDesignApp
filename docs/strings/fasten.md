@@ -11,22 +11,19 @@ Assembly shares), and the app shows them as they come.
 In the insert menu's Fasten accordion, and under the context bar's
 Preselection button.
 
-| String                                                                      | Kind               | Where                                            | When                                                                   | Review    |
-| --------------------------------------------------------------------------- | ------------------ | ------------------------------------------------ | ---------------------------------------------------------------------- | --------- |
-| "Configuration"                                                             | Group title        | The insert menu, over Fasten                     | A part that can fasten, in an assembly, with parameters                | **⚑** New |
-| "Fasten"                                                                    | Accordion title    | The insert menu, with a checkbox                 | A part that can fasten, in an assembly                                 | **⚑** New |
-| "Preselection"                                                              | Button             | The context bar                                  | A library page in an assembly, signed in; counts the picks             | **⚑** New |
-| "Can fasten to preselections" / "Fastens to {n} preselection(s)"            | Tooltip            | The plugs icon after a part's name               | A part that can fasten, in an assembly; the count while picks are held | **⚑** New |
-| "Add insert location"                                                       | Button             | The context bar                                  | The assembly has none                                                  | **⚑** New |
-| "Insert location added"                                                     | Button, green      | The context bar, in place of Add insert location | Once it has added one                                                  | **⚑** New |
-| "Unexpectedly failed to add an insert location."                            | Error toast        |                                                  | Adding one failed                                                      |           |
-| "Cancel" / "Done"                                                           | Buttons            | Under the bar's lists                            | Preselection open: Cancel also clears the picks                        | **⚑** New |
-| "Select by"                                                                 | Input label        | Over the lists                                   | Always                                                                 | **⚑** New |
-| "The part will be fastened to the selected edge."                           | Description        | Under the lists                                  | One edge picked                                                        |           |
-| "A part will be inserted and fastened to each selected edge."               | Description        | Under the lists                                  | Several edges picked                                                   |           |
-| "A part will be inserted and fastened to every hole in the selected faces." | Description        | Under the lists                                  | Faces picked                                                           |           |
-| "Circular edges" / "Faces"                                                  | Option, list label | Select by, first list                            | Always                                                                 |           |
-| "Edges to exclude"                                                          | Query list label   | Second list                                      | Faces                                                                  |           |
+| String                                                           | Kind               | Where                                            | When                                                                   | Review    |
+| ---------------------------------------------------------------- | ------------------ | ------------------------------------------------ | ---------------------------------------------------------------------- | --------- |
+| "Configuration"                                                  | Group title        | The insert menu, over Fasten                     | A part that can fasten, in an assembly, with parameters                | **⚑** New |
+| "Fasten"                                                         | Accordion title    | The insert menu, with a checkbox                 | A part that can fasten, in an assembly                                 | **⚑** New |
+| "Preselection"                                                   | Button             | The context bar                                  | A library page in an assembly, signed in; counts the picks             | **⚑** New |
+| "Can fasten to preselections" / "Fastens to {n} preselection(s)" | Tooltip            | The plugs icon after a part's name               | A part that can fasten, in an assembly; the count while picks are held | **⚑** New |
+| "Add insert location"                                            | Button             | The context bar                                  | The assembly has none                                                  | **⚑** New |
+| "Insert location added"                                          | Button, green      | The context bar, in place of Add insert location | Once it has added one                                                  | **⚑** New |
+| "Unexpectedly failed to add an insert location."                 | Error toast        |                                                  | Adding one failed                                                      |           |
+| "Cancel" / "Done"                                                | Buttons            | Under the bar's lists                            | Preselection open: Cancel also clears the picks                        | **⚑** New |
+| "Select by"                                                      | Input label        | Over the lists                                   | Always                                                                 | **⚑** New |
+| "Circular edges" / "Faces"                                       | Option, list label | Select by, first list                            | Always                                                                 |           |
+| "Edges to exclude"                                               | Query list label   | Second list                                      | Faces                                                                  |           |
 
 A row's problem under it is the check's, listed in
 [auto-assembly.md](./auto-assembly.md#a-picks-problem).

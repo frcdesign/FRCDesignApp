@@ -151,11 +151,6 @@ describe("fasten picks", () => {
 
         expect(screen.getByText("Edge 2")).toBeTruthy();
         expect(screen.queryByText("Edge 3")).toBeNull();
-        expect(
-            screen.getByText(
-                "A part will be inserted and fastened to each selected edge."
-            )
-        ).toBeTruthy();
     });
 
     it("picks faces, and edges to exclude, in faces mode", () => {
@@ -181,9 +176,7 @@ describe("fasten picks", () => {
 
     it("keeps taking picks while folded from its header", async () => {
         renderInMenu(SCREW);
-        const header = screen
-            .getByText("Fasten")
-            .closest("[data-group-header]");
+        const header = document.querySelector("[data-group-header]");
         await userEvent.click(header as HTMLElement);
         expect(screen.getByRole("checkbox", { name: "Fasten" })).toBeTruthy();
 

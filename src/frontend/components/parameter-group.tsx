@@ -12,7 +12,7 @@ import classes from "./parameter-group.module.css";
 
 interface ParameterGroupProps {
     title: string;
-    /** A checkbox beside its header, as an Onshape feature's: unticked, its rows are gone. */
+    /** A checkbox titling it, as an Onshape feature's: unticked, its rows are gone. */
     checked?: boolean;
     onCheckedChange?: (checked: boolean) => void;
     children?: ReactNode;
@@ -22,8 +22,8 @@ const ITEM = "group";
 
 /**
  * A titled group of rows in a `ParameterGrid`, folded from its header as an
- * Onshape feature dialog's groups are. A group driven by a checkbox has it
- * beside the header, its own target; ticked, it opens and folds.
+ * Onshape feature dialog's groups are. A group driven by a checkbox has its
+ * title as the checkbox's label, and folds from a chevron of its own beside it.
  */
 export function ParameterGroup(props: ParameterGroupProps): ReactNode {
     const { title, checked, onCheckedChange, children } = props;
@@ -44,33 +44,43 @@ export function ParameterGroup(props: ParameterGroupProps): ReactNode {
             classNames={{ content: classes.content }}
         >
             <Accordion.Item value={ITEM}>
-                <Group gap="xs" wrap="nowrap">
-                    {hasCheckbox && (
+                {hasCheckbox ? (
+                    <Group gap="xs" wrap="nowrap" justify="space-between">
                         <Checkbox
-                            aria-label={title}
+                            label={title}
                             checked={checked}
+                            classNames={{ label: classes.title }}
                             onChange={(event) => {
                                 setIsOpen(true);
                                 onCheckedChange?.(event.currentTarget.checked);
                             }}
                         />
-                    )}
+                        {isFoldable && (
+                            <UnstyledButton
+                                className={`${classes.control} ${classes.chevronOnly} interactive`}
+                                onClick={() => setIsOpen(!isOpen)}
+                                data-group-header
+                            >
+                                <SectionChevron
+                                    opened={isExpanded}
+                                    size={IconSize.SMALL}
+                                />
+                            </UnstyledButton>
+                        )}
+                    </Group>
+                ) : (
                     <UnstyledButton
-                        flex={1}
-                        className={`${classes.control} ${isFoldable ? "interactive" : ""}`}
-                        disabled={!isFoldable}
+                        className={`${classes.control} interactive`}
                         onClick={() => setIsOpen(!isOpen)}
                         data-group-header
                     >
                         <Text className={classes.title}>{title}</Text>
-                        {isFoldable && (
-                            <SectionChevron
-                                opened={isExpanded}
-                                size={IconSize.SMALL}
-                            />
-                        )}
+                        <SectionChevron
+                            opened={isExpanded}
+                            size={IconSize.SMALL}
+                        />
                     </UnstyledButton>
-                </Group>
+                )}
                 {children && isFoldable && (
                     <Accordion.Panel>
                         <div className={classes.body}>{children}</div>

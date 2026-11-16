@@ -2,7 +2,7 @@ import { type ReactNode, useEffect, useState } from "react";
 import { Badge, Box, Button, Collapse, Group } from "@mantine/core";
 import {
     CheckIcon,
-    CursorClickIcon,
+    PlugsConnectedIcon,
     PlusIcon,
     TargetIcon
 } from "@phosphor-icons/react";
@@ -112,8 +112,9 @@ function LibraryActions(): ReactNode {
             <BarRow>
                 <Button
                     size="compact-sm"
-                    variant={isPreselecting ? "filled" : undefined}
-                    leftSection={<CursorClickIcon />}
+                    // The parts that fasten to its picks carry the same icon, in the same color
+                    variant={isPreselecting ? "filled" : "light"}
+                    leftSection={<PlugsConnectedIcon />}
                     rightSection={
                         pickCount > 0 && (
                             // Mantine's badge sets its own cursor

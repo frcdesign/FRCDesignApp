@@ -398,7 +398,7 @@ describe("AutoAssemblyPanel", () => {
             "Add screw washer",
             "Add nut",
             "Add nut washer"
-        ].map((title) => screen.getByText(title, { selector: "p" }));
+        ].map((title) => screen.getByText(title, { selector: "p, label" }));
         titles
             .slice(1)
             .forEach((title, index) =>
@@ -417,20 +417,23 @@ describe("AutoAssemblyPanel", () => {
         expect(sizing()).toBeNull();
     });
 
-    it("ticks a group by its checkbox, and folds it from its title", async () => {
+    it("ticks a group by its title, and folds it from its chevron", async () => {
         renderPanel();
         const nut = () =>
             screen.getByRole<HTMLInputElement>("checkbox", { name: "Add nut" });
         const type = () =>
             screen.queryByRole("textbox", { name: "Type" }) ??
             screen.queryByRole("combobox", { name: "Type" });
-        await userEvent.click(nut());
+        await userEvent.click(screen.getByText("Add nut"));
         expect(nut().checked).toBe(false);
         expect(useAutoAssemblyStore.getState().added.nut).toBe(false);
-        await userEvent.click(nut());
+        await userEvent.click(screen.getByText("Add nut"));
         expect(type()).toBeTruthy();
 
-        await userEvent.click(screen.getByText("Add nut"));
+        const chevron = nut()
+            .closest(".mantine-Accordion-item")
+            ?.querySelector("[data-group-header]");
+        await userEvent.click(chevron as HTMLElement);
         expect(nut().checked).toBe(true);
         expect(type()).toBeNull();
     });
