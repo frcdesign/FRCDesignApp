@@ -27,7 +27,8 @@ import {
     entitySchema,
     INCONSISTENT_PICK_MESSAGE,
     isConsistentPick,
-    MAX_SELECTIONS
+    MAX_SELECTIONS,
+    pickKey
 } from "./picked";
 import {
     FastenerKind,
@@ -129,6 +130,17 @@ function hasStopFace(body: {
         : body.stopFace === undefined;
 }
 
+const FLIP_MESSAGE = "Flip only circular edges that are picked.";
+
+/** Each edge to flip is one of the targets. */
+function isFlipPicked(body: {
+    targets: z.infer<typeof entitySchema>[];
+    flipped: z.infer<typeof entitySchema>[];
+}): boolean {
+    const targets = new Set(body.targets.map(pickKey));
+    return body.flipped.every((edge) => targets.has(pickKey(edge)));
+}
+
 const STOP_FACE_MESSAGE =
     "Select a face to stop at, with the Face stop condition.";
 
@@ -140,9 +152,12 @@ const insertBody = z
         excluded: z.array(entitySchema).max(MAX_SELECTIONS).default([]),
         replaced: z.array(entitySchema).max(MAX_SELECTIONS).default([]),
         stopFace: entitySchema.optional(),
+        flipped: z.array(entitySchema).max(MAX_SELECTIONS).default([]),
+        flipScrews: z.boolean().default(false),
         options: optionsSchema
     })
     .refine(isConsistentPick, INCONSISTENT_PICK_MESSAGE)
+    .refine(isFlipPicked, FLIP_MESSAGE)
     .refine(hasStopFace, STOP_FACE_MESSAGE)
     .refine(
         (body) => body.targets.length > 0 || body.replaced.length > 0,
@@ -157,9 +172,12 @@ const checkBody = z
         excluded: z.array(entitySchema).max(MAX_SELECTIONS).default([]),
         replaced: z.array(entitySchema).max(MAX_SELECTIONS).default([]),
         stopFace: entitySchema.optional(),
+        flipped: z.array(entitySchema).max(MAX_SELECTIONS).default([]),
+        flipScrews: z.boolean().default(false),
         options: optionsSchema.optional()
     })
     .refine(isConsistentPick, INCONSISTENT_PICK_MESSAGE)
+    .refine(isFlipPicked, FLIP_MESSAGE)
     .refine(hasStopFace, STOP_FACE_MESSAGE);
 
 /**
@@ -186,7 +204,8 @@ autoAssemblyRoutes.post(
             excluded,
             set,
             replaced,
-            request.stopFace
+            request.stopFace,
+            { flipped: request.flipped, flipScrews: request.flipScrews }
         );
         // Only parts the catalog makes can be planned with
         const canPlan =
@@ -207,7 +226,8 @@ autoAssemblyRoutes.post(
         const holeSize = planned && pickedHoleSize(request, indexed, planned);
         return c.json({
             problems: pickProblems(request, indexed, planned),
-            ...(holeSize ? { holeSize } : {})
+            ...(holeSize ? { holeSize } : {}),
+            ...(indexed.firstScrew ? { existingScrew: indexed.firstScrew } : {})
         } satisfies PickCheckOut);
     }
 );

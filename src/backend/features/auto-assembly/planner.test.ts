@@ -149,6 +149,42 @@ describe("planHoles", () => {
         expect(exit?.point[2]).toBeCloseTo(-0.5 * INCH);
     });
 
+    it("fastens a flipped edge from the far end of its holes, its head there and its nut here", () => {
+        const [flipped] = planHoles(
+            [{ ...CIRCULAR_EDGE, isFlipped: true }],
+            TWO_PLATES,
+            [],
+            options(),
+            FASTENER_SET.catalog
+        );
+        expect(flipped.planned.key).toBe(CIRCULAR_EDGE.key);
+        expect(flipped.planned.status).toBe(HoleStatus.READY);
+        expect(flipped.planned.screw?.length).toBe("IN_0_75");
+        expect(flipped.circularEdge).toMatchObject({
+            occurrencePath: ["bottom"],
+            edgeId: "bottom-bottom"
+        });
+        // Out of the bottom plate: the head goes in against it
+        expect(flipped.circularEdge.normal[2]).toBe(-1);
+        expect(flipped.circularEdge.center[2]).toBeCloseTo(-0.5 * INCH);
+        expect(flipped.exit?.edge).toEqual({
+            occurrencePath: ["top"],
+            edgeId: "top-top"
+        });
+
+        const [blind] = planHoles(
+            [{ ...CIRCULAR_EDGE, isFlipped: true }],
+            [hole("top", 0, 0.25, 0.201, { closedAtEnd: true })],
+            [],
+            options(),
+            FASTENER_SET.catalog
+        );
+        expect(blind.planned).toMatchObject({
+            status: HoleStatus.NO_FIT,
+            reason: "The hole doesn't go through, so it can't be flipped."
+        });
+    });
+
     it("counts the screw and nut washers chosen", () => {
         const { planned } = plan(TWO_PLATES, {
             screwWasher: WASHER,

@@ -133,14 +133,20 @@ function fastenerOptions(settled: SettledChoices): FastenerOptions;
 interface AutoAssemblyState extends Choices {
     targets: OnshapeSelection[];
     excluded: OnshapeSelection[];
-    /** Whether Size was chosen by hand since the last run; until then it follows the first hole picked. */
-    isSizeChosen: boolean;
+    /** The screw's inputs chosen by hand since the last run; the rest follow what's picked. */
+    chosenScrewInputs: string[];
+    /** Keys (`selectionKey`) of the circular edges fastened from the far end of their holes. */
+    flipped: string[];
+    /** Every screw to update goes in from the other end of its holes. */
+    flipScrews: boolean;
     setForm: (id: FormInput, value: string) => void;
     setMode: (mode: FastenerMode) => void;
     setScrew: (id: string, value: string) => void;
-    /** Size as the hole picked is made for, unless it was chosen by hand. */
-    followHoleSize: (size: string) => void;
-    /** Picks cleared and Size free to follow holes again, after a run starts. */
+    /** The screw's inputs as the picks say, but those chosen by hand. */
+    followScrew: (screw: Record<string, string>) => void;
+    toggleFlipped: (entity: OnshapeSelection) => void;
+    setFlipScrews: (flipScrews: boolean) => void;
+    /** Picks and flips cleared, and the screw free to follow them again, after a run starts. */
     finishRun: () => void;
     setPart: (part: Part, id: string, value: string) => void;
     setAdded: (part: Part, added: boolean) => void;
@@ -441,6 +447,10 @@ interface AutoAssemblyIn {
     replaced: SelectedEntity[];
     /** The planar face `StopCondition.FACE` stops at; only with it. */
     stopFace?: SelectedEntity;
+    /** Circular edges in `targets` fastened from the far end of their holes. */
+    flipped?: SelectedEntity[];
+    /** Every screw in `replaced` goes in from the other end of its holes. */
+    flipScrews?: boolean;
     options: FastenerOptions;
 }
 
@@ -658,6 +668,8 @@ interface AssemblyCircularEdge {
     radius: number;
     /** One of a face's circular edges, rather than one picked itself. */
     isFromFace?: boolean;
+    /** Fastened from the far end of its holes: the head goes there, the nut here. */
+    isFlipped?: boolean;
 }
 
 interface AssemblyHole {
@@ -1083,11 +1095,13 @@ The groups:
    size, shows its checkbox alone. The screw washer is gone under a countersunk
    head, and the nut washer without a nut.
 
-Size follows the holes picked, as an Onshape feature's editing logic sets one
-input from another. Each check answers the size the first hole picked is made
-for (`holeSize`), and the panel sets Size to it (`followHoleSize`). It stops
-once Size is chosen by hand (`isSizeChosen`). A run starting frees it again
-(`finishRun`).
+The screw follows what's picked, as an Onshape feature's editing logic sets one
+input from another (`followScrew`):
+
+- Size follows the size the first hole picked is made for (`holeSize`).
+- Every screw input follows the first existing screw picked (`existingScrew`).
+- An input chosen by hand stops following (`chosenScrewInputs`). A run
+  starting frees them all again (`finishRun`).
 
 The studios' parameters are their configurations as Onshape answers them,
 parsed by `parseOnshapeConfiguration`, so their options show as the Part
@@ -1113,6 +1127,12 @@ _Select by_ decides what the picks are:
   assembly, as whole solid parts (`SOLID_BODIES`), each row named "Screw {n}";
   the run decides which picks are screws.
 
+A circular edge's row has a flip toggle. A flipped edge is fastened from the
+far end of its holes, so the head goes there and the nut at the edge picked.
+Under existing screws, **Flip screws** does the same for every screw to update.
+Both go in the request (`flipped`, `flipScrews`). Changing Select by, or a run
+starting, clears them, and an edge picked again starts unflipped.
+
 A run takes one kind: only the lists Select by shows are sent, and changing
 Select by clears every pick. The button reads Replace for existing screws and
 Insert otherwise. It needs a pick, and, under the Face stop
@@ -1123,8 +1143,8 @@ hidden stop condition says.
 (`isConsistentPick`: faces with edges to exclude, circular edges alone, or
 screws alone), one with neither holes nor screws to update, one with a face
 to stop at without the Face stop condition or the other way round
-(`hasStopFace`), and a part its
-studio doesn't make (`isMade`) or not in the screw's size.
+(`hasStopFace`), an edge to flip that isn't picked (`isFlipPicked`), and a
+part its studio doesn't make (`isMade`) or not in the screw's size.
 
 ### Checking picks — `POST /api/auto-assembly/check`
 
@@ -1151,9 +1171,12 @@ options (`planHoles`), and answers each pick's problem (`pickProblems` in
 - a screw to update that isn't one, or whose hole won't plan ready;
 - a face to stop at whose part is gone, or that isn't planar.
 
-It also answers `holeSize`: the size the first hole picked is made for, from
-the targets, then the screws to update (`pickedHoleSize`). Size follows it in
-the form.
+It also answers what the screw follows in the form:
+
+- `holeSize`: the size the first hole picked is made for, from the targets,
+  then the screws to update (`pickedHoleSize`).
+- `existingScrew`: the first screw to update's configuration, its studio's
+  defaults filled in (`firstScrew`).
 
 Nothing picked asks Onshape nothing. FTC, or parts the catalog doesn't make,
 is checked without planning. The last check's marks stay while the next goes,
@@ -1209,7 +1232,10 @@ recorded with why, and the steps after it are skipped.
        A pick that isn't such a screw, or a screw on no hole, is reported
        with why.
     6. `planHoles`, for each circular edge, with the chosen screw's size and
-       head:
+       head. A flipped edge (`isFlipped`) is first swapped for the edge at the
+       far end of the holes it would go through, facing back (`farEnd`). Its
+       plan keeps the pick's key. Holes that end blind or tapped, or with no
+       edge at their far end, can't be flipped: **no fit**. Then:
         1. A library screw already on its axis, seated there: **fastened**.
         2. Every hole on the axis, nearest first. The first must start at the
            circular edge (or within a flat head's countersink of it).

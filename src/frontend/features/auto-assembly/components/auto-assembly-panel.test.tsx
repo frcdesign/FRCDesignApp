@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, screen, waitFor } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
     AssemblyJobState,
@@ -98,7 +98,9 @@ beforeEach(() => {
         excluded: [],
         replaced: [],
         stopFace: [],
-        isSizeChosen: false
+        chosenScrewInputs: [],
+        flipped: [],
+        flipScrews: false
     });
 });
 
@@ -293,6 +295,8 @@ describe("AutoAssemblyPanel", () => {
                 ),
                 excluded: [],
                 replaced: [],
+                flipped: [],
+                flipScrews: false,
                 options: fastenerOptions(settled)
             }),
             { problems: [], holeSize: "QUARTER_20" }
@@ -304,13 +308,85 @@ describe("AutoAssemblyPanel", () => {
         );
 
         await choose("Size", "#8-32");
-        useAutoAssemblyStore.getState().followHoleSize("QUARTER_20");
+        useAutoAssemblyStore.getState().followScrew({ size: "QUARTER_20" });
         expect(useAutoAssemblyStore.getState().screw.size).toBe("NO_8_32");
 
         // Free to follow again once a run starts
         useAutoAssemblyStore.getState().finishRun();
-        useAutoAssemblyStore.getState().followHoleSize("QUARTER_20");
+        useAutoAssemblyStore.getState().followScrew({ size: "QUARTER_20" });
         expect(useAutoAssemblyStore.getState().screw.size).toBe("QUARTER_20");
+    });
+
+    it("takes the first existing screw picked as the screw, but what's chosen by hand", async () => {
+        const queryClient = createTestQueryClient();
+        renderPanel(queryClient);
+        await choose("Select by", "Existing screws");
+        select({ ...face("S"), entityType: "BODY" });
+        await choose("Head", "Socket head");
+        const settled = settleChoices(
+            FASTENER_SET,
+            useAutoAssemblyStore.getState()
+        );
+        queryClient.setQueryData(
+            pickCheckQueryKey({
+                assembly: ASSEMBLY,
+                selectionMode: SelectionMode.SCREWS,
+                targets: [],
+                excluded: [],
+                replaced: toSelectedEntities(
+                    useAutoAssemblyStore.getState().replaced
+                ),
+                flipped: [],
+                flipScrews: false,
+                options: fastenerOptions(settled)
+            }),
+            {
+                problems: [],
+                existingScrew: { size: "NO_8_32", head: "BUTTON" }
+            }
+        );
+        await waitFor(() =>
+            expect(useAutoAssemblyStore.getState().screw.size).toBe("NO_8_32")
+        );
+        expect(useAutoAssemblyStore.getState().screw.head).toBe("SOCKET");
+    });
+
+    it("flips a circular edge from its row, and every screw to update with Flip screws", async () => {
+        renderPanel();
+        await userEvent.click(
+            screen.getByText("Circular edges", { selector: "p" })
+        );
+        select(
+            { ...face("E"), entityType: "EDGE" },
+            { ...face("F"), entityType: "EDGE" }
+        );
+        const [flip] = within(
+            screen.getByText("Edge 1").parentElement!
+        ).getAllByRole("button");
+        await userEvent.click(flip);
+        await userEvent.click(insertButton());
+        expect(apiPost).toHaveBeenLastCalledWith("/auto-assembly/insert", {
+            body: expect.objectContaining({
+                flipped: [
+                    {
+                        occurrencePath: ["plate"],
+                        entityId: "E",
+                        entityType: "EDGE"
+                    }
+                ],
+                flipScrews: false
+            })
+        });
+
+        await choose("Select by", "Existing screws");
+        select({ ...face("S"), entityType: "BODY" });
+        await userEvent.click(
+            screen.getByRole("checkbox", { name: "Flip screws" })
+        );
+        await userEvent.click(screen.getByRole("button", { name: "Replace" }));
+        expect(apiPost).toHaveBeenLastCalledWith("/auto-assembly/insert", {
+            body: expect.objectContaining({ flipped: [], flipScrews: true })
+        });
     });
 
     it("asks what to fasten before what to fasten with, each group folding from its header", async () => {

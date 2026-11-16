@@ -162,6 +162,18 @@ describe("POST /api/auto-assembly/insert", () => {
         ).toBe(400);
     });
 
+    it("flips only circular edges that are picked", async () => {
+        publish();
+        const res = await post("/auto-assembly/insert", {
+            ...BODY,
+            flipped: [{ ...BODY.targets[0], entityId: "JHZ" }]
+        });
+        expect(res.status).toBe(400);
+        expect(JSON.stringify(await res.json())).toContain(
+            "Flip only circular edges that are picked."
+        );
+    });
+
     it("takes a face to stop at only with the Face stop condition", async () => {
         publish();
         const stopFace = {
