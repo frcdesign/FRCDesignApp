@@ -311,12 +311,20 @@ function planHole(
     if ("error" in picked) {
         return sized({ status: HoleStatus.NO_FIT, reason: picked.error, end });
     }
+    // A countersink puts the first hole below the circular edge; a flat head over a plain one stands proud
+    const isPlain = head.countersunk && first.near <= LINEAR_TOLERANCE;
+    const warning = [
+        picked.warning,
+        isPlain ? "The hole isn't countersunk for a flat head." : undefined
+    ]
+        .filter((each) => each !== undefined)
+        .join(" ");
     const planned: Omit<PlannedHole, "key"> = {
         status: HoleStatus.READY,
         end,
         depth: stack.depth,
         screw: picked.screw,
-        ...(picked.warning ? { warning: picked.warning } : {}),
+        ...(warning ? { warning } : {}),
         ...(washers.start ? { screwWasher: washers.start } : {})
     };
 

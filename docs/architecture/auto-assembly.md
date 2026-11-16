@@ -200,7 +200,7 @@ enum Part {
 function AutoAssemblyPanel(props: AutoAssemblyPanelProps): ReactNode;
 // The Fastener and Length groups, and a group per washer and the nut.
 function FastenerOptionsForm(props: FastenerOptionsFormProps): ReactNode;
-// Onshape's parameter groups, as unstyled accordions: each folds from its header, and may be driven by a checkbox its title ticks.
+// Onshape's parameter groups, as unstyled accordions: each folds from its title, and may be driven by a checkbox beside it.
 function ParameterGroup(props: ParameterGroupProps): ReactNode;
 
 interface AutoAssemblyPanelProps {
@@ -1067,10 +1067,11 @@ The panel is a `ParameterGrid` of the configuration dialog's own inputs
 (`ParameterInput`), in groups (`ParameterGroup`), as an Onshape feature
 dialog's are. A group is an unstyled accordion, like `AppSection`'s:
 
-- Its whole header row highlights on hover and folds the group.
-- The chevron sits at the row's end.
-- A checkbox sits beside the title, not in a button. Clicking the title ticks
-  the checkbox rather than folding.
+- Its title and chevron are one control, which highlights on hover and folds
+  the group. They line up with the rows' edges.
+- A group driven by a checkbox has the checkbox to the left of that control,
+  as its own target. Unticked, the control doesn't fold.
+- There's no line under a header.
 
 The groups:
 
@@ -1134,7 +1135,10 @@ Both go in the request (`flipped`, `flipScrews`). Changing Select by, or a run
 starting, clears them, and an edge picked again starts unflipped.
 
 A run takes one kind: only the lists Select by shows are sent, and changing
-Select by clears every pick. The button reads Replace for existing screws and
+Select by clears every pick. The button sits in a footer stuck to the bottom of
+the panel (`PanelFooter`), so it's always in view. The selecting action bar
+floats above the footer, reading its height from the document
+(`PANEL_FOOTER_HEIGHT`). The button reads Replace for existing screws and
 Insert otherwise. It needs a pick, and, under the Face stop
 condition, a face to stop at; manual sizing sends **All holes**, whatever the
 hidden stop condition says.
@@ -1304,7 +1308,9 @@ recorded with why, and the steps after it are skipped.
        or a screw or nut on no washer, is fastened to an implicit connector at
        the center of its hole's edge (`fastenMateToCircularEdge`, as insert and
        fasten mates). A screw or nut on a washer is fastened to the washer's
-       top connector, connector to connector.
+       top connector, connector to connector. The top connector points out of
+       the washer's top face, as an edge's implicit connector does, so the
+       part sits the same way up on either.
     3. With fewer parts fastened than inserted, the step finishes with a
        warning saying how many sit unmated.
 5. **Record inserts** (`record-inserts`), once fastening has ended however it

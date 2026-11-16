@@ -3,14 +3,25 @@
     grid-column: 1 / -1;
 }
 
-/* The page's text color, as `AppSection`'s header keeps it. */
-.header {
-    min-height: rem(32px);
+/* Its own target beside the checkbox: the title and chevron, which fold it. */
+.control {
+    display: flex;
+    align-items: center;
+    gap: var(--mantine-spacing-xs);
+    min-height: rem(30px);
     padding-inline: var(--mantine-spacing-xs);
+    border-radius: var(--mantine-radius-sm);
     color: var(--mantine-color-text);
+    /* Out by its padding, so its title and chevron line up with the rows' edges */
+    margin-inline-end: calc(var(--mantine-spacing-xs) * -1);
+}
+
+.control:first-child {
+    margin-inline-start: calc(var(--mantine-spacing-xs) * -1);
 }
 
 .title {
+    flex: 1;
     font-size: var(--mantine-font-size-sm);
     font-weight: 600;
 }

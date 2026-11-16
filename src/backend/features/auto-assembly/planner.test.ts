@@ -185,6 +185,23 @@ describe("planHoles", () => {
         });
     });
 
+    it("warns of a flat head over a hole with no countersink", () => {
+        const flat = plan(TWO_PLATES, { screw: { head: "FLAT" } }).planned;
+        expect(flat.status).toBe(HoleStatus.READY);
+        expect(flat.warning).toContain(
+            "The hole isn't countersunk for a flat head."
+        );
+        // Countersunk: the first hole starts below the circular edge
+        const sunk = plan(
+            [hole("top", 0.1, 0.25, 0.201), hole("bottom", 0.25, 0.5, 0.201)],
+            { screw: { head: "FLAT" } }
+        ).planned;
+        expect(sunk.warning ?? "").not.toContain("countersunk");
+        expect(plan(TWO_PLATES).planned.warning ?? "").not.toContain(
+            "countersunk"
+        );
+    });
+
     it("counts the screw and nut washers chosen", () => {
         const { planned } = plan(TWO_PLATES, {
             screwWasher: WASHER,

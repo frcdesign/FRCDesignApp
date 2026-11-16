@@ -28,6 +28,7 @@ import {
     ParameterGrid,
     ParameterInput
 } from "../../../components/parameter-input";
+import { PanelFooter } from "../../../components/panel-footer";
 import { QueryList } from "../../../components/query-list";
 import {
     isBody,
@@ -203,111 +204,124 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
     };
 
     return (
-        <Stack gap="md" p="md">
-            <LastRunCallout assembly={assembly} />
-            <ParameterGrid>
-                <ParameterGroup title={m.autoAssemblySelections()}>
-                    <FormInputRow id={FormInput.SELECT_BY} settled={settled} />
-                    {mode === SelectionMode.FACES && (
-                        <>
+        <>
+            <Stack gap="md" p="md">
+                <LastRunCallout assembly={assembly} />
+                <ParameterGrid>
+                    <ParameterGroup title={m.autoAssemblySelections()}>
+                        <FormInputRow
+                            id={FormInput.SELECT_BY}
+                            settled={settled}
+                        />
+                        {mode === SelectionMode.FACES && (
+                            <>
+                                <FullWidthRow>
+                                    <QueryList
+                                        id="auto-assembly-faces"
+                                        autoFocus
+                                        label={m.autoAssemblyFaces()}
+                                        entities={targets}
+                                        onChange={setTargets}
+                                        accepts={isFace}
+                                        filter={PLANAR_FACES}
+                                        problem={problem}
+                                        isChecking={isChecking}
+                                    />
+                                </FullWidthRow>
+                                <FullWidthRow>
+                                    <QueryList
+                                        id="auto-assembly-excluded"
+                                        label={m.autoAssemblyEdgesToExclude()}
+                                        entities={excluded}
+                                        onChange={setExcluded}
+                                        accepts={isEdge}
+                                        filter={CIRCULAR_EDGES}
+                                        problem={problem}
+                                        isChecking={isChecking}
+                                    />
+                                </FullWidthRow>
+                            </>
+                        )}
+                        {mode === SelectionMode.LOCATIONS && (
                             <FullWidthRow>
                                 <QueryList
-                                    id="auto-assembly-faces"
+                                    id="auto-assembly-locations"
                                     autoFocus
-                                    label={m.autoAssemblyFaces()}
+                                    label={m.autoAssemblyCircularEdges()}
                                     entities={targets}
                                     onChange={setTargets}
-                                    accepts={isFace}
-                                    filter={PLANAR_FACES}
-                                    problem={problem}
-                                    isChecking={isChecking}
-                                />
-                            </FullWidthRow>
-                            <FullWidthRow>
-                                <QueryList
-                                    id="auto-assembly-excluded"
-                                    label={m.autoAssemblyEdgesToExclude()}
-                                    entities={excluded}
-                                    onChange={setExcluded}
                                     accepts={isEdge}
                                     filter={CIRCULAR_EDGES}
                                     problem={problem}
                                     isChecking={isChecking}
+                                    rowSection={(entity) => (
+                                        <FlipToggle entity={entity} />
+                                    )}
                                 />
                             </FullWidthRow>
-                        </>
-                    )}
-                    {mode === SelectionMode.LOCATIONS && (
-                        <FullWidthRow>
-                            <QueryList
-                                id="auto-assembly-locations"
-                                autoFocus
-                                label={m.autoAssemblyCircularEdges()}
-                                entities={targets}
-                                onChange={setTargets}
-                                accepts={isEdge}
-                                filter={CIRCULAR_EDGES}
-                                problem={problem}
-                                isChecking={isChecking}
-                                rowSection={(entity) => (
-                                    <FlipToggle entity={entity} />
-                                )}
-                            />
-                        </FullWidthRow>
-                    )}
-                    {mode === SelectionMode.SCREWS && (
-                        <FullWidthRow>
-                            <QueryList
-                                id="auto-assembly-replaced"
-                                autoFocus
-                                label={m.autoAssemblyScrewsToUpdate()}
-                                entities={replaced}
-                                onChange={setReplaced}
-                                accepts={isBody}
-                                filter={SOLID_BODIES}
-                                problem={problem}
-                                isChecking={isChecking}
-                                describe={(_entity, index) =>
-                                    m.autoAssemblyScrewRow({ index: index + 1 })
+                        )}
+                        {mode === SelectionMode.SCREWS && (
+                            <FullWidthRow>
+                                <QueryList
+                                    id="auto-assembly-replaced"
+                                    autoFocus
+                                    label={m.autoAssemblyScrewsToUpdate()}
+                                    entities={replaced}
+                                    onChange={setReplaced}
+                                    accepts={isBody}
+                                    filter={SOLID_BODIES}
+                                    problem={problem}
+                                    isChecking={isChecking}
+                                    describe={(_entity, index) =>
+                                        m.autoAssemblyScrewRow({
+                                            index: index + 1
+                                        })
+                                    }
+                                />
+                            </FullWidthRow>
+                        )}
+                        {mode === SelectionMode.SCREWS && (
+                            <ParameterInput
+                                inputId="flip-screws"
+                                parameter={FLIP_SCREWS_PARAMETER}
+                                value={String(flipScrews)}
+                                selection={{
+                                    [FLIP_SCREWS_PARAMETER.id]:
+                                        String(flipScrews)
+                                }}
+                                parameters={[FLIP_SCREWS_PARAMETER]}
+                                onValueChange={(value) =>
+                                    setFlipScrews(value === "true")
                                 }
                             />
-                        </FullWidthRow>
-                    )}
-                    {mode === SelectionMode.SCREWS && (
-                        <ParameterInput
-                            inputId="flip-screws"
-                            parameter={FLIP_SCREWS_PARAMETER}
-                            value={String(flipScrews)}
-                            selection={{
-                                [FLIP_SCREWS_PARAMETER.id]: String(flipScrews)
-                            }}
-                            parameters={[FLIP_SCREWS_PARAMETER]}
-                            onValueChange={(value) =>
-                                setFlipScrews(value === "true")
-                            }
-                        />
-                    )}
-                </ParameterGroup>
-                <FastenerOptionsForm
-                    settled={settled}
-                    problem={problem}
-                    isChecking={isChecking}
-                />
-            </ParameterGrid>
-            <Button
-                disabled={
-                    isFtc ||
-                    picks.targets.length + picks.replaced.length === 0 ||
-                    (isStopFace && !picks.stopFace) ||
-                    isRunning ||
-                    insertMutation.isPending
-                }
-                loading={insertMutation.isPending}
-                onClick={insert}
-            >
-                {isScrews ? m.autoAssemblyReplace() : m.autoAssemblyInsert()}
-            </Button>
-        </Stack>
+                        )}
+                    </ParameterGroup>
+                    <FastenerOptionsForm
+                        settled={settled}
+                        problem={problem}
+                        isChecking={isChecking}
+                    />
+                </ParameterGrid>
+            </Stack>
+            <PanelFooter>
+                <Button
+                    fullWidth
+                    disabled={
+                        isFtc ||
+                        picks.targets.length + picks.replaced.length === 0 ||
+                        (isStopFace && !picks.stopFace) ||
+                        isRunning ||
+                        insertMutation.isPending
+                    }
+                    loading={insertMutation.isPending}
+                    onClick={insert}
+                >
+                    {isScrews
+                        ? m.autoAssemblyReplace()
+                        : m.autoAssemblyInsert()}
+                </Button>
+            </PanelFooter>
+        </>
     );
 }
 

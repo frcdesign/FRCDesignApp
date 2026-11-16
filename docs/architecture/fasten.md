@@ -327,7 +327,7 @@ enum MateLocation {
     - The insert menu shows the same picks in its **Fasten** group
       (`FastenSection`), a `ParameterGroup` whose checkbox is `fasten`. The
       part's parameters sit above it in a **Configuration** group. Its
-      title ticks the checkbox; its header row folds it. Folded, its lists
+      checkbox sits to the left of its title, which folds it. Folded, its lists
       still take picks. While a menu is open
       (`openInsertableId`) the bar unmounts its own lists, since two lists of
       one id would both take picks. Both read `useFastenPicks`.
