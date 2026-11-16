@@ -239,11 +239,12 @@ that reconnects refreshes the library, since pushes during the outage are lost.
 - **Retries at the step, not the request.** A workflow step's retry is durable
   and visible; a retry inside `fetch` would hide attempts inside one step's
   timeout.
-- **An insert waits 60 s and never retries a timeout.** Onshape finishes an
-  insert it is slow to answer (see
-  [ONSHAPE.md](../ONSHAPE.md#calling-the-api)), so a retry inserts the part
-  twice. A timeout answers `handled` 504 in the caller's words, that the part
-  should still appear, rather than a failure; the use goes unrecorded. The
+- **An insert waits 60 s and never retries a timeout.** A call Onshape is
+  slow to answer can still land (see
+  [ONSHAPE.md](../ONSHAPE.md#calling-the-api)), and a retry after 60 s would
+  keep someone watching the toast waiting two minutes. A timeout answers
+  `handled` 504 with the caller's message (`INSERT_TIMED_OUT` for a part),
+  asking for a report if the part doesn't appear; the use goes unrecorded. The
   client's loading toast says Onshape is slow after 15 s (`SLOW_INSERT_MS`), so
   the wait doesn't look stuck. A 5xx is still retried, as nothing says it
   inserted.

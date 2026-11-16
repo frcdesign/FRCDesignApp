@@ -144,7 +144,7 @@ featureScriptRoutes.post(
                             feature.getFeature(),
                             timeoutMs
                         ),
-                    `Onshape is still adding ${row.name}. It should appear in your Part Studio shortly; check for it before adding it again.`
+                    "Onshape timed out while adding. If your feature doesn't appear, file a report."
                 );
                 await trackFeatureAdd(c, {
                     featureType: row.featureType,

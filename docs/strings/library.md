@@ -27,14 +27,14 @@ the part has a mate connector, whatever the insert menu's **Fasten** is set to.
 The insert menu's remaining tips are in
 `src/frontend/features/insert/insert-tips.ts`.
 
-| String                                                                                                                                            | Kind              | Where                  | When                                                 | Review    |
-| ------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- | ---------------------- | ---------------------------------------------------- | --------- |
-| "Insert" / "Derive"                                                                                                                               | Outlined button   | Each part row          | In an assembly / a Part Studio; none standalone      | **⚑** New |
-| "Assemblies can't be derived into a Part Studio."                                                                                                 | Tooltip           | On the disabled button | An assembly's row, in a Part Studio                  | **⚑** New |
-| "Tip: you can insert a part even while the part's thumbnail is still generating."                                                                 | Tip toast         |                        | The insert menu's preview is still rendering         |           |
-| "Sign in to Onshape to see a preview of your selection." / "Sign in"                                                                              | Tip toast, button |                        | Signed out, after changing the configuration         |           |
-| "Still inserting {name}. Onshape is taking longer than usual..."                                                                                  | Loading toast     |                        | An insert has gone 15 s without an answer            | **⚑** New |
-| "Onshape is still inserting {name}. It should appear in your assembly shortly; check for it before inserting it again." (or "…your Part Studio…") | Error toast       |                        | Onshape gave no answer in 60 s; worded by the server | **⚑** New |
+| String                                                                            | Kind              | Where                  | When                                                 | Review    |
+| --------------------------------------------------------------------------------- | ----------------- | ---------------------- | ---------------------------------------------------- | --------- |
+| "Insert" / "Derive"                                                               | Outlined button   | Each part row          | In an assembly / a Part Studio; none standalone      | **⚑** New |
+| "Assemblies can't be derived into a Part Studio."                                 | Tooltip           | On the disabled button | An assembly's row, in a Part Studio                  | **⚑** New |
+| "Tip: you can insert a part even while the part's thumbnail is still generating." | Tip toast         |                        | The insert menu's preview is still rendering         |           |
+| "Sign in to Onshape to see a preview of your selection." / "Sign in"              | Tip toast, button |                        | Signed out, after changing the configuration         |           |
+| "Still inserting {name}. Onshape is taking longer than usual..."                  | Loading toast     |                        | An insert has gone 15 s without an answer            | **⚑** New |
+| "Onshape timed out while inserting. If your part doesn't appear, file a report."  | Error toast       |                        | Onshape gave no answer in 60 s; worded by the server | **⚑** New |
 
 ## Group page
 

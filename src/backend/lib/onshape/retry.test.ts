@@ -8,7 +8,7 @@ import { retryInsert } from "./retry";
 import { ApiErrorKind } from "../api-error";
 
 const NO_WAIT = { retries: 1, delayMs: 0, timeoutMs: 60_000 };
-const STILL_RUNNING = "Onshape is still inserting it.";
+const TIMED_OUT = "Onshape timed out.";
 
 describe("retryInsert", () => {
     afterEach(() => vi.restoreAllMocks());
@@ -20,7 +20,7 @@ describe("retryInsert", () => {
             .mockRejectedValueOnce(new OnshapeApiError("boom", 500))
             .mockResolvedValueOnce("inserted");
 
-        await expect(retryInsert(call, STILL_RUNNING, NO_WAIT)).resolves.toBe(
+        await expect(retryInsert(call, TIMED_OUT, NO_WAIT)).resolves.toBe(
             "inserted"
         );
         expect(call).toHaveBeenCalledTimes(2);
@@ -29,7 +29,7 @@ describe("retryInsert", () => {
     it("gives each attempt the policy's timeout", async () => {
         const call = vi.fn().mockResolvedValue("inserted");
 
-        await retryInsert(call, STILL_RUNNING, NO_WAIT);
+        await retryInsert(call, TIMED_OUT, NO_WAIT);
 
         expect(call).toHaveBeenCalledWith(60_000);
     });
@@ -41,23 +41,23 @@ describe("retryInsert", () => {
             .mockRejectedValue(new OnshapeApiError("boom", 503));
 
         await expect(
-            retryInsert(call, STILL_RUNNING, NO_WAIT)
+            retryInsert(call, TIMED_OUT, NO_WAIT)
         ).rejects.toMatchObject({ status: 503 });
         expect(call).toHaveBeenCalledTimes(2);
     });
 
-    it("says a timed-out insert is still running, without calling again", async () => {
+    it("words a timed-out insert, without calling again", async () => {
         vi.spyOn(console, "warn").mockImplementation(() => undefined);
         const call = vi
             .fn()
             .mockRejectedValueOnce(new OnshapeTimeoutError(60_000))
-            .mockResolvedValueOnce("inserted twice");
+            .mockResolvedValueOnce("inserted");
 
         await expect(
-            retryInsert(call, STILL_RUNNING, NO_WAIT)
+            retryInsert(call, TIMED_OUT, NO_WAIT)
         ).rejects.toMatchObject({
             status: 504,
-            body: { kind: ApiErrorKind.HANDLED, message: STILL_RUNNING }
+            body: { kind: ApiErrorKind.HANDLED, message: TIMED_OUT }
         });
         expect(call).toHaveBeenCalledTimes(1);
     });
@@ -69,9 +69,7 @@ describe("retryInsert", () => {
     ])("does not retry %s", async (_label, error) => {
         const call = vi.fn().mockRejectedValue(error);
 
-        await expect(retryInsert(call, STILL_RUNNING, NO_WAIT)).rejects.toBe(
-            error
-        );
+        await expect(retryInsert(call, TIMED_OUT, NO_WAIT)).rejects.toBe(error);
         expect(call).toHaveBeenCalledTimes(1);
     });
 });

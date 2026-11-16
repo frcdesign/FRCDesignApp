@@ -249,11 +249,13 @@ errors.
     About 1% of insert requests went the full 60 s without an answer, and none
     answered 5xx. Whether a 5xx means nothing was inserted is _unverified_.
 
-- **Onshape finishes an insert after the app stops waiting** — _observed_
+- **An insert can land after the app stops waiting** — _observed_
   2026-11-16: four inserts of the same mecanum wheel into one assembly, a few
-  seconds apart, each went unanswered for 20 s twice, and the wheels appeared
-  in the assembly. At least six of that part's inserts in the week before went
-  unanswered twice too. Inserts into one assembly seem to wait on each other, so
+  seconds apart, were each called twice, neither call answered within 20 s,
+  and the assembly got four wheels, not eight. So one call of each pair landed
+  and the other didn't; which one, and why not both, is _unverified_. At least
+  six of that part's inserts in the week before went unanswered twice too.
+  Inserts into one assembly seem to wait on each other, so
   several in a row each take as long as those before it — _unverified_.
 
 - **Internal endpoints** — the ones Onshape's own web client calls, such as the

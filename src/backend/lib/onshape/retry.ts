@@ -23,14 +23,16 @@ function isServerError(error: unknown): error is OnshapeApiError {
     );
 }
 
+export const INSERT_TIMED_OUT =
+    "Onshape timed out while inserting. If your part doesn't appear, file a report.";
+
 /**
- * Calls again when Onshape answers 5xx. A timeout is not retried: Onshape
- * finishes a call it was slow to answer, so a second would insert the part
- * twice. The user is told `stillRunningMessage` instead of a failure.
+ * Calls again when Onshape answers 5xx. A timeout is not retried, since the
+ * call may still land; the user is told `timedOutMessage` instead.
  */
 export async function retryInsert<T>(
     call: (timeoutMs: number) => Promise<T>,
-    stillRunningMessage: string,
+    timedOutMessage: string,
     policy: InsertRetry = INSERT_RETRY
 ): Promise<T> {
     for (let attempt = 0; ; attempt++) {
@@ -38,11 +40,8 @@ export async function retryInsert<T>(
             return await call(policy.timeoutMs);
         } catch (error) {
             if (error instanceof OnshapeTimeoutError) {
-                console.warn(`Insert still running: ${describeError(error)}`);
-                throw handledError(
-                    stillRunningMessage,
-                    HttpStatus.GATEWAY_TIMEOUT
-                );
+                console.warn(`Insert timed out: ${describeError(error)}`);
+                throw handledError(timedOutMessage, HttpStatus.GATEWAY_TIMEOUT);
             }
             if (attempt >= policy.retries || !isServerError(error)) {
                 throw error;

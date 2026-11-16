@@ -39,7 +39,7 @@ import {
     addAssemblyFeature
 } from "../../../lib/onshape/endpoints/assemblies";
 import { PartType } from "../../../lib/onshape/endpoints/documents";
-import { retryInsert } from "../../../lib/onshape/retry";
+import { INSERT_TIMED_OUT, retryInsert } from "../../../lib/onshape/retry";
 import { finishEvenIfDisconnected } from "../../../lib/background";
 import { onshapeOverrides } from "../../configurations/selection";
 import { readSelection, selectionSchema } from "./read-selection";
@@ -308,7 +308,7 @@ insertableRoutes.post(
                             feature.getFeature(),
                             timeoutMs
                         ),
-                    `Onshape is still inserting ${row.name}. It should appear in your Part Studio shortly; check for it before inserting it again.`
+                    INSERT_TIMED_OUT
                 );
 
                 await recordRecentInsert(c, {
@@ -428,7 +428,7 @@ insertableRoutes.post(
                             row.elementType,
                             { configuration, partTypes, transform, timeoutMs }
                         ),
-                    `Onshape is still inserting ${row.name}. It should appear in your assembly shortly; check for it before inserting it again.`
+                    INSERT_TIMED_OUT
                 );
 
                 // The part is in the assembly whatever the fasten does.

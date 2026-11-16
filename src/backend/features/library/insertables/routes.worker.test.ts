@@ -39,7 +39,7 @@ import {
     OnshapeRateLimitError,
     OnshapeTimeoutError
 } from "../../../lib/onshape/client";
-import { INSERT_RETRY } from "../../../lib/onshape/retry";
+import { INSERT_RETRY, INSERT_TIMED_OUT } from "../../../lib/onshape/retry";
 import { AUTO_INDEX_THRESHOLD } from "../../configurations/combinations";
 import {
     enumParam,
@@ -660,7 +660,7 @@ describe("insertable routes", () => {
         expect(await loggedInsert()).toBeDefined();
     });
 
-    it("says a timed-out insert is still running, without inserting again", async () => {
+    it("words a timed-out insert, without inserting again", async () => {
         await seedAssembly(db);
         vi.spyOn(console, "warn").mockImplementation(() => undefined);
         const insert = vi
@@ -672,7 +672,7 @@ describe("insertable routes", () => {
         expect(res.status).toBe(504);
         expect(await res.json()).toMatchObject({
             kind: "handled",
-            message: expect.stringContaining("still inserting")
+            message: INSERT_TIMED_OUT
         });
         expect(insert).toHaveBeenCalledTimes(1);
         expect(insert.mock.calls[0][4]?.timeoutMs).toBe(60_000);
