@@ -324,8 +324,9 @@ enum MateLocation {
     - Both lists are passive (`isPassive`): they take what's selected, without
       limiting picks, until one is clicked or **Preselection** opens.
     - Hovering a row lights its entity up.
-    - The insert menu shows the same picks in its **Fasten** accordion
-      (`FastenSection`), a `ParameterGroup` whose checkbox is `fasten`. Its
+    - The insert menu shows the same picks in its **Fasten** group
+      (`FastenSection`), a `ParameterGroup` whose checkbox is `fasten`. The
+      part's parameters sit above it in a **Configuration** group. Its
       title ticks the checkbox; its header row folds it. Folded, its lists
       still take picks. While a menu is open
       (`openInsertableId`) the bar unmounts its own lists, since two lists of
@@ -409,8 +410,10 @@ In [strings/fasten.md](../strings/fasten.md).
   its picks are made from the header. A button that opens the lists under
   the bar keeps them on screen while picking; a hover card closed as the
   pointer left for the Onshape window.
-- **The menu's picks are a section, not a card.** The Fasten accordion sits
+- **The menu's picks are a section, not a card.** The Fasten group sits
   under the parameters, so the footer holds only what acts on the part.
+  Beside it, the parameters are a **Configuration** group of the same kind,
+  so the two fold alike.
 - **No Replicate.** Onshape accepts a Replicate added through the API (200,
   `featureStatus` OK, listed by the features endpoint) but makes no copies,
   and the assembly shows nothing for it. Each edge gets its own instance and

@@ -11,7 +11,10 @@ import { ParameterGrid } from "../../../components/parameter-input";
 import { apiPost } from "../../../lib/api-client";
 import { useOnshapeLaunch } from "../../../lib/onshape-params";
 import { queryClient } from "../../../lib/query-client";
-import { insertLocationQueryKey } from "../../../lib/query-keys";
+import {
+    configurationQueryKey,
+    insertLocationQueryKey
+} from "../../../lib/query-keys";
 import {
     type OnshapeSelection,
     useOnshapeSelection
@@ -22,10 +25,20 @@ import {
     setFastenTargets,
     useFastenPicks
 } from "../fasten-picks";
+import { enumParam } from "../../../../__test_utils__/configuration-fixtures";
 import { FastenMark } from "./fasten-mark";
+import { InsertMenuContent } from "./insert-menu";
 import { FastenSection } from "./fasten-section";
 
-vi.mock("../../auth/access-level", () => ({ useIsSignedIn: () => true }));
+vi.mock("../../auth/access-level", async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    useIsSignedIn: () => true
+}));
+
+vi.mock("../../../lib/library", async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    useLibraryId: () => "frc-design-lib"
+}));
 
 vi.mock("../../../lib/api-client", () => ({
     apiGet: vi.fn(() => new Promise(() => undefined)),
@@ -204,6 +217,46 @@ describe("fasten picks", () => {
         useOnshapeLaunch.setState({ elementType: ElementType.PART_STUDIO });
         renderWithProviders(<FastenMark insertable={SCREW} />, queryClient);
         expect(document.querySelector("svg")).toBeNull();
+    });
+
+    it("groups the menu's configuration beside Fasten, and only there", async () => {
+        const configuration = {
+            parameters: [enumParam("size", ["small", "large"])],
+            records: []
+        };
+        queryClient.setQueryData(
+            configurationQueryKey("ins", "mv"),
+            configuration
+        );
+        queryClient.setQueryData(
+            configurationQueryKey("tube", "mv"),
+            configuration
+        );
+        const menu = (insertable: InsertableOut) => (
+            <InsertMenuContent
+                insertable={insertable}
+                onInsert={vi.fn()}
+                source={"library" as never}
+            />
+        );
+        const { unmount } = renderWithProviders(menu(SCREW), queryClient);
+        const title = screen.getByText("Configuration");
+        expect(
+            title.compareDocumentPosition(screen.getByText("Fasten")) &
+                Node.DOCUMENT_POSITION_FOLLOWING
+        ).toBeTruthy();
+        // Folded, its rows are hidden, not gone
+        const size = () =>
+            screen.queryByRole("textbox", { name: "size" }) ??
+            screen.queryByRole("combobox", { name: "size" });
+        expect(size()).toBeTruthy();
+        await userEvent.click(title);
+        expect(size()).toBeNull();
+        unmount();
+
+        renderWithProviders(menu(TUBE), queryClient);
+        expect(screen.queryByText("Configuration")).toBeNull();
+        expect(screen.getByLabelText("size")).toBeTruthy();
     });
 
     it("has no section for a part that can't fasten, or in a Part Studio", () => {

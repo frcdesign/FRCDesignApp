@@ -13,6 +13,7 @@ Preselection button.
 
 | String                                                                      | Kind               | Where                                            | When                                                                   | Review    |
 | --------------------------------------------------------------------------- | ------------------ | ------------------------------------------------ | ---------------------------------------------------------------------- | --------- |
+| "Configuration"                                                             | Group title        | The insert menu, over Fasten                     | A part that can fasten, in an assembly, with parameters                | **⚑** New |
 | "Fasten"                                                                    | Accordion title    | The insert menu, with a checkbox                 | A part that can fasten, in an assembly                                 | **⚑** New |
 | "Preselection"                                                              | Button             | The context bar                                  | A library page in an assembly, signed in; counts the picks             | **⚑** New |
 | "Can fasten to preselections" / "Fastens to {n} preselection(s)"            | Tooltip            | The plugs icon after a part's name               | A part that can fasten, in an assembly; the count while picks are held | **⚑** New |

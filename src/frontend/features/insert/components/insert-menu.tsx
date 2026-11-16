@@ -47,6 +47,7 @@ import { useCanFasten, useTargetElementType } from "../insert-hooks";
 import { UseSource } from "@backend/features/analytics/usage";
 import { FastenSection } from "./fasten-section";
 import { ParameterGrid } from "../../../components/parameter-input";
+import { ParameterGroup } from "../../../components/parameter-group";
 import { m } from "../../../paraglide/messages";
 import { DownloadStepButton } from "../../download/components/download-step-button";
 
@@ -93,6 +94,7 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
         props.initialConfigurationKey ??
         DEFAULT_CONFIGURATION_KEY;
     useThumbnailWaitTip(configurationKey);
+    const canFasten = useCanFasten(insertable);
     // What the preview stops following for a signed-out caller.
     const [isEdited, setIsEdited] = useState(false);
     // Cleared by an edit, or once the menu has been up long enough.
@@ -165,10 +167,19 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
                 </Stack>
             </AppModalTop>
             <AppModalBody>
-                {parameters}
-                <ParameterGrid>
-                    <FastenSection insertable={insertable} />
-                </ParameterGrid>
+                {canFasten ? (
+                    // Beside Fasten, the configuration is a group of its own
+                    <ParameterGrid>
+                        {parameters && (
+                            <ParameterGroup title={m.insertMenuConfiguration()}>
+                                {parameters}
+                            </ParameterGroup>
+                        )}
+                        <FastenSection insertable={insertable} />
+                    </ParameterGrid>
+                ) : (
+                    parameters
+                )}
             </AppModalBody>
             <InsertMenuFooter
                 insertable={insertable}
