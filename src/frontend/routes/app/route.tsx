@@ -1,4 +1,4 @@
-import { usePreviewHandshake } from "../../features/preview/extension";
+import { useCompanionHandshake } from "../../features/companion/connection";
 import {
     createFileRoute,
     Outlet,
@@ -61,7 +61,7 @@ function App() {
     const { ref: headerRef, height: headerHeight } = useElementSize();
 
     useMessageListener();
-    usePreviewHandshake();
+    useCompanionHandshake();
     usePushSync();
     useVersionJobToasts();
     useAssemblyJobToasts();

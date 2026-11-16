@@ -1186,7 +1186,7 @@ It also answers what the screw follows in the form:
 
 Planned, it answers `previews` too: where each part of each ready hole would
 go, and the mesh to draw it with (`previewParts`). The panel shows them in
-Onshape's view through the preview extension; see
+Onshape's view through the FRCDesignApp Companion; see
 [previews.md](./previews.md).
 
 Nothing picked asks Onshape nothing. FTC, or parts the catalog doesn't make,

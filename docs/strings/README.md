@@ -17,6 +17,7 @@ user.
 | [testbench.md](./testbench.md)             | The owner's testbench page                              |
 | [auto-assembly.md](./auto-assembly.md)     | Auto Assembly's page, its runs, and pick problems       |
 | [fasten.md](./fasten.md)                   | Insert and fasten's card, toasts and tip                |
+| [previews.md](./previews.md)               | The Companion's navbar button, tip and listing          |
 
 ## Shape of a file
 

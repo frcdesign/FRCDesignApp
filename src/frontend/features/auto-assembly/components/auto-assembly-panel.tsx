@@ -177,7 +177,8 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
     );
     const { problems, holeSize, existingScrew, isChecking, previews } =
         usePickProblems(checkBody);
-    usePartPreview(previews);
+    // Only a planned check has previews to wait for
+    usePartPreview(previews, isChecking && checkBody?.options !== undefined);
 
     // The screw follows what's picked until chosen by hand, as an Onshape feature's editing logic does
     useEffect(() => {

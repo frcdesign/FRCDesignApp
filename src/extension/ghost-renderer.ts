@@ -56,8 +56,9 @@ void main() {
     outColor = vec4(color * uColor.a, uColor.a);
 }`;
 
-const FACE_COLOR = [0.3, 0.6, 0.95] as const;
-const EDGE_COLOR = [0.05, 0.18, 0.4] as const;
+/** Green, apart from the blue Onshape selects in and the grays parts default to. */
+const FACE_COLOR = [0.16, 0.8, 0.36] as const;
+const EDGE_COLOR = [0.02, 0.33, 0.12] as const;
 
 interface Uniforms {
     model: WebGLUniformLocation | null;
@@ -261,8 +262,8 @@ export class GhostRenderer {
 
             gl.depthMask(false);
             gl.depthFunc(isReversed ? gl.LESS : gl.GREATER);
-            this.faces(0.12);
-            this.edges(0.4);
+            this.faces(0.2);
+            this.edges(0.55);
 
             gl.depthFunc(isReversed ? gl.GEQUAL : gl.LEQUAL);
             this.visible();
@@ -375,7 +376,7 @@ export class GhostRenderer {
         this.faces(1);
         gl.colorMask(true, true, true, true);
         gl.depthMask(false);
-        this.faces(0.75);
+        this.faces(0.85);
         this.edges(1);
     }
 

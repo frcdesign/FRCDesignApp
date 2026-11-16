@@ -748,5 +748,9 @@
     "insertMenuInsert": "Insert",
     "insertMenuConfiguration": "Configuration",
     "insertMenuDerive": "Derive",
-    "queryListDeselectRefused": "Due to Onshape limitations, deselecting via the graphics window is not possible after resuming a selection."
+    "queryListDeselectRefused": "Due to Onshape limitations, deselecting via the graphics window is not possible after resuming a selection.",
+    "companionGet": "Get the extension",
+    "companionConnected": "Extension connected",
+    "companionTip": "Tip: Get the FRCDesignApp Companion extension to preview Auto Assembly's parts in Onshape.",
+    "companionTipAction": "Get it"
 }

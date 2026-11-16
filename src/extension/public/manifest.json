@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
-    "name": "FRCDesign Preview",
-    "description": "Shows the parts FRCDesignApp is about to insert, in Onshape's graphics window.",
+    "name": "FRCDesignApp Companion",
+    "description": "Gives FRCDesignApp additional functionality inside Onshape, such as previews of parts before they're inserted.",
     "version": "0.1.0",
     "minimum_chrome_version": "111",
     "content_scripts": [

@@ -1,22 +1,22 @@
-/** The extension's one script, run in Onshape's own page so it can reach the viewer. */
+/** The Companion's one script, run in Onshape's own page so it can reach the viewer. */
 import {
     APP_ORIGINS,
-    parsePreviewRequest,
-    PREVIEW_PROTOCOL_VERSION,
-    PREVIEW_SOURCE,
-    type PreviewReady
-} from "@backend/features/previews/contract";
+    COMPANION_PROTOCOL_VERSION,
+    COMPANION_SOURCE,
+    type CompanionReady,
+    parseCompanionRequest
+} from "@backend/features/companion/contract";
 import { PreviewController, type PreviewMode } from "./preview";
 
-interface PreviewConsole {
-    clear: () => void;
-    readonly mode: PreviewMode;
+interface CompanionConsole {
+    clearPreview: () => void;
+    readonly previewMode: PreviewMode;
 }
 
 declare global {
     interface Window {
         /** For checking a preview from the browser console. */
-        frcDesignPreview?: PreviewConsole;
+        frcDesignCompanion?: CompanionConsole;
     }
 }
 
@@ -27,16 +27,16 @@ function start() {
         if (!APP_ORIGINS.includes(event.origin)) {
             return;
         }
-        const request = parsePreviewRequest(event.data);
+        const request = parseCompanionRequest(event.data);
         if (!request) {
             return;
         }
         switch (request.type) {
             case "hello": {
-                const ready: PreviewReady = {
-                    source: PREVIEW_SOURCE,
+                const ready: CompanionReady = {
+                    source: COMPANION_SOURCE,
                     type: "ready",
-                    version: PREVIEW_PROTOCOL_VERSION
+                    version: COMPANION_PROTOCOL_VERSION
                 };
                 (event.source as Window | null)?.postMessage(
                     ready,
@@ -44,25 +44,25 @@ function start() {
                 );
                 return;
             }
-            case "show":
+            case "show-preview":
                 controller.show(request.meshes, request.parts);
                 return;
-            case "clear":
+            case "clear-preview":
                 controller.clear();
                 return;
         }
     });
 
-    window.frcDesignPreview = {
-        clear: () => {
+    window.frcDesignCompanion = {
+        clearPreview: () => {
             controller.clear();
         },
-        get mode() {
+        get previewMode() {
             return controller.mode;
         }
     };
 }
 
-if (!window.frcDesignPreview) {
+if (!window.frcDesignCompanion) {
     start();
 }

@@ -1,3 +1,4 @@
+import { useCompanionTip } from "../companion/companion-tip";
 import { type PreviewPart } from "@backend/features/previews/contract";
 import {
     keepPreviousData,
@@ -61,12 +62,15 @@ export function useAssemblyJobQuery(assembly: ElementPath | undefined) {
 
 /** Starts a run; it carries on whether or not anybody stays on the page. */
 export function useInsertMutation(assembly: ElementPath) {
+    const showCompanionTip = useCompanionTip();
     return useMutation({
         mutationKey: ["auto-assembly-insert", assembly],
         mutationFn: (body: AutoAssemblyIn) =>
             apiPost<AssemblyJobStatus>("/auto-assembly/insert", { body }),
-        onSuccess: (status) =>
-            queryClient.setQueryData(assemblyJobQueryKey(assembly), status),
+        onSuccess: (status) => {
+            queryClient.setQueryData(assemblyJobQueryKey(assembly), status);
+            showCompanionTip();
+        },
         onError: getAppErrorHandler(m.autoAssemblyStartFailed())
     });
 }

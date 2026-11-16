@@ -49,7 +49,10 @@ const { navigateToTab } = vi.hoisted(() => ({ navigateToTab: vi.fn() }));
 vi.mock("../../../lib/tabs", () => ({ useNavigateToTab: () => navigateToTab }));
 
 // Signed out, so the job query only reads what a test seeds
-vi.mock("../../auth/access-level", () => ({ useIsSignedIn: () => false }));
+vi.mock("../../auth/access-level", () => ({
+    useIsSignedIn: () => false,
+    useAccessData: () => ({ signedIn: false, seenHints: [], isPending: false })
+}));
 
 const ASSEMBLY = {
     documentId: "doc",

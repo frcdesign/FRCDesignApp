@@ -222,6 +222,18 @@ export function sendStopRequestMessage(
     }
 }
 
+/** Onshape's spinner for work going on in its tab. Undocumented; see docs/ONSHAPE.md. */
+export function sendWorkingSpinnerMessage(
+    elementPath: ElementPath,
+    isWorking: boolean
+) {
+    sendMessage(elementPath, {
+        messageName: isWorking
+            ? MessageType.START_WORKING_SPINNER
+            : MessageType.STOP_WORKING_SPINNER
+    });
+}
+
 /*
  * Highlighting the insert location was tried and dropped:
  * `requestSelectionHighlight` answered SUCCESS and painted nothing. Undocumented
@@ -242,7 +254,9 @@ enum MessageType {
     SWITCH_TAB = "openAnotherElementInCurrentWorkspace",
     OPEN_FEATURE = "openFeatureDialog",
     CLOSE_FEATURE = "closeFeatureDialog",
-    STOP_REQUEST = "stopRequest"
+    STOP_REQUEST = "stopRequest",
+    START_WORKING_SPINNER = "startWorkingSpinner",
+    STOP_WORKING_SPINNER = "stopWorkingSpinner"
 }
 
 interface Message {

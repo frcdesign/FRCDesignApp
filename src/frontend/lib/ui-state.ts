@@ -66,6 +66,8 @@ interface UiState {
     fastenSelectionMode: SelectionMode;
     /** How many times an insert and fasten has offered the circular edges tip; see `insert-tips`. */
     fastenCircularEdgesTipCount: number;
+    /** How many times an insert has offered the Companion; see `companion-tip`. */
+    companionTipCount: number;
     /** The access level to view the app as; absent means the granted default. */
     accessLevel?: AccessLevel;
     /** So a relaunch can reopen the insert menu. */
@@ -87,7 +89,8 @@ export const useUiState = create<UiState>()(
             fasten: true,
             seenHints: [],
             fastenSelectionMode: SelectionMode.LOCATIONS,
-            fastenCircularEdgesTipCount: 0
+            fastenCircularEdgesTipCount: 0,
+            companionTipCount: 0
         }),
         { name: "uiState", version: 1, migrate: migrateUiState }
     )

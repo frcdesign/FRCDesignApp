@@ -1,3 +1,4 @@
+import { useCompanionTip } from "../companion/companion-tip";
 import { useIsFetching, useMutation, useQuery } from "@tanstack/react-query";
 import { apiGet, apiPost } from "../../lib/api-client";
 import {
@@ -74,6 +75,7 @@ export function useInsertMutation(
     // The backend resolves where it is now, since it moves when dragged.
     const insertLocationId = useInsertLocationId();
     const libraryId = useLibraryId();
+    const showCompanionTip = useCompanionTip();
 
     const toastId = "insert-" + insertable.id;
 
@@ -139,6 +141,7 @@ export function useInsertMutation(
                     }),
                     toastId
                 );
+                showCompanionTip();
                 return;
             }
             // In an assembly, the only feature an insert builds is the mate.
@@ -151,6 +154,7 @@ export function useInsertMutation(
                     : m.insertSucceeded({ name: insertable.name }),
                 toastId
             );
+            showCompanionTip();
         },
         // Settled: a fasten that fails still leaves the part inserted.
         onSettled: () => invalidateRecents(libraryId)

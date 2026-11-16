@@ -279,7 +279,7 @@ What the panel's window messages say about what's picked, in `SELECTION` and
 
 ## The web client's viewer
 
-What the preview extension (`src/extension/`) reaches inside Onshape's own page
+What the FRCDesignApp Companion (`src/extension/`) reaches inside Onshape's own page
 to draw in the graphics window. None of it is an API. All of it is
 _unverified_: read from the web client's code (1.223) and from another
 extension that relies on it, and seen working only against a stand-in for the
@@ -300,6 +300,10 @@ looks each thing up and does without when it isn't there.
 - `viewer.forceRequestDraw()` draws a frame; Onshape draws none on its own
   while nothing changes.
 - `viewer.printingInProgress` is true while it renders for print.
+- The client messages `startWorkingSpinner` and `stopWorkingSpinner`, each
+  with the tab's ids, turn a spinner for that tab. The web client handles them
+  beside the documented messages, with no capability in front; what the spinner
+  looks like, and where, is _unverified_.
 - The client messages `startAssemblyAnimation`, `updateAssemblyAnimation` and
   `stopAssemblyAnimation` move instances on screen without changing the
   document, but only for an account with the `WEB.ASSEMBLY_MESSAGE_ANIMATION`

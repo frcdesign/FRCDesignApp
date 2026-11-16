@@ -67,6 +67,7 @@ import { type AppTab, UtilityTab } from "../lib/app-tab";
 import { getTabName, useNavigateToTab } from "../lib/tabs";
 import { useRefreshVersionManagerMutation } from "../features/version-manager/queries";
 import { RefreshButton } from "./refresh-button";
+import { CompanionButton } from "../features/companion/components/companion-button";
 
 /** Stretched so a full-height child's underline lands on the row's border. */
 export function NavbarRow(props: PropsWithChildren): ReactNode {
@@ -107,6 +108,7 @@ export function AppNavbar(): ReactNode {
                 <PagePicker />
                 <Group gap="xs" ml="auto" className={styles.noShrink}>
                     {/* Inserting is the library's; a utility inserts nothing from a row. */}
+                    <CompanionButton />
                     <SignInButton />
                     {isVersionManager && <VersionManagerRefreshButton />}
                     <SettingsControls />

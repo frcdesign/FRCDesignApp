@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-    decodePreviewMesh,
-    encodePreviewMesh,
-    parsePreviewRequest,
-    PREVIEW_SOURCE
-} from "./contract";
+import { decodePreviewMesh, encodePreviewMesh } from "./contract";
 import { toPreviewMesh } from "./tessellate";
 
 /** Two triangles sharing an edge, a unit square in z = 0, facing +Z. */
@@ -139,55 +134,5 @@ describe("the preview mesh format", () => {
         ]
     ])("refuses %s", (_name, buffer) => {
         expect(decodePreviewMesh(buffer)).toBeUndefined();
-    });
-});
-
-describe("parsePreviewRequest", () => {
-    const IDENTITY = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
-    const meshes = { screw: new ArrayBuffer(4) };
-
-    it("takes a show whose parts name meshes it carries", () => {
-        const request = {
-            source: PREVIEW_SOURCE,
-            type: "show",
-            meshes,
-            parts: [{ mesh: "screw", transform: IDENTITY }]
-        };
-
-        expect(parsePreviewRequest(request)).toEqual(request);
-    });
-
-    it.each([
-        ["another sender's message", { messageName: "SELECTION" }],
-        ["an unknown type", { source: PREVIEW_SOURCE, type: "explode" }],
-        [
-            "a part naming a mesh it doesn't carry",
-            {
-                source: PREVIEW_SOURCE,
-                type: "show",
-                meshes,
-                parts: [{ mesh: "nut", transform: IDENTITY }]
-            }
-        ],
-        [
-            "a transform that isn't sixteen numbers",
-            {
-                source: PREVIEW_SOURCE,
-                type: "show",
-                meshes,
-                parts: [{ mesh: "screw", transform: [1, 0, 0] }]
-            }
-        ],
-        [
-            "a mesh that isn't bytes",
-            {
-                source: PREVIEW_SOURCE,
-                type: "show",
-                meshes: { screw: "data" },
-                parts: []
-            }
-        ]
-    ])("refuses %s", (_name, data) => {
-        expect(parsePreviewRequest(data)).toBeUndefined();
     });
 });
