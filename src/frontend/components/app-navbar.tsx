@@ -108,7 +108,6 @@ export function AppNavbar(): ReactNode {
                 <PagePicker />
                 <Group gap="xs" ml="auto" className={styles.noShrink}>
                     {/* Inserting is the library's; a utility inserts nothing from a row. */}
-                    <CompanionButton />
                     <SignInButton />
                     {isVersionManager && <VersionManagerRefreshButton />}
                     <SettingsControls />
@@ -309,6 +308,7 @@ function PagePicker(): ReactNode {
 export function SettingsControls(): ReactNode {
     return (
         <Group gap={0}>
+            <CompanionButton />
             <ThemeToggle />
             <SettingsButton />
         </Group>

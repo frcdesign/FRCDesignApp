@@ -35,7 +35,7 @@ const useCompanion: UseBoundStore<StoreApi<CompanionState>>;
 // Inside Onshape, in a browser that can install it.
 function useCanUseCompanion(): boolean;
 function postToCompanion(server: string, request: CompanionRequest): void;
-// In the navbar: gets the Companion, or says it's connected.
+// Beside the theme toggle: gets the Companion, or says it's connected.
 function CompanionButton(): ReactNode;
 // After an insert, until the Companion has connected on any computer.
 function useCompanionTip(): () => void;
@@ -229,10 +229,11 @@ get it.
 Both offers show only inside Onshape, in a browser that can install a Chrome
 extension (`useCanUseCompanion`: Chrome, Edge or Opera).
 
-- **The navbar** has a puzzle piece beside Sign in (`CompanionButton`).
-  Without the Companion, its tooltip says to get it, and a click opens
-  `COMPANION_URL`. It carries the blue dot until the Companion has connected
-  on any computer. Connected, it's green, and its tooltip says so.
+- **The navbar** has a puzzle piece beside the theme toggle
+  (`CompanionButton`), badged with its status (`BadgedIcon`). Without the
+  Companion, it carries the info badge, its tooltip says to get it, and a
+  click opens `COMPANION_URL`. Connected, it carries the check, and its tooltip
+  says so.
 - **After an insert** — a library insert, or starting an Auto Assembly run —
   a tip toast offers it, with a button opening `COMPANION_URL`
   (`useCompanionTip`). It shows at most once a page load and three times in
@@ -351,7 +352,8 @@ In [strings/previews.md](../strings/previews.md).
   is to the app, so what it does next joins it, and one install covers all of
   it.
 - **Offered where it helps, then quiet.** The navbar's button stays, since it
-  also says whether the Companion is connected. The tip comes after an insert,
+  also says whether the Companion is connected, as a status badge like the
+  app's others. The tip comes after an insert,
   when previews would have helped, and stops once it's connected anywhere or
   after three.
 

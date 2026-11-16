@@ -8,10 +8,10 @@ browser's extensions page show.
 
 ## The navbar
 
-| String                | Kind    | Where                       | When                                                         | Review    |
-| --------------------- | ------- | --------------------------- | ------------------------------------------------------------ | --------- |
-| "Get the extension"   | Tooltip | The puzzle piece, top right | Inside Onshape, in Chrome, Edge or Opera, without it running | **⚑** New |
-| "Extension connected" | Tooltip | The puzzle piece, green     | The Companion answered                                       | **⚑** New |
+| String                | Kind    | Where                         | When                                                         | Review    |
+| --------------------- | ------- | ----------------------------- | ------------------------------------------------------------ | --------- |
+| "Get the extension"   | Tooltip | The puzzle piece, info badge  | Inside Onshape, in Chrome, Edge or Opera, without it running | **⚑** New |
+| "Extension connected" | Tooltip | The puzzle piece, check badge | The Companion answered                                       | **⚑** New |
 
 ## After an insert
 
