@@ -1,0 +1,17 @@
+CREATE TABLE `daily_feature_users` (
+	`day` text NOT NULL,
+	`feature` text NOT NULL,
+	`user_id` text NOT NULL,
+	PRIMARY KEY(`feature`, `day`, `user_id`)
+);
+--> statement-breakpoint
+ALTER TABLE `events` ADD `at_insert_location` integer;--> statement-breakpoint
+INSERT OR IGNORE INTO `daily_feature_users`("day", "feature", "user_id") SELECT DISTINCT `day`, 'search', `user_id` FROM `events` WHERE (`type` = 'download' OR (`type` = 'insert' AND `target_element_type` IS NOT NULL)) AND `library_id` IS NOT NULL AND `element_id` IS NOT NULL AND `source` IS NOT NULL AND `source` IN ('search', 'group_search');--> statement-breakpoint
+INSERT OR IGNORE INTO `daily_feature_users`("day", "feature", "user_id") SELECT DISTINCT `day`, 'favorites', `user_id` FROM `events` WHERE (`type` = 'download' OR (`type` = 'insert' AND `target_element_type` IS NOT NULL)) AND `library_id` IS NOT NULL AND `element_id` IS NOT NULL AND `source` IS NOT NULL AND `source` = 'favorites';--> statement-breakpoint
+INSERT OR IGNORE INTO `daily_feature_users`("day", "feature", "user_id") SELECT DISTINCT `day`, 'recents', `user_id` FROM `events` WHERE (`type` = 'download' OR (`type` = 'insert' AND `target_element_type` IS NOT NULL)) AND `library_id` IS NOT NULL AND `element_id` IS NOT NULL AND `source` IS NOT NULL AND `source` = 'recents';--> statement-breakpoint
+INSERT OR IGNORE INTO `daily_feature_users`("day", "feature", "user_id") SELECT DISTINCT `day`, 'quick_insert', `user_id` FROM `events` WHERE (`type` = 'download' OR (`type` = 'insert' AND `target_element_type` IS NOT NULL)) AND `library_id` IS NOT NULL AND `element_id` IS NOT NULL AND `source` IS NOT NULL AND `is_quick_insert` = 1;--> statement-breakpoint
+INSERT OR IGNORE INTO `daily_feature_users`("day", "feature", "user_id") SELECT DISTINCT `day`, 'fasten', `user_id` FROM `events` WHERE (`type` = 'download' OR (`type` = 'insert' AND `target_element_type` IS NOT NULL)) AND `library_id` IS NOT NULL AND `element_id` IS NOT NULL AND `source` IS NOT NULL AND `fasten` = 1;--> statement-breakpoint
+INSERT OR IGNORE INTO `daily_feature_users`("day", "feature", "user_id") SELECT DISTINCT `day`, 'download', `user_id` FROM `events` WHERE (`type` = 'download' OR (`type` = 'insert' AND `target_element_type` IS NOT NULL)) AND `library_id` IS NOT NULL AND `element_id` IS NOT NULL AND `source` IS NOT NULL AND `type` = 'download';--> statement-breakpoint
+INSERT OR IGNORE INTO `daily_feature_users`("day", "feature", "user_id") SELECT DISTINCT `day`, 'version_manager', `user_id` FROM `events` WHERE `type` = 'version_run' AND `version_kind` IS NOT NULL;--> statement-breakpoint
+INSERT OR IGNORE INTO `daily_feature_users`("day", "feature", "user_id") SELECT DISTINCT `day`, 'featurescripts', `user_id` FROM `events` WHERE `type` = 'feature_add' AND `feature_type` IS NOT NULL;--> statement-breakpoint
+INSERT OR IGNORE INTO `daily_feature_users`("day", "feature", "user_id") SELECT DISTINCT `day`, 'report', `user_id` FROM `events` WHERE `type` = 'report' AND `report_topic` IS NOT NULL AND `report_category` IS NOT NULL AND `report_source` IS NOT NULL AND `user_id` != 'signed-out';

@@ -1,6 +1,6 @@
 import { LibraryId } from "../library/library-id";
 import type { ElementPath } from "../../lib/onshape/path";
-import { UseSource, UseTarget } from "./usage";
+import { type AppFeature, UseSource, UseTarget } from "./usage";
 import type {
     FeedbackCategory,
     FeedbackSource,
@@ -248,4 +248,24 @@ export interface InsertableReportOut {
     /** Uses by where the part went: derived, inserted or downloaded. */
     targets: UseTargets;
     parameters: ConfigurationParameterUsage[];
+}
+
+/** One week of feature reach: who was about, and who used each feature. */
+export interface FeatureReachWeek {
+    /** The Monday it starts on, which may fall before the range does. */
+    week: string;
+    /** Everybody active that week, every feature's users among them. */
+    activeUsers: number;
+    /** Distinct users of each feature that week; a feature nobody used is absent. */
+    users: Partial<Record<AppFeature, number>>;
+}
+
+/** Each week of the range, oldest first, and where each feature's record starts. */
+export interface FeatureReachOut {
+    weeks: FeatureReachWeek[];
+    /**
+     * Each feature's first recorded use, all time; absent for one never used.
+     * Before it, nothing tells a week nobody used it from one nothing recorded.
+     */
+    firstUsed: Partial<Record<AppFeature, string>>;
 }

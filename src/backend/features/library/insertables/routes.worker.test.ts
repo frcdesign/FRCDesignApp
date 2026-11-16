@@ -467,6 +467,9 @@ describe("insertable routes", () => {
                 ]
             })
         );
+        expect(await db.select().from(events).get()).toMatchObject({
+            atInsertLocation: true
+        });
     });
 
     // The marker can be deleted after the app opens.
@@ -499,6 +502,9 @@ describe("insertable routes", () => {
             ElementType.ASSEMBLY,
             expect.objectContaining({ transform: undefined })
         );
+        expect(await db.select().from(events).get()).toMatchObject({
+            atInsertLocation: false
+        });
     });
 
     // Onshape defaults what's left out, and a long enough configuration is refused.

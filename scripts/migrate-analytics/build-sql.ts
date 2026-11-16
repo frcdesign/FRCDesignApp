@@ -417,6 +417,8 @@ const toEvent = (
         isQuickInsert: row.quick_insert === "true",
         source: UseSource.UNKNOWN,
         fasten: row.fasten === "true",
+        // The legacy app had no insert location.
+        atInsertLocation: null,
         ...NOT_A_VERSION_RUN,
         ...NOT_A_REPORT,
         ...NOT_A_FEATURE_ADD

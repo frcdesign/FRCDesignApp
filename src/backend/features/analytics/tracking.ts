@@ -9,6 +9,7 @@ import {
     NOT_A_FEATURE_ADD,
     NOT_A_REPORT,
     NOT_A_VERSION_RUN,
+    SIGNED_OUT_USER_ID,
     type ElementColumns,
     type EventCore
 } from "./logged-event";
@@ -58,6 +59,8 @@ export interface InsertEvent extends UseEvent {
     targetElementType: ElementType;
     isQuickInsert: boolean;
     fasten: boolean;
+    /** Placed at the assembly's insert location marker. */
+    atInsertLocation: boolean;
 }
 
 /** After the response, and never failing it: tracking is not what was asked for. */
@@ -65,7 +68,8 @@ export function trackInsert(c: AppContext, event: InsertEvent): Promise<void> {
     return trackUse(c, EventType.INSERT, event, {
         targetElementType: event.targetElementType,
         isQuickInsert: event.isQuickInsert,
-        fasten: event.fasten
+        fasten: event.fasten,
+        atInsertLocation: event.atInsertLocation
     });
 }
 
@@ -74,14 +78,15 @@ export function trackDownload(c: AppContext, event: UseEvent): Promise<void> {
     return trackUse(c, EventType.DOWNLOAD, event, {
         targetElementType: null,
         isQuickInsert: null,
-        fasten: null
+        fasten: null,
+        atInsertLocation: null
     });
 }
 
 /** The columns only an insert fills in. */
 type InsertOnlyColumns = Pick<
     LoggedEvent,
-    "targetElementType" | "isQuickInsert" | "fasten"
+    "targetElementType" | "isQuickInsert" | "fasten" | "atInsertLocation"
 >;
 
 function trackUse(
@@ -191,9 +196,6 @@ export async function trackVersionRun(
     );
 }
 
-/** Who sent a report, when they weren't signed in. */
-export const SIGNED_OUT_USER_ID = "signed-out";
-
 /** A report already posted to Discord; see `features/feedback`. */
 export interface ReportEvent {
     /** The id the Discord post quotes, so the two can be matched. */
@@ -268,6 +270,39 @@ export function trackFeatureAdd(
                 ...NOT_A_VERSION_RUN,
                 ...NOT_A_REPORT,
                 featureType: event.featureType
+            },
+            []
+        )
+    );
+}
+
+/** A favorite's default configuration, saved; `path` is its part in the loaded version. */
+export interface DefaultSelectionEvent {
+    libraryId: LibraryId;
+    path: ElementPath;
+    insertableId: string;
+}
+
+/** As `trackInsert`, once the default is saved. Not a use: nothing was placed. */
+export function trackDefaultSelection(
+    c: AppContext,
+    event: DefaultSelectionEvent
+): Promise<void> {
+    return runInBackground(c, "record a default configuration", async () =>
+        record(
+            getDb(c.env.DB),
+            {
+                ...eventCore(
+                    EventType.DEFAULT_SELECTION,
+                    event.libraryId,
+                    await c.var.getUserId()
+                ),
+                ...event.path,
+                insertableId: event.insertableId,
+                ...NOT_A_USE,
+                ...NOT_A_VERSION_RUN,
+                ...NOT_A_REPORT,
+                ...NOT_A_FEATURE_ADD
             },
             []
         )

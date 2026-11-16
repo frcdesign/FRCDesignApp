@@ -410,6 +410,43 @@
     "dashboardLoadingReports": "Loading reports...",
     "dashboardLoadingFeatureScripts": "Loading FeatureScripts...",
     "dashboardLoadingParts": "Loading parts...",
+    "dashboardLoadingFeatureReach": "Loading feature reach...",
+    "dashboardFeatureReach": "Feature reach",
+    "dashboardFeatureReachDescription": "The share of each week's active users who used a feature that week. Dashed lines mark the week a nudge shipped.",
+    "dashboardFeatureReachNoData": "No recorded use yet.",
+    "dashboardFeatureReachLatest": "Latest week: {share}",
+    "dashboardFeatureReachWeekOf": "Week of {week}",
+    "dashboardFeatureReachUsers": [
+        {
+            "declarations": [
+                "input users",
+                "input activeUsers",
+                "local activePlural = activeUsers: plural",
+                "local usersFormatted = users: number",
+                "local activeFormatted = activeUsers: number"
+            ],
+            "selectors": ["activePlural"],
+            "match": {
+                "activePlural=one": "{usersFormatted} of {activeFormatted} active user",
+                "activePlural=other": "{usersFormatted} of {activeFormatted} active users"
+            }
+        }
+    ],
+    "dashboardFeatureSearch": "Search",
+    "dashboardFeatureFavorites": "Favorites list",
+    "dashboardFeatureRecents": "Recently used list",
+    "dashboardFeatureQuickInsert": "Quick insert",
+    "dashboardFeatureFasten": "Insert and fasten",
+    "dashboardFeatureInsertLocation": "Insert location",
+    "dashboardFeatureDownload": "STEP download",
+    "dashboardFeatureDefaultConfiguration": "Default configuration",
+    "dashboardFeatureVersionManager": "Version Manager",
+    "dashboardFeatureFeatureScripts": "FeatureScripts",
+    "dashboardFeatureReport": "Report an issue",
+    "dashboardNudgeDotAdded": "Blue dot",
+    "dashboardNudgeDotRemoved": "Blue dot removed",
+    "dashboardNudgeTipAdded": "Tip",
+    "dashboardNudgeTipRemoved": "Tip removed",
     "dashboardLoadingLibrary": "Loading library usage...",
     "dashboardLoadingHealth": "Loading library health...",
     "dashboardHealthLibraries": "Libraries",

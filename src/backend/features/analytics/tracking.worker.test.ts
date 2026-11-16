@@ -87,6 +87,7 @@ function insertEvent(overrides: Partial<InsertEvent> = {}): InsertEvent {
         isQuickInsert: false,
         source: UseSource.BROWSE,
         fasten: false,
+        atInsertLocation: false,
         ...overrides
     };
 }

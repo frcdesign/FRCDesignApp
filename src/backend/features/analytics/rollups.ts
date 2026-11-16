@@ -3,7 +3,8 @@ import { type Db } from "../../db/client";
 import { type ConfigurationParameter } from "../configurations/contract";
 import { toInstanceKeys } from "../configurations/instances";
 import { earliest, increment, latest } from "../../db/updates";
-import { EventType, USE_EVENT_TYPES } from "./usage";
+import { type AppFeature, EventType, USE_EVENT_TYPES } from "./usage";
+import { featuresOf } from "./feature-reach";
 import { VersionJobOutcome } from "../version-manager/contract";
 import {
     asFeatureAdd,
@@ -29,6 +30,7 @@ import {
     dailyVersionMetrics,
     dailyFeatureScriptMetrics,
     dailyFeatureScriptUsers,
+    dailyFeatureUsers,
     insertableStats,
     userStats,
     type LoggedEvent
@@ -39,6 +41,20 @@ import {
  * by its branch, so a replay rebuilds the rollups exactly.
  */
 export function rollupWrites(
+    db: Db,
+    event: LoggedEvent,
+    parameters: ConfigurationParameter[]
+): BatchItem<"sqlite">[] {
+    return [
+        ...kindWrites(db, event, parameters),
+        ...featuresOf(event).map((feature) =>
+            markFeatureUsed(db, event, feature)
+        )
+    ];
+}
+
+/** The rollups of the event's own kind. */
+function kindWrites(
     db: Db,
     event: LoggedEvent,
     parameters: ConfigurationParameter[]
@@ -59,6 +75,10 @@ export function rollupWrites(
     const report = asReport(event);
     if (report) {
         return [countReportDay(db, report)];
+    }
+    // Not activity either: setting up a favorite places nothing.
+    if (event.type === EventType.DEFAULT_SELECTION) {
+        return [];
     }
     // Every other rollup is keyed by library.
     if (event.libraryId === null) {
@@ -82,6 +102,14 @@ export function rollupWrites(
         countPartLifetime(db, use),
         ...countValues(db, use, parameters)
     ];
+}
+
+/** Idempotent: one row per user per feature per day. */
+function markFeatureUsed(db: Db, event: LoggedEvent, feature: AppFeature) {
+    return db
+        .insert(dailyFeatureUsers)
+        .values({ day: event.day, feature, userId: event.userId })
+        .onConflictDoNothing();
 }
 
 function countFeatureAdd(db: Db, add: LoggedFeatureAdd) {

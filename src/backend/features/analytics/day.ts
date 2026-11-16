@@ -32,3 +32,9 @@ export interface DayRange {
     from: string;
     to: string;
 }
+
+/** The Monday on or before `day`, which names the week it falls in. */
+export function toWeekStart(day: string): string {
+    const weekday = new Date(`${day}T00:00:00Z`).getUTCDay();
+    return addDays(day, -((weekday + 6) % 7));
+}

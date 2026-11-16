@@ -58,7 +58,9 @@ team, plus one owner set by configuration.
   insert location's card on closing, an insert menu's ⋯ menu offering **Set
   default configuration** on closing, and a part's menu (on its card or in the
   insert menu) offering **Report an issue** on closing. Kept until deleted;
-  losing it only shows a dot again.
+  losing it only shows a dot again. The day each dot shipped is listed in
+  `src/frontend/features/dashboard/nudges.ts`, which marks it on the
+  dashboard's feature reach; a new hint adds its entry there.
 - **localStorage** (`ui-state`): `accessLevel`, the level the app is viewed as;
   `seenHints`, the hints dismissed in this browser. `useHasSeenHint` reads them
   beside the server's list, so a refetch that reads KV before the dismissal

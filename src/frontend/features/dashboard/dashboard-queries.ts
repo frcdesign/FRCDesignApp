@@ -2,6 +2,7 @@ import { queryOptions, type UseQueryResult } from "@tanstack/react-query";
 import { apiGet } from "../../lib/api-client";
 import type {
     DailyUsePoint,
+    FeatureReachOut,
     FeatureScriptUsageOut,
     LibrarySummaryOut,
     InsertableReportOut,
@@ -46,6 +47,10 @@ export function getVersionManagerQuery(range: DayRange) {
 
 export function getOverviewFeatureScriptsQuery(range: DayRange) {
     return overviewQuery<FeatureScriptUsageOut>("featurescripts", range);
+}
+
+export function getOverviewFeatureReachQuery(range: DayRange) {
+    return overviewQuery<FeatureReachOut>("feature-reach", range);
 }
 
 /** Every library's together; it changes with a reload, not with the range. */

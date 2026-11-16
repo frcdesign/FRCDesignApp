@@ -4,7 +4,7 @@
 
 Records how the libraries are used — each **use** of a part, an insert into
 Onshape or a STEP download, and each launch from Onshape —
-and how often people report problems, and shows it on a public dashboard: totals and trends, per-library health,
+how often people report problems, and who uses each of the app's features, and shows it on a public dashboard: totals and trends, per-library health,
 which parts and configuration options are used, and which aren't. It exists so
 the library team can see what to maintain and what to cut.
 
@@ -20,7 +20,7 @@ imports
 
 ```ts
 /** Bump when the columns' meaning changes. */
-const EVENT_SCHEMA_VERSION = 2;
+const EVENT_SCHEMA_VERSION = 3;
 
 /** Rows imported from the legacy app's log; see Imported history. */
 const LEGACY_SCHEMA_VERSION = 0;
@@ -35,7 +35,9 @@ enum EventType {
     /** One report posted to Discord; see `features/feedback`. */
     REPORT = "report",
     /** One FeatureScript added to a Part Studio; see `features/featurescripts`. Not a use. */
-    FEATURE_ADD = "feature_add"
+    FEATURE_ADD = "feature_add",
+    /** A favorite's default configuration saved; see `features/favorites`. Not a use. */
+    DEFAULT_SELECTION = "default_selection"
 }
 
 /** A use is an insert or a download: each counts toward a part's usage. */
@@ -67,6 +69,22 @@ enum UseSource {
 
 /** What a client may send: the import is the only writer of `UNKNOWN`. */
 const CLIENT_USE_SOURCES: readonly UseSource[];
+
+/** A feature whose reach the dashboard charts; `featuresOf` says which events count. */
+enum AppFeature {
+    /** A use started from a search, the library's or a group's. */
+    SEARCH = "search",
+    FAVORITES = "favorites",
+    RECENTS = "recents",
+    QUICK_INSERT = "quick_insert",
+    FASTEN = "fasten",
+    INSERT_LOCATION = "insert_location",
+    DOWNLOAD = "download",
+    DEFAULT_CONFIGURATION = "default_configuration",
+    VERSION_MANAGER = "version_manager",
+    FEATURESCRIPTS = "featurescripts",
+    REPORT = "report"
+}
 ```
 
 `src/backend/features/analytics/tracking.ts`, called by the routes and the
@@ -78,6 +96,10 @@ function trackInsert(c: AppContext, event: InsertEvent): Promise<void>;
 function trackDownload(c: AppContext, event: UseEvent): Promise<void>;
 function trackAppOpen(c: AppContext): Promise<void>;
 function trackReport(c: AppContext, event: ReportEvent): Promise<void>;
+function trackDefaultSelection(
+    c: AppContext,
+    event: DefaultSelectionEvent
+): Promise<void>;
 // Awaited inside the workflow's `record-run` step, which swallows its failure.
 async function trackVersionRun(
     env: AppBindings,
@@ -110,6 +132,15 @@ interface InsertEvent extends UseEvent {
     targetElementType: ElementType;
     isQuickInsert: boolean;
     fasten: boolean;
+    /** Placed at the assembly's insert location marker. */
+    atInsertLocation: boolean;
+}
+
+/** A favorite's default configuration, saved; `path` is its part in the loaded version. */
+interface DefaultSelectionEvent {
+    libraryId: LibraryId;
+    path: ElementPath;
+    insertableId: string;
 }
 
 /** A finished push or pull; see `features/version-manager`. */
@@ -120,9 +151,6 @@ interface VersionRunEvent {
     /** How it ended. */
     status: VersionJobStatus;
 }
-
-/** Who sent a report, when they weren't signed in. */
-const SIGNED_OUT_USER_ID = "signed-out";
 
 /** A report already posted to Discord; see `features/feedback`. */
 interface ReportEvent {
@@ -176,6 +204,8 @@ type LoggedEvent = {
     source: UseSource | null;
     /** Insert-and-fasten, which Onshape only offers for assembly targets. */
     fasten: boolean | null;
+    /** Placed at the assembly's insert location marker; null before schema version 3. */
+    atInsertLocation: boolean | null;
     /** A version run's own columns: how it was aimed, and what it did. */
     versionKind: VersionJobKind | null;
     versionScope: PushScopeKind | PullScopeKind | null;
@@ -201,6 +231,9 @@ function asUse(event: LoggedEvent): LoggedUse | undefined;
 function asFeatureAdd(event: LoggedEvent): LoggedFeatureAdd | undefined;
 function asVersionRun(event: LoggedEvent): LoggedVersionRun | undefined;
 function asReport(event: LoggedEvent): LoggedReport | undefined;
+
+/** Who sent a report, when they weren't signed in. */
+const SIGNED_OUT_USER_ID = "signed-out";
 
 /** What every event carries, whatever kind of event it is. */
 type EventCore = Pick<
@@ -293,11 +326,14 @@ function rollupWrites(
     event: LoggedEvent,
     parameters: ConfigurationParameter[]
 ): BatchItem<"sqlite">[];
+// `feature-reach.ts`: the features one event is a use of, which `rollupWrites`
+// marks in `daily_feature_users`.
+function featuresOf(event: LoggedEvent): AppFeature[];
 ```
 
 `src/backend/features/analytics/routes.ts`, public and read-only. Every route
 but health takes `from` and `to` day keys (`rangeQuery`); the overview and a
-library's summary clamp them to when tracking began (`clampRange`,
+library's summary and feature reach clamp them to when tracking began (`clampRange`,
 `getTrackingSince`).
 
 ```text
@@ -306,6 +342,7 @@ GET /api/analytics/overview/series                                  DailyUsePoin
 GET /api/analytics/overview/sources                                 UseSourceUsage[]
 GET /api/analytics/overview/version-manager                         VersionManagerTotals
 GET /api/analytics/overview/featurescripts                          FeatureScriptUsageOut
+GET /api/analytics/overview/feature-reach                           FeatureReachOut
 GET /api/analytics/overview/health                                  LibraryHealthCounts, every library's
 GET /api/analytics/overview/reports                                 ReportSummary
 GET /api/analytics/summary/library/:libraryId                       LibrarySummaryOut
@@ -317,8 +354,8 @@ GET /api/analytics/insertable/library/:libraryId/element/:elementId InsertableRe
 ```
 
 `src/backend/features/analytics/metric-queries.ts`, `growth.ts`,
-`part-queries.ts`, `report-queries.ts` and `featurescript-queries.ts`, the
-reads behind them
+`part-queries.ts`, `report-queries.ts`, `featurescript-queries.ts` and
+`feature-reach.ts`, the reads behind them
 
 ```ts
 async function getTotals(
@@ -411,6 +448,12 @@ async function getHealthCounts(
     db: Db,
     libraryId?: LibraryId
 ): Promise<LibraryHealthCounts>;
+// `feature-reach.ts`: each week's active users and each feature's users among
+// them, and each feature's first recorded use.
+async function getFeatureReach(
+    db: Db,
+    range: DayRange
+): Promise<FeatureReachOut>;
 
 interface PartRow {
     libraryId: LibraryId;
@@ -629,6 +672,23 @@ interface FeatureScriptUsageOut {
     features: FeatureScriptUsage[];
 }
 
+/** One week of feature reach: who was about, and who used each feature. */
+interface FeatureReachWeek {
+    /** The Monday it starts on, which may fall before the range does. */
+    week: string;
+    /** Everybody active that week, every feature's users among them. */
+    activeUsers: number;
+    /** Distinct users of each feature that week; a feature nobody used is absent. */
+    users: Partial<Record<AppFeature, number>>;
+}
+
+/** Each week of the range, oldest first, and where each feature's record starts. */
+interface FeatureReachOut {
+    weeks: FeatureReachWeek[];
+    /** Each feature's first recorded use, all time; absent for one never used. */
+    firstUsed: Partial<Record<AppFeature, string>>;
+}
+
 /** The overview's headline numbers, and the series its trends are drawn from. */
 interface OverviewUsageOut {
     /** Over the requested range, for the headline cards. */
@@ -740,6 +800,7 @@ function getOverviewSourcesQuery(range: DayRange);
 function getVersionManagerQuery(range: DayRange);
 function getOverviewFeatureScriptsQuery(range: DayRange);
 function getOverviewReportsQuery(range: DayRange);
+function getOverviewFeatureReachQuery(range: DayRange);
 function getLibrarySummaryQuery(libraryId: LibraryId, range: DayRange);
 function getPartsQuery(libraryId: LibraryId, range: DayRange);
 function getUnusedQuery(
@@ -789,6 +850,33 @@ interface DashboardEmptyProps {
     /** @default StatusColor.DIMMED */
     color?: StatusColor;
 }
+```
+
+`src/frontend/features/dashboard/nudges.ts`, every nudge toward a feature and
+the day it shipped; `feature-reach.ts` turns the route's weeks into each
+feature's line and places the nudges on it; `feature-reach-section.tsx` draws
+them
+
+```ts
+const NUDGES: readonly Nudge[];
+
+interface Nudge {
+    feature: AppFeature;
+    kind: NudgeKind; // a blue dot, or a tip toast
+    change: NudgeChange; // added, or removed
+    /** The day it reached `main`, which deploys to production. */
+    day: string;
+}
+
+// A percentage per week; null before the feature's first recorded use, or
+// for a week with nobody about.
+function toReachSeries(out: FeatureReachOut, feature: AppFeature): ReachPoint[];
+// A marker per week the feature's nudges changed in, labelled by kind.
+function nudgeMarks(
+    feature: AppFeature,
+    points: ReachPoint[],
+    nudges?: readonly Nudge[]
+): { bucket: string; label: string }[];
 ```
 
 `src/frontend/features/dashboard/metrics.ts`, what each trend tile and chart
@@ -842,15 +930,16 @@ no foreign key crosses between them):
 - `events` — the append-only log. Every event has an id, type, time, day key,
   user and schema version, and the library where it has one; a use adds the
   element path, insertable, canonical selection, source and favorite flag, and
-  an insert also its target tab type and the quick-insert and fasten flags,
-  which a download leaves null; a version run adds its kind,
+  an insert also its target tab type and the quick-insert, fasten and
+  insert-location flags, which a download leaves null; a version run adds its kind,
   scope, whether it was update-only, its outcome, and how many steps failed,
   versions it created and tabs it updated. A report adds its topic, category,
   source and the team number the reporter gave, a part report the element
   path and insertable, and a report naming a FeatureScript its constant in
   `feature_type`. A FeatureScript add has its feature's constant in
   `feature_type`, and its Feature Studio's path in the loaded version in the
-  element columns. Keyed on
+  element columns. A default configuration saved on a favorite has its library
+  and its part's path and insertable. Keyed on
   Onshape's element id with no foreign keys, so history survives a reload or a
   re-added tab.
 - Rows imported from the legacy app (see Imported history) have
@@ -869,7 +958,8 @@ no foreign key crosses between them):
   `daily_insertable_metrics`, `daily_insertable_users`,
   `daily_configuration_metrics`, `daily_user_activity`, `user_stats`,
   `daily_app_opens`, `daily_version_metrics`, `daily_report_metrics`,
-  `daily_featurescript_metrics`, `daily_featurescript_users`.
+  `daily_featurescript_metrics`, `daily_featurescript_users`,
+  `daily_feature_users`.
 - A use writes every library rollup, an insert and a download alike.
   `daily_metrics` keeps a row per event type, so the uses are the sum of the
   `insert` and `download` rows and either can be read alone.
@@ -895,6 +985,14 @@ no foreign key crosses between them):
   (`activeUserRows`), since a library rollup has no row for them. It is also
   indexed on day and opens (`daily_app_opens_day_opens_idx`), so a range's
   opens sum from the index alone.
+- `daily_feature_users` is keyed by feature, day and user: who used each
+  `AppFeature` that day, as `featuresOf` decides from the event. Feature first,
+  so a feature's first recorded day is an index seek. Any kind of event can
+  write it: a use by where it started and its flags, a version run, a
+  FeatureScript add, a signed-in report, a default configuration. Migration
+  `0014_feature_reach.sql` filled it from the log for every feature recorded
+  before it; `at_insert_location` and `default_selection` begin with it, at
+  schema version 3.
 - `favorites`, in `db/schema.ts`, is read for each part's standing favorites,
   through its index on `insertable_id` (`favorites_insertable_idx`).
 
@@ -912,8 +1010,11 @@ no foreign key crosses between them):
    it has updated a library document's references; `POST /api/feedback` calls `trackReport` once the report is
    posted to Discord (see [feedback.md](./feedback.md));
    `POST /api/featurescripts/:featureId/add` calls `trackFeatureAdd` once
-   Onshape accepted the feature (see [featurescripts.md](./featurescripts.md)).
-2. A use, an open, a FeatureScript add and a report are recorded in the background (`runInBackground`),
+   Onshape accepted the feature (see [featurescripts.md](./featurescripts.md));
+   `POST /api/default-selection/favorite/:favoriteId` calls
+   `trackDefaultSelection` once the default is saved (see
+   [favorites.md](./favorites.md)).
+2. A use, an open, a FeatureScript add, a report and a default configuration are recorded in the background (`runInBackground`),
    after the response; a version run's step swallows a failure to record. So
    tracking never slows or fails what the user asked for.
 3. The selection is stored canonically (`canonicalValues`), so `5 in` and
@@ -979,14 +1080,25 @@ panel. Its routes read only rollups and return only aggregates:
   history), **health** (every library's parts by kind and build issues,
   standing now), the **Version Manager**'s totals, **featurescripts** (adds and
   distinct users, and each feature's adds and users, every feature in the
-  document listed), and **reports**' totals. Its usage breakdown reads each
-  library's **Parts** report.
+  document listed), **feature reach** (below), and **reports**' totals. Its
+  usage breakdown reads each library's **Parts** report.
 - **Library** — its summary, health (parts, part studios and assemblies, and
   build issues by severity, hidden elements left out), its parts table, its reports' totals, and its most reported parts.
 - **Part** — one element's history, the share of its uses that went
   into an assembly, and usage of each configuration option, split per way
   the option is shown (`toParameterInstances`).
 - **Unused** — parts and options at or below a usage threshold.
+
+**Feature reach** is one small chart per `AppFeature`, on a shared 0–100%
+axis: for each week of the range, the share of that week's active users who
+used the feature that week. Active is `activeUserRows` unioned with the week's
+feature users, so a share never passes 100%. Weeks are Monday to Sunday; the
+first may begin before the range, and only its days inside it count. A
+feature's line starts the week of its first recorded use, all time, and a week
+with nobody about is left blank. A dashed line marks the week each of the
+feature's nudges (`NUDGES`) shipped or was withdrawn; features with a nudge
+come first. The tooltip gives the week's users and active users beside the
+share.
 
 The range, threshold and preset live in the url, so a view can be shared.
 
@@ -1016,12 +1128,18 @@ is withheld while its baseline reaches back before tracking began.
   `getOnshapeApi()`, and never return anything about one user.
 - Every rollup is derivable from `events` alone, so the rollups can be rebuilt by
   replaying the log.
-- An event without a library writes one rollup and no other:
-  `daily_app_opens` for an open, `daily_version_metrics` for a version run,
-  and a FeatureScript add its two, `daily_featurescript_metrics` and
-  `daily_featurescript_users`.
-  A report writes `daily_report_metrics` alone, with a library or without.
-  Every other rollup is keyed by library.
+- Besides `daily_feature_users`, which every event that is a use of an
+  `AppFeature` writes, an event without a library writes one rollup and no
+  other: `daily_app_opens` for an open, `daily_version_metrics` for a version
+  run, and a FeatureScript add its two, `daily_featurescript_metrics` and
+  `daily_featurescript_users`. A report writes `daily_report_metrics` alone,
+  with a library or without, and a default configuration nothing else. Every
+  other rollup is keyed by library.
+- `featuresOf` is the one place that says which events are a use of which
+  feature, and the migration that filled `daily_feature_users` matches it for
+  every feature recorded before it.
+- Every nudge toward a feature is in `NUDGES`, added in the change that ships
+  or withdraws it.
 - An event's columns are decided in `logged-event.ts`; a new column fails to
   compile until each kind of event says what it holds.
 - Values are compared and counted canonically, never by configuration key.
@@ -1069,11 +1187,29 @@ is withheld while its baseline reaches back before tracking began.
   of its own; the owner reads them in each feature's card
   (`GET /api/featurescripts/stats`), and the overview's FeatureScripts section
   over the range.
+- **Feature reach is weekly, over that week's active users.** The goal is
+  every active user using each feature, so the share is of the people about
+  that week, not of everyone ever seen, which only rises and is weighed down
+  by people long gone. A day holds too few people for a share to mean much; a
+  week is the shortest span that does, and a nudge that works shows as a step.
+- **A feature's line starts at its first recorded use.** Search, favorites and
+  recents rest on `source`, which imported history never recorded; insert
+  location and default configurations were not recorded at all before schema
+  version 3. Before a feature's first row nothing tells a week nobody used it
+  from one nothing recorded, so the line is left blank rather than drawn at 0%.
+  It costs the weeks before a new feature's first use, which read the same.
+- **A default configuration is not activity.** Saving one places nothing, so
+  like a report it writes no library rollup; it counts only toward its
+  feature's reach.
+- **Nudges are listed in code, dated by `main`.** A push to `main` deploys to
+  production, so the day a change reached it is the day people first saw the
+  nudge. Nothing records that on its own, and a list beside the chart is
+  reviewed with the change that ships the nudge.
 - **Reports are not activity.** Reporting a library's part is not using it, so
   a report writes no row to `daily_metrics`, `daily_user_activity` or
   `user_stats`, even when it names a library.
 - **Version runs are not activity.** They write no row to `daily_user_activity`
-  or `user_stats`: "active user" means somebody who used a part,
+  or `user_stats`, only to their own table and `daily_feature_users`: "active user" means somebody who used a part,
   and counting runs there would move the line under every historical
   figure. An open is activity, which is why it is unioned in.
 - **A download is a use.** Somebody who downloads a part is using the library

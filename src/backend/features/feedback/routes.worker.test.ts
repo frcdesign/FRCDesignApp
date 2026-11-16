@@ -21,7 +21,7 @@ import {
 import { getDb } from "../../db/client";
 import { dailyMetrics, dailyReportMetrics, events } from "../analytics/schema";
 import { EventType } from "../analytics/usage";
-import { SIGNED_OUT_USER_ID } from "../analytics/tracking";
+import { SIGNED_OUT_USER_ID } from "../analytics/logged-event";
 import { LibraryId } from "../library/library-id";
 import {
     FeedbackCategory,

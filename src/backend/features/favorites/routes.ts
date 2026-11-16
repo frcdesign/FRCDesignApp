@@ -10,7 +10,9 @@ import {
     libraryRoute
 } from "../../lib/route-params";
 import { type Db, getDb } from "../../db/client";
-import { users, favorites } from "../../db/schema";
+import { users, favorites, insertables } from "../../db/schema";
+import { trackDefaultSelection } from "../analytics/tracking";
+import { toElementPath } from "../../lib/onshape/path";
 import {
     getInsertableConfigurations,
     getParametersFor,
@@ -228,8 +230,15 @@ favoriteRoutes.post(
 
         const db = getDb(c.env.DB);
         const row = await db
-            .select({ insertableId: favorites.insertableId })
+            .select({
+                insertableId: favorites.insertableId,
+                libraryId: insertables.libraryId,
+                documentId: insertables.documentId,
+                versionId: insertables.versionId,
+                elementId: insertables.elementId
+            })
             .from(favorites)
+            .innerJoin(insertables, eq(insertables.id, favorites.insertableId))
             .where(
                 and(eq(favorites.id, favoriteId), eq(favorites.userId, userId))
             )
@@ -249,6 +258,11 @@ favoriteRoutes.post(
             .where(
                 and(eq(favorites.id, favoriteId), eq(favorites.userId, userId))
             );
+        await trackDefaultSelection(c, {
+            libraryId: row.libraryId,
+            path: toElementPath(row),
+            insertableId: row.insertableId
+        });
 
         return c.json({ success: true });
     }

@@ -22,7 +22,7 @@ import {
     FeedbackSource,
     FeedbackTopic
 } from "../feedback/contract";
-import { EventType, UseSource, UseTarget } from "./usage";
+import { AppFeature, EventType, UseSource, UseTarget } from "./usage";
 
 /**
  * Append-only. Keyed on Onshape's `elementId` with no foreign keys, so a reload
@@ -62,6 +62,8 @@ export const events = sqliteTable(
         source: text("source").$type<UseSource>(),
         // Insert-and-fasten, which Onshape only offers for assembly targets.
         fasten: integer("fasten", { mode: "boolean" }),
+        // Placed at the assembly's insert location marker; null before schema version 3.
+        atInsertLocation: integer("at_insert_location", { mode: "boolean" }),
         // A version run's own columns: how it was aimed, and what it did.
         versionKind: text("version_kind").$type<VersionJobKind>(),
         versionScope: text("version_scope").$type<
@@ -335,4 +337,16 @@ export const dailyFeatureScriptUsers = sqliteTable(
         userId: text("user_id").notNull()
     },
     (t) => [primaryKey({ columns: [t.day, t.featureType, t.userId] })]
+);
+
+/** Who used each feature on a day, so a week's reach is a distinct count over rollups. */
+export const dailyFeatureUsers = sqliteTable(
+    "daily_feature_users",
+    {
+        day: text("day").notNull(),
+        feature: text("feature").notNull().$type<AppFeature>(),
+        userId: text("user_id").notNull()
+    },
+    // Feature first, so a feature's first recorded day is an index seek.
+    (t) => [primaryKey({ columns: [t.feature, t.day, t.userId] })]
 );

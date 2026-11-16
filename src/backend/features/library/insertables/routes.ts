@@ -328,7 +328,8 @@ insertableRoutes.post(
                     isQuickInsert: body.isQuickInsert,
                     source: body.source,
                     // Insert-and-fasten is only offered for assembly targets.
-                    fasten: false
+                    fasten: false,
+                    atInsertLocation: false
                 });
 
                 return c.json({
@@ -451,7 +452,8 @@ insertableRoutes.post(
                         isFavorite: body.isFavorite,
                         isQuickInsert: body.isQuickInsert,
                         source: body.source,
-                        fasten
+                        fasten,
+                        atInsertLocation: transform !== undefined
                     });
 
                 if (!body.fasten) {

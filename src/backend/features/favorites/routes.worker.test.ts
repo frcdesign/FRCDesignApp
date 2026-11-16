@@ -8,6 +8,8 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { configurations, favorites, insertables } from "../../db/schema";
 import { ElementType } from "../../lib/onshape/element-type";
 import { MAX_FAVORITES } from "./contract";
+import { events } from "../analytics/schema";
+import { EventType } from "../analytics/usage";
 import {
     configurationRecord,
     quantityParam,
@@ -21,6 +23,7 @@ import {
     TEST_ASSEMBLY_ID,
     TEST_GROUP_ID,
     TEST_LIBRARY_ID,
+    TEST_PART_STUDIO_PATH,
     TEST_PART_STUDIO_ID,
     createTestApp,
     jsonRequest,
@@ -539,6 +542,21 @@ describe("favorites routes", () => {
                 .get();
             return row?.defaultSelection;
         }
+
+        it("records that a default was set, for the dashboard", async () => {
+            await seedPartStudio(db);
+            await seedConfiguration(db);
+            await post({ boolean: "false" });
+
+            expect(await db.select().from(events).all()).toEqual([
+                expect.objectContaining({
+                    type: EventType.DEFAULT_SELECTION,
+                    libraryId: TEST_LIBRARY_ID,
+                    elementId: TEST_PART_STUDIO_PATH.elementId,
+                    insertableId: TEST_PART_STUDIO_ID
+                })
+            ]);
+        });
 
         it("persists the selection the favorite opens with", async () => {
             await seedPartStudio(db);

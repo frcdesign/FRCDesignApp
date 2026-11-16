@@ -5,6 +5,7 @@ import { type ReactNode } from "react";
 import { LibraryId } from "@backend/features/library/library-id";
 import { type DayRange } from "@backend/features/analytics/day";
 import {
+    getOverviewFeatureReachQuery,
     getOverviewFeatureScriptsQuery,
     getOverviewHealthQuery,
     getOverviewReportsQuery,
@@ -26,6 +27,7 @@ import { VersionManagerTiles } from "../../features/dashboard/version-manager-ti
 import { FeatureScriptUsageSection } from "../../features/dashboard/featurescript-usage";
 import { OverviewReports } from "../../features/dashboard/report-summary";
 import { HealthTiles } from "../../features/dashboard/health-report";
+import { FeatureReachSection } from "../../features/dashboard/feature-reach-section";
 import { m } from "../../paraglide/messages";
 
 export const Route = createFileRoute("/dashboard/")({
@@ -51,6 +53,7 @@ function DashboardOverview(): ReactNode {
     const versionManager = useQuery(getVersionManagerQuery(range));
     const featureScripts = useQuery(getOverviewFeatureScriptsQuery(range));
     const reports = useQuery(getOverviewReportsQuery(range));
+    const featureReach = useQuery(getOverviewFeatureReachQuery(range));
     const allParts = useAllParts(range);
     const pendingParts = firstPending(allParts);
 
@@ -120,6 +123,16 @@ function DashboardOverview(): ReactNode {
                     query={reports}
                     loading={m.dashboardLoadingReports()}
                     title={m.dashboardReports()}
+                />
+            )}
+
+            {featureReach.data ? (
+                <FeatureReachSection reach={featureReach.data} />
+            ) : (
+                <DashboardState
+                    query={featureReach}
+                    loading={m.dashboardLoadingFeatureReach()}
+                    title={m.dashboardFeatureReach()}
                 />
             )}
 

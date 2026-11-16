@@ -9,6 +9,7 @@ import { getDb } from "../../db/client";
 import { configurations, insertables } from "../../db/schema";
 import type {
     DailyUsePoint,
+    FeatureReachOut,
     FeatureScriptUsageOut,
     InsertableReportOut,
     LibraryHealthCounts,
@@ -49,6 +50,7 @@ import {
 } from "./metric-queries";
 import { getReportedParts, getReportSummary } from "./report-queries";
 import { getFeatureScriptUsage } from "./featurescript-queries";
+import { getFeatureReach } from "./feature-reach";
 import { libraryTopic } from "../feedback/contract";
 import {
     clampRange,
@@ -132,6 +134,22 @@ analyticsRoutes.get(
         const db = getDb(c.env.DB);
         const usage = await getFeatureScriptUsage(db, c.req.valid("query"));
         return c.json(usage satisfies FeatureScriptUsageOut);
+    }
+);
+
+/** GET /api/analytics/overview/feature-reach */
+analyticsRoutes.get(
+    "/analytics/overview/feature-reach",
+    validate("query", rangeQuery),
+    async (c) => {
+        const db = getDb(c.env.DB);
+        // Weeks are densified, so they need the clamped range.
+        const range = clampRange(
+            c.req.valid("query"),
+            await getTrackingSince(db)
+        );
+        const reach = await getFeatureReach(db, range);
+        return c.json(reach satisfies FeatureReachOut);
     }
 );
 

@@ -15,11 +15,18 @@ import { configurations } from "../../db/schema";
 import { type AppContext } from "../../lib/context";
 import { ElementType } from "../../lib/onshape/element-type";
 import { toSelection } from "../configurations/selection";
-import { UseSource } from "./usage";
+import { AppFeature, UseSource } from "./usage";
+import { SIGNED_OUT_USER_ID } from "./logged-event";
+import {
+    FeedbackCategory,
+    FeedbackSource,
+    FeedbackTopic
+} from "../feedback/contract";
 import { rollupWrites } from "./rollups";
 import {
     dailyAppOpens,
     dailyConfigurationMetrics,
+    dailyFeatureUsers,
     dailyInsertableMetrics,
     dailyInsertableUsers,
     dailyMetrics,
@@ -33,7 +40,11 @@ import {
 } from "./schema";
 import {
     trackAppOpen,
+    trackDefaultSelection,
+    trackDownload,
+    trackFeatureAdd,
     trackInsert,
+    trackReport,
     trackVersionRun,
     type InsertEvent
 } from "./tracking";
@@ -57,6 +68,7 @@ const ROLLUPS = [
     dailyInsertableUsers,
     dailyConfigurationMetrics,
     dailyVersionMetrics,
+    dailyFeatureUsers,
     insertableStats,
     userStats
 ];
@@ -80,6 +92,7 @@ function insertEvent(overrides: Partial<InsertEvent> = {}): InsertEvent {
         isQuickInsert: false,
         source: UseSource.BROWSE,
         fasten: false,
+        atInsertLocation: false,
         ...overrides
     };
 }
@@ -157,5 +170,126 @@ describe("rollupWrites", () => {
         await db.batch([writes[0], ...writes.slice(1)]);
 
         expect(await readRollups()).toEqual(live);
+    });
+    describe("feature users", () => {
+        const pushed = {
+            state: VersionJobState.COMPLETE,
+            result: { createdVersions: 0, updatedElements: 0 }
+        };
+
+        /** One of every event that is a use of some feature, by its own user. */
+        async function trackEveryFeature(): Promise<void> {
+            await trackInsert(
+                fakeContext("searcher"),
+                insertEvent({ source: UseSource.GROUP_SEARCH })
+            );
+            await trackInsert(
+                fakeContext("fan"),
+                insertEvent({ source: UseSource.FAVORITES })
+            );
+            await trackInsert(
+                fakeContext("regular"),
+                insertEvent({ source: UseSource.RECENTS, isQuickInsert: true })
+            );
+            await trackInsert(
+                fakeContext("assembler"),
+                insertEvent({
+                    targetElementType: ElementType.ASSEMBLY,
+                    fasten: true
+                })
+            );
+            await trackDownload(fakeContext("downloader"), insertEvent());
+            await trackVersionRun(env, {
+                userId: "pusher",
+                kind: VersionJobKind.PUSH,
+                scope: PushScopeKind.CHILDREN,
+                status: pushed
+            });
+            await trackFeatureAdd(fakeContext("scripter"), {
+                featureType: "robotFrame",
+                path: TEST_PART_STUDIO_PATH
+            });
+            for (const userId of ["reporter", undefined]) {
+                await trackReport(fakeContext(), {
+                    id: crypto.randomUUID(),
+                    userId,
+                    libraryId: undefined,
+                    topic: FeedbackTopic.APP,
+                    category: FeedbackCategory.BUG,
+                    source: FeedbackSource.GENERAL
+                });
+            }
+            await trackInsert(fakeContext("browser"), insertEvent());
+        }
+
+        async function readFeatureUsers() {
+            const rows = await db.select().from(dailyFeatureUsers).all();
+            return rows
+                .map(({ feature, userId }) => `${feature} ${userId}`)
+                .sort();
+        }
+
+        it("records who used each feature, and nobody for a plain insert", async () => {
+            await trackEveryFeature();
+            await trackInsert(
+                fakeContext("placer"),
+                insertEvent({
+                    targetElementType: ElementType.ASSEMBLY,
+                    atInsertLocation: true
+                })
+            );
+            await trackDefaultSelection(fakeContext("configurer"), {
+                libraryId: TEST_LIBRARY_ID,
+                path: TEST_PART_STUDIO_PATH,
+                insertableId: TEST_PART_STUDIO_ID
+            });
+
+            expect(await readFeatureUsers()).toEqual(
+                [
+                    `${AppFeature.SEARCH} searcher`,
+                    `${AppFeature.FAVORITES} fan`,
+                    `${AppFeature.RECENTS} regular`,
+                    `${AppFeature.QUICK_INSERT} regular`,
+                    `${AppFeature.FASTEN} assembler`,
+                    `${AppFeature.INSERT_LOCATION} placer`,
+                    `${AppFeature.DOWNLOAD} downloader`,
+                    `${AppFeature.DEFAULT_CONFIGURATION} configurer`,
+                    `${AppFeature.VERSION_MANAGER} pusher`,
+                    `${AppFeature.FEATURESCRIPTS} scripter`,
+                    `${AppFeature.REPORT} reporter`
+                ].sort()
+            );
+            expect(await readFeatureUsers()).not.toContainEqual(
+                expect.stringContaining(SIGNED_OUT_USER_ID)
+            );
+        });
+
+        it("doesn't count a default configuration as activity", async () => {
+            await trackDefaultSelection(fakeContext(), {
+                libraryId: TEST_LIBRARY_ID,
+                path: TEST_PART_STUDIO_PATH,
+                insertableId: TEST_PART_STUDIO_ID
+            });
+
+            expect(await db.select().from(dailyUserActivity).all()).toEqual([]);
+            expect(await db.select().from(userStats).all()).toEqual([]);
+        });
+
+        it("is rebuilt from the log by the migration that added it", async () => {
+            await trackEveryFeature();
+            const live = await readFeatureUsers();
+
+            const migration = env.TEST_MIGRATIONS.find((m) =>
+                m.name.includes("feature_reach")
+            );
+            const backfill = (migration?.queries ?? []).filter((query) =>
+                query.includes("INSERT")
+            );
+            expect(backfill.length).toBeGreaterThan(0);
+            await db.delete(dailyFeatureUsers);
+            await env.DB.batch(backfill.map((query) => env.DB.prepare(query)));
+
+            expect(await readFeatureUsers()).toEqual(live);
+        });
     });
 });

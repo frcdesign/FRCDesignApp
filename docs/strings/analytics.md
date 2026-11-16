@@ -66,6 +66,23 @@ and every library's together on the overview.
 | "If the problem persists, send a report." | Zero state description | Under it                        | Same; shared with the app's other section errors            |           |
 | "Try again" / "Send a report"             | Buttons                | Under it                        | Same; Try again refetches that section alone                | **⚑** New |
 
+## Feature reach
+
+On the overview: one small chart per feature, each week's share of active users
+who used it, with its nudges marked.
+
+| String                                                                                                                                                                                                               | Kind          | Where                       | When                                                       | Review                                           |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | --------------------------- | ---------------------------------------------------------- | ------------------------------------------------ |
+| "Feature reach"                                                                                                                                                                                                      | Section title |                             | Always                                                     | **⚑** New                                        |
+| "The share of each week's active users who used a feature that week. Dashed lines mark the week a nudge shipped."                                                                                                    | Description   | Under the title             | Always                                                     | **⚑** New; long                                  |
+| "Version Manager" / "Insert location" / "Default configuration" / "Report an issue" / "Quick insert" / "Search" / "Favorites list" / "Recently used list" / "Insert and fasten" / "STEP download" / "FeatureScripts" | Chart titles  | Each feature's card         | Always                                                     | **⚑** New                                        |
+| "Latest week: {share}"                                                                                                                                                                                               | Caption       | Beside a card's title       | The feature has a recorded use                             | **⚑** New                                        |
+| "No recorded use yet."                                                                                                                                                                                               | Empty notice  | In place of a card's chart  | Nobody has used the feature, all time                      | **⚑** New                                        |
+| "Blue dot" / "Blue dot removed" / "Tip" / "Tip removed"                                                                                                                                                              | Marker labels | On a dashed line in a chart | A nudge for the feature shipped or was withdrawn that week | **⚑** New; a week with two joins them with " · " |
+| "Week of {week}"                                                                                                                                                                                                     | Tooltip title | Hovering a chart            | Always                                                     | **⚑** New                                        |
+| "{users} of {activeUsers} active user(s)"                                                                                                                                                                            | Tooltip line  | Under the share             | Always                                                     | **⚑** New                                        |
+| "Loading feature reach..."                                                                                                                                                                                           | Loading       | In place of the section     | Loading                                                    | **⚑** New                                        |
+
 ## Version Manager
 
 On the overview.

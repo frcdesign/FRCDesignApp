@@ -5,6 +5,7 @@ import { configurations, insertables } from "../../db/schema";
 import {
     dailyAppOpens,
     dailyConfigurationMetrics,
+    dailyFeatureUsers,
     dailyFeatureScriptMetrics,
     dailyFeatureScriptUsers,
     dailyInsertableMetrics,
@@ -32,7 +33,7 @@ import {
 import { getDb } from "../../db/client";
 import { featureScripts } from "../featurescripts/schema";
 import { createApp } from "../../app";
-import { EventType, UseSource, UseTarget } from "./usage";
+import { AppFeature, EventType, UseSource, UseTarget } from "./usage";
 import { LibraryId } from "../library/library-id";
 import {
     ParameterType,
@@ -40,6 +41,7 @@ import {
 } from "../configurations/contract";
 import {
     type DailyUsePoint,
+    type FeatureReachOut,
     type FeatureScriptUsageOut,
     type OverviewUsageOut,
     type ReportSummary,
@@ -185,6 +187,7 @@ const OVERVIEW_AREAS = [
     "sources",
     "version-manager",
     "featurescripts",
+    "feature-reach",
     "health",
     "reports"
 ];
@@ -605,6 +608,68 @@ describe("analytics routes", () => {
             const body: LibrarySummaryOut = await res.json();
 
             expect(body.totals.uses).toBe(2);
+        });
+    });
+
+    describe("GET /analytics/overview/feature-reach", () => {
+        it("counts each week's feature users among everybody active that week", async () => {
+            // 2026-06-01 is a Monday.
+            await db.insert(dailyAppOpens).values([
+                { day: "2026-06-01", userId: "a", opens: 1 },
+                { day: "2026-06-03", userId: "b", opens: 2 },
+                { day: "2026-06-09", userId: "c", opens: 1 }
+            ]);
+            await db.insert(dailyUserActivity).values({
+                day: "2026-06-02",
+                libraryId: TEST_LIBRARY_ID,
+                userId: "a"
+            });
+            await db.insert(dailyFeatureUsers).values([
+                {
+                    day: "2026-05-01",
+                    feature: AppFeature.FAVORITES,
+                    userId: "a"
+                },
+                { day: "2026-06-02", feature: AppFeature.SEARCH, userId: "a" },
+                { day: "2026-06-04", feature: AppFeature.SEARCH, userId: "a" },
+                // Never opened the app that week, and still among its users.
+                {
+                    day: "2026-06-05",
+                    feature: AppFeature.VERSION_MANAGER,
+                    userId: "d"
+                },
+                { day: "2026-06-10", feature: AppFeature.SEARCH, userId: "c" }
+            ]);
+
+            const res = await anonymousGet(
+                "/api/analytics/overview/feature-reach?from=2026-06-03&to=2026-06-21"
+            );
+            const body: FeatureReachOut = await res.json();
+
+            expect(body).toEqual({
+                weeks: [
+                    {
+                        // Only its days in the range: a's search on the 4th, b and d.
+                        week: "2026-06-01",
+                        activeUsers: 3,
+                        users: {
+                            [AppFeature.SEARCH]: 1,
+                            [AppFeature.VERSION_MANAGER]: 1
+                        }
+                    },
+                    {
+                        week: "2026-06-08",
+                        activeUsers: 1,
+                        users: { [AppFeature.SEARCH]: 1 }
+                    },
+                    { week: "2026-06-15", activeUsers: 0, users: {} }
+                ],
+                firstUsed: {
+                    [AppFeature.FAVORITES]: "2026-05-01",
+                    [AppFeature.SEARCH]: "2026-06-02",
+                    [AppFeature.VERSION_MANAGER]: "2026-06-05"
+                }
+            });
         });
     });
 
