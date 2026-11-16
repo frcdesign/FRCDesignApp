@@ -6,6 +6,7 @@ import { IconSize, PrimaryColor } from "../lib/style-constants";
 import styles from "../lib/styles.module.css";
 import { m } from "../paraglide/messages";
 import { AppIcon } from "./app-icon";
+import { PANEL_FOOTER_HEIGHT } from "./panel-footer";
 
 /**
  * Floats over the bottom of the panel while a query list limits what the
@@ -19,7 +20,16 @@ export function SelectingActionBar(): ReactNode {
     const stop = () => useOnshapeSelection.getState().finishSelecting();
 
     return (
-        <ActionBar opened={isFiltering} onClose={stop}>
+        <ActionBar
+            opened={isFiltering}
+            onClose={stop}
+            // Above a panel footer's main action, where there is one
+            position={{
+                bottom: `calc(var(${PANEL_FOOTER_HEIGHT}, 0px) + var(--mantine-spacing-md))`,
+                left: 0,
+                right: 0
+            }}
+        >
             {/* A box the icon's size, centred, so the glyph sits on the text's line */}
             <Center
                 w={IconSize.MEDIUM}

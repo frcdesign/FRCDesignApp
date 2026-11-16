@@ -3,7 +3,7 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { type FastenerMode } from "@backend/features/auto-assembly/contract";
 import { StudioInput } from "@backend/features/auto-assembly/studios";
-import { type OnshapeSelection } from "../../lib/selection";
+import { type OnshapeSelection, selectionKey } from "../../lib/selection";
 import { type Choices, defaultChoices, Part } from "./options";
 import { FormInput } from "./parameters";
 
@@ -14,14 +14,20 @@ interface AutoAssemblyState extends Choices {
     replaced: OnshapeSelection[];
     /** The planar face the Face stop condition stops at: one at most. */
     stopFace: OnshapeSelection[];
-    /** Whether Size was chosen by hand since the last run; until then it follows the first hole picked. */
-    isSizeChosen: boolean;
+    /** The screw's inputs chosen by hand since the last run; the rest follow what's picked. */
+    chosenScrewInputs: string[];
+    /** Keys (`selectionKey`) of the circular edges fastened from the far end of their holes. */
+    flipped: string[];
+    /** Every screw to update goes in from the other end of its holes. */
+    flipScrews: boolean;
     setForm: (id: FormInput, value: string) => void;
     setMode: (mode: FastenerMode) => void;
     setScrew: (id: string, value: string) => void;
-    /** Size as the hole picked is made for, unless it was chosen by hand. */
-    followHoleSize: (size: string) => void;
-    /** Picks cleared and Size free to follow holes again, after a run starts. */
+    /** The screw's inputs as the picks say, but those chosen by hand. */
+    followScrew: (screw: Record<string, string>) => void;
+    toggleFlipped: (entity: OnshapeSelection) => void;
+    setFlipScrews: (flipScrews: boolean) => void;
+    /** Picks and flips cleared, and the screw free to follow them again, after a run starts. */
     finishRun: () => void;
     setPart: (part: Part, id: string, value: string) => void;
     setAdded: (part: Part, added: boolean) => void;
@@ -44,6 +50,19 @@ function withVendor(parts: Choices["parts"], vendor: string): Choices["parts"] {
     };
 }
 
+/** The screw with these inputs changed; a new vendor's washers and nuts, where it makes them. */
+function withScrew(
+    state: Choices,
+    changes: Record<string, string>
+): Pick<Choices, "screw" | "parts"> {
+    const vendor = changes[StudioInput.VENDOR];
+    return {
+        screw: { ...state.screw, ...changes },
+        parts:
+            vendor === undefined ? state.parts : withVendor(state.parts, vendor)
+    };
+}
+
 export const useAutoAssemblyStore = create<AutoAssemblyState>()(
     persist(
         (set) => ({
@@ -52,42 +71,62 @@ export const useAutoAssemblyStore = create<AutoAssemblyState>()(
             excluded: [],
             replaced: [],
             stopFace: [],
-            isSizeChosen: false,
+            chosenScrewInputs: [],
+            flipped: [],
+            flipScrews: false,
             setForm: (id, value) =>
                 set((state) => ({
                     form: { ...state.form, [id]: value },
                     // Picks of one kind mean nothing as the other
                     ...(id === FormInput.SELECT_BY && state.form[id] !== value
-                        ? { targets: [], excluded: [], replaced: [] }
+                        ? {
+                              targets: [],
+                              excluded: [],
+                              replaced: [],
+                              flipped: [],
+                              flipScrews: false
+                          }
                         : {})
                 })),
             setMode: (mode) => set({ mode }),
             setScrew: (id, value) =>
                 set((state) => ({
-                    screw: { ...state.screw, [id]: value },
-                    // A new vendor's washers and nuts, where it makes them
-                    ...(id === StudioInput.VENDOR
-                        ? { parts: withVendor(state.parts, value) }
-                        : {}),
-                    ...(id === StudioInput.SIZE ? { isSizeChosen: true } : {})
+                    ...withScrew(state, { [id]: value }),
+                    chosenScrewInputs: state.chosenScrewInputs.includes(id)
+                        ? state.chosenScrewInputs
+                        : [...state.chosenScrewInputs, id]
                 })),
-            followHoleSize: (size) =>
-                set((state) =>
-                    state.isSizeChosen || state.screw[StudioInput.SIZE] === size
+            followScrew: (screw) =>
+                set((state) => {
+                    const followed = Object.fromEntries(
+                        Object.entries(screw).filter(
+                            ([id, value]) =>
+                                !state.chosenScrewInputs.includes(id) &&
+                                state.screw[id] !== value
+                        )
+                    );
+                    return Object.keys(followed).length === 0
                         ? {}
-                        : {
-                              screw: {
-                                  ...state.screw,
-                                  [StudioInput.SIZE]: size
-                              }
-                          }
-                ),
+                        : withScrew(state, followed);
+                }),
+            toggleFlipped: (entity) =>
+                set((state) => {
+                    const key = selectionKey(entity);
+                    return {
+                        flipped: state.flipped.includes(key)
+                            ? state.flipped.filter((each) => each !== key)
+                            : [...state.flipped, key]
+                    };
+                }),
+            setFlipScrews: (flipScrews) => set({ flipScrews }),
             finishRun: () =>
                 set({
                     targets: [],
                     excluded: [],
                     replaced: [],
-                    isSizeChosen: false
+                    chosenScrewInputs: [],
+                    flipped: [],
+                    flipScrews: false
                 }),
             setPart: (part, id, value) =>
                 set((state) => ({
@@ -98,7 +137,15 @@ export const useAutoAssemblyStore = create<AutoAssemblyState>()(
                 })),
             setAdded: (part, added) =>
                 set((state) => ({ added: { ...state.added, [part]: added } })),
-            setTargets: (targets) => set({ targets }),
+            setTargets: (targets) =>
+                set((state) => {
+                    // An edge picked again starts unflipped
+                    const keys = new Set(targets.map(selectionKey));
+                    return {
+                        targets,
+                        flipped: state.flipped.filter((key) => keys.has(key))
+                    };
+                }),
             setExcluded: (excluded) => set({ excluded }),
             setReplaced: (replaced) => set({ replaced }),
             // A new pick takes the old one's place

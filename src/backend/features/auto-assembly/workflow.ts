@@ -161,7 +161,11 @@ async function runSteps(ctx: RunContext, request: AutoAssemblyIn) {
                 request.excluded,
                 set,
                 request.replaced,
-                request.stopFace
+                request.stopFace,
+                {
+                    flipped: request.flipped ?? [],
+                    flipScrews: request.flipScrews ?? false
+                }
             );
             const plans = planHoles(
                 indexed.circularEdges,

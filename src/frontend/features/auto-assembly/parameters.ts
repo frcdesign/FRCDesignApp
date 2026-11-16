@@ -4,6 +4,7 @@
  * decides what shows, so a hidden choice keeps its value for when it's back.
  */
 import {
+    type BooleanParameter,
     type ConfigurationParameter,
     type EnumParameter,
     ParameterType,
@@ -107,4 +108,12 @@ export const SIZING_PARAMETER: EnumParameter = {
         { id: FastenerMode.PRESET, name: m.autoAssemblySizingManual() }
     ],
     optionConditions: []
+};
+
+/** Whether each screw to update goes in from the other end of its holes. */
+export const FLIP_SCREWS_PARAMETER: BooleanParameter = {
+    type: ParameterType.BOOLEAN,
+    id: "flipScrews",
+    name: m.autoAssemblyFlipScrews(),
+    default: "false"
 };

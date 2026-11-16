@@ -2,6 +2,7 @@
 import { type PreviewPart } from "../previews/contract";
 import { type ElementPath } from "../../lib/onshape/path";
 import { type Program } from "./catalog";
+import { type Selection } from "../configurations/contract";
 import { type PartChoice, type ScrewChoice } from "./studios";
 
 export enum FastenerMode {
@@ -76,6 +77,10 @@ export interface AutoAssemblyIn {
     replaced: SelectedEntity[];
     /** The planar face `StopCondition.FACE` stops at; only with it. */
     stopFace?: SelectedEntity;
+    /** Circular edges in `targets` fastened from the far end of their holes. */
+    flipped?: SelectedEntity[];
+    /** Every screw in `replaced` goes in from the other end of its holes. */
+    flipScrews?: boolean;
     options: FastenerOptions;
 }
 
@@ -87,6 +92,8 @@ export interface PickCheckIn {
     excluded: SelectedEntity[];
     replaced: SelectedEntity[];
     stopFace?: SelectedEntity;
+    flipped?: SelectedEntity[];
+    flipScrews?: boolean;
     options?: FastenerOptions;
 }
 
@@ -111,6 +118,8 @@ export interface PickCheckOut {
     holeSize?: string;
     /** Every part a run would insert, where it would go; only when planned. */
     previews?: PreviewPart[];
+    /** The first screw to update's studio inputs: what the screw follows until it's chosen by hand. */
+    existingScrew?: Selection;
 }
 
 /** Which of the form's lists a pick was made in. */

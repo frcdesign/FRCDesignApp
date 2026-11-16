@@ -66,6 +66,8 @@ export interface AssemblyCircularEdge {
     radius: number;
     /** One of a face's circular edges, rather than one picked itself. */
     isFromFace?: boolean;
+    /** Fastened from the far end of its holes: the head goes there, the nut here. */
+    isFlipped?: boolean;
 }
 
 /** A library screw already in the assembly, from Auto Assembly or not: its origin and Z axis. */
@@ -126,13 +128,64 @@ export function planHoles(
     catalog: Catalog,
     context: PlanContext = {}
 ): HolePlan[] {
-    return circularEdges.map((circularEdge) =>
-        planHole(circularEdge, holes, placed, {
-            ...options,
-            catalog,
-            ...context
-        })
+    return circularEdges.map((circularEdge) => {
+        const planOptions = { ...options, catalog, ...context };
+        if (!circularEdge.isFlipped) {
+            return planHole(circularEdge, holes, placed, planOptions);
+        }
+        const far = farEnd(circularEdge, holes, planOptions);
+        return typeof far === "string"
+            ? {
+                  planned: {
+                      key: circularEdge.key,
+                      status: HoleStatus.NO_FIT,
+                      reason: far
+                  },
+                  circularEdge
+              }
+            : planHole(far, holes, placed, planOptions);
+    });
+}
+
+/**
+ * The circular edge at the far end of the holes a screw from this one would go
+ * through, facing back: where a flipped screw's head goes. Keyed as this one,
+ * so its plan answers the pick. Why not, when the holes end blind or tapped.
+ */
+function farEnd(
+    circularEdge: AssemblyCircularEdge,
+    holes: AssemblyHole[],
+    options: PlanOptions
+): AssemblyCircularEdge | string {
+    const into = scale(circularEdge.normal, -1);
+    const segments = alongAxis(circularEdge, into, holes);
+    const first = segments.find(
+        (segment) =>
+            segment.near <= LINEAR_TOLERANCE && segment.far > LINEAR_TOLERANCE
     );
+    const size = getSize(options.catalog, options.screw.size);
+    if (!first || !size) {
+        return "No hole goes into the part from this circular edge.";
+    }
+    const stack = followStack(segments, first, size, options, undefined);
+    if (stack.end !== HoleEnd.THROUGH) {
+        return "The hole doesn't go through, so it can't be flipped.";
+    }
+    const edge = stack.last.edges.find(
+        (each) => Math.abs(each.t - stack.depth) < LINEAR_TOLERANCE
+    );
+    if (!edge) {
+        return "No edge on the far side to flip to.";
+    }
+    return {
+        key: circularEdge.key,
+        occurrencePath: stack.last.hole.occurrencePath,
+        edgeId: edge.id,
+        center: add(circularEdge.center, scale(into, stack.depth)),
+        normal: into,
+        radius: stack.last.hole.radius,
+        ...(circularEdge.isFromFace ? { isFromFace: true } : {})
+    };
 }
 
 /** How far past a size's free clearance a hole is still taken for a clearance hole of it. */
@@ -258,12 +311,20 @@ function planHole(
     if ("error" in picked) {
         return sized({ status: HoleStatus.NO_FIT, reason: picked.error, end });
     }
+    // A countersink puts the first hole below the circular edge; a flat head over a plain one stands proud
+    const isPlain = head.countersunk && first.near <= LINEAR_TOLERANCE;
+    const warning = [
+        picked.warning,
+        isPlain ? "The hole isn't countersunk for a flat head." : undefined
+    ]
+        .filter((each) => each !== undefined)
+        .join(" ");
     const planned: Omit<PlannedHole, "key"> = {
         status: HoleStatus.READY,
         end,
         depth: stack.depth,
         screw: picked.screw,
-        ...(picked.warning ? { warning: picked.warning } : {}),
+        ...(warning ? { warning } : {}),
         ...(washers.start ? { screwWasher: washers.start } : {})
     };
 

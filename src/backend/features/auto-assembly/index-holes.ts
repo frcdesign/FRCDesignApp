@@ -33,6 +33,8 @@ import {
     type AssemblyHole,
     type PlacedScrew
 } from "./planner";
+import { type Selection } from "../configurations/contract";
+import { decodeConfiguration } from "../configurations/utils";
 import { scanStudio, type StudioScan } from "./scan";
 import { pickKey } from "./picked";
 import { type Replacement, screwLength, seatEdge, stackParts } from "./replace";
@@ -54,6 +56,16 @@ export interface IndexedHoles {
     stopPlane?: AssemblyPlane;
     /** Why the face picked to stop at gave no plane. */
     stopFaceProblem?: string;
+    /** The first screw to replace's configuration, its studio's defaults filled in. */
+    firstScrew?: Selection;
+}
+
+/** Which holes are fastened from their far end. */
+export interface Flips {
+    /** Circular edges picked to flip. */
+    flipped: SelectedEntity[];
+    /** Every screw to replace goes in from the other end of its holes. */
+    flipScrews: boolean;
 }
 
 function isFastener(
@@ -99,7 +111,8 @@ export async function indexHoles(
     /** Picks on screws whose stacks are taken out and their holes planned again. */
     replaced: SelectedEntity[] = [],
     /** The planar face to stop at, scanned for its plane. */
-    stopFace?: SelectedEntity
+    stopFace?: SelectedEntity,
+    flips: Flips = { flipped: [], flipScrews: false }
 ): Promise<IndexedHoles> {
     const definition = await getAssembly(client, assembly, {
         excludeSuppressed: true
@@ -282,17 +295,32 @@ export async function indexHoles(
           : !stopPlane
             ? "Not a planar face."
             : undefined;
+    const flippedKeys = new Set(flips.flipped.map(pickKey));
     const picked = withoutExcluded(
         circularEdgesOf(targets),
         circularEdgesOf(excluded)
+    ).map((circularEdge) =>
+        targets.some(
+            (target) =>
+                flippedKeys.has(pickKey(target)) &&
+                pickEdges[pickKey(target)].includes(circularEdge.key)
+        )
+            ? { ...circularEdge, isFlipped: true }
+            : circularEdge
     );
     const pickedKeys = new Set(picked.map((circularEdge) => circularEdge.key));
+    const firstScrew =
+        replacing.screws[0] &&
+        fasteners &&
+        screwSelection(fasteners, replacing.screws[0]);
 
     return {
         circularEdges: [
             ...picked,
             ...seats
-                .map(({ seat }) => seat)
+                .map(({ seat }) =>
+                    flips.flipScrews ? { ...seat, isFlipped: true } : seat
+                )
                 .filter((seat) => !pickedKeys.has(seat.key))
         ],
         unfound: [...unfound, ...replacing.unfound, ...unseated],
@@ -307,8 +335,23 @@ export async function indexHoles(
         replacements,
         pickEdges,
         ...(stopPlane ? { stopPlane } : {}),
-        ...(stopFaceProblem ? { stopFaceProblem } : {})
+        ...(stopFaceProblem ? { stopFaceProblem } : {}),
+        ...(firstScrew ? { firstScrew } : {})
     };
+}
+
+/** A placed screw's configuration, each input it leaves out at its studio's default. */
+function screwSelection(
+    fasteners: FastenerSet,
+    screw: PartOccurrence
+): Selection {
+    const chosen = decodeConfiguration(screw.source.configuration ?? "");
+    return Object.fromEntries(
+        fasteners.studios[FastenerKind.SCREW].parameters.map((parameter) => [
+            parameter.id,
+            chosen[parameter.id] ?? parameter.default
+        ])
+    );
 }
 
 function maxWasherThickness(fasteners: FastenerSet): number {
