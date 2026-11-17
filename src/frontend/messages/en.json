@@ -412,9 +412,9 @@
     "dashboardLoadingParts": "Loading parts...",
     "dashboardLoadingFeatureReach": "Loading feature reach...",
     "dashboardFeatureReach": "Feature reach",
-    "dashboardFeatureReachDescription": "The share of each week's active users who used a feature that week. Dashed lines mark the week a nudge shipped.",
+    "dashboardFeatureReachDescription": "Each week, the share of active users who used a feature, or for some features how many did. Dashed lines mark the week a nudge shipped.",
     "dashboardFeatureReachNoData": "No recorded use yet.",
-    "dashboardFeatureReachLatest": "Latest week: {share}",
+    "dashboardFeatureReachLatest": "Latest week: {value}",
     "dashboardFeatureReachWeekOf": "Week of {week}",
     "dashboardFeatureReachUsers": [
         {
@@ -435,22 +435,23 @@
     "dashboardFeatureReachViewAll": "All users",
     "dashboardFeatureReachViewSplit": "New vs existing",
     "dashboardFeatureReachExisting": "Existing users",
-    "dashboardFeatureReachNew": [
+    "dashboardFeatureReachNew": "New users",
+    "dashboardFeatureReachUserCount": [
         {
             "declarations": [
-                "input weeks",
-                "local weeksPlural = weeks: plural",
-                "local weeksFormatted = weeks: number"
+                "input count",
+                "local countPlural = count: plural",
+                "local formatted = count: number"
             ],
-            "selectors": ["weeksPlural"],
+            "selectors": ["countPlural"],
             "match": {
-                "weeksPlural=one": "New users (first seen that week)",
-                "weeksPlural=other": "New users (first seen within {weeksFormatted} weeks)"
+                "countPlural=one": "{formatted} user",
+                "countPlural=other": "{formatted} users"
             }
         }
     ],
-    "dashboardFeatureReachExistingShare": "Existing users: {share}",
-    "dashboardFeatureReachNewShare": "New users: {share}",
+    "dashboardFeatureReachExistingLine": "Existing users: {value}",
+    "dashboardFeatureReachNewLine": "New users: {value}",
     "dashboardFeatureSearch": "Search",
     "dashboardFeatureFavorites": "Favorites list",
     "dashboardFeatureRecents": "Recently used list",

@@ -3,8 +3,9 @@ import type { FeatureReachOut } from "@backend/features/analytics/contract";
 import { AppFeature } from "@backend/features/analytics/usage";
 import {
     featureOrder,
-    latestReach,
+    latestPoint,
     nudgeMarks,
+    ReachMeasure,
     toReachSeries
 } from "./feature-reach";
 import { NUDGES, NudgeChange, NudgeKind } from "./nudges";
@@ -34,17 +35,21 @@ const REACH: FeatureReachOut = {
 describe("toReachSeries", () => {
     it("starts a feature's line the week its record does", () => {
         const reach = toReachSeries(REACH, AppFeature.INSERT_LOCATION).map(
-            (point) => point.reach
+            (point) => point.value
         );
 
         expect(reach).toEqual([null, 25, null, 0]);
     });
 
     it("leaves a week with nobody about blank rather than at zero", () => {
-        const points = toReachSeries(REACH, AppFeature.SEARCH);
+        const points = toReachSeries(
+            REACH,
+            AppFeature.SEARCH,
+            ReachMeasure.SHARE
+        );
 
-        expect(points.map((point) => point.reach)).toEqual([0, 0, null, 100]);
-        expect(latestReach(points)).toMatchObject({
+        expect(points.map((point) => point.value)).toEqual([0, 0, null, 100]);
+        expect(latestPoint(points)).toMatchObject({
             bucket: "2026-11-09",
             users: 5,
             activeUsers: 5
@@ -54,7 +59,7 @@ describe("toReachSeries", () => {
     it("draws nothing for a feature nobody has used", () => {
         const points = toReachSeries(REACH, AppFeature.FASTEN);
 
-        expect(latestReach(points)).toBeUndefined();
+        expect(latestPoint(points)).toBeUndefined();
     });
 });
 
@@ -82,27 +87,57 @@ describe("toReachSeries, new and existing users", () => {
     };
 
     it("takes the new users out of everybody's to leave the existing", () => {
-        const [, week] = toReachSeries(split, AppFeature.SEARCH);
+        const [, week] = toReachSeries(
+            split,
+            AppFeature.SEARCH,
+            ReachMeasure.SHARE
+        );
 
         expect(week).toMatchObject({
-            reach: 60,
-            newReach: 25,
-            existingReach: (5 / 6) * 100,
+            value: 60,
+            newValue: 25,
+            existingValue: (5 / 6) * 100,
             newCount: { users: 1, activeUsers: 4 },
             existingCount: { users: 5, activeUsers: 6 }
         });
     });
 
     it("leaves a group blank where it can't be told apart or had nobody about", () => {
-        const points = toReachSeries(split, AppFeature.SEARCH);
+        const points = toReachSeries(
+            split,
+            AppFeature.SEARCH,
+            ReachMeasure.SHARE
+        );
 
-        expect(points.map((point) => point.newReach)).toEqual([null, 25, null]);
-        expect(points.map((point) => point.existingReach)).toEqual([
+        expect(points.map((point) => point.newValue)).toEqual([null, 25, null]);
+        expect(points.map((point) => point.existingValue)).toEqual([
             null,
             (5 / 6) * 100,
             100
         ]);
-        expect(points[0].reach).toBe(0);
+        expect(points[0].value).toBe(0);
+    });
+});
+
+describe("toReachSeries, counted", () => {
+    it("counts the week's users, a quiet week at zero", () => {
+        const points = toReachSeries(
+            REACH,
+            AppFeature.SEARCH,
+            ReachMeasure.USERS
+        );
+
+        expect(points.map((point) => point.value)).toEqual([0, 0, 0, 5]);
+    });
+
+    it("still starts the line at the feature's first recorded use", () => {
+        const points = toReachSeries(
+            REACH,
+            AppFeature.INSERT_LOCATION,
+            ReachMeasure.USERS
+        );
+
+        expect(points.map((point) => point.value)).toEqual([null, 2, 0, 0]);
     });
 });
 

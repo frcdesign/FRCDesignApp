@@ -13,12 +13,12 @@ export interface ReachCount {
 
 export interface ReachPoint extends BucketPoint, ReachCount {
     /**
-     * Percentages; null for a week before the feature's record starts, with
-     * nobody in the group about, or where new users can't be told apart.
+     * In the feature's {@link ReachMeasure}; null for a week before its record
+     * starts, a share of nobody, or where new users can't be told apart.
      */
-    reach: number | null;
-    newReach: number | null;
-    existingReach: number | null;
+    value: number | null;
+    newValue: number | null;
+    existingValue: number | null;
     /** Undefined where new users can't be told apart. */
     newCount?: ReachCount;
     existingCount?: ReachCount;
@@ -30,10 +30,40 @@ export enum ReachView {
     NEW_VS_EXISTING = "new-vs-existing"
 }
 
-/** One feature's weekly share of active users, all and split by new and existing. */
+export enum ReachMeasure {
+    /** The percentage of the week's active users who used it. */
+    SHARE = "share",
+    /** How many people used it that week. */
+    USERS = "users"
+}
+
+/**
+ * Counted where a share says little: nobody should need to report an issue or
+ * download a part, and nearly everybody searches.
+ */
+export function featureMeasure(feature: AppFeature): ReachMeasure {
+    switch (feature) {
+        case AppFeature.SEARCH:
+        case AppFeature.DOWNLOAD:
+        case AppFeature.REPORT:
+            return ReachMeasure.USERS;
+        case AppFeature.FAVORITES:
+        case AppFeature.RECENTS:
+        case AppFeature.QUICK_INSERT:
+        case AppFeature.FASTEN:
+        case AppFeature.INSERT_LOCATION:
+        case AppFeature.DEFAULT_CONFIGURATION:
+        case AppFeature.VERSION_MANAGER:
+        case AppFeature.FEATURESCRIPTS:
+            return ReachMeasure.SHARE;
+    }
+}
+
+/** One feature's weekly use in its measure, all and split by new and existing. */
 export function toReachSeries(
     out: FeatureReachOut,
-    feature: AppFeature
+    feature: AppFeature,
+    measure: ReachMeasure = featureMeasure(feature)
 ): ReachPoint[] {
     const firstUsed = out.firstUsed[feature];
     const firstWeek = firstUsed ? toWeekStart(firstUsed) : undefined;
@@ -54,26 +84,35 @@ export function toReachSeries(
             users: all.users - newCount.users,
             activeUsers: all.activeUsers - newCount.activeUsers
         };
-        const share = (count: ReachCount | undefined) =>
-            recorded && count && count.activeUsers > 0
-                ? (count.users / count.activeUsers) * 100
-                : null;
+        const valueOf = (count: ReachCount | undefined) =>
+            recorded && count ? measured(count, measure) : null;
         return {
             bucket: week.week,
             label: formatBucket(week.week, Granularity.WEEK),
             ...all,
-            reach: share(all),
-            newReach: share(newCount),
-            existingReach: share(existingCount),
+            value: valueOf(all),
+            newValue: valueOf(newCount),
+            existingValue: valueOf(existingCount),
             newCount,
             existingCount
         };
     });
 }
 
-/** The newest week with a share to state. */
-export function latestReach(points: ReachPoint[]): ReachPoint | undefined {
-    return points.findLast((point) => point.reach !== null);
+function measured(count: ReachCount, measure: ReachMeasure): number | null {
+    switch (measure) {
+        case ReachMeasure.USERS:
+            return count.users;
+        case ReachMeasure.SHARE:
+            return count.activeUsers > 0
+                ? (count.users / count.activeUsers) * 100
+                : null;
+    }
+}
+
+/** The newest week with a value to state. */
+export function latestPoint(points: ReachPoint[]): ReachPoint | undefined {
+    return points.findLast((point) => point.value !== null);
 }
 
 /** Nudged features first, in the order their nudges shipped, so the ones being pushed lead. */

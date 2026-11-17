@@ -1,4 +1,8 @@
-import { LineChart, type LineChartSeries } from "@mantine/charts";
+import {
+    LineChart,
+    type LineChartProps,
+    type LineChartSeries
+} from "@mantine/charts";
 import {
     Card,
     Group,
@@ -10,20 +14,19 @@ import {
 } from "@mantine/core";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { type ReactNode } from "react";
-import {
-    NEW_USER_WEEKS,
-    type FeatureReachOut
-} from "@backend/features/analytics/contract";
+import type { FeatureReachOut } from "@backend/features/analytics/contract";
 import { type AppFeature } from "@backend/features/analytics/usage";
 import { Section } from "../../components/section";
 import { MUTED_MARK, PrimaryColor } from "../../lib/style-constants";
-import { formatPercent } from "./format";
+import { formatCount, formatPercent } from "./format";
 import { DashboardEmpty } from "./dashboard-state";
 import {
     featureLabel,
+    featureMeasure,
     featureOrder,
-    latestReach,
+    latestPoint,
     nudgeMarks,
+    ReachMeasure,
     ReachView,
     toReachSeries,
     type ReachCount,
@@ -39,12 +42,18 @@ const PANEL_HEIGHT = 140;
 
 const PERCENT_TICKS = [0, 50, 100];
 
+/** A count's axis climbs to fit, in about this many steps. */
+const COUNT_TICK_COUNT = 3;
+
 /** A year of weeks still reads with dots; past that they crowd. */
 const MAX_DOTTED_WEEKS = 60;
 
-/** Checked apart in both themes and for color blindness; the dash tells them apart too. */
+/**
+ * Checked apart in both themes and for color blindness; the dash tells them
+ * apart too. Blue, as the app's dot for what's new.
+ */
 const EXISTING_COLOR = "frcGreen.7";
-const NEW_COLOR = "grape.6";
+const NEW_COLOR = "blue.6";
 const NEW_DASH = "5 3";
 
 function useReachView(): ReachView {
@@ -56,7 +65,7 @@ interface FeatureReachSectionProps {
     reach: FeatureReachOut;
 }
 
-/** One panel per feature, each with its own nudges marked, on a shared 0–100% axis. */
+/** One panel per feature, each with its own nudges marked. */
 export function FeatureReachSection({
     reach
 }: FeatureReachSectionProps): ReactNode {
@@ -99,10 +108,7 @@ function ReachViewControl({ view }: ReachViewControlProps): ReactNode {
             onChange={(value) =>
                 void navigate({
                     to: ".",
-                    search: (search) => ({
-                        ...search,
-                        reach: value
-                    })
+                    search: (search) => ({ ...search, reach: value })
                 })
             }
             data={[
@@ -130,7 +136,7 @@ function SplitLegend(): ReactNode {
             <LegendItem
                 color={NEW_COLOR}
                 dash={NEW_DASH}
-                label={m.dashboardFeatureReachNew({ weeks: NEW_USER_WEEKS })}
+                label={m.dashboardFeatureReachNew()}
             />
         </Group>
     );
@@ -166,7 +172,7 @@ function seriesFor(view: ReachView, feature: AppFeature): LineChartSeries[] {
         case ReachView.ALL:
             return [
                 {
-                    name: "reach",
+                    name: "value",
                     label: featureLabel(feature),
                     color: PrimaryColor.FILLED
                 }
@@ -174,15 +180,13 @@ function seriesFor(view: ReachView, feature: AppFeature): LineChartSeries[] {
         case ReachView.NEW_VS_EXISTING:
             return [
                 {
-                    name: "existingReach",
+                    name: "existingValue",
                     label: m.dashboardFeatureReachExisting(),
                     color: EXISTING_COLOR
                 },
                 {
-                    name: "newReach",
-                    label: m.dashboardFeatureReachNew({
-                        weeks: NEW_USER_WEEKS
-                    }),
+                    name: "newValue",
+                    label: m.dashboardFeatureReachNew(),
                     color: NEW_COLOR,
                     strokeDasharray: NEW_DASH
                 }
@@ -201,16 +205,17 @@ function FeatureReachPanel({
     points,
     view
 }: FeatureReachPanelProps): ReactNode {
-    const latest = latestReach(points);
+    const latest = latestPoint(points);
+    const measure = featureMeasure(feature);
     const middle = points[Math.floor(points.length / 2)]?.bucket ?? "";
     return (
         <Card>
             <Group justify="space-between" mb="xs">
                 <Text fw={700}>{featureLabel(feature)}</Text>
-                {latest?.reach != null && (
+                {latest?.value != null && (
                     <Text c="dimmed">
                         {m.dashboardFeatureReachLatest({
-                            share: formatPercent(latest.reach)
+                            value: formatHeadline(latest.value, measure)
                         })}
                     </Text>
                 )}
@@ -221,13 +226,8 @@ function FeatureReachPanel({
                     data={points}
                     dataKey="bucket"
                     xAxisProps={{ tickFormatter: toLabel(points) }}
-                    // Every panel on one axis, so their heights compare.
-                    yAxisProps={{
-                        domain: [0, 100],
-                        ticks: PERCENT_TICKS,
-                        tickFormatter: (value: number) => `${value}%`
-                    }}
-                    valueFormatter={formatPercent}
+                    yAxisProps={axisFor(measure)}
+                    valueFormatter={(value) => formatValue(value, measure)}
                     curveType="monotone"
                     withDots={points.length <= MAX_DOTTED_WEEKS}
                     tooltipProps={{
@@ -239,6 +239,7 @@ function FeatureReachPanel({
                                         | undefined
                                 }
                                 view={view}
+                                measure={measure}
                             />
                         )
                     }}
@@ -265,65 +266,112 @@ function FeatureReachPanel({
 interface ReachTooltipProps {
     point: ReachPoint | undefined;
     view: ReachView;
+    measure: ReachMeasure;
 }
 
-/** The share with what it's a share of, since a small week swings it. */
-function ReachTooltip({ point, view }: ReachTooltipProps): ReactNode {
-    if (point?.reach == null) return null;
+/** The value with what it's a share of, since a small week swings it. */
+function ReachTooltip({ point, view, measure }: ReachTooltipProps): ReactNode {
+    if (point?.value == null) return null;
+    const newCount =
+        view === ReachView.NEW_VS_EXISTING ? point.newCount : undefined;
     return (
         <Paper px="md" py="sm" withBorder shadow="md">
             <Text fw={700}>
                 {m.dashboardFeatureReachWeekOf({ week: point.label })}
             </Text>
-            {view === ReachView.ALL || !point.newCount ? (
-                <TooltipShare
-                    share={formatPercent(point.reach)}
-                    count={point}
-                />
-            ) : (
+            {newCount ? (
                 <>
-                    {point.existingCount && (
-                        <TooltipShare
-                            share={m.dashboardFeatureReachExistingShare({
-                                share: formatShare(point.existingReach)
-                            })}
-                            count={point.existingCount}
-                        />
-                    )}
-                    <TooltipShare
-                        share={m.dashboardFeatureReachNewShare({
-                            share: formatShare(point.newReach)
+                    <TooltipLine
+                        value={m.dashboardFeatureReachExistingLine({
+                            value: formatOptional(point.existingValue, measure)
                         })}
-                        count={point.newCount}
+                        count={point.existingCount}
+                        measure={measure}
+                    />
+                    <TooltipLine
+                        value={m.dashboardFeatureReachNewLine({
+                            value: formatOptional(point.newValue, measure)
+                        })}
+                        count={newCount}
+                        measure={measure}
                     />
                 </>
+            ) : (
+                <TooltipLine
+                    value={formatHeadline(point.value, measure)}
+                    count={point}
+                    measure={measure}
+                />
             )}
         </Paper>
     );
 }
 
-interface TooltipShareProps {
-    share: string;
-    count: ReachCount;
+interface TooltipLineProps {
+    value: string;
+    count: ReachCount | undefined;
+    measure: ReachMeasure;
 }
 
-function TooltipShare({ share, count }: TooltipShareProps): ReactNode {
+/** A share says what it's of; a count already is the number of people. */
+function TooltipLine({ value, count, measure }: TooltipLineProps): ReactNode {
     return (
         <>
-            <Text>{share}</Text>
-            <Text c="dimmed">
-                {m.dashboardFeatureReachUsers({
-                    users: count.users,
-                    activeUsers: count.activeUsers
-                })}
-            </Text>
+            <Text>{value}</Text>
+            {count && measure === ReachMeasure.SHARE && (
+                <Text c="dimmed">
+                    {m.dashboardFeatureReachUsers({
+                        users: count.users,
+                        activeUsers: count.activeUsers
+                    })}
+                </Text>
+            )}
         </>
     );
 }
 
-/** A group nobody in was about that week has no share. */
-function formatShare(reach: number | null): string {
-    return reach === null ? "—" : formatPercent(reach);
+/** Every share on one fixed axis, so their heights compare; a count's fits it. */
+function axisFor(measure: ReachMeasure): LineChartProps["yAxisProps"] {
+    switch (measure) {
+        case ReachMeasure.SHARE:
+            return {
+                domain: [0, 100],
+                ticks: PERCENT_TICKS,
+                tickFormatter: (value: number) => `${value}%`
+            };
+        case ReachMeasure.USERS:
+            return {
+                domain: [0, "auto"],
+                allowDecimals: false,
+                tickCount: COUNT_TICK_COUNT,
+                tickFormatter: (value: number) => formatCount(value)
+            };
+    }
+}
+
+/** As an axis or a line in a list shows it: "18.0%", "37". */
+function formatValue(value: number, measure: ReachMeasure): string {
+    switch (measure) {
+        case ReachMeasure.SHARE:
+            return formatPercent(value);
+        case ReachMeasure.USERS:
+            return formatCount(value);
+    }
+}
+
+/** On its own: "18.0%", "37 users". */
+function formatHeadline(value: number, measure: ReachMeasure): string {
+    switch (measure) {
+        case ReachMeasure.SHARE:
+            return formatPercent(value);
+        case ReachMeasure.USERS:
+            return m.dashboardFeatureReachUserCount({ count: value });
+    }
+}
+
+/** A group with nothing to state, such as a share of nobody. */
+function formatOptional(value: number | null, measure: ReachMeasure): string {
+    return value === null ? "—" : formatValue(value, measure);
 }
 
 function toLabel(points: ReachPoint[]): (bucket: string) => string {

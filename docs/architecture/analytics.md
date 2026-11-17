@@ -876,10 +876,16 @@ interface Nudge {
     day: string;
 }
 
-// Percentages per week, of everybody, the new and the existing; null before the
-// feature's first recorded use, for a group with nobody about, or where new
-// users can't be told apart.
-function toReachSeries(out: FeatureReachOut, feature: AppFeature): ReachPoint[];
+// Share of active users, or a count of users, per feature.
+function featureMeasure(feature: AppFeature): ReachMeasure;
+// Values per week in that measure, of everybody, the new and the existing;
+// null before the feature's first recorded use, for a share of nobody, or
+// where new users can't be told apart.
+function toReachSeries(
+    out: FeatureReachOut,
+    feature: AppFeature,
+    measure?: ReachMeasure
+): ReachPoint[];
 // A marker per week the feature's nudges changed in, labelled by kind.
 function nudgeMarks(
     feature: AppFeature,
@@ -1098,16 +1104,16 @@ panel. Its routes read only rollups and return only aggregates:
   the option is shown (`toParameterInstances`).
 - **Unused** — parts and options at or below a usage threshold.
 
-**Feature reach** is one small chart per `AppFeature`, on a shared 0–100%
-axis: for each week of the range, the share of that week's active users who
-used the feature that week. Active is `activeUserRows` unioned with the week's
+**Feature reach** is one small chart per `AppFeature`: for each week of the
+range, the share of that week's active users who used the feature that week,
+on a shared 0–100% axis, or for search, STEP downloads and reports the number
+of people who did, on an axis that fits it (`featureMeasure`). Active is `activeUserRows` unioned with the week's
 feature users, so a share never passes 100%. Weeks are Monday to Sunday; the
 first may begin before the range, and only its days inside it count. A
 feature's line starts the week of its first recorded use, all time, and a week
 with nobody about is left blank. A dashed line marks the week each of the
 feature's nudges (`NUDGES`) shipped or was withdrawn; features with a nudge
-come first. The tooltip gives the week's users and active users beside the
-share.
+come first. The tooltip gives a share's users and active users beside it.
 
 **New vs existing** (`reach=new-vs-existing` in the url) draws two lines per
 chart in place of one. A person is new in a week when their first day in any
@@ -1216,6 +1222,10 @@ is withheld while its baseline reaches back before tracking began.
   rollups at request time rather than stored, so it never drifts from them,
   at the cost of reading every person's days in those three tables on each
   request.
+- **Some features are counted, not shared.** Nobody should need to report an
+  issue or download a STEP file, so a share of everybody has no target to
+  reach; nearly everybody searches, so its share sits near the top and hides
+  growth. Their charts count the week's users instead.
 - **A feature's line starts at its first recorded use.** Search, favorites and
   recents rest on `source`, which imported history never recorded; insert
   location and default configurations were not recorded at all before schema
