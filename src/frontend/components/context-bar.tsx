@@ -9,7 +9,11 @@ import {
 } from "@phosphor-icons/react";
 import { type ElementPath } from "@backend/lib/onshape/path";
 import { useIsSignedIn } from "../features/auth/access-level";
-import { openEditPartsDialog } from "../features/edit-parts/open-edit-parts-dialog";
+import { EditPartsPicker } from "../features/edit-parts/components/edit-parts-picker";
+import {
+    EDIT_PARTS_LIST,
+    setEditParts
+} from "../features/edit-parts/edit-picks";
 import {
     type InsertLocation,
     useAddInsertLocationMutation,
@@ -69,7 +73,8 @@ function BarRow(props: BarRowProps): ReactNode {
 
 /** What the bar has open under it. */
 enum BarAction {
-    PRESELECTION = "preselection"
+    PRESELECTION = "preselection",
+    EDIT = "edit"
 }
 
 interface LibraryActionsProps {
@@ -86,6 +91,7 @@ function LibraryActions(props: LibraryActionsProps): ReactNode {
         (state) => state.openInsertableId !== undefined
     );
     const isPreselecting = open === BarAction.PRESELECTION;
+    const isEditing = open === BarAction.EDIT;
     // Added from here, it stays to say so
     const [isAdded, setIsAdded] = useState(false);
 
@@ -105,14 +111,14 @@ function LibraryActions(props: LibraryActionsProps): ReactNode {
         setOpen(undefined);
     };
 
-    const togglePreselection = () => {
-        if (isPreselecting) {
+    const toggle = (action: BarAction, listId: string) => {
+        if (open === action) {
             stop();
             return;
         }
-        setOpen(BarAction.PRESELECTION);
+        setOpen(action);
         // Clicked, as its list would be: Onshape limits picks to what it takes.
-        useOnshapeSelection.getState().activate(FASTEN_TARGETS_LIST);
+        useOnshapeSelection.getState().activate(listId);
     };
 
     return (
@@ -135,18 +141,17 @@ function LibraryActions(props: LibraryActionsProps): ReactNode {
                             </Badge>
                         )
                     }
-                    onClick={togglePreselection}
+                    onClick={() =>
+                        toggle(BarAction.PRESELECTION, FASTEN_TARGETS_LIST)
+                    }
                 >
                     {m.contextBarPreselection()}
                 </Button>
                 <Button
                     size="compact-sm"
-                    variant="light"
+                    variant={isEditing ? "filled" : "light"}
                     leftSection={<PencilSimpleIcon />}
-                    onClick={() => {
-                        stop();
-                        openEditPartsDialog(assembly);
-                    }}
+                    onClick={() => toggle(BarAction.EDIT, EDIT_PARTS_LIST)}
                 >
                     {m.editPartsButton()}
                 </Button>
@@ -159,6 +164,18 @@ function LibraryActions(props: LibraryActionsProps): ReactNode {
                         />
                     )}
             </BarRow>
+            {/* Mounted only while open: nothing is picked to edit in passing. */}
+            {isEditing && (
+                <Box p="sm" className={styles.frame}>
+                    <EditPartsPicker
+                        assembly={assembly}
+                        onCancel={() => {
+                            setEditParts([]);
+                            stop();
+                        }}
+                    />
+                </Box>
+            )}
             {/* Two lists of the same id would both take picks, so the insert menu's replace these while it's open. */}
             {!isMenuOpen && (
                 // Hidden by display alone: its lists take picks while closed, which needs their effects.

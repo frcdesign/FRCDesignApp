@@ -22,7 +22,7 @@ import { ConfigurationWrapper } from "../../insert/components/configurations";
 import { setEditParts } from "../edit-picks";
 import { useEditCheck, useEditPartsMutation } from "../queries";
 
-interface EditMenuContentProps {
+export interface EditMenuContentProps {
     assembly: ElementPath;
     insertable: InsertableOut;
     parts: OnshapeSelection[];
@@ -30,7 +30,6 @@ interface EditMenuContentProps {
     check: EditCheckOut;
     /** Also every copy configured like a pick. */
     applyToAll: boolean;
-    onBack: () => void;
 }
 
 /** The values of `selection` that differ from `from`. */
@@ -47,7 +46,7 @@ function changesOf(
 
 /** The configuration menu for copies already in the assembly. */
 export function EditMenuContent(props: EditMenuContentProps): ReactNode {
-    const { assembly, insertable, parts, check, applyToAll, onBack } = props;
+    const { assembly, insertable, parts, check, applyToAll } = props;
     const modal = useAppModal();
     const [selection, setSelection] = useState<PartialSelection | undefined>(
         check.selection
@@ -114,8 +113,8 @@ export function EditMenuContent(props: EditMenuContentProps): ReactNode {
                 )}
             </AppModalBody>
             <AppModalFooter>
-                <Button variant="default" onClick={onBack}>
-                    {m.editPartsBack()}
+                <Button variant="default" onClick={() => modal.close()}>
+                    {m.editPartsCancel()}
                 </Button>
                 <Button
                     variant="filled"

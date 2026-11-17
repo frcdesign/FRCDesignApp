@@ -18,19 +18,18 @@ the old one deleted. Mates to the old copy go with it.
 ## Code map
 
 `src/frontend/components/context-bar.tsx`,
-`src/frontend/features/edit-parts/open-edit-parts-dialog.tsx`,
-`src/frontend/features/edit-parts/components/edit-parts-dialog.tsx`,
+`src/frontend/features/edit-parts/components/edit-parts-picker.tsx`,
+`src/frontend/features/edit-parts/open-edit-menu.tsx`,
 `src/frontend/features/edit-parts/components/edit-menu.tsx`,
 `src/frontend/features/edit-parts/edit-picks.ts` and
 `src/frontend/features/edit-parts/queries.ts`
 
 ```ts
-// Edit parts in the bar opens the dialog.
+// Edit parts in the bar opens the picker under it and starts selecting.
 function ContextBar(props: ContextBarProps): ReactNode;
-// Starts with the picks empty, and clears them on close.
-function openEditPartsDialog(assembly: ElementPath): void;
-// Picking the parts, then the configuration menu for them.
-function EditPartsDialog(props: EditPartsDialogProps): ReactNode;
+// Parts to edit, Select all with the same configuration, Cancel and Edit.
+function EditPartsPicker(props: EditPartsPickerProps): ReactNode;
+function openEditMenu(props: EditMenuContentProps): void;
 // The part's parameters on the first pick's configuration, then Update.
 function EditMenuContent(props: EditMenuContentProps): ReactNode;
 // Asked a moment after the picks or the changes move.
@@ -47,7 +46,6 @@ interface EditMenuContentProps {
     check: EditCheckOut;
     /** Also every copy configured like a pick. */
     applyToAll: boolean;
-    onBack: () => void;
 }
 
 interface EditPicksState {
@@ -137,7 +135,7 @@ interface EditPlan {
 
 ## Storage
 
-- **Memory** `useEditPicks` — the parts picked, while the dialog is open.
+- **Memory** `useEditPicks` — the parts picked, for the tab.
 - **D1** analytics, through `recordInserts`: one insert per copy replaced,
   source `edit` ([analytics.md](./analytics.md)).
 
@@ -148,31 +146,31 @@ from the assembly on every check and run.
 
 ### Picking
 
-1. **Edit parts** in the context bar stops any preselecting and opens the
-   dialog with its picks empty.
-2. The dialog's **Parts to edit** list starts selecting, so Onshape lets only
-   whole parts be picked (`SOLID_BODIES`).
-3. A moment after the picks change, `POST /api/edit-parts/check` reads the
+1. **Edit parts** in the context bar opens `EditPartsPicker` under the bar,
+   as **Preselection** opens its lists, and starts selecting with its list.
+   Onshape then lets only whole parts be picked (`SOLID_BODIES`). The picker
+   is mounted only while open.
+2. A moment after the picks change, `POST /api/edit-parts/check` reads the
    assembly. The first pick's top-level instance names the part, by its
    document and element. `planEdit` marks a pick of another part, and counts
    the copies configured like a pick.
-4. **Select all with the same configuration** is unticked to start. Under it,
+3. **Select all with the same configuration** is unticked to start. Under it,
    the count of matching copies.
-5. **Edit** is enabled once the check names a part the open library holds. A
+4. **Edit** is enabled once the check names a part the open library holds. A
    part of another library says to open that library.
-6. Closing the dialog, by **Cancel** or otherwise, clears the picks.
+5. **Cancel** clears the picks, stops selecting and closes the section.
+   **Stop selecting** closes it and keeps the picks.
 
 ### Editing
 
-1. **Edit** turns the dialog into the configuration menu, titled with the
-   part, on the first pick's configuration. The list unmounts, which stops
-   selecting.
+1. **Edit** opens the configuration menu over the panel, titled with the part,
+   on the first pick's configuration.
 2. The changes are the parameters whose value differs from where the menu
    started. With none, **Update** is disabled. It counts the copies it will
    replace: the matching ones with **Select all**, else the picks.
 3. With changes, the check runs again with them. A pick whose own
    configuration can't take them is counted in a warning.
-4. **Back** returns to the picks, as they were.
+4. **Cancel** closes the menu and leaves the picks under the bar.
 5. **Update** posts the picks, the changes and the choice to
    `POST /api/edit-parts`.
 
@@ -186,7 +184,8 @@ from the assembly on every check and run.
    `transformedinstances` call, from the version the library holds now.
 4. Deletes the old copies' instances in one `modify` call.
 5. Records an insert per copy, in the background.
-6. The client clears the picks and closes the dialog.
+6. The client clears the picks, stops selecting, and closes the menu and the
+   section.
 
 ## User-facing strings
 
@@ -226,8 +225,8 @@ In [strings/edit-parts.md](../strings/edit-parts.md).
   transform are replaced by one insert.
 - **Select all starts off.** Replacing copies deletes their mates, so the
   wider edit is something to ask for.
-- **Picking is a dialog.** Picks and the choice to widen them come before
-  the configuration, so the menu opens knowing what it edits.
+- **Picking is under the bar, as Preselection's is.** Picks and the choice
+  to widen them come first, so the menu opens knowing what it edits.
 - **Following by value.** "Select all" reaches copies by their configuration
   now, so it covers copies made by patterns or pasted in Onshape.
 

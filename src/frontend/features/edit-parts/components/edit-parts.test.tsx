@@ -22,10 +22,12 @@ import {
     useOnshapeSelection
 } from "../../../lib/selection";
 import { setEditParts, useEditPicks } from "../edit-picks";
-import { EditPartsDialog } from "./edit-parts-dialog";
+import { ContextBar } from "../../../components/context-bar";
+import { openEditMenu } from "../open-edit-menu";
 import { EditMenuContent } from "./edit-menu";
 
 vi.mock("../../auth/access-level", () => ({ useIsSignedIn: () => true }));
+vi.mock("../open-edit-menu", () => ({ openEditMenu: vi.fn() }));
 vi.mock("../../../lib/api-client", () => ({
     apiGet: vi.fn(() => new Promise(() => undefined)),
     apiPost: vi.fn(() => Promise.resolve({ updated: 3 }))
@@ -105,6 +107,7 @@ describe("edit parts", () => {
     afterEach(() => {
         queryClient.clear();
         vi.mocked(apiPost).mockClear();
+        vi.mocked(openEditMenu).mockClear();
         setEditParts([]);
         useOnshapeSelection.setState({
             focused: undefined,
@@ -116,26 +119,23 @@ describe("edit parts", () => {
         });
     });
 
-    it("starts selecting whole parts, and goes on to the configuration once they name a part", async () => {
+    it("picks whole parts under the bar, and Edit opens the menu on them", async () => {
         const picked = {
             assembly: ASSEMBLY,
             parts: toSelectedEntities([body("a")])
         };
         queryClient.setQueryData(editCheckQueryKey(picked), CHECK);
-        queryClient.setQueryData(configurationQueryKey(SCREW.id, "mv"), {
-            parameters: PARAMETERS,
-            records: []
-        });
-        renderWithProviders(
-            <EditPartsDialog assembly={ASSEMBLY} />,
-            queryClient
+        renderWithProviders(<ContextBar isLibrary />, queryClient);
+        await userEvent.click(
+            screen.getByRole("button", { name: "Edit parts" })
         );
         expect(useOnshapeSelection.getState().active).toBe("edit-parts");
-        const edit = screen.getByRole("button", { name: "Edit" });
-        expect(edit).toHaveProperty("disabled", true);
+        expect(screen.getByRole("button", { name: "Edit" })).toHaveProperty(
+            "disabled",
+            true
+        );
 
         selectInOnshape(body("a"));
-        expect(useEditPicks.getState().parts).toEqual([body("a")]);
         expect(screen.getByText("Part 1")).toBeTruthy();
         expect(
             await screen.findByText("3 parts in this assembly.")
@@ -144,6 +144,7 @@ describe("edit parts", () => {
             "Select all with the same configuration"
         );
         expect(applyToAll).toHaveProperty("checked", false);
+        await userEvent.click(applyToAll);
         await waitFor(() =>
             expect(screen.getByRole("button", { name: "Edit" })).toHaveProperty(
                 "disabled",
@@ -151,14 +152,18 @@ describe("edit parts", () => {
             )
         );
 
-        await userEvent.click(applyToAll);
         await userEvent.click(screen.getByRole("button", { name: "Edit" }));
-        expect(
-            screen.getByRole("button", { name: "Update 3 parts" })
-        ).toBeTruthy();
+        expect(openEditMenu).toHaveBeenCalledWith({
+            assembly: ASSEMBLY,
+            insertable: SCREW,
+            parts: [body("a")],
+            check: CHECK,
+            applyToAll: true
+        });
 
-        await userEvent.click(screen.getByRole("button", { name: "Back" }));
-        expect(screen.getByText("Part 1")).toBeTruthy();
+        await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+        expect(useEditPicks.getState().parts).toEqual([]);
+        expect(screen.queryByText("Parts to edit")).toBeNull();
     });
 
     it("sends only what changed, to the picks alone unless asked for all", async () => {
@@ -173,7 +178,6 @@ describe("edit parts", () => {
                 parts={[body("a")]}
                 check={CHECK}
                 applyToAll={false}
-                onBack={() => undefined}
             />,
             queryClient
         );

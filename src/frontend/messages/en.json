@@ -720,7 +720,6 @@
     "editPartsRow": "Part {index}",
     "editPartsEdit": "Edit",
     "editPartsOtherLibrary": "Open this part's library to edit it.",
-    "editPartsTitle": "Edit parts",
     "editPartsApplyToAll": "Select all with the same configuration",
     "editPartsMatching": [
         {
@@ -736,7 +735,7 @@
             }
         }
     ],
-    "editPartsBack": "Back",
+    "editPartsCancel": "Cancel",
     "editPartsMatesWarning": "Mates to these parts are deleted. Fasten them again by hand.",
     "editPartsCannotChange": [
         {
