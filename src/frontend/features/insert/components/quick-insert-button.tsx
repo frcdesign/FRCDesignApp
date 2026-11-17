@@ -11,6 +11,7 @@ import {
     useTargetElementType
 } from "../insert-hooks";
 import { useInsertMutation } from "../queries";
+import { useFastenCircularEdgesTip } from "../insert-tips";
 
 interface QuickInsertButtonProps {
     insertable: InsertableOut;
@@ -36,11 +37,13 @@ export function QuickInsertButton(props: QuickInsertButtonProps): ReactNode {
         isQuickInsert: true,
         source
     });
+    const showFastenCircularEdgesTip = useFastenCircularEdgesTip();
 
     if (!targetElementType) {
         return null;
     }
     const isAssembly = targetElementType === ElementType.ASSEMBLY;
+    const fasten = isAssembly && insertable.supportsFasten;
     return (
         <RowActionButton
             label={isAssembly ? m.insertQuickInsert() : m.insertQuickDerive()}
@@ -51,9 +54,10 @@ export function QuickInsertButton(props: QuickInsertButtonProps): ReactNode {
                     ? m.insertCannotDeriveAssembly()
                     : undefined
             }
-            onClick={() =>
-                insertMutation.mutate(isAssembly && insertable.supportsFasten)
-            }
+            onClick={() => {
+                insertMutation.mutate(fasten);
+                showFastenCircularEdgesTip(fasten);
+            }}
         />
     );
 }

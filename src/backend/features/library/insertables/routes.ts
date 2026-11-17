@@ -1,5 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { handledError, internalError } from "../../../lib/api-error";
+import { getFastenerSet } from "../../auto-assembly/fastener-set";
+import { generatedFeatures } from "../../generated-parts/store";
 import { validate } from "../../../lib/validate";
 import { HttpStatus } from "http-status-ts";
 import z from "zod";
@@ -41,7 +43,10 @@ import {
 import { PartType } from "../../../lib/onshape/endpoints/documents";
 import { INSERT_TIMED_OUT, retryInsert } from "../../../lib/onshape/retry";
 import { finishEvenIfDisconnected } from "../../../lib/background";
-import { onshapeOverrides } from "../../configurations/selection";
+import {
+    onshapeOverrides,
+    partStudioInsertOverrides
+} from "../../configurations/selection";
 import { readSelection, selectionSchema } from "./read-selection";
 import { encodeConfiguration } from "../../configurations/utils";
 import { fastenMate } from "../../../lib/onshape/objects/assembly-features";
@@ -51,8 +56,23 @@ import {
     findMateConnector
 } from "../../load/parse-fasten";
 import { getFastenQuery } from "./fasten-query";
+import { partName, readStoredParts } from "./part-name";
+import {
+    fastenToCircularEdges,
+    getInstancePath
+} from "./fasten-circular-edges";
+import { indexHoles } from "../../auto-assembly/index-holes";
+import { SelectionMode } from "../../auto-assembly/contract";
+import {
+    entitySchema,
+    INCONSISTENT_PICK_MESSAGE,
+    isConsistentPick,
+    MAX_SELECTIONS
+} from "../../auto-assembly/picked";
 import { getInsertLocationTransform } from "../../insert-location/parse";
 import { replaceBuildIssues } from "../../build-checker/issues";
+import { markHintSeen } from "../../hints/store";
+import { Hint } from "../../hints/contract";
 
 export const insertableRoutes = getApp();
 
@@ -65,6 +85,16 @@ function inLibrary(libraryId: LibraryId, insertableId: string) {
 }
 
 const setFastenBody = z.object({ supportsFasten: z.boolean() });
+
+/** A generated part always fastens, which its load sets. */
+function refuseGenerated(isGenerated: boolean): void {
+    if (isGenerated) {
+        throw handledError(
+            "A FeatureScript part always inserts and fastens.",
+            HttpStatus.BAD_REQUEST
+        );
+    }
+}
 
 /** Both settings, so an admin's edits land in one reindex. */
 const indexingBody = z.object({
@@ -91,20 +121,23 @@ insertableRoutes.post(
                 versionId: insertables.versionId,
                 elementId: insertables.elementId,
                 elementType: insertables.elementType,
-                buildIssues: insertables.buildIssues
+                buildIssues: insertables.buildIssues,
+                isGenerated: insertables.isGenerated
             })
             .from(insertables)
             .where(inLibrary(libraryId, insertableId))
             .get();
         if (!row)
             throw internalError("Insertable not found", HttpStatus.NOT_FOUND);
+        refuseGenerated(row.isGenerated);
 
         // Off asks nothing of Onshape; on finds the connector again, in case it moved.
         const found = supportsFasten
             ? await findMateConnector(
                   await c.var.getOnshapeApi(),
                   toElementPath(row),
-                  row.elementType
+                  row.elementType,
+                  await generatedFeatures(db)
               )
             : undefined;
         if (supportsFasten && !found) {
@@ -165,6 +198,7 @@ async function reindex(
             elementType: insertables.elementType,
             isOpenComposite: insertables.isOpenComposite,
             buildIssues: insertables.buildIssues,
+            isGenerated: insertables.isGenerated,
             parameters: configurations.parameters
         })
         .from(insertables)
@@ -176,6 +210,13 @@ async function reindex(
         .get();
     if (!row) {
         throw internalError("Insertable not found", HttpStatus.NOT_FOUND);
+    }
+    // Every configuration is indexed from its generator, whatever the settings
+    if (row.isGenerated) {
+        throw handledError(
+            "A generated part's indexing isn't configurable.",
+            HttpStatus.BAD_REQUEST
+        );
     }
     const parameters = row.parameters ?? [];
     const indexing = decideIndexing(parameters, settings);
@@ -240,11 +281,17 @@ const insertBody = z.object({
     source: z.enum(CLIENT_USE_SOURCES).default(UseSource.BROWSE)
 });
 
-const addToAssemblyBody = insertBody.extend({
-    fasten: z.boolean().default(false),
-    /** The insert location marker's instance id, when the assembly has one. */
-    insertLocationId: z.string().optional()
-});
+const addToAssemblyBody = insertBody
+    .extend({
+        fasten: z.boolean().default(false),
+        /** The insert location marker's instance id, when the assembly has one. */
+        insertLocationId: z.string().optional(),
+        /** What to fasten to, as Auto Assembly takes it; none leaves the mate open. */
+        selectionMode: z.enum(SelectionMode).default(SelectionMode.LOCATIONS),
+        targets: z.array(entitySchema).max(MAX_SELECTIONS).default([]),
+        excluded: z.array(entitySchema).max(MAX_SELECTIONS).default([])
+    })
+    .refine(isConsistentPick, INCONSISTENT_PICK_MESSAGE);
 
 /** POST /api/add-to-part-studio/insertable/:insertableId */
 insertableRoutes.post(
@@ -329,6 +376,8 @@ insertableRoutes.post(
                     source: body.source,
                     // Insert-and-fasten is only offered for assembly targets.
                     fasten: false,
+                    fastenable: row.fastenInfo !== null,
+                    preselected: false,
                     atInsertLocation: false
                 });
 
@@ -392,24 +441,13 @@ insertableRoutes.post(
                 );
 
                 // Only the overrides: a whole selection can exceed what Onshape accepts.
-                let configuration = selection
-                    ? encodeConfiguration(
-                          onshapeOverrides(selection, parameters)
-                      )
-                    : undefined;
-
-                // Onshape won't insert a part studio from an empty configuration (an assembly
-                // is fine), so name one parameter at its default.
-                if (
+                const configuration =
                     selection &&
-                    configuration === "" &&
-                    row.elementType === ElementType.PART_STUDIO
-                ) {
-                    const [first] = parameters;
-                    configuration = encodeConfiguration({
-                        [first.id]: selection[first.id]
-                    });
-                }
+                    encodeConfiguration(
+                        row.elementType === ElementType.PART_STUDIO
+                            ? partStudioInsertOverrides(selection, parameters)
+                            : onshapeOverrides(selection, parameters)
+                    );
 
                 // Resolved here, since the marker moves whenever someone drags it.
                 const transform = body.insertLocationId
@@ -420,17 +458,79 @@ insertableRoutes.post(
                       )
                     : undefined;
 
-                const result = await retryInsert(
-                    (timeoutMs) =>
-                        addElementToAssembly(
-                            onshapeApi,
-                            targetPath,
-                            sourcePath,
-                            row.elementType,
-                            { configuration, partTypes, transform, timeoutMs }
-                        ),
-                    INSERT_TIMED_OUT
-                );
+                // Every path below records once, an insert per instance it placed.
+                const track = (
+                    fasten: boolean,
+                    instances = 1,
+                    preselected = false
+                ) =>
+                    trackInsert(
+                        c,
+                        {
+                            libraryId: row.libraryId,
+                            path: sourcePath,
+                            insertableId,
+                            targetElementType: ElementType.ASSEMBLY,
+                            selection,
+                            parameters,
+                            isFavorite: body.isFavorite,
+                            isQuickInsert: body.isQuickInsert,
+                            source: body.source,
+                            fasten,
+                            fastenable: row.fastenInfo !== null,
+                            preselected,
+                            atInsertLocation: transform !== undefined
+                        },
+                        instances
+                    );
+
+                // Read before inserting, so picks with no circular edge insert nothing.
+                const fastensToPicks =
+                    body.fasten &&
+                    row.fastenInfo !== null &&
+                    body.targets.length > 0;
+                const edges = fastensToPicks
+                    ? (
+                          await indexHoles(
+                              onshapeApi,
+                              c.env.KV,
+                              targetPath,
+                              body.targets,
+                              body.excluded,
+                              await getFastenerSet(getDb(c.env.DB))
+                          )
+                      ).circularEdges
+                    : [];
+                if (fastensToPicks && edges.length === 0) {
+                    throw handledError(
+                        "No circular edges were found in what was selected.",
+                        HttpStatus.BAD_REQUEST
+                    );
+                }
+                const insert = () =>
+                    retryInsert(
+                        (timeoutMs) =>
+                            addElementToAssembly(
+                                onshapeApi,
+                                targetPath,
+                                sourcePath,
+                                row.elementType,
+                                {
+                                    configuration,
+                                    partTypes,
+                                    transform,
+                                    timeoutMs
+                                }
+                            ),
+                        INSERT_TIMED_OUT
+                    );
+                const result = await insert();
+                let instances = 1;
+                const insertAnother = async () => {
+                    const inserted = await insert();
+                    instances++;
+                    return inserted;
+                };
 
                 // The part is in the assembly whatever the fasten does.
                 await recordRecentInsert(c, {
@@ -439,22 +539,6 @@ insertableRoutes.post(
                     selection,
                     parameters
                 });
-
-                // Every path below records the insert exactly once.
-                const track = (fasten: boolean) =>
-                    trackInsert(c, {
-                        libraryId: row.libraryId,
-                        path: sourcePath,
-                        insertableId,
-                        targetElementType: ElementType.ASSEMBLY,
-                        selection,
-                        parameters,
-                        isFavorite: body.isFavorite,
-                        isQuickInsert: body.isQuickInsert,
-                        source: body.source,
-                        fasten,
-                        atInsertLocation: transform !== undefined
-                    });
 
                 if (!body.fasten) {
                     await track(false);
@@ -470,27 +554,40 @@ insertableRoutes.post(
                     );
                 }
 
-                const instancePath: string[] =
-                    result.insertInstanceResponses?.[0]?.occurrences?.[0]
-                        ?.path ?? [];
-
-                const mate = fastenMate(row.name, [
-                    getFastenQuery(row.elementType, instancePath, fastenInfo)
-                ]);
+                const fastenQuery = (instancePath: string[]) =>
+                    getFastenQuery(row.elementType, instancePath, fastenInfo);
+                // Mates named after the part, as its configuration names it
+                const stored = await readStoredParts(db, insertableId);
+                const name = stored ? partName(stored, selection) : row.name;
 
                 try {
+                    if (edges.length > 0) {
+                        await fastenToCircularEdges(onshapeApi, targetPath, {
+                            name,
+                            inserted: result,
+                            insert: insertAnother,
+                            fastenQuery,
+                            edges
+                        });
+                        await track(true, instances, true);
+                        await markHintSeen(c, Hint.FASTENED_TO_CIRCULAR_EDGES);
+                        return c.json({
+                            fastenedCount: edges.length
+                        } satisfies InsertOut);
+                    }
+
                     const fastenResult = await addAssemblyFeature(
                         onshapeApi,
                         targetPath,
-                        mate
+                        fastenMate(name, [fastenQuery(getInstancePath(result))])
                     );
                     await track(true);
                     return c.json({
                         featureId: fastenResult.feature.featureId
                     } satisfies InsertOut);
                 } catch (error) {
-                    // Only the mate failed; the insert is still in the assembly.
-                    await track(false);
+                    // What was inserted stays in the assembly whatever failed after it.
+                    await track(false, instances);
                     throw error;
                 }
             })()

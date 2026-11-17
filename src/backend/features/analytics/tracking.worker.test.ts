@@ -87,6 +87,8 @@ function insertEvent(overrides: Partial<InsertEvent> = {}): InsertEvent {
         isQuickInsert: false,
         source: UseSource.BROWSE,
         fasten: false,
+        fastenable: false,
+        preselected: false,
         atInsertLocation: false,
         ...overrides
     };
@@ -353,6 +355,64 @@ describe("tracking", () => {
                 fastenCount: 1,
                 quickInsertCount: 1
             });
+        });
+
+        it("counts how a fastenable part was placed, of its inserts into an assembly", async () => {
+            const assembly = { targetElementType: ElementType.ASSEMBLY };
+            await trackInsert(
+                fakeContext(),
+                insertEvent({ ...assembly, fastenable: true })
+            );
+            await trackInsert(
+                fakeContext(),
+                insertEvent({
+                    ...assembly,
+                    fastenable: true,
+                    fasten: true,
+                    preselected: true
+                })
+            );
+            await trackInsert(
+                fakeContext(),
+                insertEvent({
+                    ...assembly,
+                    fastenable: true,
+                    fasten: true,
+                    source: UseSource.AUTO_ASSEMBLY
+                })
+            );
+            // A derive can't fasten, so it isn't a fastenable insert
+            await trackInsert(fakeContext(), insertEvent({ fastenable: true }));
+
+            const daily = await db.select().from(dailyMetrics).get();
+            expect(daily).toMatchObject({
+                count: 4,
+                fastenableCount: 3,
+                preselectedCount: 1,
+                autoAssemblyCount: 1
+            });
+        });
+
+        it("records an insert per instance placed", async () => {
+            await trackInsert(
+                fakeContext(),
+                insertEvent({
+                    targetElementType: ElementType.ASSEMBLY,
+                    fastenable: true,
+                    fasten: true,
+                    preselected: true
+                }),
+                3
+            );
+
+            expect(await db.select().from(events).all()).toHaveLength(3);
+            expect(await db.select().from(dailyMetrics).get()).toMatchObject({
+                count: 3,
+                preselectedCount: 3
+            });
+            expect(await db.select().from(insertableStats).get()).toMatchObject(
+                { useCount: 3 }
+            );
         });
 
         it("counts targets by type, giving fasten its denominator", async () => {

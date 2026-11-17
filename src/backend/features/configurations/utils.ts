@@ -172,8 +172,8 @@ function getControlledOptionIds(
 }
 
 /**
- * An option no condition names is always offered; one several name is offered
- * while any holds.
+ * With no conditions, every option is offered; with any, as Onshape does, an
+ * option is offered only while a condition naming it holds.
  */
 export function getVisibleOptions(
     enumParameter: EnumParameter,
@@ -186,7 +186,6 @@ export function getVisibleOptions(
     }
 
     const optionIds = enumParameter.options.map((option) => option.id);
-    const controlled = new Set<string>();
     const shown = new Set<string>();
 
     for (const optionCondition of enumParameter.optionConditions) {
@@ -195,20 +194,18 @@ export function getVisibleOptions(
             selection,
             parameters
         );
+        if (!holds) {
+            continue;
+        }
         for (const optionId of getControlledOptionIds(
             optionCondition,
             optionIds
         )) {
-            controlled.add(optionId);
-            if (holds) {
-                shown.add(optionId);
-            }
+            shown.add(optionId);
         }
     }
 
-    return enumParameter.options.filter(
-        (option) => !controlled.has(option.id) || shown.has(option.id)
-    );
+    return enumParameter.options.filter((option) => shown.has(option.id));
 }
 
 /** The selected option if still visible, else the default, else the first. */

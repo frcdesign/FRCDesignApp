@@ -4,7 +4,7 @@
  */
 
 /** Bump when the columns' meaning changes. */
-export const EVENT_SCHEMA_VERSION = 3;
+export const EVENT_SCHEMA_VERSION = 4;
 
 /** Rows imported from the legacy app's log; see `scripts/migrate-analytics`. */
 export const LEGACY_SCHEMA_VERSION = 0;
@@ -47,6 +47,8 @@ export enum UseSource {
     BROWSE = "browse",
     FAVORITES = "favorites",
     RECENTS = "recents",
+    /** An Auto Assembly run, which inserts a part per fastener it places. */
+    AUTO_ASSEMBLY = "auto_assembly",
     /** Imported from the legacy app's log, which never recorded where a use started. */
     UNKNOWN = "unknown"
 }
@@ -71,7 +73,10 @@ export enum AppFeature {
     RECENTS = "recents",
     QUICK_INSERT = "quick_insert",
     FASTEN = "fasten",
+    /** Fastened to circular edges or faces picked in Onshape beforehand. */
+    PRESELECTION = "preselection",
     INSERT_LOCATION = "insert_location",
+    AUTO_ASSEMBLY = "auto_assembly",
     DOWNLOAD = "download",
     DEFAULT_CONFIGURATION = "default_configuration",
     VERSION_MANAGER = "version_manager",

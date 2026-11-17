@@ -92,6 +92,8 @@ function insertEvent(overrides: Partial<InsertEvent> = {}): InsertEvent {
         isQuickInsert: false,
         source: UseSource.BROWSE,
         fasten: false,
+        fastenable: false,
+        preselected: false,
         atInsertLocation: false,
         ...overrides
     };
@@ -198,6 +200,25 @@ describe("rollupWrites", () => {
                     fasten: true
                 })
             );
+            await trackInsert(
+                fakeContext("picker"),
+                insertEvent({
+                    targetElementType: ElementType.ASSEMBLY,
+                    fasten: true,
+                    fastenable: true,
+                    preselected: true
+                })
+            );
+            // Fastened by the run's planner, not by a choice to fasten.
+            await trackInsert(
+                fakeContext("planner"),
+                insertEvent({
+                    targetElementType: ElementType.ASSEMBLY,
+                    source: UseSource.AUTO_ASSEMBLY,
+                    fasten: true,
+                    fastenable: true
+                })
+            );
             await trackDownload(fakeContext("downloader"), insertEvent());
             await trackVersionRun(env, {
                 userId: "pusher",
@@ -251,6 +272,9 @@ describe("rollupWrites", () => {
                     `${AppFeature.RECENTS} regular`,
                     `${AppFeature.QUICK_INSERT} regular`,
                     `${AppFeature.FASTEN} assembler`,
+                    `${AppFeature.FASTEN} picker`,
+                    `${AppFeature.PRESELECTION} picker`,
+                    `${AppFeature.AUTO_ASSEMBLY} planner`,
                     `${AppFeature.INSERT_LOCATION} placer`,
                     `${AppFeature.DOWNLOAD} downloader`,
                     `${AppFeature.DEFAULT_CONFIGURATION} configurer`,

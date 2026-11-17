@@ -32,11 +32,8 @@ import {
     updateOutdatedReferences,
     type ReferenceUpdateOptions
 } from "./references";
-import {
-    describeRunFailure,
-    describeStepFailure,
-    isTransient
-} from "./failures";
+import { describeRunFailure, describeStepFailure } from "./failures";
+import { isTransient } from "../../lib/onshape/failures";
 import { reportJob } from "./jobs";
 import { planTasks } from "./tasks";
 import { trackVersionRun } from "../analytics/tracking";

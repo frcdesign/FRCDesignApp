@@ -14,7 +14,8 @@ import {
     rem,
     Table,
     Text,
-    Tooltip
+    Tooltip,
+    Select
 } from "@mantine/core";
 import {
     useDashboardLibraryId,
@@ -22,6 +23,7 @@ import {
 } from "./features/dashboard/dashboard-nav";
 import { LibraryId } from "@backend/features/library/library-id";
 import { useIsVersionManager } from "./features/version-manager/navigation";
+import { useIsAutoAssembly } from "./features/auto-assembly/navigation";
 import { useIsFeatureScripts } from "./features/featurescripts/navigation";
 import {
     FILLED_SHADE,
@@ -75,6 +77,8 @@ export const AppColor = {
     DASHBOARD: "frcGreen",
     /** The Version Manager acts on the open document, which is no library's. */
     VERSION_MANAGER: "blue",
+    /** Auto Assembly's parts are FRCDesign's, but it acts on the open assembly. */
+    AUTO_ASSEMBLY: "blue",
     /** FeatureScripts are their own area, released apart from any library. */
     FEATURESCRIPTS: "blue"
 } as const;
@@ -87,6 +91,7 @@ export function useAppColor(libraryId: string): string {
     const isDashboard = useIsDashboard();
     const dashboardLibraryId = useDashboardLibraryId();
     const isVersionManager = useIsVersionManager();
+    const isAutoAssembly = useIsAutoAssembly();
     const isFeatureScripts = useIsFeatureScripts();
 
     if (isDashboard) {
@@ -96,6 +101,9 @@ export function useAppColor(libraryId: string): string {
     }
     if (isVersionManager) {
         return AppColor.VERSION_MANAGER;
+    }
+    if (isAutoAssembly) {
+        return AppColor.AUTO_ASSEMBLY;
     }
     if (isFeatureScripts) {
         return AppColor.FEATURESCRIPTS;
@@ -163,6 +171,8 @@ export function createAppTheme(primaryColor: string) {
             }),
             Input: Input.extend({ styles: { section: ICON_SECTION } }),
             Modal: Modal.extend({ defaultProps: { centered: true } }),
+            // A select reads as a field, not a dropdown button
+            Select: Select.extend({ defaultProps: { rightSection: null } }),
             Table: Table.extend({
                 defaultProps: { highlightOnHover: true },
                 // Headings the weight of other labels, not Mantine's bold.

@@ -1,6 +1,6 @@
 import { FeedbackTopic } from "@backend/features/feedback/contract";
 import { createFileRoute } from "@tanstack/react-router";
-import { type ReactNode, useEffect } from "react";
+import { type ReactNode } from "react";
 import {
     LinkDirection,
     type LinkedWorkspace,
@@ -44,8 +44,6 @@ import {
 } from "../../features/version-manager/queries";
 import { useNeedsSignIn } from "../../features/auth/access-level";
 import { startSignIn } from "../../features/auth/sign-in";
-import { useMarkHintSeen } from "../../features/hints/queries";
-import { Hint } from "@backend/features/hints/contract";
 import { m } from "../../paraglide/messages";
 
 export const Route = createFileRoute("/app/version-manager")({
@@ -60,9 +58,6 @@ function VersionManagerPage(): ReactNode {
     const workspace = useTargetWorkspace();
     const isConnected = useIsConnectedToOnshape();
     const needsSignIn = useNeedsSignIn();
-    const markOpened = useMarkHintSeen(Hint.OPENED_VERSION_MANAGER);
-
-    useEffect(markOpened, [markOpened]);
 
     if (!workspace) {
         return (

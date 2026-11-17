@@ -5,6 +5,7 @@ import {
     type SearchSchemaInput
 } from "@tanstack/react-router";
 import { AppShell } from "@mantine/core";
+import { SelectingActionBar } from "../../components/selecting-action-bar";
 import { useElementSize } from "@mantine/hooks";
 import { Suspense } from "react";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
@@ -26,6 +27,7 @@ import { SectionLoading } from "../../components/app-notice";
 import { useMessageListener } from "../../lib/messages";
 import { usePushSync } from "../../lib/push-sync";
 import { useVersionJobToasts } from "../../features/version-manager/job-toasts";
+import { useAssemblyJobToasts } from "../../features/auto-assembly/job-toasts";
 import { RootAppError } from "../../components/root-error";
 
 export const Route = createFileRoute("/app")({
@@ -60,6 +62,7 @@ function App() {
     useMessageListener();
     usePushSync();
     useVersionJobToasts();
+    useAssemblyJobToasts();
 
     return (
         <AppShell header={{ height: headerHeight || 56 }}>
@@ -89,6 +92,7 @@ function App() {
                 >
                     <Outlet />
                 </Suspense>
+                <SelectingActionBar />
                 <TanStackRouterDevtools />
             </AppShell.Main>
             {/* Over whichever library the app opened in, until it is answered. */}

@@ -59,60 +59,95 @@ export interface InsertEvent extends UseEvent {
     targetElementType: ElementType;
     isQuickInsert: boolean;
     fasten: boolean;
+    /** Whether the part offered insert and fasten. */
+    fastenable: boolean;
+    /** Fastened to circular edges or faces picked in Onshape beforehand. */
+    preselected: boolean;
     /** Placed at the assembly's insert location marker. */
     atInsertLocation: boolean;
 }
 
-/** After the response, and never failing it: tracking is not what was asked for. */
-export function trackInsert(c: AppContext, event: InsertEvent): Promise<void> {
-    return trackUse(c, EventType.INSERT, event, {
-        targetElementType: event.targetElementType,
-        isQuickInsert: event.isQuickInsert,
-        fasten: event.fasten,
-        atInsertLocation: event.atInsertLocation
-    });
+/**
+ * After the response, and never failing it: tracking is not what was asked
+ * for. Each of the `instances` the insert placed is a use of its own.
+ */
+export function trackInsert(
+    c: AppContext,
+    event: InsertEvent,
+    instances = 1
+): Promise<void> {
+    return runInBackground(c, "record an insert", async () =>
+        recordInserts(
+            getDb(c.env.DB),
+            await c.var.getUserId(),
+            Array.from({ length: instances }, () => event)
+        )
+    );
+}
+
+/** One event per insert, all in one batch; for a caller with no request to track from. */
+export async function recordInserts(
+    db: Db,
+    userId: string,
+    inserts: InsertEvent[]
+): Promise<void> {
+    await recordBatch(
+        db,
+        inserts.map((event) => ({
+            event: {
+                ...columnsOfUse(EventType.INSERT, event, userId),
+                targetElementType: event.targetElementType,
+                isQuickInsert: event.isQuickInsert,
+                fasten: event.fasten,
+                fastenable: event.fastenable,
+                preselected: event.preselected,
+                atInsertLocation: event.atInsertLocation
+            },
+            parameters: event.parameters
+        }))
+    );
 }
 
 /** As `trackInsert`, for a STEP export Onshape has accepted. */
 export function trackDownload(c: AppContext, event: UseEvent): Promise<void> {
-    return trackUse(c, EventType.DOWNLOAD, event, {
-        targetElementType: null,
-        isQuickInsert: null,
-        fasten: null,
-        atInsertLocation: null
-    });
-}
-
-/** The columns only an insert fills in. */
-type InsertOnlyColumns = Pick<
-    LoggedEvent,
-    "targetElementType" | "isQuickInsert" | "fasten" | "atInsertLocation"
->;
-
-function trackUse(
-    c: AppContext,
-    type: EventType.INSERT | EventType.DOWNLOAD,
-    event: UseEvent,
-    insertOnly: InsertOnlyColumns
-): Promise<void> {
-    return runInBackground(c, `record a ${type}`, async () =>
+    return runInBackground(c, "record a download", async () =>
         record(
             getDb(c.env.DB),
             {
-                ...eventCore(type, event.libraryId, await c.var.getUserId()),
-                ...NOT_A_VERSION_RUN,
-                ...NOT_A_REPORT,
-                ...NOT_A_FEATURE_ADD,
-                ...event.path,
-                insertableId: event.insertableId,
-                selection: appliedSelection(event.selection, event.parameters),
-                isFavorite: event.isFavorite,
-                source: event.source,
-                ...insertOnly
+                ...columnsOfUse(
+                    EventType.DOWNLOAD,
+                    event,
+                    await c.var.getUserId()
+                ),
+                targetElementType: null,
+                isQuickInsert: null,
+                fasten: null,
+                fastenable: null,
+                preselected: null,
+                atInsertLocation: null
             },
             event.parameters
         )
     );
+}
+
+/** The columns every use fills in; its kind adds the rest. */
+function columnsOfUse(
+    type: EventType.INSERT | EventType.DOWNLOAD,
+    event: UseEvent,
+    userId: string
+) {
+    return {
+        ...eventCore(type, event.libraryId, userId),
+        ...NOT_A_VERSION_RUN,
+        ...NOT_A_REPORT,
+        ...NOT_A_FEATURE_ADD,
+        ...event.path,
+        insertableId: event.insertableId,
+        selection: appliedSelection(event.selection, event.parameters),
+        isFavorite: event.isFavorite,
+        source: event.source
+    };
 }
 
 /** As `trackInsert`, for a launch from Onshape. */
@@ -310,15 +345,28 @@ export function trackDefaultSelection(
 }
 
 /** Batched so neither half lands without the other. */
-async function record(
+function record(
     db: Db,
     event: LoggedEvent,
     parameters: ConfigurationParameter[]
 ): Promise<void> {
-    const writes: BatchItem<"sqlite">[] = [
-        db.insert(events).values(event),
-        ...rollupWrites(db, event, parameters)
-    ];
+    return recordBatch(db, [{ event, parameters }]);
+}
+
+interface Recorded {
+    event: LoggedEvent;
+    parameters: ConfigurationParameter[];
+}
+
+/** Several events and their rollups in one batch, so none lands without the rest. */
+async function recordBatch(db: Db, recorded: Recorded[]): Promise<void> {
+    if (recorded.length === 0) return;
+    const writes: BatchItem<"sqlite">[] = recorded.flatMap(
+        ({ event, parameters }) => [
+            db.insert(events).values(event),
+            ...rollupWrites(db, event, parameters)
+        ]
+    );
 
     await db.batch(writes as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
 }

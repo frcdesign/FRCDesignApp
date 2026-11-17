@@ -71,6 +71,11 @@
             "class_name": "VersionManagerWorkflow"
         },
         {
+            "name": "auto-assembly-workflow",
+            "binding": "AUTO_ASSEMBLY_WORKFLOW",
+            "class_name": "AutoAssemblyWorkflow"
+        },
+        {
             "name": "load-featurescripts-workflow",
             "binding": "LOAD_FEATURESCRIPTS_WORKFLOW",
             "class_name": "LoadFeatureScriptsWorkflow"
@@ -165,6 +170,11 @@
                     "class_name": "VersionManagerWorkflow"
                 },
                 {
+                    "name": "auto-assembly-workflow-cert",
+                    "binding": "AUTO_ASSEMBLY_WORKFLOW",
+                    "class_name": "AutoAssemblyWorkflow"
+                },
+                {
                     "name": "load-featurescripts-workflow-cert",
                     "binding": "LOAD_FEATURESCRIPTS_WORKFLOW",
                     "class_name": "LoadFeatureScriptsWorkflow"
@@ -229,6 +239,11 @@
                     "name": "version-manager-workflow-prod",
                     "binding": "VERSION_MANAGER_WORKFLOW",
                     "class_name": "VersionManagerWorkflow"
+                },
+                {
+                    "name": "auto-assembly-workflow-prod",
+                    "binding": "AUTO_ASSEMBLY_WORKFLOW",
+                    "class_name": "AutoAssemblyWorkflow"
                 },
                 {
                     "name": "load-featurescripts-workflow-prod",

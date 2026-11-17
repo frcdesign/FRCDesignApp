@@ -4,6 +4,8 @@ import { HoverBubbleRow } from "../../../components/app-hover-bubble";
 
 interface RowSwitchProps {
     checked: boolean;
+    /** Neither on nor off, until somebody decides; the thumb sits in the middle. */
+    indeterminate?: boolean;
     disabled?: boolean;
     onToggle: () => void;
 }

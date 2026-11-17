@@ -1,4 +1,6 @@
+import { NonRetryableError } from "cloudflare:workflows";
 import { eq } from "drizzle-orm";
+import { generatedFeatures } from "../generated-parts/store";
 import { type Db, getDb } from "../../db/client";
 import {
     type Configuration,
@@ -22,6 +24,16 @@ import { uploadThumbnails } from "../thumbnails/store";
 import { getConfiguration } from "../../lib/onshape/endpoints/configurations";
 import { getParts } from "../../lib/onshape/endpoints/parts";
 import { checkInsertable } from "../build-checker/checks";
+import { generatedConfiguration } from "../generated-parts/records";
+import {
+    type GeneratedFeature,
+    GeneratedManifestError,
+    type GeneratedTab,
+    parseManifest,
+    releasedStudio,
+    type ReleasedStudio
+} from "../generated-parts/manifest";
+import { getBlobText } from "../../lib/onshape/endpoints/blob-elements";
 import { parseOnshapeConfiguration } from "./parse-configuration";
 import { parseVendors } from "./parse-vendors";
 import {
@@ -55,6 +67,8 @@ export interface ParsedInsertable {
     /** The element's own part data; null when nothing was probed. */
     partMetadata: PartMetadata | null;
     configuration: Configuration;
+    /** Whether it's a Part Studio robot-code generates, rather than one modeled by hand. */
+    isGenerated: boolean;
 }
 
 /** The user-owned flags that decide how much of a load runs. */
@@ -71,6 +85,7 @@ interface ProbedInsertable {
     hasParts: boolean;
     partMetadata: PartMetadata | null;
     configuration: Configuration;
+    isGenerated: boolean;
     /** Everything raised so far; the thumbnail check adds its own. */
     buildIssues: BuildIssue[];
 }
@@ -112,7 +127,8 @@ export async function loadInsertable(
             ...probed.buildIssues
         ),
         partMetadata: probed.partMetadata,
-        configuration: probed.configuration
+        configuration: probed.configuration,
+        isGenerated: probed.isGenerated
     };
 
     await ctx.step.do(`save-${insertableId}`, () =>
@@ -127,33 +143,59 @@ async function probeInsertable(
 ): Promise<ProbedInsertable> {
     const { insertableId, elementPath } = target;
 
-    const flags = await readFlagsStep(ctx, insertableId);
+    const flags = await readFlagsStep(ctx, target);
 
     const parameters = await parseConfigurationStep(ctx, target);
 
-    const vendors = parseVendors(target.name, parameters);
+    // Its records are robot-code's, released with its configuration
+    const released = target.generated
+        ? await readReleasedStudioStep(ctx, target, target.generated)
+        : undefined;
+    const generated =
+        released && generatedConfiguration(parameters, released.records);
+
+    const vendors = generated
+        ? generated.vendors
+        : parseVendors(target.name, parameters);
 
     const fasten = decideFasten(
         flags.fastenDisabled
             ? undefined
-            : ((await findMateConnectorStep(ctx, target)) ?? undefined)
+            : ((await findMateConnectorStep(
+                  ctx,
+                  target,
+                  released && {
+                      elementId: elementPath.elementId,
+                      type: released.feature,
+                      mateConnector: released.mateConnector
+                  }
+              )) ?? undefined)
     );
 
     const parts = await readPartsStep(ctx, target);
     const { isOpenComposite } = parts;
     const hasParts = !hasBuildIssue(parts.buildIssues, BuildIssueType.NO_PARTS);
 
-    const indexing = decideIndexing(parameters, flags);
+    // A generated studio indexes every configuration, whatever its count or the admin's settings
+    const indexing = generated
+        ? { shouldIndex: false, configurations: [], buildIssues: [] }
+        : decideIndexing(parameters, flags);
 
-    const recordsResult = indexing.shouldIndex
-        ? await loadConfigurationRecords(
-              ctx,
-              insertableId,
-              { elementPath, elementType: target.elementType, isOpenComposite },
-              parameters,
-              indexing.configurations
-          )
-        : NO_RECORDS;
+    const recordsResult = generated
+        ? { ...generated, buildIssues: [] }
+        : indexing.shouldIndex
+          ? await loadConfigurationRecords(
+                ctx,
+                insertableId,
+                {
+                    elementPath,
+                    elementType: target.elementType,
+                    isOpenComposite
+                },
+                parameters,
+                indexing.configurations
+            )
+          : NO_RECORDS;
 
     return {
         vendors,
@@ -162,6 +204,7 @@ async function probeInsertable(
         hasParts,
         partMetadata: recordsResult.partMetadata,
         configuration: { parameters, records: recordsResult.records },
+        isGenerated: released !== undefined,
         buildIssues: addBuildIssue(
             hasParts ? [] : parts.buildIssues,
             ...recordsResult.buildIssues,
@@ -171,10 +214,49 @@ async function probeInsertable(
     };
 }
 
+/** Its studio's part of the manifest released beside it, as a step returns at most 1 MiB. */
+function readReleasedStudioStep(
+    ctx: LoadContext,
+    target: InsertableTarget,
+    generated: GeneratedTab
+): Promise<ReleasedStudio> {
+    return ctx.step.do(
+        `generated-${target.insertableId}`,
+        { retries: ONSHAPE_STEP_RETRIES },
+        async () => {
+            const text = await getBlobText(
+                await getOnshapeApiFromContext(ctx),
+                {
+                    ...target.elementPath,
+                    elementId: generated.manifestElementId
+                }
+            );
+            return nonRetryable(() =>
+                releasedStudio(
+                    parseManifest(text, `${generated.set}'s manifest`),
+                    generated
+                )
+            );
+        }
+    );
+}
+
+/** Runs `read` in a step, failing it at once on a manifest it can't read, which every retry would read the same. */
+export function nonRetryable<T>(read: () => T): T {
+    try {
+        return read();
+    } catch (error) {
+        if (error instanceof GeneratedManifestError) {
+            throw new NonRetryableError(error.message);
+        }
+        throw error;
+    }
+}
+
 /** A new insertable has no row, so it gets the defaults the save writes. */
 function readFlagsStep(
     ctx: LoadContext,
-    insertableId: string
+    { insertableId, generated }: InsertableTarget
 ): Promise<InsertableFlags> {
     return ctx.step.do(`flags-${insertableId}`, async () => {
         const row = await getDb(ctx.env.DB)
@@ -186,13 +268,13 @@ function readFlagsStep(
             .from(insertables)
             .where(eq(insertables.id, insertableId))
             .get();
-        return (
-            row ?? {
-                fastenDisabled: false,
-                indexConfigurations: false,
-                excludedParameterIds: []
-            }
-        );
+        const flags = row ?? {
+            fastenDisabled: false,
+            indexConfigurations: false,
+            excludedParameterIds: []
+        };
+        // A generated studio's part makes a mate connector, and always fastens
+        return generated ? { ...flags, fastenDisabled: false } : flags;
     });
 }
 
@@ -246,10 +328,15 @@ function readPartsStep(
     );
 }
 
-/** Null when there is none: a step's result can't be undefined. */
+/**
+ * Null when there is none: a step's result can't be undefined. `ownFeature`: a
+ * generated studio's feature, which its own load knows before any set naming it
+ * is stored.
+ */
 function findMateConnectorStep(
     ctx: LoadContext,
-    { insertableId, elementPath, elementType }: InsertableTarget
+    { insertableId, elementPath, elementType }: InsertableTarget,
+    ownFeature: GeneratedFeature | undefined
 ): Promise<MateConnector | null> {
     return ctx.step.do(
         `fasten-${insertableId}`,
@@ -258,7 +345,11 @@ function findMateConnectorStep(
             (await findMateConnector(
                 await getOnshapeApiFromContext(ctx),
                 elementPath,
-                elementType
+                elementType,
+                [
+                    ...(await generatedFeatures(getDb(ctx.env.DB))),
+                    ...(ownFeature ? [ownFeature] : [])
+                ]
             )) ?? null
     );
 }
@@ -285,8 +376,11 @@ export async function saveInsertable(
         fastenInfo: parsed.fastenInfo,
         isOpenComposite: parsed.isOpenComposite,
         partMetadata: parsed.partMetadata,
+        isGenerated: parsed.isGenerated,
         buildIssues: parsed.buildIssues,
-        lastLoadedAt: new Date()
+        lastLoadedAt: new Date(),
+        // Not an editor's to change: a generated part fastens
+        ...(target.generated !== undefined && { fastenDisabled: false })
     };
 
     const insertableWrite = db

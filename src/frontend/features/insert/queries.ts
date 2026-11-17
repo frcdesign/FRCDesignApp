@@ -1,14 +1,8 @@
-import {
-    skipToken,
-    useIsFetching,
-    useMutation,
-    useQuery
-} from "@tanstack/react-query";
+import { useIsFetching, useMutation, useQuery } from "@tanstack/react-query";
 import { apiGet, apiPost } from "../../lib/api-client";
 import {
     type ConfigurationResult,
-    type PartialSelection,
-    type UnitInfo
+    type PartialSelection
 } from "@backend/features/configurations/contract";
 import {
     InsertableOut,
@@ -21,16 +15,18 @@ import { queryClient } from "../../lib/query-client";
 import { handleAppError } from "../../lib/errors";
 import { sendOpenFeatureMessage } from "../../lib/messages";
 import { useTargetElement } from "../../lib/onshape-params";
-import {
-    configurationQueryKey,
-    renderQueryPrefix,
-    unitInfoQueryKey
-} from "../../lib/query-keys";
+import { configurationQueryKey, renderQueryPrefix } from "../../lib/query-keys";
 import { toInsertablePath } from "../../lib/api-paths";
 import { useInsertLocationId } from "../insert-location/queries";
 import { useLibraryId } from "../../lib/library";
 import { invalidateRecents } from "../recents/queries";
+import { getUiState } from "../../lib/ui-state";
 import { m } from "../../paraglide/messages";
+import { Hint } from "@backend/features/hints/contract";
+import { markHintSeen } from "../hints/queries";
+import { clearFastenPicks, useFastenPicks } from "./fasten-picks";
+import { toSelectedEntities } from "../../lib/selection";
+import { SelectionMode } from "@backend/features/auto-assembly/contract";
 
 /** Most inserts answer within 10 s; a slower one shouldn't look stuck. */
 const SLOW_INSERT_MS = 15_000;
@@ -40,27 +36,6 @@ interface InsertArgs {
     isFavorite: boolean;
     source: UseSource;
     isQuickInsert?: boolean;
-}
-
-/** Undefined outside a document, or until they load; quantities show their own unit meanwhile. */
-export function useUnitInfo(): UnitInfo | undefined {
-    const target = useTargetElement();
-    const query = useQuery<UnitInfo>({
-        queryKey: unitInfoQueryKey(target),
-        queryFn: target
-            ? () =>
-                  apiGet("/unit-info", {
-                      query: {
-                          documentId: target.documentId,
-                          instanceId: target.instanceId,
-                          instanceType: target.instanceType
-                      }
-                  })
-            : skipToken,
-        // A document's units do not change while it is open.
-        staleTime: Infinity
-    });
-    return query.data;
 }
 
 /** Pinned to the microversion, so it never refetches mid-configuration. */
@@ -118,10 +93,22 @@ export function useInsertMutation(
             isQuickInsert: insertArgs.isQuickInsert ?? false,
             source: insertArgs.source
         };
+        // Read at the click, since picks land as Onshape reports them.
+        const { fastenSelectionMode } = getUiState();
+        const { targets, excluded } = useFastenPicks.getState();
+        const isFaces = fastenSelectionMode === SelectionMode.FACES;
         return elementType === ElementType.ASSEMBLY
             ? {
                   endpoint: "/add-to-assembly",
-                  body: { ...common, fasten, insertLocationId }
+                  body: {
+                      ...common,
+                      fasten,
+                      insertLocationId,
+                      selectionMode: fastenSelectionMode,
+                      targets: fasten ? toSelectedEntities(targets) : [],
+                      excluded:
+                          fasten && isFaces ? toSelectedEntities(excluded) : []
+                  }
               }
             : { endpoint: "/add-to-part-studio", body: common };
     };
@@ -152,7 +139,7 @@ export function useInsertMutation(
         onError: (error) =>
             handleAppError(
                 error,
-                `Unexpectedly failed to insert ${insertable.name}.`,
+                m.insertFailed({ name: insertable.name }),
                 toastId,
                 { part: { insertable, selection } }
             ),
@@ -160,14 +147,26 @@ export function useInsertMutation(
             if (target && result.featureId !== undefined) {
                 sendOpenFeatureMessage(target, result.featureId);
             }
+            if (result.fastenedCount !== undefined) {
+                clearFastenPicks();
+                markHintSeen(Hint.FASTENED_TO_CIRCULAR_EDGES);
+                showSuccessToast(
+                    m.fastenInsertedAndFastened({
+                        name: insertable.name,
+                        count: result.fastenedCount
+                    }),
+                    toastId
+                );
+                return;
+            }
             // In an assembly, the only feature an insert builds is the mate.
             const fastened =
                 result.featureId !== undefined &&
                 target?.elementType === ElementType.ASSEMBLY;
             showSuccessToast(
                 fastened
-                    ? `Successfully inserted ${insertable.name} and created a Fasten mate.`
-                    : `Successfully inserted ${insertable.name}.`,
+                    ? m.fastenInsertedWithMate({ name: insertable.name })
+                    : m.insertSucceeded({ name: insertable.name }),
                 toastId
             );
         },

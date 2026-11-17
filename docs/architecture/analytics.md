@@ -63,6 +63,8 @@ enum UseSource {
     BROWSE = "browse",
     FAVORITES = "favorites",
     RECENTS = "recents",
+    /** An Auto Assembly run, which inserts a part per fastener it places. */
+    AUTO_ASSEMBLY = "auto_assembly",
     /** Imported from the legacy app's log, which never recorded where a use started. */
     UNKNOWN = "unknown"
 }
@@ -78,7 +80,10 @@ enum AppFeature {
     RECENTS = "recents",
     QUICK_INSERT = "quick_insert",
     FASTEN = "fasten",
+    /** Fastened to circular edges or faces picked in Onshape beforehand. */
+    PRESELECTION = "preselection",
     INSERT_LOCATION = "insert_location",
+    AUTO_ASSEMBLY = "auto_assembly",
     DOWNLOAD = "download",
     DEFAULT_CONFIGURATION = "default_configuration",
     VERSION_MANAGER = "version_manager",
@@ -91,8 +96,13 @@ enum AppFeature {
 workflow that did the work
 
 ```ts
-// In the background, after the response; see Recording.
-function trackInsert(c: AppContext, event: InsertEvent): Promise<void>;
+// In the background, after the response; see Recording. Each of the
+// `instances` an insert placed is a use of its own.
+function trackInsert(
+    c: AppContext,
+    event: InsertEvent,
+    instances = 1
+): Promise<void>;
 function trackDownload(c: AppContext, event: UseEvent): Promise<void>;
 function trackAppOpen(c: AppContext): Promise<void>;
 function trackReport(c: AppContext, event: ReportEvent): Promise<void>;
@@ -105,8 +115,14 @@ async function trackVersionRun(
     env: AppBindings,
     event: VersionRunEvent
 ): Promise<void>;
-// The event and its rollup rows in one D1 batch.
-async function record(
+// Awaited by Auto Assembly's `record-inserts` step: one event per part.
+async function recordInserts(
+    db: Db,
+    userId: string,
+    inserts: InsertEvent[]
+): Promise<void>;
+// The event and its rollup rows in one D1 batch; `recordBatch` for several.
+function record(
     db: Db,
     event: LoggedEvent,
     parameters: ConfigurationParameter[]
@@ -132,6 +148,10 @@ interface InsertEvent extends UseEvent {
     targetElementType: ElementType;
     isQuickInsert: boolean;
     fasten: boolean;
+    /** Whether the part offered insert and fasten. */
+    fastenable: boolean;
+    /** Fastened to circular edges or faces picked in Onshape beforehand. */
+    preselected: boolean;
     /** Placed at the assembly's insert location marker. */
     atInsertLocation: boolean;
 }
@@ -204,7 +224,11 @@ type LoggedEvent = {
     source: UseSource | null;
     /** Insert-and-fasten, which Onshape only offers for assembly targets. */
     fasten: boolean | null;
-    /** Placed at the assembly's insert location marker; null before schema version 3. */
+    /** Null before schema version 3. Whether the part offered insert and fasten. */
+    fastenable: boolean | null;
+    /** Null before schema version 3. Fastened to picks made beforehand. */
+    preselected: boolean | null;
+    /** Null before schema version 4. Placed at the assembly's insert location marker. */
     atInsertLocation: boolean | null;
     /** A version run's own columns: how it was aimed, and what it did. */
     versionKind: VersionJobKind | null;
@@ -530,6 +554,14 @@ interface AnalyticsTotals {
     uniqueUsers: number;
     /** A subset of `uses`. */
     favoriteUses: number;
+    /** A subset of the inserts, from a row's own Insert or Derive button. */
+    quickInserts: number;
+    /** Into an assembly, of a part offering insert and fasten when it was inserted; the base of the next two. */
+    fastenableInserts: number;
+    /** Fastened to edges or faces picked in Onshape beforehand. */
+    preselectedInserts: number;
+    /** Placed by Auto Assembly; also its entry of the sources. */
+    autoAssemblyInserts: number;
     targets: UseTargets;
     /** Current, not over the range: a favorite is state, not an event. */
     favorites: number;
@@ -872,8 +904,8 @@ interface Nudge {
     feature: AppFeature;
     kind: NudgeKind; // a blue dot, or a tip toast
     change: NudgeChange; // added, or removed
-    /** The day it reached `main`, which deploys to production. */
-    day: string;
+    /** The day it reached `main`, which deploys to production; absent until then. */
+    day?: string;
 }
 
 // Share of active users, or a count of users, per feature.
@@ -928,6 +960,32 @@ interface MetricDefinition {
 | `uses`             | Inserts and downloads | —          |
 | `assemblyFraction` | Uses into an assembly | Every use  |
 
+`src/frontend/features/dashboard/use-mix.tsx`, the breakdowns
+
+```tsx
+// Where uses started from, each as a fraction of every use.
+function UseSourceBreakdown(props: { sources: UseSourceUsage[] }): ReactNode;
+// Every insert, by how it was made: the insert menu, quick insert or Auto Assembly.
+function InsertMethodBreakdown(props: { totals: AnalyticsTotals }): ReactNode;
+// Inserts into an assembly of a part offering insert and fasten, by how each was
+// placed: normally, fastened to preselected edges, or by Auto Assembly.
+function FastenMethodBreakdown(props: { totals: AnalyticsTotals }): ReactNode;
+```
+
+`src/backend/features/auto-assembly/track-inserts.ts`
+
+```ts
+// A run's parts, as inserts from the library each studio is in.
+async function recordRunInserts(
+    db: Db,
+    userId: string,
+    set: FastenerSet,
+    parts: PartPlacement[],
+    paths: (string[] | null)[],
+    mated: Set<number>
+): Promise<void>;
+```
+
 Named, not copied: `AppContext` and `AppBindings` (`src/backend/lib/context.ts`),
 `Db` (`src/backend/db/client.ts`), `ElementPath` and `InstanceType`
 (`src/backend/lib/onshape/path.ts`), `ElementType`, `LibraryId`, `Selection`
@@ -945,8 +1003,10 @@ no foreign key crosses between them):
 - `events` — the append-only log. Every event has an id, type, time, day key,
   user and schema version, and the library where it has one; a use adds the
   element path, insertable, canonical selection, source and favorite flag, and
-  an insert also its target tab type and the quick-insert, fasten and
-  insert-location flags, which a download leaves null; a version run adds its kind,
+  an insert also its target tab type and the quick-insert, fasten, fastenable
+  (the part offered insert and fasten), preselected (fastened to picks made
+  beforehand) and insert-location flags, which a download leaves null; an Auto
+  Assembly run's inserts have source `auto_assembly`; a version run adds its kind,
   scope, whether it was update-only, its outcome, and how many steps failed,
   versions it created and tabs it updated. A report adds its topic, category,
   source and the team number the reporter gave, a part report the element
@@ -977,7 +1037,10 @@ no foreign key crosses between them):
   `daily_feature_users`.
 - A use writes every library rollup, an insert and a download alike.
   `daily_metrics` keeps a row per event type, so the uses are the sum of the
-  `insert` and `download` rows and either can be read alone.
+  `insert` and `download` rows and either can be read alone. Beside its
+  favorite, fasten and quick-insert counts it keeps, of inserts into an
+  assembly of a part offering insert and fasten, `fastenable_count`, with the
+  `preselected_count` and `auto_assembly_count` inside it.
   `daily_target_metrics` and `daily_insertable_metrics` split by `UseTarget`:
   an insert's target tab type (`PARTSTUDIO`, `ASSEMBLY`, the same strings as
   `ElementType`), or `DOWNLOAD`. The targets sum to the uses.
@@ -1004,10 +1067,11 @@ no foreign key crosses between them):
   `AppFeature` that day, as `featuresOf` decides from the event. Feature first,
   so a feature's first recorded day is an index seek. Any kind of event can
   write it: a use by where it started and its flags, a version run, a
-  FeatureScript add, a signed-in report, a default configuration. Migration
-  `0014_feature_reach.sql` filled it from the log for every feature recorded
-  before it; `at_insert_location` and `default_selection` begin with it, at
-  schema version 3.
+  FeatureScript add, a signed-in report, a default configuration. An Auto
+  Assembly run's uses count only toward `AUTO_ASSEMBLY`, not toward fasten or
+  the other flags they set. Migration `0015_feature_reach.sql` filled it from
+  the log for every feature recorded before it. `at_insert_location` and
+  `default_selection` begin with it, at schema version 4.
 - `favorites`, in `db/schema.ts`, is read for each part's standing favorites,
   through its index on `insertable_id` (`favorites_insertable_idx`).
 
@@ -1015,7 +1079,14 @@ no foreign key crosses between them):
 
 ### Recording
 
-1. An insert route calls `trackInsert` once the insert succeeded;
+1. An insert route calls `trackInsert` once the insert succeeded, with how many
+   instances it placed: an insert and fasten to picks places one per edge, and
+   each is a use of its own, `preselected`. Auto Assembly's workflow calls
+   `recordRunInserts` in its `record-inserts` step once fastening has ended,
+   however it ended: each part it inserted is an insert from the library its
+   studio is in, source `auto_assembly`, fastened if its mate was added, never
+   favorited. The parts a run deletes to replace a screw aren't recorded;
+   their replacements are inserts like any other;
    `POST /api/step-export` calls `trackDownload` once Onshape accepts the
    export (see [download.md](./download.md)); `/init`'s
    handoff calls `POST /api/app-open`, which calls `trackAppOpen`; the
@@ -1030,12 +1101,14 @@ no foreign key crosses between them):
    `trackDefaultSelection` once the default is saved (see
    [favorites.md](./favorites.md)).
 2. A use, an open, a FeatureScript add, a report and a default configuration are recorded in the background (`runInBackground`),
-   after the response; a version run's step swallows a failure to record. So
+   after the response; a workflow's step swallows a failure to record. So
    tracking never slows or fails what the user asked for.
 3. The selection is stored canonically (`canonicalValues`), so `5 in` and
    `(2 + 3) in` count as one value.
 4. `record` writes the event and its rollup rows in one D1 batch, so neither
-   lands without the other.
+   lands without the other; `recordBatch` writes several events the same way,
+   one query against D1's per-invocation limit however many statements it
+   holds.
 
 ### Imported history
 
@@ -1098,6 +1171,15 @@ panel. Its routes read only rollups and return only aggregates:
   document listed), **feature usage** (`feature-reach`, below), and
   **reports**' totals. Its usage breakdown reads each library's **Parts**
   report.
+- Under **How people use the app**, beside the sources, the usage route's
+  totals draw two cards:
+    - how every insert was made (`InsertMethodBreakdown`): the insert menu,
+      quick insert or Auto Assembly;
+    - how a part offering insert and fasten was placed
+      (`FastenMethodBreakdown`): inserted normally, fastened to preselected
+      edges, or by Auto Assembly. Its base is `fastenableInserts`, recorded on
+      each event when it happens, so a part given fasten later doesn't
+      undercount it.
 - **Library** — its summary, health (parts, part studios and assemblies, and
   build issues by severity, hidden elements left out), its parts table, its reports' totals, and its most reported parts.
 - **Part** — one element's history, the share of its uses that went
@@ -1124,7 +1206,8 @@ first may begin before the range, and only its days inside it count. A
 feature's line starts the week of its first recorded use, all time, and a week
 with nobody about is left blank. A dashed line marks the week each of the
 feature's nudges (`NUDGES`) shipped or was withdrawn; features with a nudge
-come first. The tooltip gives a share's users and active users beside it.
+come first. A nudge still on cert has no day and no marker until it reaches
+`main`. The tooltip gives a share's users and active users beside it.
 
 **New vs existing** (`reach=new-vs-existing` in the url) draws two lines per
 chart in place of one. A person is new in a week when their first day in any
@@ -1246,9 +1329,12 @@ is withheld while its baseline reaches back before tracking began.
 - **A feature's line starts at its first recorded use.** Search, favorites and
   recents rest on `source`, which imported history never recorded; insert
   location and default configurations were not recorded at all before schema
-  version 3. Before a feature's first row nothing tells a week nobody used it
+  version 4. Before a feature's first row nothing tells a week nobody used it
   from one nothing recorded, so the line is left blank rather than drawn at 0%.
   It costs the weeks before a new feature's first use, which read the same.
+- **An Auto Assembly run's uses are Auto Assembly's alone.** A run's planner
+  fastens the parts it places. Counting those toward Insert and fasten would
+  credit a choice nobody made.
 - **A default configuration is not activity.** Saving one places nothing, so
   like a report it writes no library rollup; it counts only toward its
   feature's reach.
@@ -1319,6 +1405,11 @@ is withheld while its baseline reaches back before tracking began.
   never between parts.
 - **Public aggregates.** The numbers are useful to the community, and nothing
   per-user is exposed.
+- **Fastenable inserts are their own denominator.** Preselection and Auto
+  Assembly only place parts that offer insert and fasten, into an assembly;
+  measured against every insert they would read as rare however often they
+  replace the alternative. Only events from schema version 3 carry
+  `fastenable` and `preselected`, so the breakdown counts from then.
 - **The module isn't called `events.ts`.** Ad blockers match an `events-<hash>.js`
   chunk, and the frontend imports its enums.
 

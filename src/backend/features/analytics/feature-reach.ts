@@ -45,12 +45,17 @@ export function featuresOf(event: LoggedEvent): AppFeature[] {
     }
     const use = asUse(event);
     if (!use) return [];
+    // A run's planner fastens its parts; nobody chose to.
+    if (use.source === UseSource.AUTO_ASSEMBLY) {
+        return [AppFeature.AUTO_ASSEMBLY];
+    }
 
     const features: AppFeature[] = [];
     const fromSource = sourceFeature(use.source);
     if (fromSource) features.push(fromSource);
     if (use.isQuickInsert) features.push(AppFeature.QUICK_INSERT);
     if (use.fasten) features.push(AppFeature.FASTEN);
+    if (use.preselected) features.push(AppFeature.PRESELECTION);
     if (use.atInsertLocation) features.push(AppFeature.INSERT_LOCATION);
     if (use.target === UseTarget.DOWNLOAD) features.push(AppFeature.DOWNLOAD);
     return features;
@@ -66,6 +71,7 @@ function sourceFeature(source: UseSource): AppFeature | undefined {
         case UseSource.RECENTS:
             return AppFeature.RECENTS;
         case UseSource.BROWSE:
+        case UseSource.AUTO_ASSEMBLY:
         case UseSource.UNKNOWN:
             return undefined;
     }

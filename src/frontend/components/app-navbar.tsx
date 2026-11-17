@@ -13,6 +13,7 @@ import {
     CaretDownIcon,
     GearIcon,
     GitBranchIcon,
+    ScrewdriverIcon,
     type Icon,
     MagnifyingGlassIcon,
     MoonIcon,
@@ -56,14 +57,15 @@ import { getLibraryVersionQuery } from "../features/library/queries";
 import { LibraryId } from "@backend/features/library/library-id";
 import { AppColor, getLibraryColor, toShade } from "../theme";
 import { queryClient } from "../lib/query-client";
-import { InsertLocationStatus } from "../features/insert-location/components/insert-location-status";
+import { ContextBar } from "./context-bar";
+import { useIsVersionManager } from "../features/version-manager/navigation";
+import { useTargetElement, useTargetWorkspace } from "../lib/onshape-params";
 import {
-    useIsVersionManager,
-    useIsVersionManagerNew
-} from "../features/version-manager/navigation";
+    useIsAutoAssembly,
+    useIsAutoAssemblyNew
+} from "../features/auto-assembly/navigation";
 import { useIsFeatureScripts } from "../features/featurescripts/navigation";
 import { FeatureScriptSearchBar } from "../features/featurescripts/components/featurescript-search-bar";
-import { useTargetWorkspace } from "../lib/onshape-params";
 import { type WorkspacePath } from "@backend/features/version-manager/contract";
 import { type AppTab, UtilityTab } from "../lib/app-tab";
 import { getTabName, useNavigateToTab } from "../lib/tabs";
@@ -95,13 +97,14 @@ export function NavbarRow(props: PropsWithChildren): ReactNode {
     );
 }
 
-/** The page picker with the brand and settings, over search and its filters. */
+/** The page picker with the brand and settings, over search and its filters, then the context bar. */
 export function AppNavbar(): ReactNode {
     // Search and its filters belong to a library; FeatureScripts has a search
-    // of its own there, and the Version Manager's page fills the room.
+    // of its own there, and the Version Manager's and Auto Assembly's pages fill the room.
     const isVersionManager = useIsVersionManager();
+    const isAutoAssembly = useIsAutoAssembly();
     const isFeatureScripts = useIsFeatureScripts();
-    const isLibrary = !isVersionManager && !isFeatureScripts;
+    const isLibrary = !isVersionManager && !isAutoAssembly && !isFeatureScripts;
     const workspace = useTargetWorkspace();
 
     return (
@@ -109,8 +112,6 @@ export function AppNavbar(): ReactNode {
             <NavbarRow>
                 <PagePicker />
                 <Group gap="xs" ml="auto" className={styles.noShrink}>
-                    {/* The insert location is where a library's parts land in an assembly. */}
-                    {isLibrary && <InsertLocationStatus />}
                     <SignInButton />
                     {isVersionManager && workspace && (
                         <VersionManagerRefreshButton workspace={workspace} />
@@ -129,6 +130,7 @@ export function AppNavbar(): ReactNode {
                     <FeatureScriptSearchBar />
                 </Group>
             )}
+            <ContextBar isLibrary={isLibrary} />
         </Stack>
     );
 }
@@ -163,7 +165,9 @@ interface AppPage {
 }
 
 function useAppPages(): AppPage[] {
-    const isNew = useIsVersionManagerNew();
+    const targetElement = useTargetElement();
+    const isAutoAssembly = useIsAutoAssembly();
+    const isNew = useIsAutoAssemblyNew();
 
     const libraries = Object.values(LibraryId).map((libraryId) => ({
         tab: libraryId,
@@ -185,6 +189,20 @@ function useAppPages(): AppPage[] {
         icon: PuzzlePieceIcon,
         color: AppColor.FEATURESCRIPTS
     };
+    // Listed while it is showing even without an element, so the picker never names a page it does not offer.
+    const autoAssembly: AppPage[] =
+        targetElement || isAutoAssembly
+            ? [
+                  {
+                      tab: UtilityTab.AUTO_ASSEMBLY,
+                      group: UTILITIES_GROUP,
+                      icon: ScrewdriverIcon,
+                      color: AppColor.AUTO_ASSEMBLY,
+                      badge: isNew ? <NewBadge /> : undefined,
+                      isNew
+                  }
+              ]
+            : [];
 
     return [
         ...libraries,
@@ -193,10 +211,9 @@ function useAppPages(): AppPage[] {
             tab: UtilityTab.VERSION_MANAGER,
             group: UTILITIES_GROUP,
             icon: GitBranchIcon,
-            color: AppColor.VERSION_MANAGER,
-            badge: isNew ? <NewBadge /> : undefined,
-            isNew
-        }
+            color: AppColor.VERSION_MANAGER
+        },
+        ...autoAssembly
     ];
 }
 
@@ -214,14 +231,17 @@ function PagePicker(): ReactNode {
     const pages = useAppPages();
     const currentLibraryId = useLibraryId();
     const isVersionManager = useIsVersionManager();
+    const isAutoAssembly = useIsAutoAssembly();
     const isFeatureScripts = useIsFeatureScripts();
     const navigateToTab = useNavigateToTab();
 
     const current: AppTab = isVersionManager
         ? UtilityTab.VERSION_MANAGER
-        : isFeatureScripts
-          ? UtilityTab.FEATURESCRIPTS
-          : currentLibraryId;
+        : isAutoAssembly
+          ? UtilityTab.AUTO_ASSEMBLY
+          : isFeatureScripts
+            ? UtilityTab.FEATURESCRIPTS
+            : currentLibraryId;
     const currentPage = pages.find((page) => page.tab === current);
 
     // Warm the versions on hover, so picking one has nothing left to wait for.
@@ -278,10 +298,12 @@ function PagePicker(): ReactNode {
                                         shown={page.isNew ?? false}
                                         offset={-1}
                                     >
+                                        {/* Inline, it sits on a line of text above the label's center */}
                                         <AppIcon
                                             icon={page.icon}
                                             size={IconSize.MEDIUM}
                                             color={toShade(page.color)}
+                                            style={{ display: "block" }}
                                         />
                                     </DotIndicator>
                                 }

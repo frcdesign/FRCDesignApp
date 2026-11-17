@@ -59,6 +59,10 @@ export async function getTotals(
         appOpens: Number(opens?.value ?? 0),
         uniqueUsers: uniqueUsers?.value ?? 0,
         favoriteUses: Number(uses?.favorites ?? 0),
+        quickInserts: Number(uses?.quickInserts ?? 0),
+        fastenableInserts: Number(uses?.fastenables ?? 0),
+        preselectedInserts: Number(uses?.preselected ?? 0),
+        autoAssemblyInserts: Number(uses?.autoAssemblys ?? 0),
         targets: toTargets(targets),
         favorites: favoriteCount?.value ?? 0
     };
@@ -93,7 +97,11 @@ function countMetrics(db: Db, libraryId?: LibraryId, range?: DayRange) {
     return db
         .select({
             total: sum(dailyMetrics.count),
-            favorites: sum(dailyMetrics.favoriteCount)
+            favorites: sum(dailyMetrics.favoriteCount),
+            quickInserts: sum(dailyMetrics.quickInsertCount),
+            fastenables: sum(dailyMetrics.fastenableCount),
+            preselected: sum(dailyMetrics.preselectedCount),
+            autoAssemblys: sum(dailyMetrics.autoAssemblyCount)
         })
         .from(dailyMetrics)
         .where(and(...filters))

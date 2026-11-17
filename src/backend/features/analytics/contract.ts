@@ -16,6 +16,11 @@ export function emptyTargets(): UseTargets {
     ) as UseTargets;
 }
 
+/** The uses that were inserts: into a Part Studio or an assembly. */
+export function insertsOf(targets: UseTargets): number {
+    return targets[UseTarget.PART_STUDIO] + targets[UseTarget.ASSEMBLY];
+}
+
 /** Lifetime counts, either overall or scoped to one library. */
 export interface AnalyticsTotals {
     /** Inserts and downloads; `targets` splits them. */
@@ -25,6 +30,14 @@ export interface AnalyticsTotals {
     uniqueUsers: number;
     /** A subset of `uses`. */
     favoriteUses: number;
+    /** A subset of the inserts, from a row's own Insert or Derive button. */
+    quickInserts: number;
+    /** Into an assembly, of a part offering insert and fasten when it was inserted; the base of the next two. */
+    fastenableInserts: number;
+    /** Fastened to edges or faces picked in Onshape beforehand. */
+    preselectedInserts: number;
+    /** Placed by Auto Assembly; also its entry of the sources. */
+    autoAssemblyInserts: number;
     targets: UseTargets;
     /** Current, not over the range: a favorite is state, not an event. */
     favorites: number;

@@ -54,11 +54,13 @@ team, plus one owner set by configuration.
   it from D1 on a miss.
 - **KV** `seen-hints:` — by user id, the features (`Hint`) whose blue dot and
   **New** badge the user no longer needs, recorded by `POST /api/seen-hints`
-  once the feature has been opened: the Version Manager's page on showing, the
-  insert location's card on closing, an insert menu's ⋯ menu offering **Set
+  once the feature has been opened: the Version Manager's page on showing, an
+  insert menu's ⋯ menu offering **Set
   default configuration** on closing, and a part's menu (on its card or in the
-  insert menu) offering **Report an issue** on closing. Kept until deleted;
-  losing it only shows a dot again. The day each dot shipped is listed in
+  insert menu) offering **Report an issue** on closing. Fastening an insert to
+  circular edges is recorded by the insert request itself, and `markHintSeen`
+  shows it at once. Kept until deleted; losing it only shows a dot again. The
+  day each dot shipped is listed in
   `src/frontend/features/dashboard/nudges.ts`, which marks it on the
   dashboard's Feature usage; a new hint adds its entry there.
 - **localStorage** (`ui-state`): `accessLevel`, the level the app is viewed as;

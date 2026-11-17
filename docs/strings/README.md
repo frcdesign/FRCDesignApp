@@ -3,7 +3,7 @@
 One file per feature area, beside its document in
 [`docs/architecture/`](../architecture/README.md), listing the strings the area
 shows a user that are worth a reviewer's read: titles, labels, descriptions,
-placeholders, prompts sent to Onshape, toasts, tips, and errors written for the
+placeholders, toasts, tips, and errors written for the
 user.
 
 | File                                       | Area                                                     |
@@ -16,6 +16,8 @@ user.
 | [analytics.md](./analytics.md)             | The dashboard's usage numbers, charts and tables         |
 | [featurescripts.md](./featurescripts.md)   | The FeatureScripts tab, its cards and details (proposed) |
 | [testbench.md](./testbench.md)             | The owner's testbench page                               |
+| [auto-assembly.md](./auto-assembly.md)     | Auto Assembly's page, its runs, and pick problems        |
+| [fasten.md](./fasten.md)                   | Insert and fasten's card, toasts and tip                 |
 
 ## Shape of a file
 

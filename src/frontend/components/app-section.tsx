@@ -141,9 +141,10 @@ export function AppSection(props: AppSectionProps): ReactNode {
     );
 }
 
-interface SectionChevronProps {
+export interface SectionChevronProps {
     opened: boolean;
-    onToggle: () => void;
+    /** Left out where the row around it does the folding. */
+    onToggle?: () => void;
     size: IconSize;
 }
 
@@ -152,7 +153,7 @@ interface SectionChevronProps {
  * lands at the end of the row, and like Mantine's is part of the header rather
  * than a button of its own.
  */
-function SectionChevron(props: SectionChevronProps): ReactNode {
+export function SectionChevron(props: SectionChevronProps): ReactNode {
     const { opened, onToggle, size } = props;
 
     return (

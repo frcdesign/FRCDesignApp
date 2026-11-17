@@ -89,6 +89,14 @@ D1 tables live in `db/schema.ts`, except a feature's own: tracking's are in
 them and they hold no foreign key into the rest. `drizzle.config.ts` lists every schema
 file, so a new one has to be added there or its tables generate no migration.
 
+A branch adds one migration, however many schema changes it makes: when it
+changes the schema again, fold the change into the branch's migration rather
+than generating another. Delete the branch's `.sql`, its snapshot and its
+`_journal.json` entry, run `npx drizzle-kit generate --name <feature>`, and
+carry over anything written by hand, such as a backfill; `npm run
+check:migrations` checks it applies, with data and without. Never edit a
+migration another branch added, or one already applied to cert or production.
+
 KV is for what may expire or be lost: sessions, and caches that save Onshape
 calls. Every key belongs to a `kvStore` (`lib/kv-store.ts`) declared beside the
 code that owns it, with its prefix, value type and lifetime; don't read or
@@ -141,9 +149,36 @@ generated and git-ignored: never edit it.
   `switch`, so a new case without one fails `tsc`; never index `m` by a built
   key.
 
+## Wording
+
+Users read in a narrow panel, mid-task. Keep it short and plain:
+
+- **Labels are a few words.** A button names its action ("Insert", "Clear"),
+  an input its value ("Max length"), a list what it holds ("Edges to
+  exclude").
+- **A description is one sentence saying what the control does.** Leave out
+  side effects, consequences and results unless they're critical and not
+  obvious.
+- **An error names what went wrong, in a few words.** "Invalid manifest",
+  "Failed to find manifest's part studio". Leave the technical detail for the
+  console.
+- **Say it once.** No restating the label in the description, and no "so",
+  "which" or "rather than" clauses tacking a second idea onto a sentence.
+- **Prefer the plain word.** "Delete" over "remove the replaced parts",
+  "screw" over "fastener" when it's a screw.
+
 The build-status feature is migrated. The rest moves over as it is worked on:
 a new string goes in the catalog, and a component you change has its strings
 moved there in the same change. `docs/strings/` lists them for review.
+
+# Onshape API calls
+
+Ask before anything that calls Onshape, and run it only once the user says yes,
+every time: the Onshape FeatureScript MCP's tools, a load or anything else run
+against a real Onshape session, and robot-code's `fs` commands that talk to
+Onshape. Each call spends the user's Onshape API allocation, and a write to a
+library document can't be undone. Tests mock Onshape and need no asking. When
+the user runs a command themselves, say exactly what to run.
 
 # Feature tracking
 
@@ -164,9 +199,10 @@ and in code; "inserts" means only the ones that went into Onshape.
 # Architecture docs
 
 `docs/architecture/` holds one document per feature area, indexed in its
-`README.md`: thumbnails, configurations, loading, favorites, recents, auth
-(with access levels and environment variables), search, analytics, build
-issues and the admin card, and the Version Manager. Each states the area's flows, storage,
+`README.md`: thumbnails, configurations, loading, favorites, recents, insert and
+fasten, auth (with access levels and environment variables), search,
+analytics, build issues and the admin card, the Version Manager, Auto Assembly,
+and generated parts. Each states the area's flows, storage,
 **invariants**, failure modes and decisions. Read the area's document before
 changing it, and check the change against its invariants.
 
@@ -192,6 +228,10 @@ rather than repeating them.
 Write them as comments are written: what is true now, no history, no hedging.
 Name code by path and symbol in backticks; describe behavior and point at the
 code rather than pasting it.
+
+Keep sentences short: one idea each, about 25 words at most. When a sentence
+lists three or more things, or chains clauses with colons, semicolons and
+parentheses, make it a list or split it.
 
 When a document and the code disagree and it isn't clear which is intended,
 ask rather than quietly changing either. After reading a whole document against

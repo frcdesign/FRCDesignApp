@@ -1,0 +1,214 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { act, renderHook } from "@testing-library/react";
+import { useMessageListener } from "./messages";
+import { useOnshapeLaunch } from "./onshape-params";
+import { expectSelection, onPick, useOnshapeSelection } from "./selection";
+
+const SERVER = "https://cad.onshape.com";
+
+const edge = {
+    selectionType: "ENTITY",
+    entityType: "EDGE",
+    selectionId: "JHD",
+    occurrencePath: ["plate"]
+};
+
+function post(data: unknown) {
+    act(() => {
+        window.dispatchEvent(
+            new MessageEvent("message", { origin: SERVER, data })
+        );
+    });
+}
+
+describe("useMessageListener", () => {
+    const picked = vi.fn();
+    let stopPicking: () => void;
+
+    beforeEach(() => {
+        useOnshapeLaunch.setState({ server: SERVER });
+        useOnshapeSelection.setState({
+            focused: "list",
+            shown: [],
+            awaited: undefined,
+            isHighlighted: false
+        });
+        stopPicking = onPick("list", picked);
+        renderHook(() => useMessageListener());
+    });
+
+    afterEach(() => {
+        stopPicking();
+        picked.mockReset();
+        useOnshapeLaunch.setState({ server: undefined });
+        useOnshapeSelection.setState({
+            focused: undefined,
+            shown: [],
+            awaited: undefined
+        });
+    });
+
+    const picks = [
+        { entityType: "EDGE", selectionId: "JHD", occurrencePath: ["plate"] }
+    ];
+
+    it("hands the focused list what a SELECTION message added", () => {
+        post({ messageName: "SELECTION", selections: [edge] });
+        expect(picked).toHaveBeenCalledWith({
+            added: picks,
+            removed: [],
+            isHighlightCleared: false,
+            isDeselectRefused: false
+        });
+    });
+
+    it("hands it what was deselected, as Onshape sends the whole selection", () => {
+        post({ messageName: "SELECTION", selections: [edge] });
+        post({ messageName: "SELECTION", selections: [] });
+        expect(picked).toHaveBeenLastCalledWith({
+            added: [],
+            removed: picks,
+            isHighlightCleared: false,
+            isDeselectRefused: false
+        });
+    });
+
+    it("follows a pending selection request's answers, which carry the selection in its place", () => {
+        const answer = (selections: unknown[]) =>
+            post({
+                messageName: "REQUESTED_SELECTION",
+                messageId: "selection-1",
+                status: { statusCode: "PENDING" },
+                selections
+            });
+        answer([]);
+        answer([edge]);
+        expect(picked).toHaveBeenLastCalledWith({
+            added: picks,
+            removed: [],
+            isHighlightCleared: false,
+            isDeselectRefused: false
+        });
+        answer([]);
+        expect(picked).toHaveBeenLastCalledWith({
+            added: [],
+            removed: picks,
+            isHighlightCleared: false,
+            isDeselectRefused: false
+        });
+    });
+
+    it("follows a highlight's answers too, taking the window cleared as clearing the highlight", () => {
+        const answer = (rest: object) =>
+            post({
+                messageName: "REQUESTED_SELECTION_HIGHLIGHT",
+                messageId: "highlight-selection-1",
+                status: { statusCode: "PENDING" },
+                ...rest
+            });
+        expectSelection(picks);
+        answer({});
+        answer({ selections: [edge] });
+        expect(picked).not.toHaveBeenCalled();
+
+        answer({ selections: [] });
+        expect(picked).toHaveBeenCalledWith({
+            added: [],
+            removed: [],
+            isHighlightCleared: true,
+            isDeselectRefused: false
+        });
+    });
+
+    it("keeps picks a click clears from a highlight of several, until Onshape can resume a selection", () => {
+        const both = [edge, { ...edge, selectionId: "JHE" }];
+        expectSelection(
+            both.map(({ entityType, selectionId, occurrencePath }) => ({
+                entityType,
+                selectionId,
+                occurrencePath
+            }))
+        );
+        post({ messageName: "SELECTION", selections: both });
+        post({ messageName: "SELECTION", selections: [] });
+        expect(picked).toHaveBeenCalledWith({
+            added: [],
+            removed: [],
+            isHighlightCleared: true,
+            isDeselectRefused: false
+        });
+    });
+
+    it("refuses a deselection from a highlight well after it's shown", () => {
+        const both = [edge, { ...edge, selectionId: "JHE" }];
+        expectSelection(
+            both.map(({ entityType, selectionId, occurrencePath }) => ({
+                entityType,
+                selectionId,
+                occurrencePath
+            }))
+        );
+        post({ messageName: "SELECTION", selections: both });
+        // A person takes a while; Onshape's own answers come at once
+        useOnshapeSelection.setState({ highlightedAt: 0 });
+        post({ messageName: "SELECTION", selections: [edge] });
+        expect(picked).toHaveBeenLastCalledWith({
+            added: [],
+            removed: [],
+            isHighlightCleared: false,
+            isDeselectRefused: true
+        });
+    });
+
+    it("lets the console send a message, addressed to the launching element", () => {
+        const posted = vi
+            .spyOn(window.parent, "postMessage")
+            .mockImplementation(vi.fn());
+        useOnshapeLaunch.setState({
+            documentId: "doc",
+            instanceId: "ws",
+            instanceType: "w",
+            elementId: "asm",
+            elementType: "ASSEMBLY" as never
+        });
+        renderHook(() => useMessageListener());
+        window.sendToOnshape?.({ messageName: "stopRequest" });
+        expect(posted).toHaveBeenLastCalledWith(
+            {
+                messageName: "stopRequest",
+                documentId: "doc",
+                workspaceId: "ws",
+                elementId: "asm"
+            },
+            "*"
+        );
+        posted.mockRestore();
+        useOnshapeLaunch.setState({
+            documentId: undefined,
+            instanceId: undefined,
+            instanceType: undefined,
+            elementId: undefined,
+            elementType: undefined
+        });
+    });
+
+    it("takes nothing that a highlight made Onshape select, nor drops what leaves it", () => {
+        post({ messageName: "SELECTION", selections: [edge] });
+        picked.mockClear();
+        expectSelection(picks);
+        // Onshape clears the window, then shows what was highlighted
+        post({ messageName: "SELECTION", selections: [] });
+        post({ messageName: "SELECTION", selections: [edge] });
+        expect(picked).not.toHaveBeenCalled();
+
+        // Shown again, as a late answer to it would: not a pick
+        post({ messageName: "SELECTION", selections: [] });
+        post({ messageName: "SELECTION", selections: [edge] });
+        expect(picked).toHaveBeenLastCalledWith({
+            added: [],
+            removed: [],
+            isHighlightCleared: false,
+            isDeselectRefused: false
+        });
+    });
+});

@@ -27,6 +27,8 @@ function getUtilityName(tabId: UtilityTab): string {
     switch (tabId) {
         case UtilityTab.VERSION_MANAGER:
             return "Version Manager";
+        case UtilityTab.AUTO_ASSEMBLY:
+            return "Auto Assembly";
         case UtilityTab.FEATURESCRIPTS:
             return m.featureScriptsTabName();
     }

@@ -61,9 +61,7 @@ describe("findInsertLocation", () => {
 
     // An assembly can hold a marker inserted before the sketch was revised.
     it("matches whatever version the marker was inserted from", async () => {
-        const assembly = toAssembly([
-            { ...MARKER, documentVersion: "older" } as OnshapeAssemblyInstance
-        ]);
+        const assembly = toAssembly([{ ...MARKER, documentVersion: "older" }]);
         expect(await findIn(assembly)).toBe("marker");
     });
 

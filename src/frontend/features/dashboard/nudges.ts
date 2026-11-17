@@ -18,8 +18,8 @@ export interface Nudge {
     feature: AppFeature;
     kind: NudgeKind;
     change: NudgeChange;
-    /** The day it reached `main`, which deploys to production. */
-    day: string;
+    /** The day it reached `main`, which deploys to production; absent until then, and unmarked. */
+    day?: string;
 }
 
 /** Every nudge shipped or withdrawn; add one in the change that ships it. */
@@ -61,6 +61,23 @@ export const NUDGES: readonly Nudge[] = [
         kind: NudgeKind.TIP,
         change: NudgeChange.REMOVED,
         day: "2026-11-14"
+    },
+    // On cert: give each its day when it reaches main.
+    {
+        feature: AppFeature.AUTO_ASSEMBLY,
+        kind: NudgeKind.DOT,
+        change: NudgeChange.ADDED
+    },
+    // An insert and fasten with nothing picked, until somebody has fastened to picks.
+    {
+        feature: AppFeature.PRESELECTION,
+        kind: NudgeKind.TIP,
+        change: NudgeChange.ADDED
+    },
+    {
+        feature: AppFeature.VERSION_MANAGER,
+        kind: NudgeKind.DOT,
+        change: NudgeChange.REMOVED
     }
 ];
 

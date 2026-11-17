@@ -42,6 +42,7 @@ export function parsedInsertable(
         thumbnailUrls: null,
         fastenInfo: null,
         isOpenComposite: false,
+        isGenerated: false,
         buildIssues: [],
         partMetadata: null,
         configuration: { parameters: [], records: [] },

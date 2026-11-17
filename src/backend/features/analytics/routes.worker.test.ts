@@ -299,7 +299,10 @@ describe("analytics routes", () => {
                 count: 10,
                 favoriteCount: 4,
                 fastenCount: 3,
-                quickInsertCount: 6
+                quickInsertCount: 6,
+                fastenableCount: 5,
+                preselectedCount: 2,
+                autoAssemblyCount: 1
             });
             await db.insert(dailyTargetMetrics).values([
                 {
@@ -324,6 +327,10 @@ describe("analytics routes", () => {
             expect(body.totals).toMatchObject({
                 uses: 10,
                 favoriteUses: 4,
+                quickInserts: 6,
+                fastenableInserts: 5,
+                preselectedInserts: 2,
+                autoAssemblyInserts: 1,
                 targets: {
                     [UseTarget.ASSEMBLY]: 5,
                     [UseTarget.PART_STUDIO]: 5,

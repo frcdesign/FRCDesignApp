@@ -1,0 +1,38 @@
+/* Rows, one under another. */
+.grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--mantine-spacing-sm);
+    align-items: start;
+}
+
+/* A grid whose rows are all hidden would still take a gap where it sits. */
+.grid:empty {
+    display: none;
+}
+
+/*
+ * A label as wide as its own text, and its control the rest of the row, so one
+ * long label moves only its own control. Past 40% of the row, a label wraps.
+ */
+.row {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: fit-content(40%) minmax(0, 1fr);
+    gap: var(--mantine-spacing-sm);
+    align-items: start;
+}
+
+/* As tall as the input beside it, so the two stay level when it shows an error. */
+.label,
+.checkbox {
+    display: flex;
+    align-items: center;
+    min-height: var(--input-height-sm, rem(36px));
+}
+
+.label {
+    font-size: var(--mantine-font-size-sm);
+    overflow-wrap: anywhere;
+    cursor: pointer;
+}

@@ -61,6 +61,8 @@ describe("waiting out a render", () => {
         pushes.listeners.clear();
         vi.useRealTimers();
         vi.restoreAllMocks();
+        // A wait a test leaves pending would answer the next test's pushes
+        pushes.listeners.clear();
     });
 
     it("asks again as soon as the render is pushed, not on a timer", async () => {

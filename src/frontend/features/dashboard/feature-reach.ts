@@ -51,7 +51,9 @@ export function featureMeasure(feature: AppFeature): ReachMeasure {
         case AppFeature.RECENTS:
         case AppFeature.QUICK_INSERT:
         case AppFeature.FASTEN:
+        case AppFeature.PRESELECTION:
         case AppFeature.INSERT_LOCATION:
+        case AppFeature.AUTO_ASSEMBLY:
         case AppFeature.DEFAULT_CONFIGURATION:
         case AppFeature.VERSION_MANAGER:
         case AppFeature.FEATURESCRIPTS:
@@ -143,7 +145,7 @@ export function nudgeMarks(
     const buckets = new Set(points.map((point) => point.bucket));
     const labels = new Map<string, string[]>();
     for (const nudge of nudges) {
-        if (nudge.feature !== feature) continue;
+        if (nudge.feature !== feature || nudge.day === undefined) continue;
         const week = toWeekStart(nudge.day);
         if (!buckets.has(week)) continue;
         labels.set(week, [...(labels.get(week) ?? []), nudgeLabel(nudge)]);
@@ -166,6 +168,10 @@ export function featureLabel(feature: AppFeature): string {
             return m.dashboardFeatureQuickInsert();
         case AppFeature.FASTEN:
             return m.dashboardFeatureFasten();
+        case AppFeature.PRESELECTION:
+            return m.dashboardFeaturePreselection();
+        case AppFeature.AUTO_ASSEMBLY:
+            return m.dashboardFeatureAutoAssembly();
         case AppFeature.INSERT_LOCATION:
             return m.dashboardFeatureInsertLocation();
         case AppFeature.DOWNLOAD:

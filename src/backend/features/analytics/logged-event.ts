@@ -72,6 +72,8 @@ export const NOT_A_USE: UseColumns = {
     isQuickInsert: null,
     source: null,
     fasten: null,
+    fastenable: null,
+    preselected: null,
     atInsertLocation: null
 };
 

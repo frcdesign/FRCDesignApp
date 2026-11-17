@@ -12,6 +12,7 @@ import { insertableRoutes } from "./features/library/insertables/routes";
 import { libraryRoutes } from "./features/library/routes";
 import { thumbnailRoutes } from "./features/thumbnails/routes";
 import { versionManagerRoutes } from "./features/version-manager/routes";
+import { autoAssemblyRoutes } from "./features/auto-assembly/routes";
 import { webhookRoutes } from "./features/webhooks/routes";
 import { webhookProbeRoutes } from "./features/testbench/webhook-probe";
 import { testbenchRoutes } from "./features/testbench/routes";
@@ -48,6 +49,7 @@ const apiRoutes = [
     versionManagerRoutes,
     hintRoutes,
     feedbackRoutes,
+    autoAssemblyRoutes,
     downloadRoutes,
     featureScriptRoutes
 ];

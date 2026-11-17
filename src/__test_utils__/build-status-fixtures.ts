@@ -17,6 +17,7 @@ export function insertableBuildStatus(
         isVisible: true,
         supportsFasten: false,
         fastenDisabled: false,
+        isGenerated: false,
         indexConfigurations: false,
         excludedParameterIds: [],
         vendors: [],

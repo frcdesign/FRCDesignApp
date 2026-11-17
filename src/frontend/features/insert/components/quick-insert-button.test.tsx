@@ -13,6 +13,11 @@ vi.mock("../queries", () => ({
     useInsertMutation: () => ({ mutate, isPending: false })
 }));
 
+const showFastenTip = vi.hoisted(() => vi.fn());
+vi.mock("../insert-tips", () => ({
+    useFastenCircularEdgesTip: () => showFastenTip
+}));
+
 const { QuickInsertButton } = await import("./quick-insert-button");
 
 const SHAFT: InsertableOut = {
@@ -81,6 +86,8 @@ describe("QuickInsertButton", () => {
 
         await userEvent.click(screen.getByRole("button", { name: "Insert" }));
         expect(mutate).toHaveBeenCalledWith(true);
+        // Fastening with no circular edges picked may tip that it could
+        expect(showFastenTip).toHaveBeenCalledWith(true);
     });
 
     it("inserts without fastening a part with nothing to fasten to", async () => {

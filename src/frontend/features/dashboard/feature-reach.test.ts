@@ -158,6 +158,14 @@ describe("nudgeMarks", () => {
         ).toEqual([{ bucket: "2026-10-26", label: "Blue dot · Tip" }]);
     });
 
+    it("leaves a nudge unmarked until it has shipped", () => {
+        const unshipped = { ...dot, day: undefined };
+
+        expect(
+            nudgeMarks(AppFeature.VERSION_MANAGER, points, [unshipped])
+        ).toEqual([]);
+    });
+
     it("marks only the feature's own nudges, inside the range", () => {
         const outside = { ...dot, day: "2026-12-01" };
 

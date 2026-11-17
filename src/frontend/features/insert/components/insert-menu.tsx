@@ -11,11 +11,16 @@ import {
 } from "../../../components/app-modal";
 import { MenuTitle, type MenuTitleProps } from "../../../components/app-title";
 import { useAppModal } from "../../../components/open-app-modal";
-import { useSignInPreviewTip, useThumbnailWaitTip } from "../insert-tips";
+import {
+    useFastenCircularEdgesTip,
+    useSignInPreviewTip,
+    useThumbnailWaitTip
+} from "../insert-tips";
 import { PreviewImageCard } from "../../thumbnails/components/thumbnail";
 import { FavoriteButton } from "../../favorites/components/favorite-button";
 import { MenuButton } from "../../../components/app-menu";
 import { GetAppCallout } from "../../../components/get-app";
+import { AutoAssemblyCallout } from "../../auto-assembly/components/auto-assembly-callout";
 import { InsertableMenuItems } from "../../library/components/insertable-card";
 import { ConfigurationWrapper, type SelectionReport } from "./configurations";
 import { ResetConfigurationButton } from "./reset-configuration-button";
@@ -36,10 +41,12 @@ import { RequireSignIn } from "../../auth/components/require-access";
 import { useIsSignedIn } from "../../auth/access-level";
 import { Hint } from "@backend/features/hints/contract";
 import { useHasSeenHint, useMarkHintSeen } from "../../hints/queries";
-import { useTargetElementType } from "../insert-hooks";
+import { useCanFasten, useTargetElementType } from "../insert-hooks";
 import { UseSource } from "@backend/features/analytics/usage";
-import { InsertLocationStatus } from "../../insert-location/components/insert-location-status";
-import { InfoCheckbox } from "../../../components/info-checkbox";
+import { FastenSection } from "./fasten-section";
+import { ParameterGrid } from "../../../components/parameter-input";
+import { ParameterGroup } from "../../../components/parameter-group";
+import { m } from "../../../paraglide/messages";
 import { DownloadStepButton } from "../../download/components/download-step-button";
 
 interface UseMenuTitleProps extends Omit<MenuTitleProps, "name"> {
@@ -85,6 +92,7 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
         props.initialConfigurationKey ??
         DEFAULT_CONFIGURATION_KEY;
     useThumbnailWaitTip(configurationKey);
+    const canFasten = useCanFasten(insertable);
     // What the preview stops following for a signed-out caller.
     const [isEdited, setIsEdited] = useState(false);
     // No ConfigurationWrapper reports a part with no parameters, but the title needs its record.
@@ -131,6 +139,10 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
             <AppModalTop>
                 <Stack gap="sm">
                     <GetAppCallout />
+                    <AutoAssemblyCallout
+                        insertableId={insertable.id}
+                        onOpen={() => modal.close()}
+                    />
                     <PreviewImageCard
                         path={insertable.path}
                         insertableId={insertable.id}
@@ -141,7 +153,21 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
                     />
                 </Stack>
             </AppModalTop>
-            <AppModalBody>{parameters}</AppModalBody>
+            <AppModalBody>
+                {canFasten ? (
+                    // Beside Fasten, the configuration is a group of its own
+                    <ParameterGrid>
+                        {parameters && (
+                            <ParameterGroup title={m.insertMenuConfiguration()}>
+                                {parameters}
+                            </ParameterGroup>
+                        )}
+                        <FastenSection insertable={insertable} />
+                    </ParameterGrid>
+                ) : (
+                    parameters
+                )}
+            </AppModalBody>
             <InsertMenuFooter
                 insertable={insertable}
                 favorite={favorite}
@@ -271,19 +297,26 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
         source
     });
     const fasten = useUiState((state) => state.fasten);
+    const showFastenCircularEdgesTip = useFastenCircularEdgesTip();
 
     const isLoadingConfiguration = useIsFetchingConfiguration(
         insertable.id,
         insertable.microversionId
     );
 
-    const canFasten =
-        insertable.supportsFasten && targetElementType === ElementType.ASSEMBLY;
+    const canFasten = useCanFasten(insertable);
 
     const handleClick = useCallback(() => {
         insertMutation.mutate(canFasten && fasten);
+        showFastenCircularEdgesTip(canFasten && fasten);
         onInsert();
-    }, [insertMutation, onInsert, canFasten, fasten]);
+    }, [
+        insertMutation,
+        onInsert,
+        canFasten,
+        fasten,
+        showFastenCircularEdgesTip
+    ]);
 
     if (!targetElementType) {
         return null;
@@ -291,15 +324,6 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
 
     return (
         <Group gap="sm" align="center">
-            <InsertLocationStatus />
-            {canFasten && (
-                <InfoCheckbox
-                    label="Fasten"
-                    info="Also create a fasten mate which references the inserted part."
-                    checked={fasten}
-                    onChange={(checked) => updateUiState({ fasten: checked })}
-                />
-            )}
             <Button
                 // Light would put green on pale green.
                 variant="filled"
@@ -308,8 +332,8 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
                 onClick={handleClick}
             >
                 {targetElementType === ElementType.ASSEMBLY
-                    ? "Insert"
-                    : "Derive"}
+                    ? m.insertMenuInsert()
+                    : m.insertMenuDerive()}
             </Button>
         </Group>
     );

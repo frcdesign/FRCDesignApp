@@ -1,4 +1,4 @@
-import { Stack } from "@mantine/core";
+import { SimpleGrid, Stack } from "@mantine/core";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { type ReactNode } from "react";
@@ -19,7 +19,11 @@ import {
 import { DashboardState } from "../../features/dashboard/dashboard-state";
 import { UsesByLibraryChart } from "../../features/dashboard/uses-chart";
 import { ChartRangeControl } from "../../features/dashboard/range-control";
-import { UseSourceBreakdown } from "../../features/dashboard/use-mix";
+import {
+    FastenMethodBreakdown,
+    InsertMethodBreakdown,
+    UseSourceBreakdown
+} from "../../features/dashboard/use-mix";
 import {
     OVERVIEW_TOTALS_PRESET,
     RANGE_PRESETS,
@@ -168,6 +172,12 @@ function DashboardOverview(): ReactNode {
                     />
                 )}
             </SectionCard>
+            {usage.data && (
+                <SimpleGrid cols={{ base: 1, sm: 2 }}>
+                    <InsertMethodBreakdown totals={usage.data.totals} />
+                    <FastenMethodBreakdown totals={usage.data.totals} />
+                </SimpleGrid>
+            )}
 
             {pendingParts ? (
                 <DashboardState
