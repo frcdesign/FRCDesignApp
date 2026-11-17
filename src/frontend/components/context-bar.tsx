@@ -62,8 +62,10 @@ function BarRow(props: BarRowProps): ReactNode {
         <Group
             gap="xs"
             px="sm"
-            h={BAR_HEIGHT}
-            wrap="nowrap"
+            // Wraps on a narrow panel rather than clipping a button's label
+            mih={BAR_HEIGHT}
+            py={6}
+            wrap="wrap"
             className={`${styles.frame} ${styles.dividerTop}`}
         >
             {props.children}
