@@ -11,29 +11,25 @@ import { METRICS, toTrend } from "./metrics";
 import { SectionCard } from "../../components/section";
 import { m } from "../../paraglide/messages";
 
-interface UsesByLibraryCardProps {
+interface UsesByLibraryChartProps {
     series: DailyUsePoint[];
 }
 
 /** Tall enough to read a year of daily points without squinting. */
 const PAGE_CHART_HEIGHT = 280;
 
-/** Every library on one axis, for the app dashboard. */
-export function UsesByLibraryCard({
+/** Every library on one axis, for the app dashboard, inside a card it provides. */
+export function UsesByLibraryChart({
     series
-}: UsesByLibraryCardProps): ReactNode {
+}: UsesByLibraryChartProps): ReactNode {
     return (
-        <SectionCard title={m.dashboardUsesOverTime()}>
-            {/* The app spans both competitions, so both are marked. */}
-            <LibraryUsesChart
-                series={series}
-                h={PAGE_CHART_HEIGHT}
-                programs={[Program.FTC, Program.FRC]}
-                granularity={pickChartGranularity(
-                    series.map((point) => point.day)
-                )}
-            />
-        </SectionCard>
+        // The app spans both competitions, so both are marked.
+        <LibraryUsesChart
+            series={series}
+            h={PAGE_CHART_HEIGHT}
+            programs={[Program.FTC, Program.FRC]}
+            granularity={pickChartGranularity(series.map((point) => point.day))}
+        />
     );
 }
 

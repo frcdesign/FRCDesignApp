@@ -9,9 +9,9 @@ import {
     Paper,
     SegmentedControl,
     SimpleGrid,
-    Stack,
     Text
 } from "@mantine/core";
+import { type UseQueryResult } from "@tanstack/react-query";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { type ReactNode } from "react";
 import type { FeatureReachOut } from "@backend/features/analytics/contract";
@@ -19,8 +19,10 @@ import { type AppFeature } from "@backend/features/analytics/usage";
 import { Section } from "../../components/section";
 import { MUTED_MARK, PrimaryColor } from "../../lib/style-constants";
 import { formatCount, formatPercent } from "./format";
-import { DashboardEmpty } from "./dashboard-state";
+import { DashboardEmpty, DashboardState } from "./dashboard-state";
+import { ChartRangeControl } from "./range-control";
 import {
+    evenTicks,
     featureLabel,
     featureMeasure,
     featureOrder,
@@ -45,6 +47,9 @@ const PERCENT_TICKS = [0, 50, 100];
 /** A count's axis climbs to fit, in about this many steps. */
 const COUNT_TICK_COUNT = 3;
 
+/** As many week labels as fit under a panel without crowding. */
+const MAX_TICKS = 5;
+
 /** A year of weeks still reads with dots; past that they crowd. */
 const MAX_DOTTED_WEEKS = 60;
 
@@ -62,35 +67,44 @@ function useReachView(): ReachView {
 }
 
 interface FeatureReachSectionProps {
-    reach: FeatureReachOut;
+    query: UseQueryResult<FeatureReachOut>;
 }
 
-/** One panel per feature, each with its own nudges marked. */
+/**
+ * One panel per feature, each with its own nudges marked, over the section's
+ * own range. Its controls stay while a new range loads.
+ */
 export function FeatureReachSection({
-    reach
+    query
 }: FeatureReachSectionProps): ReactNode {
     const view = useReachView();
     return (
         <Section title={m.dashboardFeatureReach()}>
-            <Group justify="space-between" align="flex-start">
-                <Stack gap={4}>
-                    <Text c="dimmed">
-                        {m.dashboardFeatureReachDescription()}
-                    </Text>
-                    {view === ReachView.NEW_VS_EXISTING && <SplitLegend />}
-                </Stack>
-                <ReachViewControl view={view} />
+            {/* A row of its own: two controls don't fit beside the title on a phone. */}
+            <Group justify="space-between" preventGrowOverflow={false}>
+                {view === ReachView.NEW_VS_EXISTING ? <SplitLegend /> : <div />}
+                <Group gap="sm" preventGrowOverflow={false}>
+                    <ReachViewControl view={view} />
+                    <ChartRangeControl searchKey="featureRange" />
+                </Group>
             </Group>
-            <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }}>
-                {featureOrder().map((feature) => (
-                    <FeatureReachPanel
-                        key={feature}
-                        feature={feature}
-                        points={toReachSeries(reach, feature)}
-                        view={view}
-                    />
-                ))}
-            </SimpleGrid>
+            {query.data ? (
+                <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }}>
+                    {featureOrder().map((feature) => (
+                        <FeatureReachPanel
+                            key={feature}
+                            feature={feature}
+                            points={toReachSeries(query.data, feature)}
+                            view={view}
+                        />
+                    ))}
+                </SimpleGrid>
+            ) : (
+                <DashboardState
+                    query={query}
+                    loading={m.dashboardLoadingFeatureReach()}
+                />
+            )}
         </Section>
     );
 }
@@ -225,7 +239,14 @@ function FeatureReachPanel({
                     h={PANEL_HEIGHT}
                     data={points}
                     dataKey="bucket"
-                    xAxisProps={{ tickFormatter: toLabel(points) }}
+                    xAxisProps={{
+                        ticks: evenTicks(
+                            points.map((point) => point.bucket),
+                            MAX_TICKS
+                        ),
+                        interval: 0,
+                        tickFormatter: toLabel(points)
+                    }}
                     yAxisProps={axisFor(measure)}
                     valueFormatter={(value) => formatValue(value, measure)}
                     curveType="monotone"

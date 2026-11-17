@@ -7,14 +7,17 @@ import { m } from "../../paraglide/messages";
 
 interface VersionManagerTilesProps {
     totals: VersionManagerTotals;
+    /** Beside the title: the window it covers, where the page doesn't pick one. */
+    caption?: string;
 }
 
 /** What pushing and pulling has done, in the words the run report uses. */
 export function VersionManagerTiles({
-    totals
+    totals,
+    caption
 }: VersionManagerTilesProps): ReactNode {
     return (
-        <Section title={m.dashboardVersionManager()}>
+        <Section title={m.dashboardVersionManager()} caption={caption}>
             <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }}>
                 <StatTile
                     label={m.dashboardVersionRuns()}

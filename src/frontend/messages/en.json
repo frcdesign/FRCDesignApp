@@ -410,9 +410,22 @@
     "dashboardLoadingReports": "Loading reports...",
     "dashboardLoadingFeatureScripts": "Loading FeatureScripts...",
     "dashboardLoadingParts": "Loading parts...",
-    "dashboardLoadingFeatureReach": "Loading feature reach...",
-    "dashboardFeatureReach": "Feature reach",
-    "dashboardFeatureReachDescription": "Each week, the share of active users who used a feature, or for some features how many did. Dashed lines mark the week a nudge shipped.",
+    "dashboardRangeLastDays": [
+        {
+            "declarations": [
+                "input days",
+                "local daysPlural = days: plural",
+                "local formatted = days: number"
+            ],
+            "selectors": ["daysPlural"],
+            "match": {
+                "daysPlural=one": "Last day",
+                "daysPlural=other": "Last {formatted} days"
+            }
+        }
+    ],
+    "dashboardLoadingFeatureReach": "Loading feature usage...",
+    "dashboardFeatureReach": "Feature usage",
     "dashboardFeatureReachNoData": "No recorded use yet.",
     "dashboardFeatureReachLatest": "Latest week: {value}",
     "dashboardFeatureReachWeekOf": "Week of {week}",

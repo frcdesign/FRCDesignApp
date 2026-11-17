@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { FeatureReachOut } from "@backend/features/analytics/contract";
 import { AppFeature } from "@backend/features/analytics/usage";
 import {
+    evenTicks,
     featureOrder,
     latestPoint,
     nudgeMarks,
@@ -164,6 +165,24 @@ describe("nudgeMarks", () => {
         expect(
             nudgeMarks(AppFeature.VERSION_MANAGER, points, [outside])
         ).toEqual([]);
+    });
+});
+
+describe("evenTicks", () => {
+    const weeks = Array.from({ length: 13 }, (_, i) => `w${i}`);
+
+    it("labels every week that fits", () => {
+        expect(evenTicks(weeks.slice(0, 4), 5)).toEqual(weeks.slice(0, 4));
+    });
+
+    it("spaces the labels evenly back from the newest week", () => {
+        expect(evenTicks(weeks, 5)).toEqual(["w0", "w3", "w6", "w9", "w12"]);
+        expect(evenTicks(weeks.slice(0, 12), 5)).toEqual([
+            "w2",
+            "w5",
+            "w8",
+            "w11"
+        ]);
     });
 });
 

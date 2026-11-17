@@ -333,7 +333,7 @@ function featuresOf(event: LoggedEvent): AppFeature[];
 
 `src/backend/features/analytics/routes.ts`, public and read-only. Every route
 but health takes `from` and `to` day keys (`rangeQuery`); the overview and a
-library's summary and feature reach clamp them to when tracking began (`clampRange`,
+library's summary and feature usage clamp them to when tracking began (`clampRange`,
 `getTrackingSince`).
 
 ```text
@@ -676,7 +676,7 @@ interface FeatureScriptUsageOut {
 /** How recently a person must have been first seen to count as new: this week or the three before. */
 const NEW_USER_WEEKS = 4;
 
-/** One week of feature reach: who was about, and who used each feature. */
+/** One week of feature usage: who was about, and who used each feature. */
 interface FeatureReachWeek {
     /** The Monday it starts on, which may fall before the range does. */
     week: string;
@@ -1095,8 +1095,9 @@ panel. Its routes read only rollups and return only aggregates:
   history), **health** (every library's parts by kind and build issues,
   standing now), the **Version Manager**'s totals, **featurescripts** (adds and
   distinct users, and each feature's adds and users, every feature in the
-  document listed), **feature reach** (below), and **reports**' totals. Its
-  usage breakdown reads each library's **Parts** report.
+  document listed), **feature usage** (`feature-reach`, below), and
+  **reports**' totals. Its usage breakdown reads each library's **Parts**
+  report.
 - **Library** — its summary, health (parts, part studios and assemblies, and
   build issues by severity, hidden elements left out), its parts table, its reports' totals, and its most reported parts.
 - **Part** — one element's history, the share of its uses that went
@@ -1104,7 +1105,15 @@ panel. Its routes read only rollups and return only aggregates:
   the option is shown (`toParameterInstances`).
 - **Unused** — parts and options at or below a usage threshold.
 
-**Feature reach** is one small chart per `AppFeature`: for each week of the
+The overview has no page-wide range. **Uses over time** and **Feature usage**
+each pick their own (All time, 1 year or 90 days, `CHART_RANGE_PRESETS`;
+90 days unless chosen), kept in the url as `usesRange` and `featureRange`.
+Every other section covers the last 30 days (`OVERVIEW_TOTALS_PRESET`) and
+says so beside its title; **Libraries** is standing now. The library, part and
+unused dashboards keep the range picker in the navbar, which the overview
+hides.
+
+**Feature usage** is one small chart per `AppFeature`: for each week of the
 range, the share of that week's active users who used the feature that week,
 on a shared 0–100% axis, or for search, STEP downloads and reports the number
 of people who did, on an axis that fits it (`featureMeasure`). Active is `activeUserRows` unioned with the week's
@@ -1124,7 +1133,7 @@ The split is left out of a week whose window starts on or before the day
 tracking began, since somebody first seen then may have used the app long
 before.
 
-The range, threshold and preset live in the url, so a view can be shared.
+The ranges, threshold and views live in the url, so a view can be shared.
 
 Every loading, empty and failed section is a notice (`app-notice.tsx`), as
 the rest of the app's are. A section whose query is still loading says what it
@@ -1138,7 +1147,7 @@ fetched once for every card, for a part's uses, monthly rate and favorites,
 and links to its **Part** report. It asks only while the card's Usage section is
 open, and reuses an answer for five minutes.
 
-Every page's totals are over the picked range, and two numbers are not: the
+Every page's totals are over its range, and two numbers are not: the
 favorites and linked documents standing now, which are state rather than events
 and say so on the tile. Beside each headline number is its change
 (`getGrowthFor`): on **All time** against the same stretch of the season
@@ -1211,7 +1220,11 @@ is withheld while its baseline reaches back before tracking began.
   of its own; the owner reads them in each feature's card
   (`GET /api/featurescripts/stats`), and the overview's FeatureScripts section
   over the range.
-- **Feature reach is weekly, over that week's active users.** The goal is
+- **The overview's charts pick their range; its totals don't.** One range for
+  the whole page left Feature usage with one or two weekly points on 7 or 30
+  days, and a chart is where a longer view is worth choosing. A total reads
+  best over a window everyone knows without looking up, so each says which.
+- **Feature usage is weekly, over that week's active users.** The goal is
   every active user using each feature, so the share is of the people about
   that week, not of everyone ever seen, which only rises and is weighed down
   by people long gone. A day holds too few people for a share to mean much; a

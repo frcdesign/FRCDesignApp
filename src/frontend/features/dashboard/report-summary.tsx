@@ -44,12 +44,17 @@ function ReportTiles({ reports }: ReportTilesProps): ReactNode {
 
 interface OverviewReportsProps {
     reports: ReportSummary;
+    /** Beside the title: the window it covers, where the page doesn't pick one. */
+    caption?: string;
 }
 
 /** Every topic's reports, by where they were sent from. */
-export function OverviewReports({ reports }: OverviewReportsProps): ReactNode {
+export function OverviewReports({
+    reports,
+    caption
+}: OverviewReportsProps): ReactNode {
     return (
-        <Section title={m.dashboardReports()}>
+        <Section title={m.dashboardReports()} caption={caption}>
             <ReportTiles reports={reports} />
         </Section>
     );

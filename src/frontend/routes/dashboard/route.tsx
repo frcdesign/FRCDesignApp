@@ -22,6 +22,9 @@ const DashboardSearchType = z.object({
         .nonnegative()
         .optional()
         .catch(undefined),
+    /** The overview's two charts' own ranges; the rest of the overview is fixed. */
+    usesRange: z.enum(RangePreset).optional().catch(undefined),
+    featureRange: z.enum(RangePreset).optional().catch(undefined),
     /** Feature reach for everybody, or new and existing users apart. */
     reach: z.enum(ReachView).optional().catch(undefined)
 });
@@ -33,7 +36,15 @@ export const Route = createFileRoute("/dashboard")({
     validateSearch: (search: Record<string, unknown>): DashboardSearch =>
         parseSearch(DashboardSearchType, search),
     search: {
-        middlewares: [retainSearchParams(["range", "threshold", "reach"])]
+        middlewares: [
+            retainSearchParams([
+                "range",
+                "threshold",
+                "reach",
+                "usesRange",
+                "featureRange"
+            ])
+        ]
     }
 });
 

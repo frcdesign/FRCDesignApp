@@ -115,6 +115,16 @@ export function latestPoint(points: ReachPoint[]): ReachPoint | undefined {
     return points.findLast((point) => point.value !== null);
 }
 
+/**
+ * At most `max` buckets to label, evenly spaced and counted back from the
+ * newest, so the latest week always has one.
+ */
+export function evenTicks(buckets: string[], max: number): string[] {
+    if (buckets.length <= max) return buckets;
+    const step = Math.ceil((buckets.length - 1) / (max - 1));
+    return buckets.filter((_, i) => (buckets.length - 1 - i) % step === 0);
+}
+
 /** Nudged features first, in the order their nudges shipped, so the ones being pushed lead. */
 export function featureOrder(): AppFeature[] {
     const nudged = [...new Set(NUDGES.map((nudge) => nudge.feature))];

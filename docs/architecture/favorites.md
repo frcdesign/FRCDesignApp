@@ -61,7 +61,7 @@ That selection is the favorite's default configuration; a favorite without one
 has the element's own defaults. The reset button returns to the default, and is
 off while it is on screen. **Set default configuration**, in the ⋯ menu,
 saves the configuration on screen as the default, and records a
-`default_selection` event for the dashboard's feature reach (see
+`default_selection` event for the dashboard's Feature usage (see
 [analytics.md](./analytics.md)). Until the user first opens a
 menu offering it, a blue dot marks the ⋯ button and the item
 (`Hint.OPENED_SET_DEFAULT_CONFIGURATION`, see [auth.md](./auth.md)).
