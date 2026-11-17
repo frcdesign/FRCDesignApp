@@ -337,7 +337,7 @@ library's summary and feature usage clamp them to when tracking began (`clampRan
 `getTrackingSince`).
 
 ```text
-GET /api/analytics/overview/usage                                   OverviewUsageOut
+GET /api/analytics/overview/usage?trendFrom=                        OverviewUsageOut, its trends from trendFrom
 GET /api/analytics/overview/series                                  DailyUsePoint[], per library
 GET /api/analytics/overview/sources                                 UseSourceUsage[]
 GET /api/analytics/overview/version-manager                         VersionManagerTotals
@@ -1108,8 +1108,10 @@ panel. Its routes read only rollups and return only aggregates:
 The overview has no page-wide range. **Uses over time** and **Feature usage**
 each pick their own (All time, 1 year or 90 days, `CHART_RANGE_PRESETS`;
 90 days unless chosen), kept in the url as `usesRange` and `featureRange`.
-Every other section covers the last 30 days (`OVERVIEW_TOTALS_PRESET`) and
-says so beside its title; **Libraries** is standing now. The library, part and
+**Overall** totals all time, and draws its sparklines and changes over the last
+30 days (`trendFrom`). Every other section covers the last 30 days
+(`OVERVIEW_TOTALS_PRESET`). Each says which beside its title; **Libraries** is
+standing now. The library, part and
 unused dashboards keep the range picker in the navbar, which the overview
 hides.
 
@@ -1224,6 +1226,8 @@ is withheld while its baseline reaches back before tracking began.
   the whole page left Feature usage with one or two weekly points on 7 or 30
   days, and a chart is where a longer view is worth choosing. A total reads
   best over a window everyone knows without looking up, so each says which.
+  The headline totals are all time, the app's size; its changes are recent,
+  since an all-time change moves too slowly to notice.
 - **Feature usage is weekly, over that week's active users.** The goal is
   every active user using each feature, so the share is of the people about
   that week, not of everyone ever seen, which only rises and is weighed down

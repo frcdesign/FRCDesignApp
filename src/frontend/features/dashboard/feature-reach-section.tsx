@@ -79,15 +79,16 @@ export function FeatureReachSection({
 }: FeatureReachSectionProps): ReactNode {
     const view = useReachView();
     return (
-        <Section title={m.dashboardFeatureReach()}>
-            {/* A row of its own: two controls don't fit beside the title on a phone. */}
-            <Group justify="space-between" preventGrowOverflow={false}>
-                {view === ReachView.NEW_VS_EXISTING ? <SplitLegend /> : <div />}
-                <Group gap="sm" preventGrowOverflow={false}>
+        <Section
+            title={m.dashboardFeatureReach()}
+            aside={
+                <Group gap="sm" wrap="wrap" preventGrowOverflow={false}>
                     <ReachViewControl view={view} />
                     <ChartRangeControl searchKey="featureRange" />
                 </Group>
-            </Group>
+            }
+        >
+            {view === ReachView.NEW_VS_EXISTING && <SplitLegend />}
             {query.data ? (
                 <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }}>
                     {featureOrder().map((feature) => (

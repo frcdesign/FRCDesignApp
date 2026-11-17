@@ -29,8 +29,26 @@ function overviewQuery<T>(area: string, range: DayRange) {
     });
 }
 
-export function getOverviewUsageQuery(range: DayRange) {
-    return overviewQuery<OverviewUsageOut>("usage", range);
+/** Totals over `range`; the sparklines and changes over `trend` when given. */
+export function getOverviewUsageQuery(range: DayRange, trend?: DayRange) {
+    return queryOptions<OverviewUsageOut>({
+        queryKey: [
+            "analytics",
+            "overview",
+            "usage",
+            range.from,
+            range.to,
+            trend?.from
+        ],
+        queryFn: () =>
+            apiGet("/analytics/overview/usage", {
+                query: {
+                    from: range.from,
+                    to: range.to,
+                    ...(trend ? { trendFrom: trend.from } : {})
+                }
+            })
+    });
 }
 
 export function getOverviewSeriesQuery(range: DayRange) {

@@ -23,6 +23,7 @@ import { UseSourceBreakdown } from "../../features/dashboard/use-mix";
 import {
     OVERVIEW_TOTALS_PRESET,
     RANGE_PRESETS,
+    RangePreset,
     toDayRange,
     useChartPreset
 } from "../../features/dashboard/range";
@@ -52,12 +53,14 @@ function useAllParts(range: DayRange) {
 function DashboardOverview(): ReactNode {
     // Totals and breakdowns cover one fixed window; the two charts pick their own.
     const range = toDayRange(OVERVIEW_TOTALS_PRESET);
+    // The headline is all time, its changes and sparklines the recent window.
+    const allTime = toDayRange(RangePreset.ALL);
     const caption = m.dashboardRangeLastDays({
         days: RANGE_PRESETS[OVERVIEW_TOTALS_PRESET].days ?? 0
     });
     const usesRange = toDayRange(useChartPreset("usesRange"));
     const featureRange = toDayRange(useChartPreset("featureRange"));
-    const usage = useQuery(getOverviewUsageQuery(range));
+    const usage = useQuery(getOverviewUsageQuery(allTime, range));
     const series = useQuery(getOverviewSeriesQuery(usesRange));
     const sources = useQuery(getOverviewSourcesQuery(range));
     const health = useQuery(getOverviewHealthQuery());
@@ -70,7 +73,10 @@ function DashboardOverview(): ReactNode {
 
     return (
         <Stack gap="xl">
-            <Section title={m.dashboardOverviewOverall()} caption={caption}>
+            <Section
+                title={m.dashboardOverviewOverall()}
+                caption={m.dashboardRangeAllTime()}
+            >
                 {usage.data ? (
                     <HeadlineTiles
                         totals={usage.data.totals}

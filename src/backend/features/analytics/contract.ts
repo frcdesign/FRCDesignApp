@@ -172,7 +172,7 @@ export interface FeatureScriptUsageOut {
 export interface OverviewUsageOut {
     /** Over the requested range, for the headline cards. */
     totals: AnalyticsTotals;
-    /** Also over the range, for the sparklines and the trend tiles. */
+    /** From `trendFrom` when it was asked for, else the range: the sparklines and the change. */
     metricSeries: DailyMetricPoint[];
     growth: GrowthOut;
     from: string;

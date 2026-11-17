@@ -68,10 +68,10 @@ and every library's together on the overview.
 
 ## Overview ranges
 
-| String                            | Kind              | Where                                                                   | When                          | Review                                                                    |
-| --------------------------------- | ----------------- | ----------------------------------------------------------------------- | ----------------------------- | ------------------------------------------------------------------------- |
-| "Last {days} days"                | Caption           | Beside every overview section's title but the two charts' and Libraries | Always; 30 days               | **⚑** New                                                                 |
-| "All time" / "1 year" / "90 days" | Segmented control | Beside Uses over time; under Feature usage's title                      | Always; 90 days unless chosen | **⚑** New; not yet in the catalog, as the navbar's picker's labels aren't |
+| String                            | Kind              | Where                                                                                   | When                          | Review                                                                    |
+| --------------------------------- | ----------------- | --------------------------------------------------------------------------------------- | ----------------------------- | ------------------------------------------------------------------------- |
+| "All time" / "Last {days} days"   | Caption           | Beside Overall / every other overview section's title but the two charts' and Libraries | Always; 30 days               | **⚑** New                                                                 |
+| "All time" / "1 year" / "90 days" | Segmented control | Beside Uses over time; under Feature usage's title                                      | Always; 90 days unless chosen | **⚑** New; not yet in the catalog, as the navbar's picker's labels aren't |
 
 ## Feature usage
 

@@ -56,7 +56,8 @@ import {
     clampRange,
     getTrackingSince,
     rangeQuery,
-    thresholdQuery
+    thresholdQuery,
+    trendRangeQuery
 } from "./range";
 
 export const analyticsRoutes = getApp();
@@ -68,18 +69,19 @@ export const analyticsRoutes = getApp();
 /** GET /api/analytics/overview/usage */
 analyticsRoutes.get(
     "/analytics/overview/usage",
-    validate("query", rangeQuery),
+    validate("query", trendRangeQuery),
     async (c) => {
         const db = getDb(c.env.DB);
-        const requested = c.req.valid("query");
+        const { trendFrom, ...requested } = c.req.valid("query");
         const trackingSince = await getTrackingSince(db);
         // Series are densified, so they need the clamped range.
         const range = clampRange(requested, trackingSince);
+        const trend = { from: trendFrom ?? requested.from, to: requested.to };
 
         const [totals, metricSeries, growth] = await Promise.all([
             getTotals(db, undefined, range),
-            getMetricSeries(db, range),
-            getGrowthFor(db, requested, trackingSince)
+            getMetricSeries(db, clampRange(trend, trackingSince)),
+            getGrowthFor(db, trend, trackingSince)
         ]);
         return c.json({
             totals,

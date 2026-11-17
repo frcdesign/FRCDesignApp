@@ -225,6 +225,31 @@ describe("analytics routes", () => {
     });
 
     describe("GET /analytics/overview/...", () => {
+        it("totals the whole range, and trends only from trendFrom", async () => {
+            await seedMetric("2026-01-05", 9);
+            await seedMetric("2026-03-01", 4);
+            await seedMetric("2026-03-03", 2);
+
+            const res = await anonymousGet(
+                "/api/analytics/overview/usage?from=2026-01-01&to=2026-03-03&trendFrom=2026-03-02"
+            );
+            const body: OverviewUsageOut = await res.json();
+
+            expect(body.totals.uses).toBe(15);
+            expect(
+                body.metricSeries.map((point) => [point.day, point.uses])
+            ).toEqual([
+                ["2026-03-02", 0],
+                ["2026-03-03", 2]
+            ]);
+            // Against the two days before the trend, not before the range.
+            expect(body.growth.uses).toMatchObject({
+                current: 2,
+                previous: 4,
+                currentFrom: "2026-03-02"
+            });
+        });
+
         it("sums the range's totals and counts unique users", async () => {
             await seedMetric("2026-01-01", 5);
             await seedMetric("2026-01-02", 3);

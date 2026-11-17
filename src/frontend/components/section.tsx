@@ -36,9 +36,13 @@ export function Section({
             {caption === undefined && aside === undefined ? (
                 heading
             ) : (
-                // Lets a wide control drop below the title rather than squeeze beside it.
-                <Group justify="space-between" preventGrowOverflow={false}>
-                    <Group gap="xs" align="baseline">
+                // A control that doesn't fit beside the title wraps below it; the title never shrinks.
+                <Group
+                    justify="space-between"
+                    wrap="wrap"
+                    preventGrowOverflow={false}
+                >
+                    <Group gap="xs" align="baseline" style={{ flexShrink: 0 }}>
                         {heading}
                         {caption && <Text c="dimmed">{caption}</Text>}
                     </Group>
