@@ -94,6 +94,17 @@ export function sendOpenFeatureMessage(
     });
 }
 
+/** Shows another tab of the workspace in the Onshape window. */
+export function sendSwitchTabMessage(
+    elementPath: ElementPath,
+    elementId: string
+) {
+    sendMessage(elementPath, {
+        messageName: MessageType.SWITCH_TAB,
+        anotherElementId: elementId
+    });
+}
+
 /** Onshape wants each request identified uniquely; one highlight is up at a time. */
 const HIGHLIGHT_PREFIX = "highlight-selection-";
 let highlights = 0;
@@ -222,8 +233,61 @@ export function sendStopRequestMessage(
     }
 }
 
+/**
+ * Selects a part in the Onshape window. In an assembly, `occurrencePath` says
+ * which instance, and Onshape still needs the part's id to select anything in it.
+ * In a Part Studio the part's id alone selects it, so no path is sent.
+ */
+export function sendSelectPartMessage(
+    elementPath: ElementPath,
+    partId: string,
+    occurrencePath?: string[]
+) {
+    sendHighlight(elementPath, [
+        {
+            entityType: "BODY",
+            selectionId: partId,
+            occurrencePath
+        }
+    ]);
+}
+
+/** Leaves nothing selected in the Onshape window; a `stopRequest` doesn't. */
+export function sendClearSelectionMessage(elementPath: ElementPath) {
+    sendHighlight(elementPath, []);
+}
+
+interface SelectedPart {
+    entityType: string;
+    selectionId: string;
+    /** Absent in a Part Studio, where the part's id alone selects it. */
+    occurrencePath?: string[];
+}
+
+/** Selects `parts` in the Onshape window, telling the selection store it was the app. */
+function sendHighlight(elementPath: ElementPath, parts: SelectedPart[]) {
+    expectSelection(
+        parts.map((part) => ({
+            ...part,
+            occurrencePath: part.occurrencePath ?? []
+        }))
+    );
+    sendMessage(elementPath, {
+        messageName: MessageType.REQUEST_HIGHLIGHT_SELECTION,
+        messageId: `${HIGHLIGHT_PREFIX}${++highlights}`,
+        selections: parts.map(
+            ({ entityType, selectionId, occurrencePath }) => ({
+                selectionType: "ENTITY",
+                entityType,
+                selectionId,
+                ...(occurrencePath && { occurrencePath })
+            })
+        )
+    });
+}
+
 /*
- * Highlighting the insert location was tried and dropped:
+ * The insert location isn't highlighted: for its mate connector,
  * `requestSelectionHighlight` answered SUCCESS and painted nothing. Undocumented
  * findings from that:
  *

@@ -177,3 +177,8 @@ export function featureScriptsLoadStatusQueryKey() {
 export function featureScriptStatsQueryKey() {
     return ["featurescripts", "stats"];
 }
+
+/** Per workspace, which the check covers whole, whichever tab launched it. */
+export function designCheckQueryKey(workspace: InstancePath) {
+    return ["design-check", workspace.documentId, workspace.instanceId];
+}

@@ -12,7 +12,8 @@ import type {
     ReportSummary,
     UnusedOptionOut,
     UseSourceUsage,
-    VersionManagerTotals
+    VersionManagerTotals,
+    DesignCheckTotals
 } from "@backend/features/analytics/contract";
 import { LibraryId } from "@backend/features/library/library-id";
 import { type DayRange } from "@backend/features/analytics/day";
@@ -69,6 +70,10 @@ export function getOverviewFeatureScriptsQuery(range: DayRange) {
 
 export function getOverviewFeatureReachQuery(range: DayRange) {
     return overviewQuery<FeatureReachOut>("feature-reach", range);
+}
+
+export function getDesignCheckQuery(range: DayRange) {
+    return overviewQuery<DesignCheckTotals>("design-check", range);
 }
 
 /** Every library's together; it changes with a reload, not with the range. */

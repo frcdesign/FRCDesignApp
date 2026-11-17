@@ -14,6 +14,7 @@ import {
     getOverviewUsageQuery,
     getPartsQuery,
     getVersionManagerQuery,
+    getDesignCheckQuery,
     firstPending
 } from "../../features/dashboard/dashboard-queries";
 import { DashboardState } from "../../features/dashboard/dashboard-state";
@@ -36,6 +37,7 @@ import { Section, SectionCard } from "../../components/section";
 import { UsageTreemap } from "../../features/dashboard/usage-treemap";
 import { VersionManagerTiles } from "../../features/dashboard/version-manager-tiles";
 import { FeatureScriptUsageSection } from "../../features/dashboard/featurescript-usage";
+import { DesignCheckTiles } from "../../features/dashboard/design-check-tiles";
 import { OverviewReports } from "../../features/dashboard/report-summary";
 import { HealthTiles } from "../../features/dashboard/health-report";
 import { FeatureReachSection } from "../../features/dashboard/feature-reach-section";
@@ -70,6 +72,7 @@ function DashboardOverview(): ReactNode {
     const health = useQuery(getOverviewHealthQuery());
     const versionManager = useQuery(getVersionManagerQuery(range));
     const featureScripts = useQuery(getOverviewFeatureScriptsQuery(range));
+    const designCheck = useQuery(getDesignCheckQuery(range));
     const reports = useQuery(getOverviewReportsQuery(range));
     const featureReach = useQuery(getOverviewFeatureReachQuery(featureRange));
     const allParts = useAllParts(range);
@@ -148,6 +151,16 @@ function DashboardOverview(): ReactNode {
                     loading={m.dashboardLoadingFeatureScripts()}
                     title={m.dashboardFeatureScripts()}
                     caption={caption}
+                />
+            )}
+
+            {designCheck.data ? (
+                <DesignCheckTiles totals={designCheck.data} />
+            ) : (
+                <DashboardState
+                    query={designCheck}
+                    loading={m.dashboardLoadingDesignCheck()}
+                    title={m.dashboardDesignCheck()}
                 />
             )}
 

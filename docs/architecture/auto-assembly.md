@@ -840,7 +840,7 @@ function deleteAssemblyInstances(
 function getAssemblyFeatures(
     client: OnshapeApi,
     assemblyPath: ElementPath
-): Promise<OnshapeAssemblyFeatureList>;
+): Promise<OnshapeFeatureListResponse>;
 function deleteAssemblyFeature(
     client: OnshapeApi,
     assemblyPath: ElementPath,

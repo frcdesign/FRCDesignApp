@@ -6,9 +6,9 @@ import { ElementType } from "../element-type";
 import { IDENTITY_TRANSFORM } from "../objects/transform";
 import {
     OnshapeAssemblyDefinition,
-    OnshapeAssemblyFeatureList,
     OnshapeBoundingBox,
     OnshapeCreatedFeature,
+    OnshapeFeatureListResponse,
     OnshapeInsertInstancesResponse
 } from "../types";
 
@@ -33,6 +33,18 @@ export function getAssembly(
             )
         })
     });
+}
+
+/** `DELETE /assemblies/.../instance/nodeid/{nid}`, `nid` being the instance's id. */
+export function deleteInstance(
+    client: OnshapeApi,
+    assemblyPath: ElementPath,
+    instanceId: string
+): Promise<void> {
+    assertWorkspace(assemblyPath);
+    return client.deleteNone(
+        `/assemblies${toElementApiPath(assemblyPath)}/instance/nodeid/${instanceId}`
+    );
 }
 
 /** For a part studio, `options.partTypes` defaults to PARTS and COMPOSITE_PARTS. */
@@ -161,11 +173,11 @@ export function deleteAssemblyInstances(
     );
 }
 
-/** Every feature in an assembly's feature list: its mates, mate connectors and the rest. */
+/** Every feature in an assembly's feature list, its mates, mate connectors and the rest, and whether each regenerated. */
 export function getAssemblyFeatures(
     client: OnshapeApi,
     assemblyPath: ElementPath
-): Promise<OnshapeAssemblyFeatureList> {
+): Promise<OnshapeFeatureListResponse> {
     return client.get(`/assemblies${toElementApiPath(assemblyPath)}/features`);
 }
 

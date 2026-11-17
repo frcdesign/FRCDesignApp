@@ -11,6 +11,7 @@ describe("app tabs", () => {
             "/app/version-manager"
         );
         expect(getTabPath(UtilityTab.AUTO_ASSEMBLY)).toBe("/app/auto-assembly");
+        expect(getTabPath(UtilityTab.DESIGN_CHECK)).toBe("/app/design-check");
     });
 
     it("tells a library from a utility", () => {

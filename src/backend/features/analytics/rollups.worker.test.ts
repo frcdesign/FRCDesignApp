@@ -15,7 +15,7 @@ import { configurations } from "../../db/schema";
 import { type AppContext } from "../../lib/context";
 import { ElementType } from "../../lib/onshape/element-type";
 import { toSelection } from "../configurations/selection";
-import { AppFeature, UseSource } from "./usage";
+import { AppFeature, EventType, UseSource } from "./usage";
 import { SIGNED_OUT_USER_ID } from "./logged-event";
 import {
     FeedbackCategory,
@@ -27,6 +27,8 @@ import {
     dailyAppOpens,
     dailyConfigurationMetrics,
     dailyFeatureUsers,
+    dailyDesignCheckMetrics,
+    dailyDesignIssueMetrics,
     dailyInsertableMetrics,
     dailyInsertableUsers,
     dailyMetrics,
@@ -41,8 +43,10 @@ import {
 import {
     trackAppOpen,
     trackDefaultSelection,
+    trackDesignAction,
     trackDownload,
     trackFeatureAdd,
+    trackDesignCheck,
     trackInsert,
     trackReport,
     trackVersionRun,
@@ -53,6 +57,7 @@ import {
     VersionJobKind,
     VersionJobState
 } from "../version-manager/contract";
+import { DesignIssueType } from "../design-check/contract";
 
 const db = getDb(env.DB);
 const SIZE_PARAMETERS = [enumParam("size", ["small", "large"])];
@@ -69,6 +74,8 @@ const ROLLUPS = [
     dailyConfigurationMetrics,
     dailyVersionMetrics,
     dailyFeatureUsers,
+    dailyDesignCheckMetrics,
+    dailyDesignIssueMetrics,
     insertableStats,
     userStats
 ];
@@ -156,6 +163,27 @@ describe("rollupWrites", () => {
                 result: { createdVersions: 1, updatedElements: 5 }
             }
         });
+        await trackDesignCheck(fakeContext(), {
+            elementType: ElementType.PART_STUDIO,
+            issues: [
+                { type: DesignIssueType.FEATURE_ERROR, subject: "Extrude 1" },
+                { type: DesignIssueType.FEATURE_ERROR, subject: "Fillet 1" }
+            ]
+        });
+        await trackDesignCheck(fakeContext(), {
+            elementType: ElementType.ASSEMBLY,
+            issues: []
+        });
+        await trackDesignAction(
+            fakeContext(),
+            EventType.DESIGN_FIX,
+            DesignIssueType.FEATURE_ERROR
+        );
+        await trackDesignAction(
+            fakeContext(),
+            EventType.DESIGN_DISMISS,
+            DesignIssueType.FEATURE_ERROR
+        );
         clock.mockRestore();
 
         const live = await readRollups();

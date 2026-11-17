@@ -16,6 +16,7 @@ import { Route as AppRouteRouteImport } from './routes/app/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
 import { Route as AppVersionManagerRouteImport } from './routes/app/version-manager'
+import { Route as AppDesignCheckRouteImport } from './routes/app/design-check'
 import { Route as AppAutoAssemblyRouteImport } from './routes/app/auto-assembly'
 import { Route as PagesVersionErrorRouteImport } from './routes/_pages/version-error'
 import { Route as PagesSignInErrorRouteImport } from './routes/_pages/sign-in-error'
@@ -69,6 +70,11 @@ const DashboardIndexRoute = DashboardIndexRouteImport.update({
 const AppVersionManagerRoute = AppVersionManagerRouteImport.update({
   id: '/version-manager',
   path: '/version-manager',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppDesignCheckRoute = AppDesignCheckRouteImport.update({
+  id: '/design-check',
+  path: '/design-check',
   getParentRoute: () => AppRouteRoute,
 } as any)
 const AppAutoAssemblyRoute = AppAutoAssemblyRouteImport.update({
@@ -191,6 +197,7 @@ export interface FileRoutesByFullPath {
   '/sign-in-error': typeof PagesSignInErrorRoute
   '/version-error': typeof PagesVersionErrorRoute
   '/app/auto-assembly': typeof AppAutoAssemblyRoute
+  '/app/design-check': typeof AppDesignCheckRoute
   '/app/version-manager': typeof AppVersionManagerRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/app/library/$libraryId': typeof AppLibraryLibraryIdRouteRouteWithChildren
@@ -217,6 +224,7 @@ export interface FileRoutesByTo {
   '/sign-in-error': typeof PagesSignInErrorRoute
   '/version-error': typeof PagesVersionErrorRoute
   '/app/auto-assembly': typeof AppAutoAssemblyRoute
+  '/app/design-check': typeof AppDesignCheckRoute
   '/app/version-manager': typeof AppVersionManagerRoute
   '/dashboard': typeof DashboardIndexRoute
   '/app/featurescripts': typeof AppFeaturescriptsIndexRoute
@@ -244,6 +252,7 @@ export interface FileRoutesById {
   '/_pages/sign-in-error': typeof PagesSignInErrorRoute
   '/_pages/version-error': typeof PagesVersionErrorRoute
   '/app/auto-assembly': typeof AppAutoAssemblyRoute
+  '/app/design-check': typeof AppDesignCheckRoute
   '/app/version-manager': typeof AppVersionManagerRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/app/library/$libraryId': typeof AppLibraryLibraryIdRouteRouteWithChildren
@@ -274,6 +283,7 @@ export interface FileRouteTypes {
     | '/sign-in-error'
     | '/version-error'
     | '/app/auto-assembly'
+    | '/app/design-check'
     | '/app/version-manager'
     | '/dashboard/'
     | '/app/library/$libraryId'
@@ -300,6 +310,7 @@ export interface FileRouteTypes {
     | '/sign-in-error'
     | '/version-error'
     | '/app/auto-assembly'
+    | '/app/design-check'
     | '/app/version-manager'
     | '/dashboard'
     | '/app/featurescripts'
@@ -326,6 +337,7 @@ export interface FileRouteTypes {
     | '/_pages/sign-in-error'
     | '/_pages/version-error'
     | '/app/auto-assembly'
+    | '/app/design-check'
     | '/app/version-manager'
     | '/dashboard/'
     | '/app/library/$libraryId'
@@ -404,6 +416,13 @@ declare module '@tanstack/react-router' {
       path: '/version-manager'
       fullPath: '/app/version-manager'
       preLoaderRoute: typeof AppVersionManagerRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/app/design-check': {
+      id: '/app/design-check'
+      path: '/design-check'
+      fullPath: '/app/design-check'
+      preLoaderRoute: typeof AppDesignCheckRouteImport
       parentRoute: typeof AppRouteRoute
     }
     '/app/auto-assembly': {
@@ -576,6 +595,7 @@ const AppLibraryLibraryIdRouteRouteWithChildren =
 interface AppRouteRouteChildren {
   AppFeaturescriptsRouteRoute: typeof AppFeaturescriptsRouteRouteWithChildren
   AppAutoAssemblyRoute: typeof AppAutoAssemblyRoute
+  AppDesignCheckRoute: typeof AppDesignCheckRoute
   AppVersionManagerRoute: typeof AppVersionManagerRoute
   AppLibraryLibraryIdRouteRoute: typeof AppLibraryLibraryIdRouteRouteWithChildren
 }
@@ -583,6 +603,7 @@ interface AppRouteRouteChildren {
 const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppFeaturescriptsRouteRoute: AppFeaturescriptsRouteRouteWithChildren,
   AppAutoAssemblyRoute: AppAutoAssemblyRoute,
+  AppDesignCheckRoute: AppDesignCheckRoute,
   AppVersionManagerRoute: AppVersionManagerRoute,
   AppLibraryLibraryIdRouteRoute: AppLibraryLibraryIdRouteRouteWithChildren,
 }
