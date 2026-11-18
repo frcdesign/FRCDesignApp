@@ -8,6 +8,7 @@ import {
 } from "../../lib/onshape/endpoints/translations";
 import { ElementType } from "../../lib/onshape/element-type";
 import {
+    loggedEvents,
     MOCK_ONSHAPE_API,
     TEST_PART_STUDIO_ID,
     TEST_PART_STUDIO_PATH,
@@ -18,7 +19,6 @@ import {
     seedPartStudio
 } from "../../../__test_utils__";
 import { StepExportState, stepExportFilePath } from "./contract";
-import { events } from "../analytics/schema";
 import { EventType, UseSource } from "../analytics/usage";
 import { OnshapeApiError } from "../../lib/onshape/client";
 
@@ -91,7 +91,7 @@ describe("step export routes", () => {
             env
         );
 
-        expect(await db.select().from(events).all()).toMatchObject([
+        expect(loggedEvents()).toMatchObject([
             {
                 type: EventType.DOWNLOAD,
                 insertableId: TEST_PART_STUDIO_ID,
@@ -114,7 +114,7 @@ describe("step export routes", () => {
         );
 
         expect(res.status).toBe(403);
-        expect(await db.select().from(events).all()).toEqual([]);
+        expect(loggedEvents()).toEqual([]);
     });
 
     it("exports the default without naming a configuration", async () => {

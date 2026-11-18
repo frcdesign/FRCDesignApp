@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { env } from "cloudflare:workers";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+    loggedEvents,
     MOCK_ONSHAPE_API,
     createTestApp,
     jsonRequest
@@ -23,7 +24,6 @@ import { iconKey } from "./store";
 import * as LoadClaim from "./load-claim";
 import { reportLoadStatus } from "./load-status";
 import { AccessLevel } from "../auth/access-level";
-import { events } from "../analytics/schema";
 import { EventType } from "../analytics/usage";
 
 const db = getDb(env.DB);
@@ -360,7 +360,7 @@ describe("featurescripts routes", () => {
             env
         );
 
-        const logged = await db.select().from(events).all();
+        const logged = loggedEvents();
         expect(logged).toHaveLength(3);
         expect(logged[0]).toMatchObject({
             type: EventType.FEATURE_ADD,

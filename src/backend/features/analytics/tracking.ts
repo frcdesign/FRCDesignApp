@@ -3,7 +3,8 @@ import type { BatchItem } from "drizzle-orm/batch";
 import { runInBackground } from "../../lib/background";
 import { type AppBindings, type AppContext } from "../../lib/context";
 import { getDb, type Db } from "../../db/client";
-import { events, type LoggedEvent } from "./schema";
+import { type LoggedEvent } from "./schema";
+import { logEvents } from "./event-log";
 import {
     NO_ELEMENT,
     NOT_A_USE,
@@ -80,7 +81,7 @@ export function trackInsert(
 ): Promise<void> {
     return runInBackground(c, "record an insert", async () =>
         recordInserts(
-            getDb(c.env.DB),
+            c.env,
             await c.var.getUserId(),
             Array.from({ length: instances }, () => event)
         )
@@ -89,12 +90,12 @@ export function trackInsert(
 
 /** One event per insert, all in one batch; for a caller with no request to track from. */
 export async function recordInserts(
-    db: Db,
+    env: TrackingBindings,
     userId: string,
     inserts: InsertEvent[]
 ): Promise<void> {
     await recordBatch(
-        db,
+        env,
         inserts.map((event) => ({
             event: {
                 ...columnsOfUse(EventType.INSERT, event, userId),
@@ -114,7 +115,7 @@ export async function recordInserts(
 export function trackDownload(c: AppContext, event: UseEvent): Promise<void> {
     return runInBackground(c, "record a download", async () =>
         record(
-            getDb(c.env.DB),
+            c.env,
             {
                 ...columnsOfUse(
                     EventType.DOWNLOAD,
@@ -156,7 +157,7 @@ function columnsOfUse(
 export function trackAppOpen(c: AppContext): Promise<void> {
     return runInBackground(c, "record an app open", async () =>
         record(
-            getDb(c.env.DB),
+            c.env,
             {
                 ...eventCore(EventType.APP_OPEN, null, await c.var.getUserId()),
                 ...NO_ELEMENT,
@@ -214,7 +215,7 @@ export async function trackVersionRun(
 ): Promise<void> {
     const { status } = event;
     await record(
-        getDb(env.DB),
+        env,
         {
             ...eventCore(EventType.VERSION_RUN, null, event.userId),
             ...NO_ELEMENT,
@@ -259,7 +260,7 @@ export function trackReport(c: AppContext, event: ReportEvent): Promise<void> {
         : NO_ELEMENT;
     return runInBackground(c, "record a report", () =>
         record(
-            getDb(c.env.DB),
+            c.env,
             {
                 ...eventCore(
                     EventType.REPORT,
@@ -294,7 +295,7 @@ export function trackFeatureAdd(
 ): Promise<void> {
     return runInBackground(c, "record a FeatureScript add", async () =>
         record(
-            getDb(c.env.DB),
+            c.env,
             {
                 ...eventCore(
                     EventType.FEATURE_ADD,
@@ -327,7 +328,7 @@ export function trackDefaultSelection(
 ): Promise<void> {
     return runInBackground(c, "record a default configuration", async () =>
         record(
-            getDb(c.env.DB),
+            c.env,
             {
                 ...eventCore(
                     EventType.DEFAULT_SELECTION,
@@ -348,11 +349,11 @@ export function trackDefaultSelection(
 
 /** Batched so neither half lands without the other. */
 function record(
-    db: Db,
+    env: TrackingBindings,
     event: LoggedEvent,
     parameters: ConfigurationParameter[]
 ): Promise<void> {
-    return recordBatch(db, [{ event, parameters }]);
+    return recordBatch(env, [{ event, parameters }]);
 }
 
 interface Recorded {
@@ -360,18 +361,37 @@ interface Recorded {
     parameters: ConfigurationParameter[];
 }
 
-/** Several events and their rollups in one batch, so none lands without the rest. */
-async function recordBatch(db: Db, recorded: Recorded[]): Promise<void> {
+/** What recording reaches: D1 for the rollups, and the event log's stream. */
+type TrackingBindings = Pick<AppBindings, "DB" | "EVENT_LOG">;
+
+/**
+ * The rollups first, in one batch so none lands without the rest, then the
+ * events to the log. A failed send is reported, not thrown: a workflow step
+ * retried for it would count its rollups twice.
+ */
+async function recordBatch(
+    env: TrackingBindings,
+    recorded: Recorded[]
+): Promise<void> {
     if (recorded.length === 0) return;
+    const db = getDb(env.DB);
     const writes: BatchItem<"sqlite">[] = recorded.flatMap(
         ({ event, parameters }) => [
-            db.insert(events).values(event),
             ...rollupWrites(db, event, parameters),
             ...(namesPerson(event) ? [createUser(db, event)] : [])
         ]
     );
-
-    await db.batch(writes as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
+    if (writes.length > 0) {
+        await db.batch(
+            writes as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]
+        );
+    }
+    await logEvents(
+        env,
+        recorded.map(({ event }) => event)
+    ).catch((error: unknown) => {
+        console.error("Failed to send events to the event log", error);
+    });
 }
 
 /**

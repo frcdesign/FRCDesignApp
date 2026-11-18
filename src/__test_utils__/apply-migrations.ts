@@ -1,12 +1,14 @@
 import { applyD1Migrations } from "cloudflare:test";
 import { env } from "cloudflare:workers";
 import { beforeEach } from "vitest";
+import { captureEventLog } from "./event-log";
 
 // Storage outlives a test: the pool keeps it per file, and files share a runtime
 // (`isolate: false` in vitest.config.ts). So every test starts from empty storage.
 await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
 
 beforeEach(async () => {
+    captureEventLog();
     await Promise.all([emptyD1(env.DB), emptyKv(env.KV), emptyR2(env.BLOB)]);
 });
 

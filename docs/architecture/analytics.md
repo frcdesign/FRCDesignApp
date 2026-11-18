@@ -190,6 +190,18 @@ interface ReportEvent {
 }
 ```
 
+`src/backend/features/analytics/event-log.ts`, a module scripts also import
+
+```ts
+// The columns every event has, and the rest as JSON under their D1 names.
+function toLogRecord(event: LoggedEvent): EventLogRecord;
+// A no-op where no stream is bound, as in local dev and tests.
+async function logEvents(
+    env: { EVENT_LOG?: EventLog },
+    logged: LoggedEvent[]
+): Promise<void>;
+```
+
 `src/backend/features/analytics/schema.ts`: the `events` table, whose row is
 `LoggedEvent` (`typeof events.$inferSelect`), spelled out here with the
 columns' comments. Every rollup table is listed under **Storage**.
@@ -997,10 +1009,24 @@ and feedback's `FeedbackTopic`, `FeedbackCategory` and `FeedbackSource`
 
 ## Storage
 
+**The event log**, a Pipelines stream (`EVENT_LOG`) that writes an Iceberg
+table, `analytics.events`, to the R2 bucket `frc-design-app-<env>-events`:
+
+- One row per event. The columns every event has are columns of their own:
+  `id`, `type`, `created_at` (epoch ms), `day`, `user_id`, `library_id` and
+  `schema_version`. The rest is JSON in `data`, under its D1 column names
+  (`toLogRecord`). The stream's schema can't change once made, so a new
+  column goes in `data`.
+- Pipelines adds `__ingest_ts` and partitions by its day, and writes files
+  every five minutes. Nothing in the running app reads it.
+- `scripts/event-log/` creates an environment's stream, sink and pipeline
+  (`setup.sh`), and moves D1's `events` into it (`move-events.ts`).
+
 **D1**, in `features/analytics/schema.ts` (kept apart from `db/schema.ts`, since
 no foreign key crosses between them):
 
-- `events` — the append-only log. Every event has an id, type, time, day key,
+- `events` — the log's earlier home, kept until `move-events.ts` has moved
+  it; nothing writes it. Its columns are the event's. Every event has an id, type, time, day key,
   user and schema version, and the library where it has one; a use adds the
   element path, insertable, canonical selection, source and favorite flag, and
   an insert also its target tab type and the quick-insert, fasten, fastenable
@@ -1070,7 +1096,8 @@ no foreign key crosses between them):
   FeatureScript add, a signed-in report, a default configuration. An Auto
   Assembly run's uses count only toward `AUTO_ASSEMBLY`, not toward fasten or
   the other flags they set. It starts empty at migration
-  `0015_feature_reach.sql`: nothing fills it from history. `at_insert_location`
+  `0015_feature_reach.sql`; `move-events.ts` fills it from the events it
+  moves. `at_insert_location`
   and `default_selection` begin with it, at schema version 4.
 - `users`, in `db/schema.ts`, is each person's record. `record` creates it,
   dated `created_at`, in the same batch as their first event that names a
@@ -1115,10 +1142,12 @@ no foreign key crosses between them):
    tracking never slows or fails what the user asked for.
 3. The selection is stored canonically (`canonicalValues`), so `5 in` and
    `(2 + 3) in` count as one value.
-4. `record` writes the event and its rollup rows in one D1 batch, so neither
-   lands without the other; `recordBatch` writes several events the same way,
-   one query against D1's per-invocation limit however many statements it
-   holds.
+4. `recordBatch` writes the events' rollup rows in one D1 batch, so none
+   lands without the rest, one query against D1's per-invocation limit however
+   many statements it holds. `record` does the same for one event.
+5. Then it sends the events to the log (`logEvents`). A failed send is
+   reported, not thrown: a workflow step retried for it would count its
+   rollups twice.
 
 ### Imported history
 
@@ -1254,8 +1283,9 @@ is withheld while its baseline reaches back before tracking began.
 - Tracking never fails or delays the request it records.
 - Analytics routes are public: they never call `getUserId()` or
   `getOnshapeApi()`, and never return anything about one user.
-- Every rollup is derivable from `events` alone, so the rollups can be rebuilt by
-  replaying the log.
+- Every rollup is derivable from the event log alone, so the rollups can be
+  rebuilt by replaying it.
+- The log never holds an event the rollups don't count.
 - Besides `daily_feature_users`, which every event that is a use of an
   `AppFeature` writes, an event without a library writes one rollup and no
   other: `daily_app_opens` for an open, `daily_version_metrics` for a version
@@ -1293,7 +1323,8 @@ is withheld while its baseline reaches back before tracking began.
 | Failure                                       | Result                                                       | Recovery                                                            |
 | --------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------- |
 | The tracking write fails                      | That event is lost; what it records is unaffected            | None needed                                                         |
-| A rollup is wrong after a code change         | Dashboard numbers off                                        | Replay `events` through `rollupWrites`; no script does this         |
+| The event log can't be reached                | The rollups count the event; the log misses it               | None; the send's failure is logged                                  |
+| A rollup is wrong after a code change         | Dashboard numbers off                                        | Replay the event log through `rollupWrites`; no script does this    |
 | An import file fails part-way                 | D1 rolls the file back; the files before it stay applied     | Apply the same file again                                           |
 | An import file is applied twice               | Refused on its first event's id; nothing counted twice       | None needed                                                         |
 | A range starts before tracking began          | Clamped; growth withheld when its baseline predates tracking | Automatic                                                           |
@@ -1339,8 +1370,8 @@ is withheld while its baseline reaches back before tracking began.
   reach; nearly everybody searches, so its share sits near the top and hides
   growth. Their charts count the week's users instead.
 - **A feature's line starts at its first recorded use.** `daily_feature_users`
-  is not filled from history: replaying 2.8 million events in a migration
-  outlasts D1's 30-second limit. Before a feature's first row nothing tells a week nobody used it
+  is filled from history by `move-events.ts`, not by a migration: replaying
+  2.8 million events outlasts D1's 30-second limit. Before a feature's first row nothing tells a week nobody used it
   from one nothing recorded, so the line is left blank rather than drawn at 0%.
   It costs the weeks before a new feature's first use, which read the same.
 - **An Auto Assembly run's uses are Auto Assembly's alone.** A run's planner
@@ -1406,6 +1437,10 @@ is withheld while its baseline reaches back before tracking began.
   tally misses it.
 - **A log plus rollups.** The log keeps everything for replay; rollups keep every
   dashboard read a small indexed query.
+- **The log is in R2, not D1.** Nothing in the running app reads it, and it
+  grows without bound. In D1 a scan of it held the database, which runs one
+  query at a time, for seconds, and outlasted a migration's 30-second limit.
+  In R2 it costs nothing to keep and a query of it runs elsewhere.
 - **Keyed by element, not insertable.** An insertable row is replaced when a tab
   is removed and re-added; its element id is not.
 - **Imported history is credited to re-created parts by name.** The exception
