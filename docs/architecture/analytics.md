@@ -974,7 +974,7 @@ no foreign key crosses between them):
   `daily_configuration_metrics`, `daily_user_activity`, `user_stats`,
   `daily_app_opens`, `daily_version_metrics`, `daily_report_metrics`,
   `daily_featurescript_metrics`, `daily_featurescript_users`,
-  `daily_feature_users`.
+  `daily_feature_users`, `user_first_seen`.
 - A use writes every library rollup, an insert and a download alike.
   `daily_metrics` keeps a row per event type, so the uses are the sum of the
   `insert` and `download` rows and either can be read alone.
@@ -1004,10 +1004,16 @@ no foreign key crosses between them):
   `AppFeature` that day, as `featuresOf` decides from the event. Feature first,
   so a feature's first recorded day is an index seek. Any kind of event can
   write it: a use by where it started and its flags, a version run, a
-  FeatureScript add, a signed-in report, a default configuration. Migration
-  `0014_feature_reach.sql` filled it from the log for every feature recorded
-  before it; `at_insert_location` and `default_selection` begin with it, at
-  schema version 3.
+  FeatureScript add, a signed-in report, a default configuration. It starts
+  empty at migration `0015_feature_reach.sql`: nothing fills it from history.
+  `at_insert_location` and `default_selection` begin with it, at schema
+  version 4.
+- `user_first_seen` is keyed by user: their first day in any rollup that names
+  people (`daily_user_activity`, `daily_app_opens`, `daily_feature_users`).
+  Every event that writes one of those keeps the earlier of its day and the
+  stored one, so a replay in any order gives the same. Migration
+  `0015_feature_reach.sql` filled it from those rollups. It is the user's
+  record for reporting: `users` holds only people who have favorited a part.
 - `favorites`, in `db/schema.ts`, is read for each part's standing favorites,
   through its index on `insertable_id` (`favorites_insertable_idx`).
 
@@ -1127,10 +1133,9 @@ feature's nudges (`NUDGES`) shipped or was withdrawn; features with a nudge
 come first. The tooltip gives a share's users and active users beside it.
 
 **New vs existing** (`reach=new-vs-existing` in the url) draws two lines per
-chart in place of one. A person is new in a week when their first day in any
-rollup that names people — `daily_user_activity`, `daily_app_opens` or
-`daily_feature_users`, all time — falls in that week or the
-`NEW_USER_WEEKS` − 1 before it; everybody else active that week is existing.
+chart in place of one. A person is new in a week when their first day
+(`user_first_seen`) falls in that week or the `NEW_USER_WEEKS` − 1 before it.
+Everybody else active that week is existing.
 The split is left out of a week whose window starts on or before the day
 tracking began, since somebody first seen then may have used the app long
 before.
@@ -1164,15 +1169,16 @@ is withheld while its baseline reaches back before tracking began.
 - Every rollup is derivable from `events` alone, so the rollups can be rebuilt by
   replaying the log.
 - Besides `daily_feature_users`, which every event that is a use of an
-  `AppFeature` writes, an event without a library writes one rollup and no
+  `AppFeature` writes, and `user_first_seen`, which every event that names a
+  person writes, an event without a library writes one rollup and no
   other: `daily_app_opens` for an open, `daily_version_metrics` for a version
   run, and a FeatureScript add its two, `daily_featurescript_metrics` and
   `daily_featurescript_users`. A report writes `daily_report_metrics` alone,
   with a library or without, and a default configuration nothing else. Every
   other rollup is keyed by library.
 - `featuresOf` is the one place that says which events are a use of which
-  feature, and the migration that filled `daily_feature_users` matches it for
-  every feature recorded before it.
+  feature.
+- A person's first day is never later than any day a rollup names them on.
 - Every nudge toward a feature is in `NUDGES`, added in the change that ships
   or withdraws it.
 - An event's columns are decided in `logged-event.ts`; a new column fails to
@@ -1235,18 +1241,16 @@ is withheld while its baseline reaches back before tracking began.
   week is the shortest span that does, and a nudge that works shows as a step.
 - **New means first seen in the last four weeks, across every rollup.** Four
   weeks covers a newcomer's first sessions without keeping them new for a
-  whole season. First seen is read from the
-  rollups at request time rather than stored, so it never drifts from them,
-  at the cost of reading every person's days in those three tables on each
-  request.
+  whole season. First seen is stored per person, since working it out from
+  the rollups on each request read every person's days and held D1 for
+  seconds.
 - **Some features are counted, not shared.** Nobody should need to report an
   issue or download a STEP file, so a share of everybody has no target to
   reach; nearly everybody searches, so its share sits near the top and hides
   growth. Their charts count the week's users instead.
-- **A feature's line starts at its first recorded use.** Search, favorites and
-  recents rest on `source`, which imported history never recorded; insert
-  location and default configurations were not recorded at all before schema
-  version 3. Before a feature's first row nothing tells a week nobody used it
+- **A feature's line starts at its first recorded use.** `daily_feature_users`
+  is not filled from history: replaying 2.8 million events in a migration
+  outlasts D1's 30-second limit. Before a feature's first row nothing tells a week nobody used it
   from one nothing recorded, so the line is left blank rather than drawn at 0%.
   It costs the weeks before a new feature's first use, which read the same.
 - **A default configuration is not activity.** Saving one places nothing, so

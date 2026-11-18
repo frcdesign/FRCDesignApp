@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import { type Db } from "../../db/client";
 import { type ConfigurationParameter } from "../configurations/contract";
@@ -31,6 +32,7 @@ import {
     dailyFeatureScriptMetrics,
     dailyFeatureScriptUsers,
     dailyFeatureUsers,
+    userFirstSeen,
     insertableStats,
     userStats,
     type LoggedEvent
@@ -45,12 +47,34 @@ export function rollupWrites(
     event: LoggedEvent,
     parameters: ConfigurationParameter[]
 ): BatchItem<"sqlite">[] {
-    return [
+    const features = featuresOf(event);
+    const writes = [
         ...kindWrites(db, event, parameters),
-        ...featuresOf(event).map((feature) =>
-            markFeatureUsed(db, event, feature)
-        )
+        ...features.map((feature) => markFeatureUsed(db, event, feature))
     ];
+    return namesPerson(event, features)
+        ? [...writes, markFirstSeen(db, event)]
+        : writes;
+}
+
+/** Whether the event puts its user in a rollup that names people: activity, an open, a feature's users. */
+function namesPerson(event: LoggedEvent, features: AppFeature[]): boolean {
+    return (
+        features.length > 0 ||
+        event.type === EventType.APP_OPEN ||
+        (isUseEvent(event.type) && event.libraryId !== null)
+    );
+}
+
+/** The earlier of the stored day and this one, so a replay in any order keeps the first. */
+function markFirstSeen(db: Db, event: LoggedEvent) {
+    return db
+        .insert(userFirstSeen)
+        .values({ userId: event.userId, firstDay: event.day })
+        .onConflictDoUpdate({
+            target: userFirstSeen.userId,
+            set: { firstDay: sql`min(${userFirstSeen.firstDay}, ${event.day})` }
+        });
 }
 
 /** The rollups of the event's own kind. */

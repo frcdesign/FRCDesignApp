@@ -10,12 +10,7 @@ import {
 } from "drizzle-orm";
 import { type SQLiteColumn } from "drizzle-orm/sqlite-core";
 import { type Db } from "../../db/client";
-import {
-    dailyAppOpens,
-    dailyFeatureUsers,
-    dailyUserActivity,
-    type LoggedEvent
-} from "./schema";
+import { dailyFeatureUsers, userFirstSeen, type LoggedEvent } from "./schema";
 import {
     asFeatureAdd,
     asReport,
@@ -76,46 +71,10 @@ function weekOf(day: SQLiteColumn | SQL.Aliased<string>): SQL<string> {
     return sql<string>`date(${day}, '-' || ((strftime('%w', ${day}) + 6) % 7) || ' days')`;
 }
 
-/** Everybody's first day in any rollup that names people, all time. */
-function firstSeenRows(db: Db) {
-    const sightings = db
-        .select({
-            userId: dailyUserActivity.userId,
-            day: dailyUserActivity.day
-        })
-        .from(dailyUserActivity)
-        .unionAll(
-            db
-                .select({
-                    userId: dailyAppOpens.userId,
-                    day: dailyAppOpens.day
-                })
-                .from(dailyAppOpens)
-        )
-        .unionAll(
-            db
-                .select({
-                    userId: dailyFeatureUsers.userId,
-                    day: dailyFeatureUsers.day
-                })
-                .from(dailyFeatureUsers)
-        )
-        .as("sightings");
-    return db.$with("first_seen").as(
-        db
-            .select({
-                userId: sightings.userId,
-                firstDay: min(sightings.day).as("first_day")
-            })
-            .from(sightings)
-            .groupBy(sightings.userId)
-    );
-}
-
 /** Distinct users first seen in the {@link NEW_USER_WEEKS} weeks up to and including `week`. */
 function countNew(
     userId: SQLiteColumn | SQL.Aliased<string>,
-    firstDay: SQL.Aliased<string | null>,
+    firstDay: SQLiteColumn,
     week: SQL<string>
 ): SQL<number> {
     const window = `-${(NEW_USER_WEEKS - 1) * 7} days`;
@@ -152,42 +111,40 @@ export async function getFeatureReach(
                 .where(inRange)
         )
         .as("everyone");
-    const firstSeen = firstSeenRows(db);
     const everyoneWeek = weekOf(everyone.day);
     const featureWeek = weekOf(dailyFeatureUsers.day);
 
     const [activeRows, featureRows, firstRows] = await Promise.all([
+        // Left joined: anybody without a first day counts as existing.
         db
-            .with(firstSeen)
             .select({
                 week: everyoneWeek,
                 users: countDistinct(everyone.userId),
                 newUsers: countNew(
                     everyone.userId,
-                    firstSeen.firstDay,
+                    userFirstSeen.firstDay,
                     everyoneWeek
                 )
             })
             .from(everyone)
-            .innerJoin(firstSeen, eq(firstSeen.userId, everyone.userId))
+            .leftJoin(userFirstSeen, eq(userFirstSeen.userId, everyone.userId))
             .groupBy(everyoneWeek)
             .all(),
         db
-            .with(firstSeen)
             .select({
                 week: featureWeek,
                 feature: dailyFeatureUsers.feature,
                 users: countDistinct(dailyFeatureUsers.userId),
                 newUsers: countNew(
                     dailyFeatureUsers.userId,
-                    firstSeen.firstDay,
+                    userFirstSeen.firstDay,
                     featureWeek
                 )
             })
             .from(dailyFeatureUsers)
-            .innerJoin(
-                firstSeen,
-                eq(firstSeen.userId, dailyFeatureUsers.userId)
+            .leftJoin(
+                userFirstSeen,
+                eq(userFirstSeen.userId, dailyFeatureUsers.userId)
             )
             .where(inRange)
             .groupBy(featureWeek, dailyFeatureUsers.feature)

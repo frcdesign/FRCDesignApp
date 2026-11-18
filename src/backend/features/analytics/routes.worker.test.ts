@@ -6,6 +6,7 @@ import {
     dailyAppOpens,
     dailyConfigurationMetrics,
     dailyFeatureUsers,
+    userFirstSeen,
     dailyFeatureScriptMetrics,
     dailyFeatureScriptUsers,
     dailyInsertableMetrics,
@@ -715,6 +716,12 @@ describe("analytics routes", () => {
                 .values(
                     opens.map(([day, userId]) => ({ day, userId, opens: 1 }))
                 );
+            await db.insert(userFirstSeen).values([
+                { userId: "old", firstDay: "2026-01-05" },
+                { userId: "edge-old", firstDay: "2026-05-10" },
+                { userId: "edge-new", firstDay: "2026-05-11" },
+                { userId: "fresh", firstDay: "2026-06-04" }
+            ]);
             await db.insert(dailyFeatureUsers).values([
                 {
                     day: "2026-06-02",
