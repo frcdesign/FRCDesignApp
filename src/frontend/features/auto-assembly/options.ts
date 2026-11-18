@@ -27,8 +27,11 @@ import {
     type PartChoice,
     type ScrewChoice,
     settlePart,
-    settleScrew
+    settleScrew,
+    StudioInput
 } from "@backend/features/auto-assembly/studios";
+import { type Vendor } from "@backend/features/library/vendors";
+import { preferredVendor } from "../teams/vendor-ranking";
 import { FORM_PARAMETERS, FormInput, formParameter } from "./parameters";
 
 /** The washers and nut that go with a screw. */
@@ -83,6 +86,28 @@ export interface SettledChoices {
     parts: Record<Part, PartChoice | undefined>;
     /** Which parts go in: added, made in the size, and allowed by the rest. */
     added: Record<Part, boolean>;
+}
+
+/** The team's best-ranked screw vendor, until somebody picks one; washers and nuts follow it. */
+export function withPreferredScrewVendor(
+    set: FastenerSet,
+    choices: Choices,
+    ranking: Vendor[]
+): Choices {
+    if (choices.screw[StudioInput.VENDOR] !== undefined) return choices;
+    const screwVendors = new Set(
+        set.catalog.screws.map((screw) => screw.vendor)
+    );
+    const vendor = preferredVendor(
+        set.catalog.vendors.filter((each) => screwVendors.has(each.id)),
+        ranking
+    );
+    return vendor === undefined
+        ? choices
+        : {
+              ...choices,
+              screw: { ...choices.screw, [StudioInput.VENDOR]: vendor.id }
+          };
 }
 
 export function settleChoices(

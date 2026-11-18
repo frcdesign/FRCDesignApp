@@ -337,6 +337,10 @@ function writeColor(
 ): Selection;
 // vendor-ranking.ts
 function orderVendors(vendors: Vendor[], ranking: Vendor[]): Vendor[];
+function preferredVendor(
+    candidates: NamedVendor[],
+    ranking: Vendor[]
+): NamedVendor | undefined;
 function breakTiesByVendor<T>(
     items: T[],
     vendorsOf: (item: T) => Vendor[],
@@ -501,9 +505,14 @@ The current team's `vendor_ranking`:
 
 - orders the vendor filter menu, ranked vendors first;
 - breaks ties between search results of equal score, the better-ranked vendor
-  first (`breakTiesByVendor`).
+  first (`breakTiesByVendor`);
+- picks the screw vendor Auto Assembly opens on, until somebody picks one
+  (`withPreferredScrewVendor`): the best-ranked vendor in the fastener catalog
+  that makes screws. Washers and nuts follow the screw's vendor, as always.
 
-It never hides a part.
+A catalog's vendor is a library's when its id or name matches the library
+vendor's code or name, ignoring case and punctuation (`preferredVendor`), so
+`MCMASTER` and "McMaster-Carr" are `MCM`. A ranking never hides a part.
 
 ### The Color control
 

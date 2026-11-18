@@ -8,14 +8,17 @@ import {
 import {
     FastenerKind,
     GENERIC,
-    isMade
+    isMade,
+    StudioInput
 } from "@backend/features/auto-assembly/studios";
+import { Vendor } from "@backend/features/library/vendors";
 import {
     type Choices,
     defaultChoices,
     fastenerOptions,
     Part,
-    settleChoices
+    settleChoices,
+    withPreferredScrewVendor
 } from "./options";
 import { FormInput } from "./parameters";
 
@@ -124,5 +127,29 @@ describe("settleChoices", () => {
         const manual = sent(StopCondition.MAX_LENGTH, FastenerMode.PRESET);
         expect(manual.stop).toBe(StopCondition.ALL_HOLES);
         expect(manual.maxLength).toBeUndefined();
+    });
+});
+
+describe("withPreferredScrewVendor", () => {
+    it("opens on the team's best-ranked vendor making screws, by code or name", () => {
+        const preferred = withPreferredScrewVendor(FASTENER_SET, choices(), [
+            Vendor.VEX,
+            Vendor.MCM,
+            Vendor.WCP
+        ]);
+        const options = fastenerOptions(settleChoices(FASTENER_SET, preferred));
+        expect(options.screw.vendor).toBe("MCMASTER");
+        expect(options.nut?.vendor).toBe("MCMASTER");
+    });
+
+    it("leaves a vendor somebody picked, and a team ranking none of the catalog's", () => {
+        const picked = choices({ screw: { [StudioInput.VENDOR]: GENERIC } });
+        expect(
+            withPreferredScrewVendor(FASTENER_SET, picked, [Vendor.MCM])
+        ).toBe(picked);
+        const unranked = choices();
+        expect(
+            withPreferredScrewVendor(FASTENER_SET, unranked, [Vendor.VEX])
+        ).toBe(unranked);
     });
 });
