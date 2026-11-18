@@ -14,6 +14,8 @@ import {
     useClearVendorFilters,
     useVendorFilters
 } from "../vendor-filters";
+import { useCurrentTeamSettings } from "../../teams/queries";
+import { orderVendors } from "../../teams/vendor-ranking";
 
 function vendorLabel(vendor: Vendor): string {
     const name = getVendorName(vendor);
@@ -46,7 +48,8 @@ export function ClearFiltersButton(props: ClearFiltersButtonProps): ReactNode {
 export function VendorMenu(): ReactNode {
     const libraryId = useLibraryId();
     const vendorFilters = useVendorFilters();
-    const libraryVendors = getLibraryVendors(libraryId);
+    const ranking = useCurrentTeamSettings()?.vendorRanking ?? [];
+    const libraryVendors = orderVendors(getLibraryVendors(libraryId), ranking);
     const hasFilters = vendorFilters !== undefined;
 
     const menuItems = (

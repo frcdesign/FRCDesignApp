@@ -13,6 +13,7 @@ import {
     type TermSpan
 } from "@backend/features/search/tokenize";
 import { NAME_FIELD, PART_NUMBER_FIELD } from "@backend/features/search/fields";
+import { breakTiesByVendor } from "../teams/vendor-ranking";
 import {
     type ConfigurationKey,
     type PartialSelection
@@ -58,10 +59,12 @@ export interface SearchArgs {
     filters?: SearchFilters;
     /** @default false */
     showHidden?: boolean;
+    /** The current team's preferred vendors, which order equally matched parts. */
+    vendorRanking?: Vendor[];
 }
 
 export function doSearch(args: SearchArgs): SearchResult {
-    const { searchDb, query, filters, showHidden } = args;
+    const { searchDb, query, filters, showHidden, vendorRanking = [] } = args;
     const filtered: FilterResult = { byVendor: 0, byGroup: 0 };
 
     const words = queryWords(query ?? "");
@@ -117,7 +120,13 @@ export function doSearch(args: SearchArgs): SearchResult {
         }
     });
 
-    const hits: SearchHit[] = miniSearchResults
+    const ranked = breakTiesByVendor(
+        miniSearchResults,
+        (result) => (result as unknown as SearchDocument).vendors,
+        (a, b) => a.score === b.score,
+        vendorRanking
+    );
+    const hits: SearchHit[] = ranked
         // Before mapping, since each hit costs a record match and highlighting.
         .slice(0, MAX_HITS)
         .map((miniSearchResult) => {

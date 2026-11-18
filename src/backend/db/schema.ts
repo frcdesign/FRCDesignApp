@@ -20,6 +20,11 @@ import {
     PartMetadata
 } from "../features/configurations/contract";
 import { BuildIssue, knownBuildIssues } from "../features/build-checker/issues";
+import {
+    OrganizationKind,
+    Program,
+    TeamRole
+} from "../features/teams/contract";
 
 /** A JSON column whose stored rows may predate its current shape. */
 function upgradedJson<T>(upgrade: (stored: T) => T) {
@@ -293,4 +298,160 @@ export const onshapeWebhooks = sqliteTable(
         token: text("token").notNull().unique()
     },
     (t) => [primaryKey({ columns: [t.subject, t.subjectId] })]
+);
+
+/** FIRST's list of teams, refreshed weekly; a team FIRST stops listing keeps its row. */
+export const firstTeams = sqliteTable(
+    "first_teams",
+    {
+        program: text("program").$type<Program>().notNull(),
+        number: integer("number").notNull(),
+        name: text("name").notNull(),
+        city: text("city"),
+        stateProvince: text("state_province"),
+        country: text("country"),
+        rookieYear: integer("rookie_year"),
+        // The latest season FIRST listed it in, as FIRST numbers seasons.
+        lastSeason: integer("last_season").notNull()
+    },
+    (t) => [primaryKey({ columns: [t.program, t.number] })]
+);
+
+/** A registered team. Unverified, so several may claim one FIRST number. */
+export const teams = sqliteTable(
+    "teams",
+    {
+        id: text("id")
+            .primaryKey()
+            .$defaultFn(() => crypto.randomUUID()),
+        program: text("program").$type<Program>().notNull(),
+        number: integer("number").notNull(),
+        membersEditFavorites: integer("members_edit_favorites", {
+            mode: "boolean"
+        })
+            .notNull()
+            .default(false),
+        vendorRanking: text("vendor_ranking", { mode: "json" })
+            .$type<Vendor[]>()
+            .notNull()
+            .default([]),
+        colors: text("colors", { mode: "json" })
+            .$type<string[]>()
+            .notNull()
+            .default([]),
+        registeredAt: integer("registered_at", {
+            mode: "timestamp_ms"
+        }).notNull(),
+        registeredBy: text("registered_by").notNull()
+    },
+    (t) => [index("teams_first_idx").on(t.program, t.number)]
+);
+
+/**
+ * An Onshape company registered to a team: every editor of its documents
+ * joins, or only the members of one Onshape team in it (`subteam_id`).
+ */
+export const teamOrganizations = sqliteTable(
+    "team_organizations",
+    {
+        id: text("id")
+            .primaryKey()
+            .$defaultFn(() => crypto.randomUUID()),
+        teamId: text("team_id")
+            .notNull()
+            .references(() => teams.id, { onDelete: "cascade" }),
+        companyId: text("company_id").notNull(),
+        kind: text("kind").$type<OrganizationKind>().notNull(),
+        // As Onshape named it at registration.
+        name: text("name").notNull(),
+        // Empty for every editor: SQLite's unique lets nulls repeat.
+        subteamId: text("subteam_id").notNull().default(""),
+        // The subteam's member ids as last synced; empty without one.
+        subteamMembers: text("subteam_members", { mode: "json" })
+            .$type<string[]>()
+            .notNull()
+            .default([]),
+        registeredAt: integer("registered_at", {
+            mode: "timestamp_ms"
+        }).notNull(),
+        registeredBy: text("registered_by").notNull()
+    },
+    (t) => [
+        // An organization's editors, or a subteam, join one team.
+        unique().on(t.companyId, t.subteamId),
+        unique().on(t.teamId, t.companyId)
+    ]
+);
+
+export const teamMembers = sqliteTable(
+    "team_members",
+    {
+        teamId: text("team_id")
+            .notNull()
+            .references(() => teams.id, { onDelete: "cascade" }),
+        userId: text("user_id").notNull(),
+        role: text("role").$type<TeamRole>().notNull(),
+        joinedAt: integer("joined_at", { mode: "timestamp_ms" }).notNull(),
+        // Moved by every launch that proves membership again.
+        lastSeenAt: integer("last_seen_at", { mode: "timestamp_ms" }).notNull()
+    },
+    (t) => [
+        primaryKey({ columns: [t.teamId, t.userId] }),
+        index("team_members_user_idx").on(t.userId)
+    ]
+);
+
+/** A team's favorites: a user's favorite's shape, owned by the team. */
+export const teamFavorites = sqliteTable(
+    "team_favorites",
+    {
+        id: text("id")
+            .primaryKey()
+            .$defaultFn(() => crypto.randomUUID()),
+        teamId: text("team_id")
+            .notNull()
+            .references(() => teams.id, { onDelete: "cascade" }),
+        libraryId: libraryId().references(() => libraries.id),
+        insertableId: text("insertable_id")
+            .notNull()
+            .references(() => insertables.id, { onDelete: "cascade" }),
+        defaultSelection: text("default_selection", {
+            mode: "json"
+        }).$type<PartialSelection | null>(),
+        sortOrder: integer("sort_order").notNull().default(0),
+        createdBy: text("created_by").notNull(),
+        createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull()
+    },
+    (t) => [unique().on(t.teamId, t.libraryId, t.insertableId)]
+);
+
+/** What a team's members inserted in its context, one row per configuration. */
+export const teamRecentInserts = sqliteTable(
+    "team_recent_inserts",
+    {
+        id: text("id")
+            .primaryKey()
+            .$defaultFn(() => crypto.randomUUID()),
+        teamId: text("team_id")
+            .notNull()
+            .references(() => teams.id, { onDelete: "cascade" }),
+        libraryId: libraryId().references(() => libraries.id),
+        insertableId: text("insertable_id")
+            .notNull()
+            .references(() => insertables.id, { onDelete: "cascade" }),
+        selection: text("selection", { mode: "json" })
+            .$type<PartialSelection>()
+            .notNull(),
+        // Who inserted it last.
+        userId: text("user_id").notNull(),
+        insertedAt: integer("inserted_at", { mode: "timestamp_ms" }).notNull()
+    },
+    (t) => [
+        unique().on(t.teamId, t.insertableId, t.selection),
+        index("team_recent_inserts_team_library_idx").on(
+            t.teamId,
+            t.libraryId,
+            t.insertedAt
+        )
+    ]
 );

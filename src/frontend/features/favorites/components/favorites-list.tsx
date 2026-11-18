@@ -20,6 +20,8 @@ import { useFavoritesQuery } from "../queries";
 import { useLibraryQuery } from "../../library/queries";
 import { AppIcon } from "../../../components/app-icon";
 import { useVendorFilters } from "../../settings/vendor-filters";
+import { TeamFavoriteCards } from "../../teams/components/team-favorites";
+import { useTeamFavoriteInsertableIds } from "../../teams/queries";
 
 /** Only shown signed in. Unlike DocumentList, this list can be searched directly. */
 export function FavoritesList(): ReactNode {
@@ -28,6 +30,7 @@ export function FavoritesList(): ReactNode {
 
     const favoritesQuery = useFavoritesQuery();
     const libraryQuery = useLibraryQuery();
+    const teamInsertableIds = useTeamFavoriteInsertableIds();
 
     if (libraryQuery.isPending || favoritesQuery.isPending) {
         return <SectionLoading title="Loading favorites..." />;
@@ -50,30 +53,52 @@ export function FavoritesList(): ReactNode {
     const insertables = libraryQuery.data.insertables;
     const favoritesData = favoritesQuery.data;
 
+    // A part the team favorited shows once, as the team's.
+    const ownData: FavoritesData = {
+        favorites: favoritesData.favorites,
+        favoriteOrder: favoritesData.favoriteOrder.filter((favoriteId) => {
+            const favorite = favoritesData.favorites[favoriteId];
+            return favorite && !teamInsertableIds.has(favorite.insertableId);
+        })
+    };
+    const teamCards = (
+        <TeamFavoriteCards library={libraryQuery.data} query={searchQuery} />
+    );
+    // Only the team's: the user's own list has nothing to say about itself.
+    const hasTeamFavorites = teamInsertableIds.size > 0;
+
     if (searchQuery) {
         return (
-            <FavoriteSearchResults
-                query={searchQuery}
-                library={libraryQuery.data}
-                favoritesData={favoritesData}
-            />
+            <>
+                {teamCards}
+                <FavoriteSearchResults
+                    query={searchQuery}
+                    library={libraryQuery.data}
+                    favoritesData={ownData}
+                    hideEmpty={hasTeamFavorites}
+                />
+            </>
         );
     }
 
-    const favoriteInsertables = favoritesData.favoriteOrder
+    const favoriteInsertables = ownData.favoriteOrder
         .map((favoriteId) => favoritesData.favorites[favoriteId])
         .filter((favorite) => !!favorite)
         .map((favorite) => insertables[favorite.insertableId])
         .filter((insertable) => !!insertable);
 
     return (
-        <FavoriteCards
-            result={filterInsertables(favoriteInsertables, {
-                vendors: vendorFilters,
-                visibleOnly: true
-            })}
-            favoritesData={favoritesData}
-        />
+        <>
+            {teamCards}
+            <FavoriteCards
+                result={filterInsertables(favoriteInsertables, {
+                    vendors: vendorFilters,
+                    visibleOnly: true
+                })}
+                favoritesData={favoritesData}
+                hideEmpty={hasTeamFavorites}
+            />
+        </>
     );
 }
 
@@ -81,11 +106,12 @@ interface FavoriteSearchResultsProps {
     query: string;
     library: LibraryOut;
     favoritesData: FavoritesData;
+    hideEmpty: boolean;
 }
 
 /** The favorites the query matches, ranked, each by its own configuration's part number. */
 function FavoriteSearchResults(props: FavoriteSearchResultsProps): ReactNode {
-    const { query, library, favoritesData } = props;
+    const { query, library, favoritesData, hideEmpty } = props;
 
     const vendorFilters = useVendorFilters();
 
@@ -118,6 +144,7 @@ function FavoriteSearchResults(props: FavoriteSearchResultsProps): ReactNode {
         <FavoriteCards
             result={{ ...result, hits }}
             favoritesData={favoritesData}
+            hideEmpty={hideEmpty}
         />
     );
 }
@@ -125,14 +152,17 @@ function FavoriteSearchResults(props: FavoriteSearchResultsProps): ReactNode {
 interface FavoriteCardsProps {
     result: FilteredInsertables;
     favoritesData: FavoritesData;
+    /** When the team's favorites show above, an empty list of the user's says nothing. */
+    hideEmpty: boolean;
 }
 
 /** The rows themselves, however the list they show was narrowed down. */
 function FavoriteCards(props: FavoriteCardsProps): ReactNode {
-    const { result, favoritesData } = props;
+    const { result, favoritesData, hideEmpty } = props;
     const { insertables, filtered, hits } = result;
 
     if (insertables.length === 0) {
+        if (hideEmpty) return null;
         return (
             <NoSearchResultError objectLabel="favorite" filtered={filtered} />
         );

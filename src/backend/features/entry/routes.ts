@@ -4,7 +4,8 @@ import { getApp, type AppContext } from "../../lib/context";
 import { requireSignInMiddleware } from "../auth/guards";
 import { trackAppOpen } from "../analytics/tracking";
 import { ACCESS_PROBLEM_PARAM } from "./access-problem";
-import { findAccessProblem } from "./document-access";
+import { checkLaunchDocument } from "./document-access";
+import { recordLaunch } from "../teams/membership";
 
 /** Marks the `/init` a sign-in returns to; see {@link needsSignIn}. */
 const SIGN_IN_ATTEMPTED = "signInAttempted";
@@ -56,7 +57,13 @@ entryRoutes.get("/init", cacheMiddleware(), async (c) => {
     const search = new URL(c.req.url).searchParams;
     // Ours, and spent: the app is being opened, however that turned out.
     search.delete(SIGN_IN_ATTEMPTED);
-    const problem = await findAccessProblem(c, c.req.query("documentId"));
+    const { problem, document } = await checkLaunchDocument(
+        c,
+        c.req.query("documentId")
+    );
+    if (document) {
+        await recordLaunch(c, document);
+    }
     if (problem) {
         search.set(ACCESS_PROBLEM_PARAM, problem);
         return c.redirect(`/document-access?${search.toString()}`);
@@ -66,8 +73,8 @@ entryRoutes.get("/init", cacheMiddleware(), async (c) => {
 
 export const appOpenRoutes = getApp();
 
-/** POST /api/app-open: sent by the app on a launch from Onshape. */
+/** POST /api/app-open?documentId=: sent by the app on a launch from Onshape. */
 appOpenRoutes.post("/app-open", requireSignInMiddleware, async (c) => {
-    await trackAppOpen(c);
+    await trackAppOpen(c, c.req.query("documentId"));
     return c.json({});
 });

@@ -163,6 +163,7 @@ export class VersionManagerWorkflow extends WorkflowEntrypoint<
         await step.do("record-run", () =>
             trackVersionRun(this.env, {
                 userId: params.userId,
+                documentId: params.workspace.documentId,
                 kind: params.kind,
                 scope: params.scope,
                 status: final

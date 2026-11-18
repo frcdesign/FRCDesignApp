@@ -82,6 +82,7 @@ function fakeContext(userId = TEST_USER_ID): AppContext {
 
 function insertEvent(overrides: Partial<InsertEvent> = {}): InsertEvent {
     return {
+        targetDocumentId: "doc-target",
         libraryId: TEST_LIBRARY_ID,
         path: TEST_PART_STUDIO_PATH,
         insertableId: TEST_PART_STUDIO_ID,
@@ -124,7 +125,7 @@ describe("rollupWrites", () => {
         const clock = vi.spyOn(Date, "now");
 
         clock.mockReturnValue(start);
-        await trackAppOpen(fakeContext());
+        await trackAppOpen(fakeContext(), undefined);
         await trackInsert(
             fakeContext(),
             insertEvent({
@@ -149,6 +150,7 @@ describe("rollupWrites", () => {
         await trackInsert(fakeContext("someone-2"), insertEvent());
         await trackVersionRun(env, {
             userId: TEST_USER_ID,
+            documentId: "doc-target",
             kind: VersionJobKind.PUSH,
             scope: PushScopeKind.CHILDREN,
             status: {
@@ -222,13 +224,15 @@ describe("rollupWrites", () => {
             await trackDownload(fakeContext("downloader"), insertEvent());
             await trackVersionRun(env, {
                 userId: "pusher",
+                documentId: "doc-target",
                 kind: VersionJobKind.PUSH,
                 scope: PushScopeKind.CHILDREN,
                 status: pushed
             });
             await trackFeatureAdd(fakeContext("scripter"), {
                 featureType: "robotFrame",
-                path: TEST_PART_STUDIO_PATH
+                path: TEST_PART_STUDIO_PATH,
+                targetDocumentId: "doc-target"
             });
             for (const userId of ["reporter", undefined]) {
                 await trackReport(fakeContext(), {

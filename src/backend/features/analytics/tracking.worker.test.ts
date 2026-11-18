@@ -77,6 +77,7 @@ function fakeContext(userId = TEST_USER_ID): AppContext {
 /** An insert of an unconfigurable part. */
 function insertEvent(overrides: Partial<InsertEvent> = {}): InsertEvent {
     return {
+        targetDocumentId: "doc-target",
         libraryId: TEST_LIBRARY_ID,
         path: TEST_PART_STUDIO_PATH,
         insertableId: TEST_PART_STUDIO_ID,
@@ -540,6 +541,7 @@ describe("tracking", () => {
         /** A download from search; it carries none of an insert's own flags. */
         function downloadEvent(overrides: Partial<UseEvent> = {}): UseEvent {
             return {
+                targetDocumentId: undefined,
                 libraryId: TEST_LIBRARY_ID,
                 path: TEST_PART_STUDIO_PATH,
                 insertableId: TEST_PART_STUDIO_ID,
@@ -649,7 +651,7 @@ describe("tracking", () => {
 
     describe("trackAppOpen", () => {
         it("counts an open under no library", async () => {
-            await trackAppOpen(fakeContext());
+            await trackAppOpen(fakeContext(), undefined);
 
             const event = await db.select().from(events).get();
             expect(event).toMatchObject({
@@ -667,7 +669,7 @@ describe("tracking", () => {
         });
 
         it("writes none of the library rollups", async () => {
-            await trackAppOpen(fakeContext());
+            await trackAppOpen(fakeContext(), undefined);
 
             expect(await db.select().from(dailyMetrics).all()).toEqual([]);
             expect(await db.select().from(userStats).all()).toEqual([]);
@@ -677,8 +679,8 @@ describe("tracking", () => {
         });
 
         it("adds to the day it is already counted under", async () => {
-            await trackAppOpen(fakeContext());
-            await trackAppOpen(fakeContext());
+            await trackAppOpen(fakeContext(), undefined);
+            await trackAppOpen(fakeContext(), undefined);
 
             const rows = await db.select().from(dailyAppOpens).all();
             expect(rows).toHaveLength(1);
@@ -695,6 +697,7 @@ describe("tracking", () => {
         const pushed = (status: VersionJobStatus) =>
             trackVersionRun(env, {
                 userId: TEST_USER_ID,
+                documentId: "doc-target",
                 kind: VersionJobKind.PUSH,
                 scope: PushScopeKind.CHILDREN,
                 status

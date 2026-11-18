@@ -261,8 +261,9 @@ async function runSteps(ctx: RunContext, request: AutoAssemblyIn) {
     // Whatever fastening managed, what was inserted counts
     await ctx.step.do("record-inserts", () =>
         recordRunInserts(
-            getDb(ctx.env.DB),
+            ctx.env,
             ctx.userId,
+            ctx.assembly.documentId,
             set,
             parts,
             paths,

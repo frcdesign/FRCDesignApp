@@ -148,7 +148,8 @@ featureScriptRoutes.post(
                 );
                 await trackFeatureAdd(c, {
                     featureType: row.featureType,
-                    path: studioPath
+                    path: studioPath,
+                    targetDocumentId: targetPath.documentId
                 });
                 return c.json({
                     featureId: result.feature?.featureId

@@ -1,4 +1,5 @@
 import { Group } from "@mantine/core";
+import { TeamFavoriteItem } from "../../teams/components/team-favorites";
 import { PropsWithChildren, ReactNode } from "react";
 import { Favorite } from "@backend/features/favorites/contract";
 import { InsertableOut } from "@backend/features/library/contract";
@@ -216,6 +217,11 @@ export function InsertableMenuItems(
                 <MenuSection label={m.libraryMenuFavorites()}>
                     <FavoriteInsertableItem
                         favorite={favorite}
+                        insertable={insertable}
+                        selection={selection}
+                        configurationKey={configurationKey}
+                    />
+                    <TeamFavoriteItem
                         insertable={insertable}
                         selection={selection}
                         configurationKey={configurationKey}

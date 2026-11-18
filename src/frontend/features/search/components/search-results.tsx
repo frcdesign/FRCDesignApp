@@ -9,6 +9,7 @@ import { NoSearchResultError, SearchCallout } from "./search-errors";
 import { useLibraryQuery } from "../../library/queries";
 import { useSearchDbQuery } from "../queries";
 import { UseSource } from "@backend/features/analytics/usage";
+import { useCurrentTeamSettings } from "../../teams/queries";
 
 interface SearchResultsProps {
     query: string;
@@ -23,6 +24,7 @@ export function SearchResults(props: SearchResultsProps): ReactNode {
     const libraryQuery = useLibraryQuery();
     const searchDbQuery = useSearchDbQuery();
     const showHidden = useShowHidden();
+    const teamSettings = useCurrentTeamSettings();
 
     if (searchDbQuery.isPending || libraryQuery.isPending) {
         return <SectionLoading title="Loading library..." />;
@@ -48,7 +50,8 @@ export function SearchResults(props: SearchResultsProps): ReactNode {
         insertables: libraryQuery.data.insertables,
         query,
         filters,
-        showHidden
+        showHidden,
+        vendorRanking: teamSettings?.vendorRanking
     });
 
     if (result.insertables.length === 0) {

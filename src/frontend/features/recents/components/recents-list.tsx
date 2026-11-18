@@ -1,5 +1,11 @@
 import { ReactNode } from "react";
-import type { RecentInsert } from "@backend/features/recents/contract";
+import { SegmentedControl } from "@mantine/core";
+import type { UseQueryResult } from "@tanstack/react-query";
+import { UseSource } from "@backend/features/analytics/usage";
+import type {
+    RecentInsert,
+    RecentsData
+} from "@backend/features/recents/contract";
 import type {
     Insertables,
     LibraryOut
@@ -18,7 +24,9 @@ import {
     SearchCallout
 } from "../../search/components/search-errors";
 import { ItemTable } from "../../../components/item-row";
-import { useUiState } from "../../../lib/ui-state";
+import { updateUiState, useUiState } from "../../../lib/ui-state";
+import { useCurrentTeam, useTeamRecentsQuery } from "../../teams/queries";
+import { m } from "../../../paraglide/messages";
 import { useLibraryQuery } from "../../library/queries";
 import { useVendorFilters } from "../../settings/vendor-filters";
 import { useRecentsQuery } from "../queries";
@@ -28,8 +36,51 @@ import { RecentIcon } from "./recent-icon";
 /** Only shown signed in. Searched within itself, like the favorites list. */
 export function RecentsList(): ReactNode {
     const searchQuery = useUiState((state) => state.searchQuery);
-    const recentsQuery = useRecentsQuery();
+    const team = useCurrentTeam();
+    const showTeam = useUiState((state) => state.showTeamRecents ?? false);
+    const isTeamView = team !== undefined && showTeam;
+    const ownQuery = useRecentsQuery();
+    const teamQuery = useTeamRecentsQuery(isTeamView);
+    const recentsQuery = isTeamView ? teamQuery : ownQuery;
     const libraryQuery = useLibraryQuery();
+    const source = isTeamView ? UseSource.TEAM_RECENTS : UseSource.RECENTS;
+
+    const toggle = team && (
+        <SegmentedControl
+            size="xs"
+            fullWidth
+            value={isTeamView ? "team" : "mine"}
+            onChange={(value) =>
+                updateUiState({ showTeamRecents: value === "team" })
+            }
+            data={[
+                { value: "mine", label: m.teamRecentsMine() },
+                { value: "team", label: m.teamRecentsTeam() }
+            ]}
+        />
+    );
+    return (
+        <>
+            {toggle}
+            <RecentsBody
+                recentsQuery={recentsQuery}
+                libraryQuery={libraryQuery}
+                searchQuery={searchQuery}
+                source={source}
+            />
+        </>
+    );
+}
+
+interface RecentsBodyProps {
+    recentsQuery: UseQueryResult<RecentsData>;
+    libraryQuery: UseQueryResult<LibraryOut>;
+    searchQuery: string;
+    source: UseSource.RECENTS | UseSource.TEAM_RECENTS;
+}
+
+function RecentsBody(props: RecentsBodyProps): ReactNode {
+    const { recentsQuery, libraryQuery, searchQuery, source } = props;
 
     if (libraryQuery.isPending || recentsQuery.isPending) {
         return <SectionLoading title="Loading recently used parts..." />;
@@ -52,10 +103,17 @@ export function RecentsList(): ReactNode {
         return (
             <RecentCards
                 {...searchRecents(recents, libraryQuery.data, searchQuery)}
+                source={source}
             />
         );
     }
-    return <RecentCards recents={recents} insertables={insertables} />;
+    return (
+        <RecentCards
+            recents={recents}
+            insertables={insertables}
+            source={source}
+        />
+    );
 }
 
 /** The recents the query matches, ranked, each by its own configuration's part number. */
@@ -63,7 +121,7 @@ function searchRecents(
     recents: RecentInsert[],
     library: LibraryOut,
     query: string
-): RecentCardsProps {
+): Omit<RecentCardsProps, "source"> {
     const rows = recents.flatMap((recent) => {
         const insertable = library.insertables[recent.insertableId];
         return insertable
@@ -91,11 +149,12 @@ interface RecentCardsProps {
     insertables: Insertables;
     /** Where a search matched each row, by recent id. */
     hits?: Record<string, SearchHit>;
+    source: UseSource.RECENTS | UseSource.TEAM_RECENTS;
 }
 
 /** The rows themselves, narrowed by what the user may see and the vendor filters. */
 function RecentCards(props: RecentCardsProps): ReactNode {
-    const { recents, insertables, hits = {} } = props;
+    const { recents, insertables, hits = {}, source } = props;
 
     const vendorFilters = useVendorFilters();
 
@@ -133,6 +192,7 @@ function RecentCards(props: RecentCardsProps): ReactNode {
                         insertable={insertable}
                         recent={recent}
                         searchHit={hits[recent.id]}
+                        source={source}
                     />
                 ))}
             </ItemTable>

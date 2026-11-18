@@ -24,6 +24,7 @@ import {
     toStoredSelection,
     fillDerivationValues
 } from "@backend/features/configurations/selection";
+import { evaluateCondition } from "@backend/features/configurations/utils";
 import { useConfigurationQuery } from "../queries";
 import { SectionError } from "../../../components/app-notice";
 import {
@@ -31,6 +32,9 @@ import {
     ParameterInput
 } from "../../../components/parameter-input";
 import { withParameterValue } from "../parameter-value";
+import { useCurrentTeamSettings } from "../../teams/queries";
+import { controlledParameters, findColorControl } from "../../teams/color";
+import { ColorRow } from "../../teams/components/color-row";
 
 /** Reported by the panel, since only it has the parameters. */
 export interface SelectionReport {
@@ -164,18 +168,52 @@ function ConfigurationParameters(
     props: ConfigurationParametersProps
 ): ReactNode {
     const { configurationResult, selection, setSelection } = props;
+    const teamColors = useCurrentTeamSettings()?.colors ?? [];
+    const { parameters } = configurationResult;
+
+    const colorControl = useMemo(
+        () => findColorControl(parameters),
+        [parameters]
+    );
+    const colorParameters = colorControl
+        ? controlledParameters(colorControl)
+        : [];
 
     return (
         <ParameterGrid>
-            {configurationResult.parameters.map((parameter) => (
-                <ParameterRow
-                    key={parameter.id}
-                    parameter={parameter}
-                    selection={selection}
-                    setSelection={setSelection}
-                    parameters={configurationResult.parameters}
-                />
-            ))}
+            {parameters.map((parameter) => {
+                if (colorControl && parameter === colorParameters[0]) {
+                    // Hidden with the inputs it stands in for.
+                    if (
+                        !evaluateCondition(
+                            parameter.condition,
+                            selection,
+                            parameters
+                        )
+                    ) {
+                        return null;
+                    }
+                    return (
+                        <ColorRow
+                            key={parameter.id}
+                            control={colorControl}
+                            selection={selection}
+                            setSelection={setSelection}
+                            teamColors={teamColors}
+                        />
+                    );
+                }
+                if (colorParameters.includes(parameter)) return null;
+                return (
+                    <ParameterRow
+                        key={parameter.id}
+                        parameter={parameter}
+                        selection={selection}
+                        setSelection={setSelection}
+                        parameters={parameters}
+                    />
+                );
+            })}
         </ParameterGrid>
     );
 }

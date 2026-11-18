@@ -9,6 +9,8 @@ import {
 } from "../configurations/contract";
 import { toStoredSelection } from "../configurations/selection";
 import { MAX_RECENTS } from "./contract";
+import { creditedTeamId } from "../teams/context";
+import { writeTeamRecentInsert } from "../teams/recents";
 
 export interface RecentInsertEvent {
     libraryId: LibraryId;
@@ -19,21 +21,32 @@ export interface RecentInsertEvent {
     parameters: ConfigurationParameter[];
 }
 
+export interface RecordedInsert extends RecentInsertEvent {
+    /** The document inserted into, which decides the team whose recents it joins. */
+    targetDocumentId: string;
+}
+
 /**
  * Awaited, so the client's refetch after the insert sees it, but never thrown:
  * the part is already in the user's document.
  */
 export async function recordRecentInsert(
     c: AppContext,
-    event: RecentInsertEvent
+    event: RecordedInsert
 ): Promise<void> {
     try {
-        await writeRecentInsert(
-            getDb(c.env.DB),
-            await c.var.getUserId(),
-            event,
-            new Date()
+        const db = getDb(c.env.DB);
+        const userId = await c.var.getUserId();
+        const insertedAt = new Date();
+        await writeRecentInsert(db, userId, event, insertedAt);
+        const teamId = await creditedTeamId(
+            c.env,
+            userId,
+            event.targetDocumentId
         );
+        if (teamId) {
+            await writeTeamRecentInsert(db, teamId, userId, event, insertedAt);
+        }
     } catch (error) {
         console.error("Failed to record a recent insert", error);
     }

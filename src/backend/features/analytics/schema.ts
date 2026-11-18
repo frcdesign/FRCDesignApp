@@ -23,6 +23,7 @@ import {
     FeedbackTopic
 } from "../feedback/contract";
 import { AppFeature, EventType, UseSource, UseTarget } from "./usage";
+import type { TeamCategory } from "../teams/contract";
 
 /**
  * Append-only. Keyed on Onshape's `elementId` with no foreign keys, so a reload
@@ -84,7 +85,9 @@ export const events = sqliteTable(
         reportSource: text("report_source").$type<FeedbackSource>(),
         reportTeamNumber: integer("report_team_number"),
         // The FeatureScript an add or a report names: its constant, which never changes once released.
-        featureType: text("feature_type")
+        featureType: text("feature_type"),
+        // The team the event is credited to (`resolveTeamContext`); null for none, and before schema version 5.
+        teamId: text("team_id")
     },
     // Only used to rebuild the rollups, which walk by day.
     (t) => [index("events_day_idx").on(t.day)]
@@ -357,4 +360,28 @@ export const dailyFeatureUsers = sqliteTable(
     },
     // Feature first, so a feature's first recorded day is an index seek.
     (t) => [primaryKey({ columns: [t.feature, t.day, t.userId] })]
+);
+
+/** A team's count in each category a day: every use, and each feature `featuresOf` gives. */
+export const dailyTeamMetrics = sqliteTable(
+    "daily_team_metrics",
+    {
+        teamId: text("team_id").notNull(),
+        day: text("day").notNull(),
+        category: text("category").$type<TeamCategory>().notNull(),
+        count: integer("count").notNull().default(0)
+    },
+    // Category and day first, so a year's ranking of every team is an index range.
+    (t) => [primaryKey({ columns: [t.category, t.day, t.teamId] })]
+);
+
+/** Who did anything credited to a team on a day: its active members. */
+export const dailyTeamUsers = sqliteTable(
+    "daily_team_users",
+    {
+        teamId: text("team_id").notNull(),
+        day: text("day").notNull(),
+        userId: text("user_id").notNull()
+    },
+    (t) => [primaryKey({ columns: [t.teamId, t.day, t.userId] })]
 );

@@ -42,6 +42,11 @@ export interface AppBindings {
     DISCORD_FRC_DESIGN_LIB_WEBHOOK_URL?: string;
     DISCORD_CONFIG_LIB_WEBHOOK_URL?: string;
     DISCORD_FEATURESCRIPTS_WEBHOOK_URL?: string;
+    /** FIRST's Events API credentials the weekly team refresh reads; see `teams/first-teams.ts`. */
+    FIRST_FRC_API_USERNAME?: string;
+    FIRST_FRC_API_TOKEN?: string;
+    FIRST_FTC_API_USERNAME?: string;
+    FIRST_FTC_API_TOKEN?: string;
 }
 
 interface AppVariables {

@@ -33,7 +33,8 @@ export enum SectionId {
     CONFIGURATION = "configuration",
     USAGE = "usage",
     /** The settings menu's. */
-    ADMIN_SETTINGS = "admin-settings"
+    ADMIN_SETTINGS = "admin-settings",
+    TEAM_SETTINGS = "team-settings"
 }
 
 /** Until someone opens or closes it. Favorites and Configuration are long, and wanted less. */
@@ -47,7 +48,8 @@ const OPENED_BY_DEFAULT: Record<SectionId, boolean> = {
     [SectionId.SETTINGS]: true,
     [SectionId.CONFIGURATION]: false,
     [SectionId.USAGE]: true,
-    [SectionId.ADMIN_SETTINGS]: true
+    [SectionId.ADMIN_SETTINGS]: true,
+    [SectionId.TEAM_SETTINGS]: false
 };
 
 interface UiState {
@@ -74,6 +76,8 @@ interface UiState {
     openFavoriteId?: string;
     /** Hints dismissed in this browser, which a refetch of the server's list can't bring back. */
     seenHints: Hint[];
+    /** Recently Used shows the team's inserts, while the user is on one. */
+    showTeamRecents?: boolean;
 }
 
 /** In localStorage, the persist default. */

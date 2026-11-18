@@ -4,7 +4,7 @@
  */
 
 /** Bump when the columns' meaning changes. */
-export const EVENT_SCHEMA_VERSION = 4;
+export const EVENT_SCHEMA_VERSION = 5;
 
 /** Rows imported from the legacy app's log; see `scripts/migrate-analytics`. */
 export const LEGACY_SCHEMA_VERSION = 0;
@@ -47,6 +47,10 @@ export enum UseSource {
     BROWSE = "browse",
     FAVORITES = "favorites",
     RECENTS = "recents",
+    /** The current team's favorites; see `features/teams`. */
+    TEAM_FAVORITES = "team_favorites",
+    /** What the current team's members inserted lately. */
+    TEAM_RECENTS = "team_recents",
     /** An Auto Assembly run, which inserts a part per fastener it places. */
     AUTO_ASSEMBLY = "auto_assembly",
     /** Imported from the legacy app's log, which never recorded where a use started. */
@@ -59,7 +63,9 @@ export const CLIENT_USE_SOURCES = [
     UseSource.GROUP_SEARCH,
     UseSource.BROWSE,
     UseSource.FAVORITES,
-    UseSource.RECENTS
+    UseSource.RECENTS,
+    UseSource.TEAM_FAVORITES,
+    UseSource.TEAM_RECENTS
 ] as const;
 
 /**
@@ -81,5 +87,9 @@ export enum AppFeature {
     DEFAULT_CONFIGURATION = "default_configuration",
     VERSION_MANAGER = "version_manager",
     FEATURESCRIPTS = "featurescripts",
-    REPORT = "report"
+    REPORT = "report",
+    /** A use started from the current team's favorites. */
+    TEAM_FAVORITES = "team_favorites",
+    /** A use started from what the team inserted lately. */
+    TEAM_RECENTS = "team_recents"
 }

@@ -33,6 +33,7 @@ import {
 } from "../configurations/contract";
 import { canonicalValues } from "../configurations/selection";
 import { toDayKey } from "./day";
+import { creditedTeamId } from "../teams/context";
 import type {
     FeedbackCategory,
     FeedbackSource,
@@ -52,6 +53,8 @@ export interface UseEvent {
     /** Whether the part was favorited, not where the use came from. */
     isFavorite: boolean;
     source: UseSource;
+    /** The document the part went into, which decides its team; undefined for a download. */
+    targetDocumentId: string | undefined;
 }
 
 export interface InsertEvent extends UseEvent {
@@ -78,7 +81,7 @@ export function trackInsert(
 ): Promise<void> {
     return runInBackground(c, "record an insert", async () =>
         recordInserts(
-            getDb(c.env.DB),
+            c.env,
             await c.var.getUserId(),
             Array.from({ length: instances }, () => event)
         )
@@ -87,15 +90,21 @@ export function trackInsert(
 
 /** One event per insert, all in one batch; for a caller with no request to track from. */
 export async function recordInserts(
-    db: Db,
+    env: AppBindings,
     userId: string,
     inserts: InsertEvent[]
 ): Promise<void> {
+    // Every insert of a batch went into one document.
+    const teamId = await creditedTeamId(
+        env,
+        userId,
+        inserts[0]?.targetDocumentId
+    );
     await recordBatch(
-        db,
+        getDb(env.DB),
         inserts.map((event) => ({
             event: {
-                ...columnsOfUse(EventType.INSERT, event, userId),
+                ...columnsOfUse(EventType.INSERT, event, userId, teamId),
                 targetElementType: event.targetElementType,
                 isQuickInsert: event.isQuickInsert,
                 fasten: event.fasten,
@@ -110,14 +119,16 @@ export async function recordInserts(
 
 /** As `trackInsert`, for a STEP export Onshape has accepted. */
 export function trackDownload(c: AppContext, event: UseEvent): Promise<void> {
-    return runInBackground(c, "record a download", async () =>
-        record(
+    return runInBackground(c, "record a download", async () => {
+        const userId = await c.var.getUserId();
+        await record(
             getDb(c.env.DB),
             {
                 ...columnsOfUse(
                     EventType.DOWNLOAD,
                     event,
-                    await c.var.getUserId()
+                    userId,
+                    await creditedTeamId(c.env, userId, event.targetDocumentId)
                 ),
                 targetElementType: null,
                 isQuickInsert: null,
@@ -127,18 +138,19 @@ export function trackDownload(c: AppContext, event: UseEvent): Promise<void> {
                 atInsertLocation: null
             },
             event.parameters
-        )
-    );
+        );
+    });
 }
 
 /** The columns every use fills in; its kind adds the rest. */
 function columnsOfUse(
     type: EventType.INSERT | EventType.DOWNLOAD,
     event: UseEvent,
-    userId: string
+    userId: string,
+    teamId: string | null
 ) {
     return {
-        ...eventCore(type, event.libraryId, userId),
+        ...eventCore(type, event.libraryId, userId, teamId),
         ...NOT_A_VERSION_RUN,
         ...NOT_A_REPORT,
         ...NOT_A_FEATURE_ADD,
@@ -150,13 +162,22 @@ function columnsOfUse(
     };
 }
 
-/** As `trackInsert`, for a launch from Onshape. */
-export function trackAppOpen(c: AppContext): Promise<void> {
-    return runInBackground(c, "record an app open", async () =>
-        record(
+/** As `trackInsert`, for a launch from Onshape into `documentId`. */
+export function trackAppOpen(
+    c: AppContext,
+    documentId: string | undefined
+): Promise<void> {
+    return runInBackground(c, "record an app open", async () => {
+        const userId = await c.var.getUserId();
+        await record(
             getDb(c.env.DB),
             {
-                ...eventCore(EventType.APP_OPEN, null, await c.var.getUserId()),
+                ...eventCore(
+                    EventType.APP_OPEN,
+                    null,
+                    userId,
+                    await creditedTeamId(c.env, userId, documentId)
+                ),
                 ...NO_ELEMENT,
                 ...NOT_A_USE,
                 ...NOT_A_VERSION_RUN,
@@ -164,8 +185,8 @@ export function trackAppOpen(c: AppContext): Promise<void> {
                 ...NOT_A_FEATURE_ADD
             },
             []
-        )
-    );
+        );
+    });
 }
 
 /** Canonical, so "5 in" and "(2 + 3) in" count as one. Null when there's nothing to configure. */
@@ -182,6 +203,7 @@ function eventCore(
     type: EventType,
     libraryId: LibraryId | null,
     userId: string,
+    teamId: string | null,
     id: string = crypto.randomUUID()
 ): EventCore {
     const now = Date.now();
@@ -192,13 +214,16 @@ function eventCore(
         day: toDayKey(now),
         libraryId,
         userId,
-        schemaVersion: EVENT_SCHEMA_VERSION
+        schemaVersion: EVENT_SCHEMA_VERSION,
+        teamId
     };
 }
 
 /** A finished push or pull; see `features/version-manager`. */
 export interface VersionRunEvent {
     userId: string;
+    /** The document the run started from, which decides its team. */
+    documentId: string;
     kind: VersionJobKind;
     scope: PushScopeKind | PullScopeKind;
     /** How it ended. */
@@ -214,7 +239,12 @@ export async function trackVersionRun(
     await record(
         getDb(env.DB),
         {
-            ...eventCore(EventType.VERSION_RUN, null, event.userId),
+            ...eventCore(
+                EventType.VERSION_RUN,
+                null,
+                event.userId,
+                await creditedTeamId(env, event.userId, event.documentId)
+            ),
             ...NO_ELEMENT,
             ...NOT_A_USE,
             ...NOT_A_REPORT,
@@ -255,7 +285,7 @@ export function trackReport(c: AppContext, event: ReportEvent): Promise<void> {
     const element: ElementColumns = event.part
         ? { ...event.part.path, insertableId: event.part.insertableId }
         : NO_ELEMENT;
-    return runInBackground(c, "record a report", () =>
+    return runInBackground(c, "record a report", async () =>
         record(
             getDb(c.env.DB),
             {
@@ -263,6 +293,9 @@ export function trackReport(c: AppContext, event: ReportEvent): Promise<void> {
                     EventType.REPORT,
                     event.libraryId ?? null,
                     event.userId ?? SIGNED_OUT_USER_ID,
+                    event.userId
+                        ? await creditedTeamId(c.env, event.userId, undefined)
+                        : null,
                     event.id
                 ),
                 ...element,
@@ -283,6 +316,8 @@ export function trackReport(c: AppContext, event: ReportEvent): Promise<void> {
 export interface FeatureAddEvent {
     featureType: string;
     path: ElementPath;
+    /** The Part Studio's document, which decides its team. */
+    targetDocumentId: string;
 }
 
 /** As `trackInsert`, once Onshape accepted the feature. Not a use: it belongs to no library. */
@@ -290,14 +325,16 @@ export function trackFeatureAdd(
     c: AppContext,
     event: FeatureAddEvent
 ): Promise<void> {
-    return runInBackground(c, "record a FeatureScript add", async () =>
-        record(
+    return runInBackground(c, "record a FeatureScript add", async () => {
+        const userId = await c.var.getUserId();
+        await record(
             getDb(c.env.DB),
             {
                 ...eventCore(
                     EventType.FEATURE_ADD,
                     null,
-                    await c.var.getUserId()
+                    userId,
+                    await creditedTeamId(c.env, userId, event.targetDocumentId)
                 ),
                 ...event.path,
                 insertableId: null,
@@ -307,8 +344,8 @@ export function trackFeatureAdd(
                 featureType: event.featureType
             },
             []
-        )
-    );
+        );
+    });
 }
 
 /** A favorite's default configuration, saved; `path` is its part in the loaded version. */
@@ -323,14 +360,16 @@ export function trackDefaultSelection(
     c: AppContext,
     event: DefaultSelectionEvent
 ): Promise<void> {
-    return runInBackground(c, "record a default configuration", async () =>
-        record(
+    return runInBackground(c, "record a default configuration", async () => {
+        const userId = await c.var.getUserId();
+        await record(
             getDb(c.env.DB),
             {
                 ...eventCore(
                     EventType.DEFAULT_SELECTION,
                     event.libraryId,
-                    await c.var.getUserId()
+                    userId,
+                    await creditedTeamId(c.env, userId, undefined)
                 ),
                 ...event.path,
                 insertableId: event.insertableId,
@@ -340,8 +379,8 @@ export function trackDefaultSelection(
                 ...NOT_A_FEATURE_ADD
             },
             []
-        )
-    );
+        );
+    });
 }
 
 /** Batched so neither half lands without the other. */

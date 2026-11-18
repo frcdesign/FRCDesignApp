@@ -91,7 +91,8 @@ downloadRoutes.post(
             selection,
             parameters,
             isFavorite: body.isFavorite,
-            source: body.source
+            source: body.source,
+            targetDocumentId: undefined
         });
         return c.json({
             translationId: translation.id

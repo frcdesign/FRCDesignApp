@@ -1,6 +1,7 @@
 /** A run's inserts, recorded as any insert from the library its studios are in. */
 import { inArray } from "drizzle-orm";
-import { type Db } from "../../db/client";
+import { getDb } from "../../db/client";
+import { type AppBindings } from "../../lib/context";
 import { insertables } from "../../db/schema";
 import { ElementType } from "../../lib/onshape/element-type";
 import { toElementPath } from "../../lib/onshape/path";
@@ -12,15 +13,16 @@ import { type FastenerSet } from "./studios";
 
 /** Each part with an occurrence is an insert; a part is fastened once its mate is in. */
 export async function recordRunInserts(
-    db: Db,
+    env: AppBindings,
     userId: string,
+    assemblyDocumentId: string,
     set: FastenerSet,
     parts: PartPlacement[],
     paths: (string[] | null)[],
     mated: Set<number>
 ): Promise<void> {
     const studios = Object.values(set.studios);
-    const rows = await db
+    const rows = await getDb(env.DB)
         .select({
             id: insertables.id,
             libraryId: insertables.libraryId,
@@ -56,6 +58,7 @@ export async function recordRunInserts(
                 isFavorite: false,
                 isQuickInsert: false,
                 source: UseSource.AUTO_ASSEMBLY,
+                targetDocumentId: assemblyDocumentId,
                 fasten: mated.has(index),
                 fastenable: true,
                 preselected: false,
@@ -63,5 +66,5 @@ export async function recordRunInserts(
             }
         ];
     });
-    await recordInserts(db, userId, inserts);
+    await recordInserts(env, userId, inserts);
 }

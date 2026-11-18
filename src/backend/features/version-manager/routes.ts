@@ -965,6 +965,7 @@ versionManagerRoutes.post(
         await runInBackground(c, "record a reference update", () =>
             trackVersionRun(c.env, {
                 userId,
+                documentId: workspace.documentId,
                 kind: VersionJobKind.PULL,
                 scope: PullScopeKind.ALL,
                 status: {

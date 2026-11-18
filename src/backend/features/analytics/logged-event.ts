@@ -25,6 +25,7 @@ export type EventCore = Pick<
     | "libraryId"
     | "userId"
     | "schemaVersion"
+    | "teamId"
 >;
 
 /** What only a version run fills in. */

@@ -10,6 +10,7 @@ import {
     UseSource
 } from "./usage";
 import { featuresOf } from "./feature-reach";
+import { ALL_USES, type TeamCategory } from "../teams/contract";
 import { ElementType } from "../../lib/onshape/element-type";
 import { VersionJobOutcome } from "../version-manager/contract";
 import {
@@ -37,6 +38,8 @@ import {
     dailyFeatureScriptMetrics,
     dailyFeatureScriptUsers,
     dailyFeatureUsers,
+    dailyTeamMetrics,
+    dailyTeamUsers,
     insertableStats,
     userStats,
     type LoggedEvent
@@ -51,10 +54,42 @@ export function rollupWrites(
     event: LoggedEvent,
     parameters: ConfigurationParameter[]
 ): BatchItem<"sqlite">[] {
+    const features = featuresOf(event);
     return [
         ...kindWrites(db, event, parameters),
-        ...featuresOf(event).map((feature) =>
-            markFeatureUsed(db, event, feature)
+        ...features.map((feature) => markFeatureUsed(db, event, feature)),
+        ...teamWrites(db, event, features)
+    ];
+}
+
+/** Beside every other rollup, never in place of one: a team's use is still everybody's. */
+function teamWrites(
+    db: Db,
+    event: LoggedEvent,
+    features: AppFeature[]
+): BatchItem<"sqlite">[] {
+    const teamId = event.teamId;
+    if (teamId === null) return [];
+    const categories: TeamCategory[] = asUse(event)
+        ? [ALL_USES, ...features]
+        : features;
+    return [
+        db
+            .insert(dailyTeamUsers)
+            .values({ teamId, day: event.day, userId: event.userId })
+            .onConflictDoNothing(),
+        ...categories.map((category) =>
+            db
+                .insert(dailyTeamMetrics)
+                .values({ teamId, day: event.day, category, count: 1 })
+                .onConflictDoUpdate({
+                    target: [
+                        dailyTeamMetrics.category,
+                        dailyTeamMetrics.day,
+                        dailyTeamMetrics.teamId
+                    ],
+                    set: { count: increment(dailyTeamMetrics.count) }
+                })
         )
     ];
 }

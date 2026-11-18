@@ -362,7 +362,8 @@ insertableRoutes.post(
                     libraryId: row.libraryId,
                     insertableId,
                     selection,
-                    parameters
+                    parameters,
+                    targetDocumentId: targetPath.documentId
                 });
                 await trackInsert(c, {
                     libraryId: row.libraryId,
@@ -374,6 +375,7 @@ insertableRoutes.post(
                     isFavorite: body.isFavorite,
                     isQuickInsert: body.isQuickInsert,
                     source: body.source,
+                    targetDocumentId: targetPath.documentId,
                     // Insert-and-fasten is only offered for assembly targets.
                     fasten: false,
                     fastenable: row.fastenInfo !== null,
@@ -476,6 +478,7 @@ insertableRoutes.post(
                             isFavorite: body.isFavorite,
                             isQuickInsert: body.isQuickInsert,
                             source: body.source,
+                            targetDocumentId: targetPath.documentId,
                             fasten,
                             fastenable: row.fastenInfo !== null,
                             preselected,
@@ -537,7 +540,8 @@ insertableRoutes.post(
                     libraryId: row.libraryId,
                     insertableId,
                     selection,
-                    parameters
+                    parameters,
+                    targetDocumentId: targetPath.documentId
                 });
 
                 if (!body.fasten) {

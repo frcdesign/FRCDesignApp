@@ -971,5 +971,115 @@
     "versionManagerFormRecursivePushInfo": "Recursively push changes across multiple links.",
     "versionManagerFormRecursivePullInfo": "Also pulls into the parent from the documents linked above it first, saving a new version of each one along the way so the next can use it. Each is numbered from its own versions unless you name them above.",
     "versionManagerQuickRecursivePushTip": "Tip: Quick recursive push in a link's ⋯ menu does this in one click, without opening the form.",
-    "versionManagerQuickRecursivePullTip": "Tip: Quick recursive pull in a link's ⋯ menu does this in one click, without opening the form."
+    "versionManagerQuickRecursivePullTip": "Tip: Quick recursive pull in a link's ⋯ menu does this in one click, without opening the form.",
+    "dashboardFeatureTeamFavorites": "Team favorites",
+    "dashboardFeatureTeamRecents": "Team's recently used list",
+    "dashboardSourceTeamFavorites": "Team favorites",
+    "dashboardSourceTeamRecents": "Team's recently used list",
+    "teamLabel": "Team",
+    "teamPersonal": "Personal",
+    "teamSetByDocument": "Set by this document",
+    "teamChooseFailed": "Failed to switch team",
+    "teamDashboard": "Team dashboard",
+    "teamOpenDashboard": "Open dashboard",
+    "teamOrganization": "Organization",
+    "teamRegisterButton": "Register team",
+    "teamRegisterTitle": "Register team",
+    "teamRegisterDescription": "Links {organization} to a FIRST team.",
+    "teamRegisterNew": "New team",
+    "teamRegisterExisting": "My team",
+    "teamRegisterTeam": "Team",
+    "teamRegisterTeamPlaceholder": "Number or name",
+    "teamRegisterNoTeam": "No team found",
+    "teamRegisterSubteam": "Onshape team",
+    "teamRegisterSubteamDescription": "Only its members join. Leave empty for everyone in the organization.",
+    "teamRegisterSubteamInvalid": "Invalid Onshape team link",
+    "teamRegistered": "Team registered",
+    "teamRegisterFailed": "Failed to register team",
+    "teamSettings": "Team settings",
+    "teamSettingsFailed": "Failed to save team settings",
+    "teamEditFailed": "Failed to update team",
+    "teamMembersEditFavorites": "Members edit favorites",
+    "teamMembersEditFavoritesDescription": "Lets members add, order and remove team favorites.",
+    "teamPreferredVendors": "Preferred vendors",
+    "teamPreferredVendorsDescription": "In the order picked: first listed first.",
+    "teamColors": "Team colors",
+    "teamAddColor": "Add",
+    "teamRemoveColor": "Remove color",
+    "teamColorLabel": "Color",
+    "teamColorCustom": "Custom",
+    "teamColorPlaceholder": "Hex or RGB",
+    "teamOrganizations": "Organizations",
+    "teamOrganizationSubteam": [
+        {
+            "declarations": [
+                "input count",
+                "local countPlural = count: plural",
+                "local formatted = count: number"
+            ],
+            "selectors": ["countPlural"],
+            "match": {
+                "countPlural=one": "{organization}, {formatted} Onshape team member",
+                "countPlural=other": "{organization}, {formatted} Onshape team members"
+            }
+        }
+    ],
+    "teamRefreshSubteam": "Refresh members",
+    "teamRemove": "Remove",
+    "teamMembers": [
+        {
+            "declarations": [
+                "input count",
+                "local countPlural = count: plural",
+                "local formatted = count: number"
+            ],
+            "selectors": ["countPlural"],
+            "match": {
+                "countPlural=one": "{formatted} member",
+                "countPlural=other": "{formatted} members"
+            }
+        }
+    ],
+    "teamRoleAdmin": "Admin",
+    "teamRoleMember": "Member",
+    "teamFirstTeams": "FIRST teams",
+    "teamRefreshFirst": "Refresh",
+    "teamRefreshedFirst": "FIRST teams refreshed",
+    "teamRefreshFirstFailed": "Failed to refresh FIRST teams",
+    "teamFavorite": "Team favorite",
+    "teamFavorites": "Team favorites",
+    "teamFavoriteAdd": "Add to team favorites",
+    "teamFavoriteRemove": "Remove from team favorites",
+    "teamFavoritesFailed": "Failed to update team favorites",
+    "teamRecentsMine": "Mine",
+    "teamRecentsTeam": "Team",
+    "teamDashboardSignIn": "Sign in to see your team",
+    "teamDashboardSignInButton": "Sign in",
+    "teamDashboardLoading": "Loading team...",
+    "teamDashboardFailed": "Failed to load team",
+    "teamDashboardYear": "{year}, September to August",
+    "teamDashboardUses": "Uses",
+    "teamDashboardActiveMembers": "Active members",
+    "teamDashboardAllUses": "All uses",
+    "teamDashboardTop": "Top {percent: number}%",
+    "teamDashboardUnranked": "Ranked once {count: number} teams use it",
+    "teamDashboardPerMember": [
+        {
+            "declarations": [
+                "input uses",
+                "input perMember",
+                "local usesPlural = uses: plural",
+                "local usesFormatted = uses: number",
+                "local perMemberFormatted = perMember: number"
+            ],
+            "selectors": ["usesPlural"],
+            "match": {
+                "usesPlural=one": "{usesFormatted} use, {perMemberFormatted} per member",
+                "usesPlural=other": "{usesFormatted} uses, {perMemberFormatted} per member"
+            }
+        }
+    ],
+    "teamMedalGold": "Gold",
+    "teamMedalSilver": "Silver",
+    "teamMedalBronze": "Bronze"
 }

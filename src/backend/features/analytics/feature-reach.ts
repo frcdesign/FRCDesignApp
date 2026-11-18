@@ -70,6 +70,10 @@ function sourceFeature(source: UseSource): AppFeature | undefined {
             return AppFeature.FAVORITES;
         case UseSource.RECENTS:
             return AppFeature.RECENTS;
+        case UseSource.TEAM_FAVORITES:
+            return AppFeature.TEAM_FAVORITES;
+        case UseSource.TEAM_RECENTS:
+            return AppFeature.TEAM_RECENTS;
         case UseSource.BROWSE:
         case UseSource.AUTO_ASSEMBLY:
         case UseSource.UNKNOWN:

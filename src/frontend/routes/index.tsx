@@ -22,7 +22,9 @@ export const Route = createFileRoute("/")({
         // Only launches from Onshape count as opens.
         if ("documentId" in search) {
             // Signed out is refused, and there's no open to count.
-            void apiPost("/app-open").catch(() => undefined);
+            void apiPost("/app-open", {
+                query: { documentId: String(search.documentId) }
+            }).catch(() => undefined);
         }
         // Whatever Onshape launched with rides along; only the path is ours.
         // By `to`, since an `href` carries its own search and drops this one.

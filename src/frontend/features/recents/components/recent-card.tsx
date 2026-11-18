@@ -4,6 +4,7 @@ import { DEFAULT_CONFIGURATION_KEY } from "@backend/features/configurations/cont
 import { ReactNode } from "react";
 import type { RecentInsert } from "@backend/features/recents/contract";
 import { InsertableOut } from "@backend/features/library/contract";
+import { TeamFavoriteItem } from "../../teams/components/team-favorites";
 import { UseSource } from "@backend/features/analytics/usage";
 import { openInsertMenu } from "../../insert/open-insert-menu";
 import {
@@ -28,6 +29,8 @@ import { openCannotDeriveAssemblyAlert } from "../../../components/alerts";
 import { type SearchHit } from "../../search/search";
 
 interface RecentCardProps {
+    /** @default UseSource.RECENTS */
+    source?: UseSource.RECENTS | UseSource.TEAM_RECENTS;
     insertable: InsertableOut;
     recent: RecentInsert;
     /** Set when a search found this row, to underline what matched. */
@@ -35,7 +38,7 @@ interface RecentCardProps {
 }
 
 export function RecentCard(props: RecentCardProps): ReactNode {
-    const { insertable, recent, searchHit } = props;
+    const { insertable, recent, searchHit, source = UseSource.RECENTS } = props;
 
     const favorite = useFavorite(insertable.id);
     const isHidden = useIsInsertableHidden(insertable);
@@ -68,7 +71,7 @@ export function RecentCard(props: RecentCardProps): ReactNode {
                     insertable,
                     initialSelection: recent.selection,
                     configurationKey: recent.configurationKey,
-                    source: UseSource.RECENTS
+                    source
                 });
             }}
             left={
@@ -107,7 +110,7 @@ export function RecentCard(props: RecentCardProps): ReactNode {
                         insertable={insertable}
                         selection={recent.selection}
                         isFavorite={favorite !== undefined}
-                        source={UseSource.RECENTS}
+                        source={source}
                     />
                     <FavoriteButton
                         favorite={favorite}
@@ -118,7 +121,11 @@ export function RecentCard(props: RecentCardProps): ReactNode {
                 </Group>
             }
             menuItems={
-                <RecentMenuItems insertable={insertable} recent={recent} />
+                <RecentMenuItems
+                    insertable={insertable}
+                    recent={recent}
+                    source={source}
+                />
             }
         />
     );
@@ -127,10 +134,11 @@ export function RecentCard(props: RecentCardProps): ReactNode {
 interface RecentMenuItemsProps {
     insertable: InsertableOut;
     recent: RecentInsert;
+    source: UseSource;
 }
 
 function RecentMenuItems(props: RecentMenuItemsProps): ReactNode {
-    const { insertable, recent } = props;
+    const { insertable, recent, source } = props;
 
     const favorite = useFavorite(insertable.id);
 
@@ -140,11 +148,16 @@ function RecentMenuItems(props: RecentMenuItemsProps): ReactNode {
                 insertable={insertable}
                 selection={recent.selection}
                 isFavorite={favorite !== undefined}
-                source={UseSource.RECENTS}
+                source={source}
             />
             <MenuSection label={m.libraryMenuFavorites()}>
                 <FavoriteInsertableItem
                     favorite={favorite}
+                    insertable={insertable}
+                    selection={recent.selection}
+                    configurationKey={recent.configurationKey}
+                />
+                <TeamFavoriteItem
                     insertable={insertable}
                     selection={recent.selection}
                     configurationKey={recent.configurationKey}

@@ -16,6 +16,11 @@
     "observability": {
         "enabled": true
     },
+    // Inherited by every environment: refreshes FIRST's team lists weekly
+    // (`teams/first-teams.ts`), off the hour every other cron lands on.
+    "triggers": {
+        "crons": ["17 7 * * 1"]
+    },
     // Use Workers Caching
     "cache": {
         "enabled": true

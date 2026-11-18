@@ -20,23 +20,30 @@ enum DocumentOwner {
     CLASSROOM = "classroom"
 }
 
-/**
- * Undefined unless Onshape says the grant can't edit the document: whether it
- * can't see it or only view it, nothing can be inserted. Undefined too
- * whenever that can't be told: no document, no session (the app offers
- * sign-in), or Onshape failing, so a check that can't answer never keeps
- * somebody out of the app.
- */
-export async function findAccessProblem(
+/** What `/init` learned of the launch's document. */
+export interface LaunchDocument {
+    /**
+     * Undefined unless Onshape says the grant can't edit the document: whether
+     * it can't see it or only view it, nothing can be inserted. Undefined too
+     * whenever that can't be told: no document, no session (the app offers
+     * sign-in), or Onshape failing, so a check that can't answer never keeps
+     * somebody out of the app.
+     */
+    problem?: AccessProblem;
+    /** The document as the grant sees it; undefined when it couldn't be read. */
+    document?: OnshapeDocumentInfo;
+}
+
+export async function checkLaunchDocument(
     c: AppContext,
     documentId: string | undefined
-): Promise<AccessProblem | undefined> {
-    if (!documentId) return undefined;
+): Promise<LaunchDocument> {
+    if (!documentId) return {};
     let api: OAuthApi;
     try {
         api = await c.var.getOnshapeApi();
     } catch {
-        return undefined;
+        return {};
     }
 
     // Undefined for a document the grant can't see at all.
@@ -44,16 +51,23 @@ export async function findAccessProblem(
     try {
         document = await getDocument(api, { documentId });
     } catch (error) {
-        if (!isUnseen(error)) return undefined;
+        if (!isUnseen(error)) return {};
     }
     if (document) {
         // Onshape doesn't promise to send it, and an absent one can't say no.
-        if (!document.permissionSet) return undefined;
+        if (!document.permissionSet) return { document };
         if (document.permissionSet.includes(OnshapePermission.WRITE)) {
-            return undefined;
+            return { document };
         }
     }
+    return { problem: await describeProblem(c, api, document), document };
+}
 
+async function describeProblem(
+    c: AppContext,
+    api: OAuthApi,
+    document: OnshapeDocumentInfo | undefined
+): Promise<AccessProblem> {
     switch (toOwner(document) ?? ownerFromLaunch(c)) {
         case DocumentOwner.CLASSROOM:
             return AccessProblem.CLASSROOM;

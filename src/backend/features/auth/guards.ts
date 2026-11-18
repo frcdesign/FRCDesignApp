@@ -6,7 +6,7 @@ import { DEFAULT_LIBRARY } from "../library/library-id";
 import { AccessLevel, isWithinAccessLevel } from "./access-level";
 import { isSignedIn } from "./request-auth";
 
-async function requireSignIn(c: AppContext): Promise<void> {
+export async function requireSignIn(c: AppContext): Promise<void> {
     if (!(await isSignedIn(c))) {
         throw signInRequiredError(
             "You must be signed in to Onshape to use this functionality."

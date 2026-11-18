@@ -28,6 +28,7 @@ import { Route as PagesCookieErrorRouteImport } from './routes/_pages/cookie-err
 import { Route as PagesBetaCompleteRouteImport } from './routes/_pages/beta-complete'
 import { Route as AppFeaturescriptsRouteRouteImport } from './routes/app/featurescripts/route'
 import { Route as AppFeaturescriptsIndexRouteImport } from './routes/app/featurescripts/index'
+import { Route as DashboardTeamsTeamIdRouteImport } from './routes/dashboard/teams/$teamId'
 import { Route as DashboardLibraryLibraryIdRouteRouteImport } from './routes/dashboard/library/$libraryId/route'
 import { Route as AppLibraryLibraryIdRouteRouteImport } from './routes/app/library/$libraryId/route'
 import { Route as DashboardLibraryLibraryIdIndexRouteImport } from './routes/dashboard/library/$libraryId/index'
@@ -131,6 +132,11 @@ const AppFeaturescriptsIndexRoute = AppFeaturescriptsIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppFeaturescriptsRouteRoute,
 } as any)
+const DashboardTeamsTeamIdRoute = DashboardTeamsTeamIdRouteImport.update({
+  id: '/teams/$teamId',
+  path: '/teams/$teamId',
+  getParentRoute: () => DashboardRouteRoute,
+} as any)
 const DashboardLibraryLibraryIdRouteRoute =
   DashboardLibraryLibraryIdRouteRouteImport.update({
     id: '/library/$libraryId',
@@ -195,6 +201,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/': typeof DashboardIndexRoute
   '/app/library/$libraryId': typeof AppLibraryLibraryIdRouteRouteWithChildren
   '/dashboard/library/$libraryId': typeof DashboardLibraryLibraryIdRouteRouteWithChildren
+  '/dashboard/teams/$teamId': typeof DashboardTeamsTeamIdRoute
   '/app/featurescripts/': typeof AppFeaturescriptsIndexRoute
   '/dashboard/library/$libraryId/part': typeof DashboardLibraryLibraryIdPartRoute
   '/dashboard/library/$libraryId/unused': typeof DashboardLibraryLibraryIdUnusedRoute
@@ -219,6 +226,7 @@ export interface FileRoutesByTo {
   '/app/auto-assembly': typeof AppAutoAssemblyRoute
   '/app/version-manager': typeof AppVersionManagerRoute
   '/dashboard': typeof DashboardIndexRoute
+  '/dashboard/teams/$teamId': typeof DashboardTeamsTeamIdRoute
   '/app/featurescripts': typeof AppFeaturescriptsIndexRoute
   '/dashboard/library/$libraryId/part': typeof DashboardLibraryLibraryIdPartRoute
   '/dashboard/library/$libraryId/unused': typeof DashboardLibraryLibraryIdUnusedRoute
@@ -248,6 +256,7 @@ export interface FileRoutesById {
   '/dashboard/': typeof DashboardIndexRoute
   '/app/library/$libraryId': typeof AppLibraryLibraryIdRouteRouteWithChildren
   '/dashboard/library/$libraryId': typeof DashboardLibraryLibraryIdRouteRouteWithChildren
+  '/dashboard/teams/$teamId': typeof DashboardTeamsTeamIdRoute
   '/app/featurescripts/': typeof AppFeaturescriptsIndexRoute
   '/dashboard/library/$libraryId/part': typeof DashboardLibraryLibraryIdPartRoute
   '/dashboard/library/$libraryId/unused': typeof DashboardLibraryLibraryIdUnusedRoute
@@ -278,6 +287,7 @@ export interface FileRouteTypes {
     | '/dashboard/'
     | '/app/library/$libraryId'
     | '/dashboard/library/$libraryId'
+    | '/dashboard/teams/$teamId'
     | '/app/featurescripts/'
     | '/dashboard/library/$libraryId/part'
     | '/dashboard/library/$libraryId/unused'
@@ -302,6 +312,7 @@ export interface FileRouteTypes {
     | '/app/auto-assembly'
     | '/app/version-manager'
     | '/dashboard'
+    | '/dashboard/teams/$teamId'
     | '/app/featurescripts'
     | '/dashboard/library/$libraryId/part'
     | '/dashboard/library/$libraryId/unused'
@@ -330,6 +341,7 @@ export interface FileRouteTypes {
     | '/dashboard/'
     | '/app/library/$libraryId'
     | '/dashboard/library/$libraryId'
+    | '/dashboard/teams/$teamId'
     | '/app/featurescripts/'
     | '/dashboard/library/$libraryId/part'
     | '/dashboard/library/$libraryId/unused'
@@ -490,6 +502,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppFeaturescriptsIndexRouteImport
       parentRoute: typeof AppFeaturescriptsRouteRoute
     }
+    '/dashboard/teams/$teamId': {
+      id: '/dashboard/teams/$teamId'
+      path: '/teams/$teamId'
+      fullPath: '/dashboard/teams/$teamId'
+      preLoaderRoute: typeof DashboardTeamsTeamIdRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
     '/dashboard/library/$libraryId': {
       id: '/dashboard/library/$libraryId'
       path: '/library/$libraryId'
@@ -612,12 +631,14 @@ const DashboardLibraryLibraryIdRouteRouteWithChildren =
 interface DashboardRouteRouteChildren {
   DashboardIndexRoute: typeof DashboardIndexRoute
   DashboardLibraryLibraryIdRouteRoute: typeof DashboardLibraryLibraryIdRouteRouteWithChildren
+  DashboardTeamsTeamIdRoute: typeof DashboardTeamsTeamIdRoute
 }
 
 const DashboardRouteRouteChildren: DashboardRouteRouteChildren = {
   DashboardIndexRoute: DashboardIndexRoute,
   DashboardLibraryLibraryIdRouteRoute:
     DashboardLibraryLibraryIdRouteRouteWithChildren,
+  DashboardTeamsTeamIdRoute: DashboardTeamsTeamIdRoute,
 }
 
 const DashboardRouteRouteWithChildren = DashboardRouteRoute._addFileChildren(

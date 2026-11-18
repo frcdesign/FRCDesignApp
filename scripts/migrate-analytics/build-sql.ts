@@ -363,7 +363,9 @@ const toEvent = (
         createdAt: new Date(createdAt),
         day: toDayKey(createdAt),
         userId: row.user_id,
-        schemaVersion: LEGACY_SCHEMA_VERSION
+        schemaVersion: LEGACY_SCHEMA_VERSION,
+        // Teams postdate the legacy log.
+        teamId: null
     };
     if (row.message === "App opened") {
         const event: LoggedEvent = {

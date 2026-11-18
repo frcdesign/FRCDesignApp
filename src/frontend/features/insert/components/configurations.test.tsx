@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
     type ConfigurationResult,
     type PartialSelection,
     type SearchRecord,
+    ParameterRole,
     VisibilityType
 } from "@backend/features/configurations/contract";
 import {
@@ -19,7 +20,23 @@ import {
     renderWithProviders
 } from "../../../../__test_utils__/render";
 import { configurationQueryKey } from "../../../lib/query-keys";
-import { ConfigurationWrapper, type SelectionReport } from "./configurations";
+import { QuantityType, Unit } from "@backend/features/configurations/enums";
+import {
+    DEFAULT_TEAM_SETTINGS,
+    type TeamSettings
+} from "@backend/features/teams/contract";
+
+const mocks = vi.hoisted(() => ({
+    teamSettings: undefined as TeamSettings | undefined
+}));
+
+// The team's colors come from its context, which needs a router to resolve.
+vi.mock("../../teams/queries", () => ({
+    useCurrentTeamSettings: () => mocks.teamSettings
+}));
+
+const { ConfigurationWrapper } = await import("./configurations");
+type SelectionReport = import("./configurations").SelectionReport;
 
 const size = enumParam("size", ["small", "large"]);
 const length = quantityParam("length");
@@ -184,5 +201,39 @@ describe("ConfigurationWrapper", () => {
         expect(input).toHaveProperty("readOnly", true);
         expect((input as HTMLInputElement).value).toMatch(/^[0-9a-f-]{36}$/);
         expect(lastReport().overrides).toEqual({});
+    });
+
+    it("draws three color channels as one Color, offering the team's", async () => {
+        const user = userEvent.setup();
+        mocks.teamSettings = { ...DEFAULT_TEAM_SETTINGS, colors: ["#ff8000"] };
+        const channel = (name: string) => ({
+            ...quantityParam(name, {
+                quantityType: QuantityType.INTEGER,
+                unit: Unit.UNITLESS,
+                defaultValue: 0,
+                max: 255
+            }),
+            role: ParameterRole.COLOR_CHANNEL
+        });
+        const { lastReport } = renderPanel({
+            parameters: [
+                size,
+                channel("Red"),
+                channel("Green"),
+                channel("Blue")
+            ],
+            records: []
+        });
+
+        await user.click(await screen.findByLabelText("Color"));
+        await user.click(await screen.findByText("#ff8000"));
+
+        expect(screen.queryByLabelText("Red")).toBeNull();
+        expect(lastReport().selection).toMatchObject({
+            Red: "255",
+            Green: "128",
+            Blue: "0"
+        });
+        mocks.teamSettings = undefined;
     });
 });

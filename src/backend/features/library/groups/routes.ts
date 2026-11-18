@@ -14,7 +14,9 @@ import {
     insertables,
     favorites,
     recentInserts,
-    WebhookSubject
+    WebhookSubject,
+    teamFavorites,
+    teamRecentInserts
 } from "../../../db/schema";
 import { bumpLibraryVersion, rebuildSearchDb } from "../db";
 import { recheckVisibility } from "../../build-checker/visibility";
@@ -91,6 +93,28 @@ groupRoutes.post(
                                 eq(recentInserts.libraryId, libraryId),
                                 inArray(
                                     recentInserts.insertableId,
+                                    insertableIds
+                                )
+                            )
+                        ),
+                    db
+                        .delete(teamFavorites)
+                        .where(
+                            and(
+                                eq(teamFavorites.libraryId, libraryId),
+                                inArray(
+                                    teamFavorites.insertableId,
+                                    insertableIds
+                                )
+                            )
+                        ),
+                    db
+                        .delete(teamRecentInserts)
+                        .where(
+                            and(
+                                eq(teamRecentInserts.libraryId, libraryId),
+                                inArray(
+                                    teamRecentInserts.insertableId,
                                     insertableIds
                                 )
                             )

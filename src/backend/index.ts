@@ -8,9 +8,14 @@ export { LoadFeatureScriptsWorkflow } from "./features/featurescripts/workflow";
 import { createApp } from "./app";
 import { productionAuth } from "./features/auth/request-auth";
 import type { AppBindings } from "./lib/context";
+import { refreshFirstTeams } from "./features/teams/first-teams";
 
 const app = createApp(productionAuth);
 
 export default {
-    fetch: app.fetch
+    fetch: app.fetch,
+    // The only cron, weekly; see `wrangler.jsonc`.
+    scheduled: (_controller, env, ctx) => {
+        ctx.waitUntil(refreshFirstTeams(env));
+    }
 } satisfies ExportedHandler<AppBindings>;

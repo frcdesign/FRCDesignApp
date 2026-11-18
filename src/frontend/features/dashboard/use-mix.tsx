@@ -23,6 +23,10 @@ function sourceLabel(source: UseSource): string {
             return m.dashboardSourceFavorites();
         case UseSource.RECENTS:
             return m.dashboardSourceRecents();
+        case UseSource.TEAM_FAVORITES:
+            return m.dashboardSourceTeamFavorites();
+        case UseSource.TEAM_RECENTS:
+            return m.dashboardSourceTeamRecents();
         case UseSource.AUTO_ASSEMBLY:
             return m.dashboardAutoAssembly();
         case UseSource.UNKNOWN:
