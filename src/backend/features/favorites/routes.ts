@@ -130,7 +130,7 @@ favoriteRoutes.post(
         // The library is named since the dead column's default may not exist.
         await db
             .insert(users)
-            .values({ id: userId, libraryId })
+            .values({ id: userId, libraryId, createdAt: new Date() })
             .onConflictDoNothing();
 
         // The highest order, not the count: deletes leave gaps.

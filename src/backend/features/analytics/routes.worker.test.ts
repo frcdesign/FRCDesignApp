@@ -1,12 +1,11 @@
 import { sql } from "drizzle-orm";
 import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
-import { configurations, insertables } from "../../db/schema";
+import { configurations, insertables, users } from "../../db/schema";
 import {
     dailyAppOpens,
     dailyConfigurationMetrics,
     dailyFeatureUsers,
-    userFirstSeen,
     dailyFeatureScriptMetrics,
     dailyFeatureScriptUsers,
     dailyInsertableMetrics,
@@ -28,6 +27,7 @@ import {
     seedAssembly,
     seedConfiguration,
     seedFavorite,
+    seedLibrary,
     seedPartStudio,
     seedTestData
 } from "../../../__test_utils__";
@@ -723,12 +723,18 @@ describe("analytics routes", () => {
                 .values(
                     opens.map(([day, userId]) => ({ day, userId, opens: 1 }))
                 );
-            await db.insert(userFirstSeen).values([
-                { userId: "old", firstDay: "2026-01-05" },
-                { userId: "edge-old", firstDay: "2026-05-10" },
-                { userId: "edge-new", firstDay: "2026-05-11" },
-                { userId: "fresh", firstDay: "2026-06-04" }
-            ]);
+            await seedLibrary(db);
+            await db.insert(users).values(
+                [
+                    ["old", "2026-01-05"],
+                    ["edge-old", "2026-05-10"],
+                    ["edge-new", "2026-05-11"],
+                    ["fresh", "2026-06-04"]
+                ].map(([id, day]) => ({
+                    id,
+                    createdAt: new Date(`${day}T15:00:00Z`)
+                }))
+            );
             await db.insert(dailyFeatureUsers).values([
                 {
                     day: "2026-06-02",

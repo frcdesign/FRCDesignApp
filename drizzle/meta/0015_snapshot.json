@@ -1,7 +1,7 @@
 {
     "version": "6",
     "dialect": "sqlite",
-    "id": "5dac37c5-241c-4d2c-9367-3caa7b640f47",
+    "id": "f42c3965-7c1d-4298-9618-faf900c77188",
     "prevId": "b765a9bd-883e-4dce-9709-de539bf0d0be",
     "tables": {
         "configurations": {
@@ -737,6 +737,13 @@
                     "notNull": true,
                     "autoincrement": false,
                     "default": "'frc-design-lib'"
+                },
+                "created_at": {
+                    "name": "created_at",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": false,
+                    "autoincrement": false
                 }
             },
             "indexes": {},
@@ -1765,30 +1772,6 @@
                     "name": "insertable_stats_library_id_element_id_pk"
                 }
             },
-            "uniqueConstraints": {},
-            "checkConstraints": {}
-        },
-        "user_first_seen": {
-            "name": "user_first_seen",
-            "columns": {
-                "user_id": {
-                    "name": "user_id",
-                    "type": "text",
-                    "primaryKey": true,
-                    "notNull": true,
-                    "autoincrement": false
-                },
-                "first_day": {
-                    "name": "first_day",
-                    "type": "text",
-                    "primaryKey": false,
-                    "notNull": true,
-                    "autoincrement": false
-                }
-            },
-            "indexes": {},
-            "foreignKeys": {},
-            "compositePrimaryKeys": {},
             "uniqueConstraints": {},
             "checkConstraints": {}
         },

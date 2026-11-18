@@ -10,7 +10,8 @@ import {
 } from "drizzle-orm";
 import { type SQLiteColumn } from "drizzle-orm/sqlite-core";
 import { type Db } from "../../db/client";
-import { dailyFeatureUsers, userFirstSeen, type LoggedEvent } from "./schema";
+import { dailyFeatureUsers, type LoggedEvent } from "./schema";
+import { users } from "../../db/schema";
 import {
     asFeatureAdd,
     asReport,
@@ -77,14 +78,16 @@ function weekOf(day: SQLiteColumn | SQL.Aliased<string>): SQL<string> {
     return sql<string>`date(${day}, '-' || ((strftime('%w', ${day}) + 6) % 7) || ' days')`;
 }
 
-/** Distinct users first seen in the {@link NEW_USER_WEEKS} weeks up to and including `week`. */
+/**
+ * Distinct users first seen in the {@link NEW_USER_WEEKS} weeks up to and
+ * including `week`. Compared at UTC midnight, hours from the reporting day's.
+ */
 function countNew(
     userId: SQLiteColumn | SQL.Aliased<string>,
-    firstDay: SQLiteColumn,
     week: SQL<string>
 ): SQL<number> {
     const window = `-${(NEW_USER_WEEKS - 1) * 7} days`;
-    return sql<number>`count(distinct case when ${firstDay} >= date(${week}, ${window}) then ${userId} end)`.mapWith(
+    return sql<number>`count(distinct case when ${users.createdAt} >= strftime('%s', ${week}, ${window}) * 1000 then ${userId} end)`.mapWith(
         Number
     );
 }
@@ -121,19 +124,15 @@ export async function getFeatureReach(
     const featureWeek = weekOf(dailyFeatureUsers.day);
 
     const [activeRows, featureRows, firstRows] = await Promise.all([
-        // Left joined: anybody without a first day counts as existing.
+        // Left joined: anybody without a record counts as existing.
         db
             .select({
                 week: everyoneWeek,
                 users: countDistinct(everyone.userId),
-                newUsers: countNew(
-                    everyone.userId,
-                    userFirstSeen.firstDay,
-                    everyoneWeek
-                )
+                newUsers: countNew(everyone.userId, everyoneWeek)
             })
             .from(everyone)
-            .leftJoin(userFirstSeen, eq(userFirstSeen.userId, everyone.userId))
+            .leftJoin(users, eq(users.id, everyone.userId))
             .groupBy(everyoneWeek)
             .all(),
         db
@@ -141,17 +140,10 @@ export async function getFeatureReach(
                 week: featureWeek,
                 feature: dailyFeatureUsers.feature,
                 users: countDistinct(dailyFeatureUsers.userId),
-                newUsers: countNew(
-                    dailyFeatureUsers.userId,
-                    userFirstSeen.firstDay,
-                    featureWeek
-                )
+                newUsers: countNew(dailyFeatureUsers.userId, featureWeek)
             })
             .from(dailyFeatureUsers)
-            .leftJoin(
-                userFirstSeen,
-                eq(userFirstSeen.userId, dailyFeatureUsers.userId)
-            )
+            .leftJoin(users, eq(users.id, dailyFeatureUsers.userId))
             .where(inRange)
             .groupBy(featureWeek, dailyFeatureUsers.feature)
             .all(),
