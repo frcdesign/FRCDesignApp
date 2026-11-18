@@ -182,7 +182,10 @@ export const users = sqliteTable("users", {
     // rebuild the table while favorites reference it.
     libraryId: libraryId()
         .default(DEFAULT_LIBRARY)
-        .references(() => libraries.id)
+        .references(() => libraries.id),
+    // When they were first seen: their first tracked event, or first favorite.
+    // Null for a row older than the column that no analytics rollup names.
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
 });
 
 export const favorites = sqliteTable(

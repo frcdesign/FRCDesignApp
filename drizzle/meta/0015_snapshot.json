@@ -1,7 +1,7 @@
 {
     "version": "6",
     "dialect": "sqlite",
-    "id": "3b651449-2c28-4d55-a57f-d9c11ff01239",
+    "id": "3635afc2-5405-4884-908d-b9123add6c97",
     "prevId": "7cc5e689-0566-405e-aec8-1a56101dcb6c",
     "tables": {
         "configurations": {
@@ -660,6 +660,13 @@
                     "notNull": true,
                     "autoincrement": false,
                     "default": "'frc-design-lib'"
+                },
+                "created_at": {
+                    "name": "created_at",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": false,
+                    "autoincrement": false
                 }
             },
             "indexes": {},

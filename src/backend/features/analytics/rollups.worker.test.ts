@@ -11,7 +11,8 @@ import {
 } from "../../../__test_utils__";
 import { enumParam } from "../../../__test_utils__/configuration-fixtures";
 import { getDb } from "../../db/client";
-import { configurations } from "../../db/schema";
+import { configurations, users } from "../../db/schema";
+import { toDayKey } from "./day";
 import { type AppContext } from "../../lib/context";
 import { ElementType } from "../../lib/onshape/element-type";
 import { toSelection } from "../configurations/selection";
@@ -27,7 +28,6 @@ import {
     dailyAppOpens,
     dailyConfigurationMetrics,
     dailyFeatureUsers,
-    userFirstSeen,
     dailyInsertableMetrics,
     dailyInsertableUsers,
     dailyMetrics,
@@ -70,7 +70,6 @@ const ROLLUPS = [
     dailyConfigurationMetrics,
     dailyVersionMetrics,
     dailyFeatureUsers,
-    userFirstSeen,
     insertableStats,
     userStats
 ];
@@ -277,14 +276,15 @@ describe("rollupWrites", () => {
             expect(await db.select().from(userStats).all()).toEqual([]);
         });
 
-        it("keeps each person's first day, whatever order the log replays in", async () => {
-            const day = 24 * 3600 * 1000;
+        it("creates a person's record on their first event, and keeps it", async () => {
+            const opened = Date.parse("2026-03-01T15:00:00Z");
             const clock = vi.spyOn(Date, "now");
-            clock.mockReturnValue(Date.parse("2026-03-02T15:00:00Z"));
-            await trackInsert(fakeContext("regular"), insertEvent());
-            clock.mockReturnValue(Date.parse("2026-03-02T15:00:00Z") - day);
+            clock.mockReturnValue(opened);
             await trackAppOpen(fakeContext("regular"));
+            clock.mockReturnValue(opened + 24 * 3600 * 1000);
+            await trackInsert(fakeContext("regular"), insertEvent());
             clock.mockRestore();
+            // Nobody to make a record for.
             await trackReport(fakeContext(), {
                 id: crypto.randomUUID(),
                 userId: undefined,
@@ -294,32 +294,38 @@ describe("rollupWrites", () => {
                 source: FeedbackSource.GENERAL
             });
 
-            expect(await db.select().from(userFirstSeen).all()).toEqual([
-                { userId: "regular", firstDay: "2026-03-01" }
-            ]);
+            expect(
+                await db
+                    .select({ id: users.id, createdAt: users.createdAt })
+                    .from(users)
+                    .all()
+            ).toEqual([{ id: "regular", createdAt: new Date(opened) }]);
         });
 
-        it("is filled from the rollups by the migration that added it", async () => {
+        it("is dated from the rollups by the migration that added the column", async () => {
             await trackAppOpen(fakeContext("opener"));
             await trackEveryFeature();
-            const live = await db.select().from(userFirstSeen).all();
+            const firstDays = async () =>
+                (await db.select().from(users).all())
+                    .map(({ id, createdAt }) => [
+                        id,
+                        createdAt && toDayKey(createdAt.getTime())
+                    ])
+                    .sort();
+            const live = await firstDays();
             expect(live.length).toBeGreaterThan(5);
 
             const migration = env.TEST_MIGRATIONS.find((m) =>
                 m.name.includes("feature_reach")
             );
             const backfill = (migration?.queries ?? []).filter((query) =>
-                query.includes("INSERT INTO `user_first_seen`")
+                query.startsWith("INSERT INTO `users`")
             );
             expect(backfill).toHaveLength(1);
-            await db.delete(userFirstSeen);
+            await db.delete(users);
             await env.DB.batch(backfill.map((query) => env.DB.prepare(query)));
 
-            const byUser = (a: { userId: string }, b: { userId: string }) =>
-                a.userId.localeCompare(b.userId);
-            expect(
-                (await db.select().from(userFirstSeen).all()).sort(byUser)
-            ).toEqual(live.sort(byUser));
+            expect(await firstDays()).toEqual(live);
         });
     });
 });

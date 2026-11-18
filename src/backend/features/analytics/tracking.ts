@@ -1,3 +1,4 @@
+import { eq, sql } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import { runInBackground } from "../../lib/background";
 import { type AppBindings, type AppContext } from "../../lib/context";
@@ -13,7 +14,8 @@ import {
     type ElementColumns,
     type EventCore
 } from "./logged-event";
-import { rollupWrites } from "./rollups";
+import { namesPerson, rollupWrites } from "./rollups";
+import { libraries, users } from "../../db/schema";
 import { EVENT_SCHEMA_VERSION, EventType, UseSource } from "./usage";
 import {
     failedTaskCount,
@@ -24,7 +26,7 @@ import {
     type PushScopeKind,
     type VersionJobStatus
 } from "../version-manager/contract";
-import { type LibraryId } from "../library/library-id";
+import { DEFAULT_LIBRARY, type LibraryId } from "../library/library-id";
 import { type ElementPath } from "../../lib/onshape/path";
 import { ElementType } from "../../lib/onshape/element-type";
 import {
@@ -317,8 +319,31 @@ async function record(
 ): Promise<void> {
     const writes: BatchItem<"sqlite">[] = [
         db.insert(events).values(event),
-        ...rollupWrites(db, event, parameters)
+        ...rollupWrites(db, event, parameters),
+        ...(namesPerson(event) ? [createUser(db, event)] : [])
     ];
 
     await db.batch(writes as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
+}
+
+/**
+ * The user's record, on the first event that names them. Through `libraries`,
+ * since its dead `library_id` must name one: with none to name, it writes nothing.
+ */
+function createUser(db: Db, event: LoggedEvent) {
+    return db
+        .insert(users)
+        .select(
+            db
+                .select({
+                    id: sql<string>`${event.userId}`.as("id"),
+                    libraryId: libraries.id,
+                    createdAt: sql<number>`${event.createdAt.getTime()}`.as(
+                        "created_at"
+                    )
+                })
+                .from(libraries)
+                .where(eq(libraries.id, event.libraryId ?? DEFAULT_LIBRARY))
+        )
+        .onConflictDoNothing();
 }

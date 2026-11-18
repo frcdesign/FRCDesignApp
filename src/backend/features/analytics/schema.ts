@@ -62,7 +62,7 @@ export const events = sqliteTable(
         source: text("source").$type<UseSource>(),
         // Insert-and-fasten, which Onshape only offers for assembly targets.
         fasten: integer("fasten", { mode: "boolean" }),
-        // Placed at the assembly's insert location marker; null before schema version 3.
+        // Placed at the assembly's insert location marker; null before schema version 4.
         atInsertLocation: integer("at_insert_location", { mode: "boolean" }),
         // A version run's own columns: how it was aimed, and what it did.
         versionKind: text("version_kind").$type<VersionJobKind>(),
@@ -350,12 +350,3 @@ export const dailyFeatureUsers = sqliteTable(
     // Feature first, so a feature's first recorded day is an index seek.
     (t) => [primaryKey({ columns: [t.feature, t.day, t.userId] })]
 );
-
-/**
- * Each person's first day in any rollup that names people: the new and
- * existing users split, and growth in users over time.
- */
-export const userFirstSeen = sqliteTable("user_first_seen", {
-    userId: text("user_id").primaryKey(),
-    firstDay: text("first_day").notNull()
-});

@@ -25,8 +25,9 @@ configuration each one opens with. Favorites are per user and per library.
 delete), `default_selection` (a stored selection, or null for the defaults),
 `sort_order`, `created_at`. Unique on user, library and insertable.
 
-`users` holds one row per user who has favorited anything; a favorite references
-it, so adding one inserts the user first.
+`users` holds a row per person, created by their first tracked event (see
+[analytics.md](./analytics.md)). A favorite references it, so adding one
+inserts the user first if they have no row yet.
 
 ## Flows
 

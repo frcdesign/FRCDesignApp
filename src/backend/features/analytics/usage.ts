@@ -4,7 +4,7 @@
  */
 
 /** Bump when the columns' meaning changes. */
-export const EVENT_SCHEMA_VERSION = 3;
+export const EVENT_SCHEMA_VERSION = 4;
 
 /** Rows imported from the legacy app's log; see `scripts/migrate-analytics`. */
 export const LEGACY_SCHEMA_VERSION = 0;
