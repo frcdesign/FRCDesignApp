@@ -1,7 +1,7 @@
 {
     "version": "6",
     "dialect": "sqlite",
-    "id": "ff62ef01-c8b8-43fc-8665-bcae522a5613",
+    "id": "5dac37c5-241c-4d2c-9367-3caa7b640f47",
     "prevId": "b765a9bd-883e-4dce-9709-de539bf0d0be",
     "tables": {
         "configurations": {
@@ -1765,6 +1765,30 @@
                     "name": "insertable_stats_library_id_element_id_pk"
                 }
             },
+            "uniqueConstraints": {},
+            "checkConstraints": {}
+        },
+        "user_first_seen": {
+            "name": "user_first_seen",
+            "columns": {
+                "user_id": {
+                    "name": "user_id",
+                    "type": "text",
+                    "primaryKey": true,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "first_day": {
+                    "name": "first_day",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                }
+            },
+            "indexes": {},
+            "foreignKeys": {},
+            "compositePrimaryKeys": {},
             "uniqueConstraints": {},
             "checkConstraints": {}
         },

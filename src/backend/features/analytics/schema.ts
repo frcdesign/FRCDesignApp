@@ -358,3 +358,12 @@ export const dailyFeatureUsers = sqliteTable(
     // Feature first, so a feature's first recorded day is an index seek.
     (t) => [primaryKey({ columns: [t.feature, t.day, t.userId] })]
 );
+
+/**
+ * Each person's first day in any rollup that names people: the new and
+ * existing users split, and growth in users over time.
+ */
+export const userFirstSeen = sqliteTable("user_first_seen", {
+    userId: text("user_id").primaryKey(),
+    firstDay: text("first_day").notNull()
+});

@@ -27,6 +27,7 @@ import {
     dailyAppOpens,
     dailyConfigurationMetrics,
     dailyFeatureUsers,
+    userFirstSeen,
     dailyInsertableMetrics,
     dailyInsertableUsers,
     dailyMetrics,
@@ -69,6 +70,7 @@ const ROLLUPS = [
     dailyConfigurationMetrics,
     dailyVersionMetrics,
     dailyFeatureUsers,
+    userFirstSeen,
     insertableStats,
     userStats
 ];
@@ -299,21 +301,49 @@ describe("rollupWrites", () => {
             expect(await db.select().from(userStats).all()).toEqual([]);
         });
 
-        it("is rebuilt from the log by the migration that added it", async () => {
+        it("keeps each person's first day, whatever order the log replays in", async () => {
+            const day = 24 * 3600 * 1000;
+            const clock = vi.spyOn(Date, "now");
+            clock.mockReturnValue(Date.parse("2026-03-02T15:00:00Z"));
+            await trackInsert(fakeContext("regular"), insertEvent());
+            clock.mockReturnValue(Date.parse("2026-03-02T15:00:00Z") - day);
+            await trackAppOpen(fakeContext("regular"));
+            clock.mockRestore();
+            await trackReport(fakeContext(), {
+                id: crypto.randomUUID(),
+                userId: undefined,
+                libraryId: undefined,
+                topic: FeedbackTopic.APP,
+                category: FeedbackCategory.BUG,
+                source: FeedbackSource.GENERAL
+            });
+
+            expect(await db.select().from(userFirstSeen).all()).toEqual([
+                { userId: "regular", firstDay: "2026-03-01" }
+            ]);
+        });
+
+        it("is filled from the rollups by the migration that added it", async () => {
+            await trackAppOpen(fakeContext("opener"));
             await trackEveryFeature();
-            const live = await readFeatureUsers();
+            const live = await db.select().from(userFirstSeen).all();
+            expect(live.length).toBeGreaterThan(5);
 
             const migration = env.TEST_MIGRATIONS.find((m) =>
                 m.name.includes("feature_reach")
             );
             const backfill = (migration?.queries ?? []).filter((query) =>
-                query.includes("INSERT")
+                query.includes("INSERT INTO `user_first_seen`")
             );
-            expect(backfill.length).toBeGreaterThan(0);
-            await db.delete(dailyFeatureUsers);
+            expect(backfill).toHaveLength(1);
+            await db.delete(userFirstSeen);
             await env.DB.batch(backfill.map((query) => env.DB.prepare(query)));
 
-            expect(await readFeatureUsers()).toEqual(live);
+            const byUser = (a: { userId: string }, b: { userId: string }) =>
+                a.userId.localeCompare(b.userId);
+            expect(
+                (await db.select().from(userFirstSeen).all()).sort(byUser)
+            ).toEqual(live.sort(byUser));
         });
     });
 });
