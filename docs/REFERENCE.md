@@ -124,6 +124,7 @@ owns, `lib/` for cross-cutting plumbing, and a small set of files at the root.
     - `generated-parts/` — library parts FeatureScript generates, whose records robot-code writes and loads index; see [architecture/generated-parts.md](./architecture/generated-parts.md)
     - `feedback/` — reports posted to the FRCDesign Discord; see [architecture/feedback.md](./architecture/feedback.md)
     - `download/` — STEP downloads for the standalone app, exported by Onshape as the signed-in caller; see [architecture/download.md](./architecture/download.md)
+    - `teams/` — FIRST teams registered through Onshape organizations, the team a use is credited to, and each team's favorites, recents, settings and standing; see [architecture/teams.md](./architecture/teams.md)
     - `favorites/`, `recents/`, `search/`, `analytics/`, `insert-location/`
 
 ### `src/frontend/`
@@ -132,7 +133,7 @@ owns, `lib/` for cross-cutting plumbing, and a small set of files at the root.
 - `routes/` — file-based TanStack Router routes
 - `lib/` — cross-cutting helpers: `api-client.ts` (fetch wrappers), `query-keys.ts` (every query key in one place), `query-client.ts`, `ui-state.ts` (the Zustand store kept in localStorage), `onshape-params.ts` (the tab's Onshape launch, in sessionStorage), `refresh.ts`, `notifications.tsx`
 - `components/` — UI used by more than one feature, plus the app shell (`app-navbar.tsx`, `alerts.tsx`, `root-error.tsx`)
-- `features/` — `library/`, `favorites/`, `recents/`, `insert/`, `insert-location/`, `search/`, `settings/`, `thumbnails/`, `build-status/`, `admin-team/`, `dashboard/`, `auth/`, each with its queries and a `components/` directory
+- `features/` — `library/`, `favorites/`, `recents/`, `insert/`, `insert-location/`, `search/`, `settings/`, `thumbnails/`, `build-status/`, `admin-team/`, `dashboard/`, `auth/`, `teams/`, each with its queries and a `components/` directory
 
 Other top-level files:
 

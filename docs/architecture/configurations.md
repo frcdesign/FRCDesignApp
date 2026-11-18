@@ -103,7 +103,8 @@ every row there opens on the defaults.
 2. `withRoles` marks parameters whose names say they are a derivation variable,
    a color or its channels, or tessellation. A parameter with a role is never
    indexed; no list or checkbox in the libraries has one yet, so today that
-   excludes nothing.
+   excludes nothing. The configuration inputs draw a color's channels, or a
+   text color, as one Color control (see [teams.md](./teams.md#the-color-control)).
 3. The parameters are stored on the `configurations` row.
 
 ### Indexing

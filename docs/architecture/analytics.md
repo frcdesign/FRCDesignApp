@@ -20,7 +20,7 @@ imports
 
 ```ts
 /** Bump when the columns' meaning changes. */
-const EVENT_SCHEMA_VERSION = 3;
+const EVENT_SCHEMA_VERSION = 5;
 
 /** Rows imported from the legacy app's log; see Imported history. */
 const LEGACY_SCHEMA_VERSION = 0;
@@ -63,6 +63,10 @@ enum UseSource {
     BROWSE = "browse",
     FAVORITES = "favorites",
     RECENTS = "recents",
+    /** The current team's favorites; see `features/teams`. */
+    TEAM_FAVORITES = "team_favorites",
+    /** What the current team's members inserted lately. */
+    TEAM_RECENTS = "team_recents",
     /** An Auto Assembly run, which inserts a part per fastener it places. */
     AUTO_ASSEMBLY = "auto_assembly",
     /** Imported from the legacy app's log, which never recorded where a use started. */
@@ -88,7 +92,11 @@ enum AppFeature {
     DEFAULT_CONFIGURATION = "default_configuration",
     VERSION_MANAGER = "version_manager",
     FEATURESCRIPTS = "featurescripts",
-    REPORT = "report"
+    REPORT = "report",
+    /** A use started from the current team's favorites. */
+    TEAM_FAVORITES = "team_favorites",
+    /** A use started from what the team inserted lately. */
+    TEAM_RECENTS = "team_recents"
 }
 ```
 
@@ -104,7 +112,11 @@ function trackInsert(
     instances = 1
 ): Promise<void>;
 function trackDownload(c: AppContext, event: UseEvent): Promise<void>;
-function trackAppOpen(c: AppContext): Promise<void>;
+// `documentId` is the launch's, which decides the open's team.
+function trackAppOpen(
+    c: AppContext,
+    documentId: string | undefined
+): Promise<void>;
 function trackReport(c: AppContext, event: ReportEvent): Promise<void>;
 function trackDefaultSelection(
     c: AppContext,
@@ -117,7 +129,7 @@ async function trackVersionRun(
 ): Promise<void>;
 // Awaited by Auto Assembly's `record-inserts` step: one event per part.
 async function recordInserts(
-    db: Db,
+    env: AppBindings,
     userId: string,
     inserts: InsertEvent[]
 ): Promise<void>;
@@ -141,6 +153,8 @@ interface UseEvent {
     /** Whether the part was favorited, not where the use came from. */
     isFavorite: boolean;
     source: UseSource;
+    /** The document the part went into, which decides its team; undefined for a download. */
+    targetDocumentId: string | undefined;
 }
 
 interface InsertEvent extends UseEvent {
@@ -166,6 +180,8 @@ interface DefaultSelectionEvent {
 /** A finished push or pull; see `features/version-manager`. */
 interface VersionRunEvent {
     userId: string;
+    /** The document the run started from, which decides its team. */
+    documentId: string;
     kind: VersionJobKind;
     scope: PushScopeKind | PullScopeKind;
     /** How it ended. */
@@ -243,6 +259,8 @@ type LoggedEvent = {
     reportCategory: FeedbackCategory | null;
     reportSource: FeedbackSource | null;
     reportTeamNumber: number | null;
+    /** The team the event is credited to (`resolveTeamContext`); null for none, and before schema version 5. */
+    teamId: string | null;
 };
 ```
 
@@ -269,6 +287,7 @@ type EventCore = Pick<
     | "libraryId"
     | "userId"
     | "schemaVersion"
+    | "teamId"
 >;
 
 /** The part a use or a part report named. */
@@ -1034,7 +1053,15 @@ no foreign key crosses between them):
   `daily_configuration_metrics`, `daily_user_activity`, `user_stats`,
   `daily_app_opens`, `daily_version_metrics`, `daily_report_metrics`,
   `daily_featurescript_metrics`, `daily_featurescript_users`,
-  `daily_feature_users`.
+  `daily_feature_users`, `daily_team_metrics`, `daily_team_users`.
+- `events.team_id` names the team an event is credited to, which
+  `resolveTeamContext` decides (see [teams.md](./teams.md)). It is null for none,
+  and for every row before schema version 5.
+- `daily_team_metrics` is keyed by category, day and team: the team's count of
+  every use (`uses`), and of each `AppFeature` `featuresOf` gives.
+  `daily_team_users` is keyed by team, day and user: who did anything credited
+  to the team, its active members. Only an event with a team writes them, beside
+  every other rollup it writes.
 - A use writes every library rollup, an insert and a download alike.
   `daily_metrics` keeps a row per event type, so the uses are the sum of the
   `insert` and `download` rows and either can be read alone. Beside its
@@ -1100,12 +1127,17 @@ no foreign key crosses between them):
    `POST /api/default-selection/favorite/:favoriteId` calls
    `trackDefaultSelection` once the default is saved (see
    [favorites.md](./favorites.md)).
-2. A use, an open, a FeatureScript add, a report and a default configuration are recorded in the background (`runInBackground`),
+2. Each tracker resolves the event's team from the document the work went
+   into (`creditedTeamId`): an insert's target, the launch's for an open, the
+   Part Studio's for a FeatureScript add, the run's for a version run. A
+   download, a report and a default configuration name none, so they get the
+   user's chosen team.
+3. A use, an open, a FeatureScript add, a report and a default configuration are recorded in the background (`runInBackground`),
    after the response; a workflow's step swallows a failure to record. So
    tracking never slows or fails what the user asked for.
-3. The selection is stored canonically (`canonicalValues`), so `5 in` and
+4. The selection is stored canonically (`canonicalValues`), so `5 in` and
    `(2 + 3) in` count as one value.
-4. `record` writes the event and its rollup rows in one D1 batch, so neither
+5. `record` writes the event and its rollup rows in one D1 batch, so neither
    lands without the other; `recordBatch` writes several events the same way,
    one query against D1's per-invocation limit however many statements it
    holds.
@@ -1252,7 +1284,10 @@ is withheld while its baseline reaches back before tracking began.
   run, and a FeatureScript add its two, `daily_featurescript_metrics` and
   `daily_featurescript_users`. A report writes `daily_report_metrics` alone,
   with a library or without, and a default configuration nothing else. Every
-  other rollup is keyed by library.
+  other rollup is keyed by library. The team rollups are the exception to all
+  of it: any event with a team writes them, in addition.
+- A team's numbers are read only by its members, through
+  `GET /api/teams/:teamId/report`, never through an analytics route.
 - `featuresOf` is the one place that says which events are a use of which
   feature, and the migration that filled `daily_feature_users` matches it for
   every feature recorded before it.
@@ -1405,6 +1440,10 @@ is withheld while its baseline reaches back before tracking began.
   never between parts.
 - **Public aggregates.** The numbers are useful to the community, and nothing
   per-user is exposed.
+- **A team's numbers are not public.** A team is a handful of people, so its
+  counts are close to per-user. They live behind the team's own members, and
+  rank it against the others only as a percentile among ten or more (see
+  [teams.md](./teams.md)).
 - **Fastenable inserts are their own denominator.** Preselection and Auto
   Assembly only place parts that offer insert and fasten, into an assembly;
   measured against every insert they would read as rare however often they

@@ -18,7 +18,7 @@ user.
 | [testbench.md](./testbench.md)             | The owner's testbench page                               |
 | [auto-assembly.md](./auto-assembly.md)     | Auto Assembly's page, its runs, and pick problems        |
 | [fasten.md](./fasten.md)                   | Insert and fasten's card, toasts and tip                 |
-| [teams.md](./teams.md)                     | Team switching, registering, settings, medals (proposed) |
+| [teams.md](./teams.md)                     | Team switching, registering, settings, the team page     |
 
 ## Shape of a file
 

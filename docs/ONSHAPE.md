@@ -168,6 +168,12 @@ the app makes of them.
   company that owns it, by an admin of that company; a person's team has no
   such company, so it can't be watched — _documented_ (`companyId` on a
   webhook) and _observed_. Members are paged, 20 at a time — _observed_.
+- **Who administers a company**: `GET /companies/{cid}` answers `BTCompanyInfo`,
+  whose `admin` says whether the caller administers it. Registering a team
+  relies on it — _unverified_, and unverified for a classroom in particular.
+- **A company's documents are the company's**: a document in an enterprise is
+  owned by it, never by an Onshape team in it, so nothing on the document says
+  which of its teams it belongs to — _unverified_.
 
 ## Permissions
 

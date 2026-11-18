@@ -1,89 +1,196 @@
 # Teams
 
-**Status: proposed.** Nothing here is built. The open questions below decide
-parts of the design; each answer may change a section.
-
-## Open questions
-
-1. **One team per organization?** The design lets a team have several
-   organizations (an enterprise and a classroom), each naming exactly one
-   team. A school whose one enterprise holds an FRC and an FTC team would have
-   to pick one. Allow an organization several teams, one per program?
-2. **Where personal work goes.** A use in a personal document, or from the
-   standalone app, counts toward the team the user has switched to. A user can
-   switch to **Personal** to count it toward no team. Is that the intent of
-   "non-team usage should count as well"?
-3. **Who may register.** The design trusts the first verified member of an
-   organization to register it, and makes them its team admin. Onshape may
-   say who administers a company (`GET /companies`), which is _unverified_.
-   Require a company admin instead, once that is checked?
-4. **Who sees a team's numbers.** The design makes the team leaderboard and
-   each team's page public, like the rest of the dashboard, showing counts
-   and medals, never members. A team of one would then show one person's
-   use. Hide a team's page from all but its members, and keep only the
-   leaderboard public?
-5. **Medal thresholds.** Proposed: among teams with any use of a feature in
-   the season, the top 10% get gold, the next 15% silver, the next 25% bronze.
-   Ranked by uses, or by uses per active member?
-6. **Team colors in color parameters.** No part in the libraries shows a color
-   dropdown today. The design offers team colors on parts that spell a color
-   out as R, G and B (`ParameterRole.COLOR_CHANNEL`) or as text, and on a
-   FeatureScript's color input. Which parts or features should get them
-   first?
-7. **The FIRST team lists need API keys.** FIRST's FRC and FTC Events APIs
-   each need a free registered username and token, saved as secrets.
-
 ## Purpose
 
-A **team** is a FIRST robotics team, FRC or FTC, as FIRST lists it. A team
-registers by linking one or more Onshape **organizations** to itself: an
-enterprise, or an educator plan's classroom. Everyone who edits that
-organization's documents through the app becomes a member.
+A **team** is a FIRST robotics team, FRC or FTC, as one or more Onshape
+**organizations** registered it. An organization is an enterprise or an
+educator plan's classroom. Teams are anonymous and unverified: a team is its
+own id, which claims a FIRST number, and several teams may claim one number.
 
 A team gets:
 
-- **Context without asking.** Work in a document an organization owns is
-  credited to that organization's team. Work anywhere else goes to the team
-  the user has switched to.
-- **Usage credited to the team** as well as the user, and a team dashboard that
-  ranks the team in each of the app's features, with gold, silver and bronze
-  medals for the season.
-- **Team settings**, set by its team admins:
-    - team favorites, marked with a team icon, and whether members may edit
-      them;
+- **Context without asking.** Work in a document a registered organization owns
+  is credited to its team. Work anywhere else goes to the team the user chose.
+- **Usage credited to the team** as well as the user. A members-only page ranks
+  the team in every feature against the other teams of its program, anonymously,
+  with gold, silver and bronze medals.
+- **Team settings**, set by its admins:
+    - team favorites, marked with a team icon, and whether members may edit them;
     - an order of preferred vendors;
-    - one or more team colors, offered wherever a color is picked.
-- **Shared recents**: what any teammate inserted in the team's context.
+    - team colors, offered by the Color control.
+- **Shared recents**: what any member inserted in the team's context.
 
 It is not:
 
 - **Library editing.** A library's admin team (see [auth.md](./auth.md)) is an
-  Onshape team that decides who edits a library. It is unrelated to a FIRST
-  team, and nothing here grants a library access level.
-- **An account system.** Membership comes from Onshape organizations, and
-  identity from Onshape sign-in, as everywhere else in the app.
-- **A roster.** The app knows a member only by Onshape user id. It shows no
-  names and lists no members to anyone but the team's admins.
-
-"Team" in this document and its code means a FIRST team. The library's admin
-team keeps its name in `features/admin-team/`.
+  Onshape team that decides who edits a library. Nothing here grants a library
+  access level. In this document and its code, "team" means a FIRST team.
+- **An account system.** Membership comes from editing an organization's
+  documents, and identity from Onshape sign-in.
+- **A roster.** The app knows a member only by Onshape user id. It shows ids to
+  the team's admins alone, and no names to anyone.
 
 ## Code map
 
-Proposed, with paths under `src/`. The backend feature is `backend/features/teams/`; the frontend's
-is `frontend/features/teams/`.
+In the order a team comes to be and is used.
 
-`backend/features/teams/contract.ts`, a leaf module the frontend also
-imports
+`src/backend/features/teams/first-teams.ts`, run by the weekly cron
 
 ```ts
-/** A FIRST program, reused from `analytics/seasons.ts`. */
-type Program = import("../analytics/seasons").Program;
+// Each program whose FIRST API credentials are set; one failing leaves the other's.
+async function refreshFirstTeams(env: AppBindings, now?: Date): Promise<void>;
+function upsertTeams(
+    db: Db,
+    program: Program,
+    season: number,
+    teams: FirstApiTeam[]
+): Promise<void>;
+```
 
-/** `frc-254`, `ftc-16457`: the program and number, which FIRST never reuses within a program. */
-type TeamId = `${Lowercase<Program>}-${number}`;
+`src/backend/features/teams/register.ts`, the one flow that calls Onshape
 
-/** A team's role for one of its members. */
+```ts
+// Returns the team the organization joined.
+async function registerOrganization(
+    c: AppContext,
+    request: RegisterTeamIn
+): Promise<string>;
+// Refused unless the organization owns the Onshape team.
+async function readSubteam(
+    api: OAuthApi,
+    subteamId: string,
+    companyId: string
+): Promise<string[]>;
+```
+
+`src/backend/features/teams/membership.ts`, called by `/init`
+
+```ts
+function toDocumentOwner(
+    document: OnshapeDocumentInfo
+): DocumentOwner | undefined;
+// Never throws: a launch opens the app whatever happens to its record.
+async function recordLaunch(
+    c: AppContext,
+    document: OnshapeDocumentInfo
+): Promise<void>;
+```
+
+`src/backend/features/teams/context.ts`
+
+```ts
+interface TeamContext {
+    teamId: string;
+    source: TeamContextSource;
+}
+
+async function resolveTeamContext(
+    env: AppBindings,
+    userId: string,
+    documentId: string | undefined
+): Promise<TeamContext | undefined>;
+// For tracking and recents: a failure credits no team.
+async function creditedTeamId(
+    env: AppBindings,
+    userId: string,
+    documentId: string | undefined
+): Promise<string | null>;
+```
+
+`src/backend/features/teams/store.ts`
+
+```ts
+/** Who owns a document: a company, or a person (`cad`, `PERSONAL_COMPANY_ID`). */
+interface DocumentOwner {
+    companyId: string;
+    /** Undefined for a person. */
+    kind?: OrganizationKind;
+}
+
+const documentOwnerStore: KvStore<DocumentOwner>;
+/** A team id, or `PERSONAL`. */
+const chosenTeamStore: KvStore<string>;
+
+async function getMyTeams(db: Db, userId: string): Promise<MyTeam[]>;
+// Joins a member, or moves an existing one's last seen; never changes a role.
+function upsertMember(
+    db: Db,
+    teamId: string,
+    userId: string,
+    role: TeamRole,
+    now: Date
+);
+```
+
+`src/backend/features/teams/guards.ts`
+
+```ts
+function teamRoute(): string; // "/teams/:teamId"
+const requireTeamMemberMiddleware: MiddlewareHandler<AppContextEnv>;
+const requireTeamAdminMiddleware: MiddlewareHandler<AppContextEnv>;
+// An admin, or a member while `members_edit_favorites` is on.
+const requireTeamFavoritesEditorMiddleware: MiddlewareHandler<AppContextEnv>;
+```
+
+`src/backend/features/teams/routes.ts` and `favorites.ts`
+
+```text
+GET    /api/teams/context?documentId=                             TeamContextOut
+GET    /api/teams/first?program=&q=                               FirstTeam[], by number or name
+POST   /api/teams/register                                        RegisterTeamIn → { teamId }
+POST   /api/teams/chosen                                          { teamId?: string | "personal" }
+POST   /api/teams/refresh-first                                   owner
+GET    /api/teams/:teamId/admin                                   admin: TeamAdminOut
+POST   /api/teams/:teamId/settings                                admin: Partial<TeamSettings>
+POST   /api/teams/:teamId/members/:userId                         admin: { role }
+DELETE /api/teams/:teamId/members/:userId                         admin, or the member leaving
+DELETE /api/teams/:teamId/organizations/:organizationId           admin
+POST   /api/teams/:teamId/organizations/:organizationId/refresh   admin: syncs a subteam
+GET    /api/teams/:teamId/favorites/library/:libraryId            member: FavoritesData
+POST   /api/teams/:teamId/favorites/library/:libraryId?insertableId=&id=   favorites editor
+DELETE /api/teams/:teamId/favorites/:favoriteId                   favorites editor
+POST   /api/teams/:teamId/favorite-order/library/:libraryId       favorites editor
+GET    /api/teams/:teamId/recents/library/:libraryId              member: RecentsData
+GET    /api/teams/:teamId/report                                  member: TeamReportOut
+```
+
+`src/backend/features/teams/recents.ts`
+
+```ts
+// As a user's: to the front, then trimmed to `MAX_TEAM_RECENTS`.
+async function writeTeamRecentInsert(
+    db: Db,
+    teamId: string,
+    userId: string,
+    event: RecentInsertEvent,
+    insertedAt: Date
+): Promise<void>;
+```
+
+`src/backend/features/teams/report.ts`
+
+```ts
+/** September to August: a team's year spans either program's season and its build. */
+interface TeamYear {
+    from: string;
+    to: string;
+    /** "2026–27". */
+    label: string;
+}
+
+function teamYear(day: string): TeamYear;
+// Undefined below `MIN_RANKED_TEAMS`, or for a team that never used the category.
+function rank(value: number, values: number[]): TeamStanding["ranking"];
+async function getTeamReport(
+    db: Db,
+    teamId: string,
+    today: string
+): Promise<TeamReportOut | undefined>;
+```
+
+`src/backend/features/teams/contract.ts`, a leaf the frontend imports
+
+```ts
 enum TeamRole {
     ADMIN = "admin",
     MEMBER = "member"
@@ -95,19 +202,27 @@ enum OrganizationKind {
     CLASSROOM = "classroom"
 }
 
-/** The team a use is credited to, and why. */
+/** Why a use is credited to the team it is. */
 enum TeamContextSource {
-    /** The document's organization belongs to the team. */
+    /** The document's organization registered the team, and the user is its member. */
     DOCUMENT = "document",
-    /** The user switched to it, for a personal document or the standalone app. */
+    /** The user's choice, for a document no team of theirs owns, or no document. */
     CHOSEN = "chosen"
 }
 
-interface TeamSummary {
-    id: TeamId;
+/** Who chose Personal: their uses count toward no team until they choose one. */
+const PERSONAL = "personal";
+const MAX_TEAM_COLORS = 6;
+const MAX_TEAM_FAVORITES = 250;
+const MAX_TEAM_RECENTS = 100;
+/** A ranking means nothing among fewer teams, and would point at one. */
+const MIN_RANKED_TEAMS = 10;
+
+/** A team as FIRST lists it. */
+interface FirstTeam {
     program: Program;
     number: number;
-    /** FIRST's nickname for the team. */
+    /** FIRST's short name, such as "The Cheesy Poofs". */
     name: string;
     city?: string;
     stateProvince?: string;
@@ -123,343 +238,364 @@ interface TeamSettings {
     colors: string[];
 }
 
-/** One of the caller's teams, as `/api/teams/mine` returns it. */
-interface MyTeam extends TeamSummary {
+/** One of the caller's teams. A team is its own id: several may claim one FIRST number. */
+interface MyTeam {
+    id: string;
+    first: FirstTeam;
     role: TeamRole;
     settings: TeamSettings;
 }
 
-/** What `/api/access-data` adds: the caller's teams and the one chosen. */
-interface TeamAccessData {
-    teams: MyTeam[];
-    /** Undefined for Personal. */
-    chosenTeamId?: TeamId;
+/** The organization that owns the launch's document, as the server knows it. */
+interface DocumentOrganization {
+    companyId: string;
+    kind: OrganizationKind;
+    /** Undefined until somebody registers it, which asks Onshape for its name. */
+    name?: string;
+    /** The teams it registered, the caller's or not. */
+    teams: { id: string; first: FirstTeam }[];
 }
 
-const MAX_TEAM_COLORS = 6;
-const MAX_TEAM_FAVORITES = 250;
-const MAX_TEAM_RECENTS = 100;
-```
+/** `GET /api/teams/context`: everything the app shows about teams. */
+interface TeamContextOut {
+    teams: MyTeam[];
+    /** The team uses are credited to now; undefined for none. */
+    current?: { teamId: string; source: TeamContextSource };
+    /** A team id or `PERSONAL`: the caller's choice for documents no team of theirs owns. Undefined for the default. */
+    chosen?: string;
+    /** Set when the document belongs to a company; undefined for a personal one or none. */
+    organization?: DocumentOrganization;
+}
 
-`backend/features/teams/first-teams.ts`, the scheduled refresh
+interface RegisterTeamIn {
+    /** The launch's document, whose owner is the organization registered. */
+    documentId: string;
+    /** An Onshape team in the organization, whose members alone join; omitted for every editor. */
+    subteamId?: string;
+    /** A FIRST team, for a new team; omitted with `teamId`. */
+    first?: { program: Program; number: number };
+    /** One of the caller's teams the organization joins, as its admin. */
+    teamId?: string;
+}
 
-```ts
-// Every team FIRST lists for the current season, FRC and FTC, upserted.
-async function refreshFirstTeams(env: AppBindings): Promise<void>;
-```
+/** What a team is ranked in: every use, and each feature's. */
+type TeamCategory = typeof ALL_USES | AppFeature;
+const ALL_USES = "uses";
 
-`backend/features/teams/membership.ts`
-
-```ts
-// At `/init`, from the document `findAccessProblem` already read.
-async function recordDocumentOwner(
-    c: AppContext,
-    document: OnshapeDocumentInfo
-): Promise<void>;
-// The caller's teams, from KV and refilled from D1.
-async function getMyTeams(c: AppContext): Promise<MyTeam[]>;
-```
-
-`backend/features/teams/context.ts`
-
-```ts
-// The team a use in this document is credited to, or undefined for none.
-async function resolveTeamContext(
-    c: AppContext,
-    documentId: string | undefined
-): Promise<{ teamId: TeamId; source: TeamContextSource } | undefined>;
-```
-
-`src/backend/features/auth/guards.ts`
-
-```ts
-// Passes a team admin of the team the path names (`teamRoute()`), and the owner.
-const requireTeamAdminMiddleware: MiddlewareHandler<AppEnv>;
-// Passes a member of that team.
-const requireTeamMemberMiddleware: MiddlewareHandler<AppEnv>;
-```
-
-`backend/features/teams/routes.ts`
-
-```text
-GET    /api/teams/search?q=                              TeamSummary[], FIRST's list
-GET    /api/teams/mine                                   MyTeam[]
-POST   /api/teams/register                               { organizationId, teamId }
-PUT    /api/teams/chosen                                 { teamId?: TeamId }
-GET    /api/teams/:teamId/members                        admin: { userId, role, lastSeenAt }[]
-PUT    /api/teams/:teamId/members/:userId                admin: { role }
-DELETE /api/teams/:teamId/members/:userId                admin, or the member leaving
-PUT    /api/teams/:teamId/settings                       admin: Partial<TeamSettings>
-GET    /api/teams/:teamId/favorites/library/:libraryId   member
-POST   /api/teams/:teamId/favorites/library/:libraryId   admin, or member when allowed
-DELETE /api/teams/:teamId/favorites/:favoriteId          admin, or member when allowed
-POST   /api/teams/:teamId/favorites/reorder              admin, or member when allowed
-GET    /api/teams/:teamId/recents/library/:libraryId     member
-```
-
-`backend/features/analytics/team-queries.ts`, behind the public team
-dashboard
-
-```text
-GET /api/analytics/teams/leaderboard?season=&feature=    TeamStanding[]
-GET /api/analytics/teams/:teamId?season=                 TeamReportOut
-```
-
-```ts
 enum Medal {
     GOLD = "gold",
     SILVER = "silver",
     BRONZE = "bronze"
 }
 
-/** One team's place in one feature over one season. */
+/** One category's standing; the other teams stay anonymous. */
 interface TeamStanding {
-    team: TeamSummary;
-    feature: AppFeature;
+    category: TeamCategory;
     uses: number;
-    /** 1 for the most uses; teams tied share a rank. */
-    rank: number;
-    /** Of the teams with any use of the feature that season. */
-    rankedTeams: number;
-    /** Undefined below bronze. */
-    medal?: Medal;
+    /** Over the team's active members this year. */
+    usesPerMember: number;
+    /** Undefined while fewer than `MIN_RANKED_TEAMS` used the category this year. */
+    ranking?: {
+        /** "Top 4%": the share of ranked teams at or above this team, rounded up. */
+        topPercent: number;
+        medal?: Medal;
+    };
 }
 
 interface TeamReportOut {
-    team: TeamSummary;
-    season: Season;
-    /** Every `AppFeature`, at zero uses if unused. */
+    first: FirstTeam;
+    /** "2026–27": September to August, which spans either program's season. */
+    year: string;
+    activeMembers: number;
     standings: TeamStanding[];
-    totals: { uses: number; activeMembers: number };
 }
 ```
 
+`TeamOrganizationOut`, `TeamMemberOut` and `TeamAdminOut` are the admin view's
+rows. `Program` is `analytics/seasons.ts`'s.
+
+`src/frontend/features/teams/`
+
+```ts
+// queries.ts
+function useTeamContextQuery(); // keyed by the launch's document
+function useCurrentTeam(): MyTeam | undefined;
+function useCurrentTeamSettings(): TeamSettings | undefined;
+function useCanEditTeamFavorites(): boolean;
+// color.ts: one Color in place of a part's channels or text color
+function findColorControl(
+    parameters: ConfigurationParameter[]
+): ColorControl | undefined;
+function readColor(
+    control: ColorControl,
+    selection: Selection
+): string | undefined;
+function writeColor(
+    control: ColorControl,
+    selection: Selection,
+    hex: string
+): Selection;
+// vendor-ranking.ts
+function orderVendors(vendors: Vendor[], ranking: Vendor[]): Vendor[];
+function breakTiesByVendor<T>(
+    items: T[],
+    vendorsOf: (item: T) => Vendor[],
+    isTie: (a: T, b: T) => boolean,
+    ranking: Vendor[]
+): T[];
+```
+
+| Path                                                            | Role                                                        |
+| --------------------------------------------------------------- | ----------------------------------------------------------- |
+| `src/frontend/features/teams/components/team-settings.tsx`      | The settings menu's team rows and the team admin's settings |
+| `src/frontend/features/teams/components/register-team-form.tsx` | **Register team**: a new team, or the caller's              |
+| `src/frontend/features/teams/components/team-favorites.tsx`     | Team favorite rows, the team icon, and the part menu's item |
+| `src/frontend/features/teams/components/color-row.tsx`          | The Color control                                           |
+| `src/frontend/features/recents/components/recents-list.tsx`     | **Mine** and **Team** on Recently Used                      |
+| `src/frontend/routes/dashboard/teams/$teamId.tsx`               | The team's page                                             |
+
 ## Storage
 
-**D1**, in `features/teams/schema.ts`, listed in `drizzle.config.ts`:
+**D1**, in `db/schema.ts`, since team favorites and recents reference
+insertables:
 
-- `first_teams` — FIRST's list: `program`, `number`, `name`, `city`,
-  `state_province`, `country`, `rookie_year`, `last_season` (the latest season
-  FIRST listed it in). Primary key on program and number. Replaced row by row
-  by the refresh; a team FIRST stops listing keeps its row.
-- `teams` — a registered team: `id` (`TeamId`, referencing `first_teams`),
-  `members_edit_favorites`, `vendor_ranking` (JSON), `colors` (JSON),
-  `registered_at`, `registered_by`.
-- `team_organizations` — `company_id` (primary key: an organization names one
-  team), `team_id`, `kind` (`OrganizationKind`), `name` (as Onshape gave it),
-  `registered_at`, `registered_by`.
-- `team_members` — `team_id`, `user_id`, `role` (`TeamRole`), `joined_at`,
-  `last_seen_at`. Primary key on team and user.
-- `team_favorites` — the shape of `favorites`, with `team_id` for `user_id`
-  and `created_by` beside it. Unique on team, library and insertable; cascade
-  on the insertable's delete.
-- `team_recent_inserts` — the shape of `recent_inserts`, with `team_id` for
-  `user_id` and `user_id` kept as who inserted it. Unique on team, insertable
-  and selection; at most `MAX_TEAM_RECENTS` rows per team and library.
+- `first_teams` — FIRST's lists: program, number, name, city, state or
+  province, country, rookie year, and the latest season FIRST listed it in.
+  Primary key on program and number. A team FIRST stops listing keeps its row.
+- `teams` — a registered team: its id, the program and number it claims,
+  `members_edit_favorites`, `vendor_ranking` and `colors`, and who registered
+  it when. Several rows may claim one number.
+- `team_organizations` — one organization registered to one team: its company
+  id and kind, the name Onshape gave it, and `subteam_id` with
+  `subteam_members`. An empty `subteam_id` means every editor. Unique on
+  company and subteam, and on team and company.
+- `team_members` — team, user, role, `joined_at` and `last_seen_at`. Primary
+  key on team and user; indexed on user.
+- `team_favorites` — a user's favorite's shape, owned by a team, with
+  `created_by`. Unique on team, library and insertable.
+- `team_recent_inserts` — a user's recent's shape, owned by a team, with who
+  last inserted it. Unique on team, insertable and selection. At most
+  `MAX_TEAM_RECENTS` rows per team and library.
 
-**D1**, in `features/analytics/schema.ts`:
+Deleting a team cascades to all four of its tables. Deleting an insertable
+deletes its team favorites and recents, and hiding one deletes them too.
 
-- `events.team_id` — the team the event is credited to, or null for none.
-  `EVENT_SCHEMA_VERSION` goes to 5; rows before it are null.
-- `daily_team_feature_metrics` — keyed by team, feature, season and day: the
-  count of the team's uses of the feature, as `featuresOf` decides.
-- `daily_team_feature_users` — keyed by team, feature, day and user: who used
-  it, for a team's active members.
+**D1**, in `features/analytics/schema.ts`: `events.team_id`, and the
+`daily_team_metrics` and `daily_team_users` rollups (see
+[analytics.md](./analytics.md)).
 
-**KV**, each a `kvStore`:
+**KV**:
 
-- `document-owner:` — by document id, the company that owns it, or `cad` for a
-  person. Written at `/init` from the document it already read. 30 days.
-- `my-teams:` — by user id, the caller's `MyTeam[]`. Rewritten by every
-  membership or settings write that touches them; one hour.
-- `chosen-team:` — by user id, the team switched to. Kept until changed; losing
-  it switches the user to Personal.
+- `document-owner:` — by document id, its `DocumentOwner`. Written by `/init`
+  and by registration; 30 days.
+- `chosen-team:` — by user id, the team chosen or `personal`. Kept until
+  changed.
 
 **Secrets**: `FIRST_FRC_API_USERNAME`, `FIRST_FRC_API_TOKEN`,
-`FIRST_FTC_API_USERNAME`, `FIRST_FTC_API_TOKEN`, listed in
-[auth.md](./auth.md)'s environment variables.
+`FIRST_FTC_API_USERNAME`, `FIRST_FTC_API_TOKEN` (see [auth.md](./auth.md)).
 
-**Cron trigger**: weekly, for `refreshFirstTeams`, in `wrangler.jsonc` per
-environment.
+**Cron**: `17 7 * * 1`, weekly, in `wrangler.jsonc`'s `triggers`, inherited by
+every environment. The Worker's `scheduled` handler runs `refreshFirstTeams`.
+
+**Browser** `uiState.showTeamRecents`: whether Recently Used shows the team's
+list. `uiState.sections` holds Team settings' open state.
 
 ## Flows
 
-### Refreshing FIRST's team list
+### Refreshing FIRST's lists
 
-1. The weekly cron calls `refreshFirstTeams` through the Worker's `scheduled`
-   handler.
-2. For each program it pages FIRST's Events API team list for the current
-   season (`/v3.0/{season}/teams` for FRC, `/v2.0/{season}/teams` for FTC),
-   with basic auth from the secrets.
-3. Each page is upserted into `first_teams` in one D1 batch.
-4. A program whose secrets are unset is skipped and logged. A failed page is
-   retried with the platform's backoff, and the refresh stops at the first page
-   that still fails; what it wrote stays.
+1. The cron, or the owner's **Refresh** beside **FIRST teams**, calls
+   `refreshFirstTeams`.
+2. For each program with credentials, it pages FIRST's Events API with basic
+   auth: `frc-api.firstinspires.org/v3.0/{season}/teams` and
+   `ftc-api.firstinspires.org/v2.0/{season}/teams`.
+3. FRC numbers a season by the year it competes in, so from September it reads
+   this year's and next year's. FTC numbers one by the year it starts.
+4. Each page is upserted in one D1 batch. `last_season` keeps the larger season.
+5. A program without credentials is skipped and logged. A page FIRST refuses
+   stops that program; what it wrote stays.
+
+### Registering an organization
+
+1. The settings menu shows **Register team** under **Organization** whenever the
+   launch's document belongs to a company the server knows of.
+2. The form registers it to a new team, picked from FIRST's list by number or
+   name, or to a team the caller administers. An Onshape team link or id is
+   optional.
+3. `registerOrganization` reads the document (`getDocument`). A document no
+   company owns is refused.
+4. It reads the company (`getCompany`). Anyone but its admin is refused.
+5. With an Onshape team, `readSubteam` checks the company owns it and reads its
+   members.
+6. A company and subteam already registered is refused, as is a company already
+   on the chosen team. A new team's number must be in `first_teams`.
+7. One batch writes the team when new, the organization, and the caller as the
+   team's admin.
 
 ### Becoming a member
 
-1. Onshape launches the app at `/init`. `findAccessProblem` already reads the
-   document (`getDocument`), its `owner` and `permissionSet`.
-2. `recordDocumentOwner` saves the owner's company under `document-owner:`.
-3. When the owner is a company and the grant has `WRITE`, the caller has shown
-   they edit that organization's documents. If the organization is registered,
-   the caller is upserted into `team_members` as a member, and `last_seen_at`
-   moves to now.
-4. Nothing else makes a member: no Onshape call checks membership, and nobody
-   is added by hand.
-
-### Registering a team
-
-1. A signed-in user launched from an organization's document that no team
-   holds sees **Register your team** in the settings menu.
-2. They pick the team from FIRST's list (`/api/teams/search`), by number or
-   name.
-3. `POST /api/teams/register` takes the launch's organization and the team. It
-   refuses an organization the caller has no `document-owner:` evidence of
-   editing, and one already registered.
-4. It writes the `teams` row if the team has none, the `team_organizations`
-   row, and the caller as the team's admin, in one batch.
-5. An organization joining a team that already exists makes the caller a
-   member, not an admin. The team's admins see it under **Organizations**, and
-   can remove it.
+1. `/init` reads the launch's document in `checkLaunchDocument`.
+2. `recordLaunch` saves its owner under `document-owner:`.
+3. When a company owns it and the grant has `WRITE`, the caller joins each team
+   the company registered: every editor's, and any subteam's they are in. A
+   member already there only moves `last_seen_at`.
+4. A team admin can change a role or remove a member. A member can leave.
+   Nothing else writes membership.
+5. **Refresh members** beside a subteam re-reads its members under the admin's
+   session. Those no longer in it stay members until removed.
 
 ### Team context
 
-1. A request that records a use, or writes a recent, names its target
-   document. `resolveTeamContext` looks the document up in `document-owner:`.
-2. A company that belongs to a team the caller is a member of gives that team,
-   `TeamContextSource.DOCUMENT`.
-3. Otherwise, a personal document, an unregistered organization, a document
-   with no evidence, or no document at all (a STEP download) gives the team in
-   `chosen-team:`, `TeamContextSource.CHOSEN`, while the caller is still its
-   member.
-4. Otherwise there is no team, and the use counts as the user's alone.
+`resolveTeamContext` decides it, for the caller and a document:
 
-### Switching teams
+1. A user on no team has none.
+2. When `document-owner:` names a company that registered teams the user is on,
+   the document decides: the chosen team if it is among them, else the one last
+   seen.
+3. Otherwise a `personal` choice gives none.
+4. Otherwise the chosen team, if the user is still on it, else the one last
+   seen. Nobody starts on Personal.
 
-The navbar's settings menu lists the caller's teams and **Personal**.
-Picking one writes `chosen-team:` (`PUT /api/teams/chosen`). While the open
-document belongs to a team, the menu shows that team as current and says the
-document decides; the choice applies again once the user is in a personal
-document. A user on one team starts switched to it.
+The settings menu's **Team** select lists the user's teams, and **Personal**
+outside a team's document. In a team's document it is disabled, and says "Set
+by this document".
 
-### Usage and the team dashboard
+### Usage and the team page
 
-1. `trackInsert`, `trackDownload` and the other trackers take the resolved
-   team and write it to `events.team_id`.
-2. `rollupWrites` adds the event to `daily_team_feature_metrics` and
-   `daily_team_feature_users` for each feature `featuresOf` gives, when it has
-   a team. Every other rollup is written as now, so global totals still count
-   personal and team use alike.
-3. `/dashboard/teams` is the leaderboard: one table per `AppFeature`, the
-   season's teams by uses, with their medal.
-4. `/dashboard/teams/:teamId` is one team: its medals and rank in every
-   feature, its uses, and its active members as a count.
-5. A medal is decided per feature and season from the rollups at read time.
-   Of the teams with any use, ranked by uses, the top 10% are gold, the next
-   15% silver and the next 25% bronze. A team's rank and medal are its own;
-   ties share both.
+1. Every tracker resolves the team in the background (`creditedTeamId`) from the
+   document the work went into. A download, a report and a default
+   configuration have none, so they go to the chosen team.
+2. `rollupWrites` adds an event with a team to `daily_team_users`, and to
+   `daily_team_metrics` for each feature `featuresOf` gives, plus `uses` for a
+   use. Every other rollup is written as before.
+3. `/dashboard/teams/:teamId`, linked from **Team dashboard**, shows the team's
+   year, September to August (`teamYear`): its uses, active members, and a card
+   per category.
+4. A category's value is the team's count over its active members that year.
+   It is ranked among every team of the program with any use of it. Below
+   `MIN_RANKED_TEAMS` such teams it says when it will be ranked instead.
+5. A ranking is "Top N%": the share of ranked teams at or above this one,
+   rounded up. Ties share the best rank. The top 10% are gold, to 25% silver,
+   to 50% bronze.
 
 ### Team favorites
 
-1. A team favorite is a library's part and its saved selection, like a
-   favorite, owned by the team.
-2. The Favorites tab lists the current team's favorites first, each with the
-   team icon, then the user's own.
-3. An admin adds, orders and removes them from a part's menu (**Add to team
-   favorites**). A member may too when `members_edit_favorites` is on.
-4. A part in both lists shows once, as the team's.
+1. The Favorites list shows the current team's favorites first, each with the
+   team icon, then the user's own. A part in both shows once, as the team's.
+2. A part's menu offers **Add to team favorites** or **Remove from team
+   favorites** to an admin, or a member while the team allows it. So does a
+   team favorite's menu, with reordering.
+3. A team favorite opens and quick-inserts with `UseSource.TEAM_FAVORITES`.
 
 ### Shared recents
 
-1. An insert with a team context writes `team_recent_inserts` beside the
-   user's own `recent_inserts`, in the same batch.
-2. **Recently Used** has two views, **Mine** and **Team**, while the user is
-   on a team. Team shows what any teammate inserted in that team's context,
-   newest first.
+1. `recordRecentInsert` writes the user's recent, then the team's when the
+   insert has a team, after the insert succeeded. Neither failing fails it.
+2. On a team, Recently Used offers **Mine** and **Team**. Team lists what any
+   member inserted in that team's context, newest first, with
+   `UseSource.TEAM_RECENTS`.
 
 ### Vendor ranking
 
 The current team's `vendor_ranking`:
 
 - orders the vendor filter menu, ranked vendors first;
-- breaks ties in search results between equally matched parts, the higher
-  ranked vendor first;
-- picks the screw vendor Auto Assembly opens with, the highest ranked one the
-  set makes.
+- breaks ties between search results of equal score, the better-ranked vendor
+  first (`breakTiesByVendor`).
 
-It never hides a part: the filters stay the user's own.
+It never hides a part.
 
-### Team colors
+### The Color control
 
-A part whose color is three channel parameters, or one text parameter, shows
-the current team's colors as swatches above them. Picking one fills the
-channels, or the text, with that color. A FeatureScript's color input offers
-them the same way. They are suggestions: any color can still be typed.
+The configuration inputs show one **Color** in place of three channel
+parameters (`ParameterRole.COLOR_CHANNEL`, red, green and blue) or a text
+color parameter (`ParameterRole.COLOR`). On a team with colors it offers them,
+then **Custom**. Custom, or any part off a team, shows a color input that takes
+hex or RGB. Picking writes each channel, scaled 0–255 or 0–1 by its maximum, or
+the text as `#rrggbb`. A color parameter with named options keeps its own
+list.
 
 ## User-facing strings
 
-[docs/strings/teams.md](../strings/teams.md), proposed.
+[docs/strings/teams.md](../strings/teams.md).
 
 ## Invariants
 
-- An organization belongs to at most one team (open question 1).
-- Membership is only ever written by `/init`, from a document the caller's
-  grant can write and a registered organization owns, or by a team admin
-  changing a role or removing a member.
-- A team always has at least one admin: the last admin can't leave or be made
-  a member.
-- A use is credited to a team only while the user is its member.
+- A company and subteam belong to at most one team; a company joins a team at
+  most once.
+- Only a company's admin, as Onshape reports it, registers that company.
+- Membership is written only by `/init`, from a document the grant can write and
+  a registered company owns, by registration, or by a team admin.
+- A team always has an admin: the last one can't leave or become a member.
 - `resolveTeamContext` is the one place that decides a use's team.
+- A use is credited to a team only while the user is its member.
 - Team context never changes what a request does, only where it is counted.
-  Resolving it never fails or slows a request: a failure gives no team.
-- No team route calls Onshape. Context comes from what `/init` already read.
-- Team favorites and team recents are read only by the team's members, and
-  written only as the team's settings allow.
-- A team's public numbers never name or count one member apart from the rest.
-- Every global rollup counts a use the same with a team or without; team
-  rollups are additional.
+  Resolving it never fails a request: a failure gives no team.
+- No team route but registration and **Refresh members** calls Onshape.
+- Team favorites, recents and the report are read only by the team's members.
+- The report never names another team, and never ranks among fewer than
+  `MIN_RANKED_TEAMS`.
+- Members are shown by id to the team's admins alone.
+- Every global rollup counts a use the same with a team or without.
 - Every team rollup is derivable from `events` alone.
 - Vendor ranking orders results; it never filters them.
 
 ## Failure and recovery
 
-| Failure                                              | Result                                                   | Recovery                                    |
-| ---------------------------------------------------- | -------------------------------------------------------- | ------------------------------------------- |
-| FIRST's API refuses or is down                       | The week's refresh stops; last week's list stays         | The next week's run                         |
-| A team is new this season and not yet listed         | It can't be registered                                   | The next refresh, or the owner adds its row |
-| `document-owner:` expired for a document             | Uses there go to the chosen team                         | The next launch from that document          |
-| Someone registers an organization for the wrong team | Its members are credited to that team                    | The owner moves the organization            |
-| A member leaves the organization in Onshape          | They stay a member, and their uses in its documents stop | An admin removes them                       |
-| `my-teams:` lags a write                             | The menu shows the old teams for up to a minute          | Automatic                                   |
+| Failure                                            | Result                                                  | Recovery                                  |
+| -------------------------------------------------- | ------------------------------------------------------- | ----------------------------------------- |
+| FIRST's API refuses or is down                     | That program's refresh stops; last week's list stays    | The next run, or **Refresh** as the owner |
+| A team is new and not yet listed                   | It can't be registered                                  | The next refresh                          |
+| No FIRST credentials                               | The refresh skips the program                           | Set the secrets                           |
+| `document-owner:` expired for a document           | Uses there go to the chosen team                        | The next launch from that document        |
+| Onshape won't say the caller administers a company | Registration refused                                    | A company admin registers it              |
+| A member leaves the organization or subteam        | They stay a member; its documents stop proving it again | An admin removes them                     |
+| Someone registers the wrong team number            | Its members' uses are credited to that team             | The team's admin removes the organization |
 
 ## Decisions
 
+- **Teams are anonymous and unverified.** Nothing proves an organization is the
+  team it claims, and nothing needs to: no team sees another, so a false claim
+  only misplaces its own numbers. A team is a UUID so two claims of one number
+  stay apart.
+- **Registration needs a company admin.** Anyone who edits a school's documents
+  could otherwise point the whole school at a team. Onshape's company record
+  says who administers it, at one call per registration.
 - **Membership from launches, not Onshape's member lists.** `/init` already
   reads the document's owner and the caller's permissions, so a member is
-  proven by editing the organization's work at no extra Onshape call. Listing
-  a company's members needs a company admin's session and would spend the
-  allocation on every sync.
-- **Context from the document, then the choice.** The document someone is
-  editing says which team the work is for better than anything they would pick.
-  A personal document says nothing, so the user's choice fills the gap.
-- **The document's owner is cached in KV.** An insert names its target document,
-  and asking Onshape who owns it on every insert would cost a call per use.
-  Losing the cache only falls back to the chosen team.
-- **Teams keyed by program and number.** FIRST numbers are what teams call
-  themselves and what the lists key on; an FRC and an FTC team may share a
-  number, so the program is part of the key.
-- **A weekly FIRST refresh into D1.** Registration searches the list on every
-  keystroke; FIRST's API is rate limited and changes only as teams register
-  for a season.
-- **Medals by rank among active teams.** A fixed count would make gold
-  trivial in a quiet feature and unreachable in a busy one. A percentile of the
-  teams that used the feature at all keeps each medal meaningful in each.
-- **Team rollups beside the global ones.** Folding the team into every rollup's
-  key would multiply rows for every reader that doesn't care. Two narrow tables
-  hold what the team dashboard reads.
-- **Team recents in their own table.** A user's recent row is keyed by user;
-  one per team keeps the shared list one indexed query, trimmed per team, and
-  leaves the user's own list as it is.
+  proven by editing the organization's work at no extra call. Listing a
+  company's members needs an admin's session on every sync.
+- **A subteam narrows an organization.** A school enterprise often holds an FRC
+  and an FTC team. Its documents are the enterprise's, never a subteam's, so the
+  document can't say which. Each team names an Onshape team, and the
+  user's own membership decides; on both, their choice does.
+- **Context from the document, then the choice.** The document someone edits
+  says which team the work is for better than anything they would pick. A
+  personal document says nothing, so the choice fills the gap. Nobody is put on
+  Personal without choosing it.
+- **The document's owner is cached in KV.** An insert names its target
+  document, and asking Onshape who owns it would cost a call per use. Losing it
+  only falls back to the choice.
+- **Ranked per active member.** A team of forty would otherwise outrank a team
+  of five on size alone.
+- **Ranked by percentile, among ten or more.** A fixed count would make gold
+  trivial in a quiet feature and unreachable in a busy one. Fewer than ten teams
+  would let a team work out who the others are.
+- **A team's year runs September to August.** FRC's season is January to April,
+  but its teams design all autumn; one window serves both programs.
+- **Members-only, not on the public dashboard.** The dashboard reports only
+  aggregates. A team's own numbers are about a handful of people, so only they
+  see them.
+- **Team rollups beside the global ones.** Keying every rollup by team would
+  multiply rows for every reader that doesn't care. Two narrow tables hold what
+  the team page reads.
+- **Team favorites and recents in tables of their own.** A user's rows are keyed
+  and trimmed by user; the team's are keyed and trimmed by team, and each list
+  stays one indexed query.
+- **A weekly FIRST refresh into D1.** Registration searches the list as someone
+  types, and FIRST's API is rate limited and changes only as teams register.
+- **One Color control.** Parts spell a color as channels or text, and a person
+  picking one shouldn't need to know which. Named-option lists are left alone,
+  since they can't take an arbitrary color.
 
 _Last reviewed: 2026-11-18_

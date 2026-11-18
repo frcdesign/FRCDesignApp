@@ -66,6 +66,12 @@ saves the configuration on screen as the default, and records a
 menu offering it, a blue dot marks the ⋯ button and the item
 (`Hint.OPENED_SET_DEFAULT_CONFIGURATION`, see [auth.md](./auth.md)).
 
+### Team favorites
+
+A team's favorites have the same shape and flows, owned by the team instead of
+a user, in `team_favorites`. The Favorites tab lists the current team's first,
+with a team icon. [teams.md](./teams.md#team-favorites) covers them.
+
 ## Invariants
 
 - A favorite is only ever read or written by its owner: every query filters by

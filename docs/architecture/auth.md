@@ -27,7 +27,7 @@ team, plus one owner set by configuration.
 | `src/backend/features/admin-team/`                          | The owner sets a library's admin team; members are synced from Onshape             |
 | `src/backend/features/admin-team/store.ts`                  | `getAdminTeam`, `saveAdminTeam`: the members, in D1 and copied to KV               |
 | `src/backend/features/entry/routes.ts`                      | `/init`, where Onshape launches the app                                            |
-| `src/backend/features/entry/document-access.ts`             | `findAccessProblem`: whether the grant can edit the document, and why not          |
+| `src/backend/features/entry/document-access.ts`             | `checkLaunchDocument`: whether the grant can edit the document, and why not        |
 | `src/frontend/routes/_pages/document-access.tsx`            | `/document-access`: what to do about a grant that can't                            |
 | `src/backend/lib/context.ts`                                | `AppBindings` (every binding and variable) and `bindAuth`                          |
 | `src/frontend/features/auth/access-level.ts`                | `useAccessData`: the server's level and the level the app is viewed as             |
@@ -103,7 +103,7 @@ team, plus one owner set by configuration.
    `error_description` (or a `CallbackProblem`) and where the sign-in was
    going. Its **Sign in again** names no company, so Onshape lets the caller
    choose the account, and **Send a report** carries the error.
-5. Back at `/init`, `findAccessProblem` reads the document as the caller's
+5. Back at `/init`, `checkLaunchDocument` reads the document as the caller's
    grant sees it (`getDocument`), whose `permissionSet` says what the grant may
    do and whose `owner` says who owns it. With `WRITE` the app opens. Without
    it, whether the grant can only view the document or can't see it at all (a
@@ -117,7 +117,11 @@ team, plus one owner set by configuration.
    `other-account` for a personal one under a company's grant (`sessioninfo`),
    which only the caller can have chosen; and `view-only` otherwise. A
    document that sends no `permissionSet` opens the app.
-6. `/document-access` says the app can't edit the document, and what to do:
+6. Whatever it found, `/init` hands the document to `recordLaunch`, which
+   saves its owner and, for a company's document the grant can write, joins
+   the caller to the teams the company registered (see
+   [teams.md](./teams.md)).
+7. `/document-access` says the app can't edit the document, and what to do:
     - **`other-account` on a personal document**: "Sign in and choose your
       personal account". **Sign in** goes through sign-in naming no company and
       back to `/init`.
@@ -174,7 +178,10 @@ delivery about another of the company's teams is ignored, and one about this
 team syncs every library that has it, under a background session.
 
 Routes gate with `requireSignInMiddleware`, `requireEditorMiddleware`,
-`requireAdminMiddleware` and `requireOwnerMiddleware`. A library-gated route
+`requireAdminMiddleware` and `requireOwnerMiddleware`. A team's routes gate on
+its own roles instead (`requireTeamMemberMiddleware`,
+`requireTeamAdminMiddleware`, see [teams.md](./teams.md)), which grant no
+library access. A library-gated route
 names its library in the path (`libraryRoute()`), and the middleware checks the
 caller's level there; a route acting on a group or element also scopes its
 query to that library, so naming your own library with another's element finds
@@ -217,6 +224,8 @@ each of them and each guard reads that library's access. The section and the
 | `DISCORD_FRC_DESIGN_LIB_WEBHOOK_URL`     | Secret per environment; `.env` locally           | `feedback/channels.ts`                         | The same, for FRCDesignLib and MKCad                                                                    |
 | `DISCORD_CONFIG_LIB_WEBHOOK_URL`         | Secret per environment; `.env` locally           | `feedback/channels.ts`                         | The same, for ConfigLib                                                                                 |
 | `DISCORD_FEATURESCRIPTS_WEBHOOK_URL`     | Secret per environment; `.env` locally           | `feedback/channels.ts`                         | The same, for FeatureScripts                                                                            |
+| `FIRST_FRC_API_USERNAME`, `_TOKEN`       | Secret per environment; `.env` locally           | `teams/first-teams.ts`                         | FIRST's FRC Events API, for the weekly team list; unset skips FRC                                       |
+| `FIRST_FTC_API_USERNAME`, `_TOKEN`       | Secret per environment; `.env` locally           | `teams/first-teams.ts`                         | FIRST's FTC Events API, the same for FTC                                                                |
 
 `README.md` also lists `API_ACCESS_KEY` and `API_SECRET_KEY`, which no code
 reads.

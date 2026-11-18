@@ -85,6 +85,13 @@ beside its title lists that configuration on hover (see
 favorite it; a recent can't be
 removed by hand, since later inserts push it out.
 
+### Team recents
+
+An insert credited to a team also writes the team's row in
+`team_recent_inserts`, after the user's. On a team, the section's **Mine** and
+**Team** switch between the two lists. [teams.md](./teams.md#shared-recents)
+covers them.
+
 ## Invariants
 
 - A recent is only ever read or written by its owner: every query filters by the
