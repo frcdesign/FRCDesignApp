@@ -122,6 +122,15 @@ function medalLabel(medal: Medal): string {
     }
 }
 
+function standingTitle(standing: TeamStanding): string {
+    if (standing.ranking) {
+        return m.teamDashboardTop({ percent: standing.ranking.topPercent });
+    }
+    return standing.uses === 0
+        ? m.teamDashboardUnused()
+        : m.teamDashboardUnranked({ count: MIN_RANKED_TEAMS });
+}
+
 interface StandingCardProps {
     standing: TeamStanding;
 }
@@ -141,11 +150,7 @@ function StandingCard(props: StandingCardProps): ReactNode {
                     </Badge>
                 )}
             </Group>
-            <Title order={3}>
-                {ranking
-                    ? m.teamDashboardTop({ percent: ranking.topPercent })
-                    : m.teamDashboardUnranked({ count: MIN_RANKED_TEAMS })}
-            </Title>
+            <Title order={3}>{standingTitle(standing)}</Title>
             <Text c="dimmed">
                 {m.teamDashboardPerMember({
                     uses: standing.uses,

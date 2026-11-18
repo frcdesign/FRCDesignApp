@@ -1063,6 +1063,7 @@
     "teamDashboardAllUses": "All uses",
     "teamDashboardTop": "Top {percent: number}%",
     "teamDashboardUnranked": "Ranked once {count: number} teams use it",
+    "teamDashboardUnused": "Not used yet",
     "teamDashboardPerMember": [
         {
             "declarations": [
