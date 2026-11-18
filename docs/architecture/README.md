@@ -39,6 +39,7 @@ read and comment on, the ones a branch changed first with their diffs; the
 | [testbench.md](./testbench.md)             | The owner's page for probing Onshape: raw calls, rate limits, toolbar, webhooks              |
 | [featurescripts.md](./featurescripts.md)   | The FeatureScripts tab: loading the frontend document, examples, adding a feature (proposed) |
 | [platform.md](./platform.md)               | Onshape client, errors, retries and timeouts, concurrency, toasts, pushes, caching           |
+| [teams.md](./teams.md)                     | FIRST teams: organizations, membership, team context, settings, medals (proposed)            |
 
 [REFERENCE.md](../REFERENCE.md) is the tour of the whole system and links here
 for depth; [GUIDE.md](../GUIDE.md) holds recipes; [ONSHAPE.md](../ONSHAPE.md)
