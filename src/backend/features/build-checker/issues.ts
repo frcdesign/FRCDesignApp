@@ -63,8 +63,13 @@ export type BuildIssue =
     | BuildIssueOf<BuildIssueType.UNSTABLE_MATE_CONNECTOR>
     | BuildIssueOf<BuildIssueType.INSERTABLES_FAILED>
     | BuildIssueOf<BuildIssueType.NOT_PUBLIC>
-    | BuildIssueOf<BuildIssueType.LOAD_FAILED>
+    | LoadFailedIssue
     | BuildIssueOf<BuildIssueType.NOT_LOADED>;
+
+/** On an insertable, the error its load threw. */
+interface LoadFailedIssue extends BuildIssueOf<BuildIssueType.LOAD_FAILED> {
+    reason?: string;
+}
 
 /** The card links to the first; the rest are counted. */
 export function toConfigurationIssue(

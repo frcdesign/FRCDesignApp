@@ -684,12 +684,40 @@ describe("loadGroup", () => {
             type: BuildIssueType.INSERTABLES_FAILED
         });
 
-        // The insertable that loaded is saved; the one that failed never was.
-        const rows = await db.select().from(insertables).all();
-        expect(rows.map((row) => row.elementId)).toEqual(["e1"]);
+        // The one that failed is kept hidden, saying why, so the build card shows it.
+        const rows = await db
+            .select()
+            .from(insertables)
+            .orderBy(asc(insertables.sortOrder))
+            .all();
+        expect(rows.map((row) => row.elementId)).toEqual(["e1", "e2"]);
+        expect(rows[1]).toMatchObject({
+            isVisible: false,
+            microversionId: "",
+            buildIssues: [{ type: BuildIssueType.LOAD_FAILED, reason: "boom" }]
+        });
     });
 
-    it("adds LOAD_FAILED to a failed insertable's existing issues", async () => {
+    it("loads a tab that failed its first load in place of its hidden row", async () => {
+        mockContents([tab("e1")]);
+        const getConfiguration = vi
+            .spyOn(ConfigurationEndpoints, "getConfiguration")
+            .mockRejectedValueOnce(new Error("boom"));
+        await loadGroup(CTX, LOADED_TARGET, false);
+        getConfiguration.mockResolvedValue(NO_CONFIGURATION);
+
+        const result = await loadGroup(CTX, LOADED_TARGET, false);
+
+        expect(result).toMatchObject({ loadedElements: 1, failedElements: 0 });
+        const rows = await db.select().from(insertables).all();
+        expect(rows).toHaveLength(1);
+        expect(rows[0].buildIssues).not.toContainEqual(
+            expect.objectContaining({ type: BuildIssueType.LOAD_FAILED })
+        );
+        expect((await readGroup())?.versionId).toBe("v-2");
+    });
+
+    it("adds LOAD_FAILED, with why, to a failed insertable's existing issues", async () => {
         mockContents([tab("e1", "mv-2")]);
         // A row from a previous good load, carrying an unrelated issue.
         await seedInsertable(db, {
@@ -711,7 +739,7 @@ describe("loadGroup", () => {
             .get();
         expect(row?.buildIssues).toEqual([
             { type: BuildIssueType.NO_VENDORS },
-            { type: BuildIssueType.LOAD_FAILED }
+            { type: BuildIssueType.LOAD_FAILED, reason: "boom" }
         ]);
         // Untouched otherwise — the failed load never reached its save.
         expect(row?.name).toBe("Existing");
