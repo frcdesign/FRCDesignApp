@@ -17,9 +17,9 @@ import {
 } from "@backend/features/auto-assembly/studios";
 import { type ElementPath } from "@backend/lib/onshape/path";
 import {
-    SectionError,
-    SectionLoading,
-    SectionNotice
+    PageError,
+    PageLoading,
+    PageNotice
 } from "../../../components/app-notice";
 import { StatusIcon } from "../../../components/status-icon";
 import { Status } from "../../../lib/status";
@@ -67,17 +67,19 @@ interface AutoAssemblyPanelProps {
 /** The form, once the fasteners the library loaded are read. */
 export function AutoAssemblyPanel(props: AutoAssemblyPanelProps): ReactNode {
     const { assembly } = props;
-    const { data: set, isPending, isError } = useFastenerSetQuery();
+    const { data: set, isPending, isError, error } = useFastenerSetQuery();
 
     if (isPending) {
-        return <SectionLoading title={m.autoAssemblyFastenersLoading()} />;
+        return <PageLoading title={m.autoAssemblyFastenersLoading()} />;
     }
     if (isError) {
-        return <SectionError title={m.autoAssemblyFastenersFailed()} />;
+        return (
+            <PageError title={m.autoAssemblyFastenersFailed()} error={error} />
+        );
     }
     if (!set) {
         return (
-            <SectionNotice
+            <PageNotice
                 icon={
                     <StatusIcon status={Status.WARNING} size={IconSize.PAGE} />
                 }
