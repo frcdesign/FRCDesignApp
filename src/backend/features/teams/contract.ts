@@ -27,6 +27,20 @@ export enum TeamContextSource {
 /** Who chose Personal: their uses count toward no team until they choose one. */
 export const PERSONAL = "personal";
 
+/** How Auto Assembly treats the Generic vendor, which sells every standard length without part numbers. */
+export enum GenericVendorPolicy {
+    /** Always Generic; the vendor inputs are hidden. */
+    REQUIRE = "require",
+    /** Generic until somebody picks another. */
+    PREFER = "prefer",
+    /** The vendor ranking decides, as for any vendor. */
+    ANY = "any",
+    /** The best-ranked other vendor until somebody picks Generic. */
+    AVOID = "avoid",
+    /** Never Generic; it is left out of the vendor inputs. */
+    BAN = "ban"
+}
+
 export const MAX_TEAM_COLORS = 6;
 /** Low enough that reordering stays one batch, as a user's favorites are. */
 export const MAX_TEAM_FAVORITES = 250;
@@ -50,12 +64,14 @@ export interface TeamSettings {
     vendorRanking: Vendor[];
     /** `#rrggbb`, in the order offered. At most `MAX_TEAM_COLORS`. */
     colors: string[];
+    genericVendor: GenericVendorPolicy;
 }
 
 export const DEFAULT_TEAM_SETTINGS: TeamSettings = {
     membersEditFavorites: false,
     vendorRanking: [],
-    colors: []
+    colors: [],
+    genericVendor: GenericVendorPolicy.ANY
 };
 
 /** One of the caller's teams. A team is its own id: several may claim one FIRST number. */

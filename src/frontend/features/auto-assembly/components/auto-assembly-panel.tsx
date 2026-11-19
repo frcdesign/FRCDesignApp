@@ -46,8 +46,8 @@ import {
 import {
     fastenerOptions,
     selectionMode,
-    settleChoices,
-    withPreferredScrewVendor
+    NO_PREFERENCES,
+    settleChoices
 } from "../options";
 import { useCurrentTeamSettings } from "../../teams/queries";
 import { FLIP_SCREWS_PARAMETER, FormInput } from "../parameters";
@@ -126,14 +126,20 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
     const finishRun = useAutoAssemblyStore((state) => state.finishRun);
     const { data: job } = useAssemblyJobQuery(assembly);
     const insertMutation = useInsertMutation(assembly);
-    const vendorRanking = useCurrentTeamSettings()?.vendorRanking;
+    const teamSettings = useCurrentTeamSettings();
     const settled = useMemo(
         () =>
             settleChoices(
                 set,
-                withPreferredScrewVendor(set, choices, vendorRanking ?? [])
+                choices,
+                teamSettings
+                    ? {
+                          ranking: teamSettings.vendorRanking,
+                          generic: teamSettings.genericVendor
+                      }
+                    : NO_PREFERENCES
             ),
-        [set, choices, vendorRanking]
+        [set, choices, teamSettings]
     );
     const mode = selectionMode(settled);
     const isFaces = mode === SelectionMode.FACES;

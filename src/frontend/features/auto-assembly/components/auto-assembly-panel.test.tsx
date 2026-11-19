@@ -37,6 +37,11 @@ import { JobDetails, JobDetailsTitle } from "./job-details";
 import { AutoAssemblyCallout } from "./auto-assembly-callout";
 import { UtilityTab } from "../../../lib/app-tab";
 import { FastenerKind } from "@backend/features/auto-assembly/studios";
+import {
+    DEFAULT_TEAM_SETTINGS,
+    GenericVendorPolicy,
+    type TeamSettings
+} from "@backend/features/teams/contract";
 
 vi.mock("../../../lib/api-client", () => ({
     apiGet: vi.fn(),
@@ -50,6 +55,13 @@ vi.mock("../../../lib/tabs", () => ({ useNavigateToTab: () => navigateToTab }));
 
 // Signed out, so the job query only reads what a test seeds
 vi.mock("../../auth/access-level", () => ({ useIsSignedIn: () => false }));
+
+const team = vi.hoisted(() => ({
+    settings: undefined as TeamSettings | undefined
+}));
+vi.mock("../../teams/queries", () => ({
+    useCurrentTeamSettings: () => team.settings
+}));
 
 const ASSEMBLY = {
     documentId: "doc",
@@ -104,7 +116,10 @@ beforeEach(() => {
     });
 });
 
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+    vi.restoreAllMocks();
+    team.settings = undefined;
+});
 
 describe("AutoAssemblyPanel", () => {
     it("says so until the library has loaded the fasteners", () => {
@@ -241,6 +256,28 @@ describe("AutoAssemblyPanel", () => {
 
         await choose("Vendor", "McMaster-Carr");
         expect(screen.getAllByLabelText("Vendor")).toHaveLength(2);
+    });
+
+    it("hides the vendor where the team requires Generic, and leaves Generic out where it bans it", async () => {
+        team.settings = {
+            ...DEFAULT_TEAM_SETTINGS,
+            genericVendor: GenericVendorPolicy.REQUIRE
+        };
+        const { unmount } = renderPanel();
+        await userEvent.click(
+            screen.getByRole("checkbox", { name: "Add screw washer" })
+        );
+        expect(screen.queryByLabelText("Vendor")).toBeNull();
+        unmount();
+
+        team.settings = {
+            ...DEFAULT_TEAM_SETTINGS,
+            genericVendor: GenericVendorPolicy.BAN
+        };
+        renderPanel();
+        await userEvent.click(screen.getAllByLabelText("Vendor")[0]);
+        expect(screen.queryByRole("option", { name: "Generic" })).toBeNull();
+        screen.getByRole("option", { name: "McMaster-Carr" });
     });
 
     it("sizes a screw automatically until switched to manual, then asks its length", async () => {

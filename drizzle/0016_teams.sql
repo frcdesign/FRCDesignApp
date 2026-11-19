@@ -73,6 +73,7 @@ CREATE TABLE `teams` (
 	`members_edit_favorites` integer DEFAULT false NOT NULL,
 	`vendor_ranking` text DEFAULT '[]' NOT NULL,
 	`colors` text DEFAULT '[]' NOT NULL,
+	`generic_vendor` text DEFAULT 'any' NOT NULL,
 	`registered_at` integer NOT NULL,
 	`registered_by` text NOT NULL
 );

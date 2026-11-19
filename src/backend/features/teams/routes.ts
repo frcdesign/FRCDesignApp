@@ -21,6 +21,7 @@ import { toDayKey } from "../analytics/day";
 import { Vendor } from "../library/vendors";
 import { resolveTeamContext } from "./context";
 import {
+    GenericVendorPolicy,
     MAX_TEAM_COLORS,
     PERSONAL,
     Program,
@@ -236,6 +237,7 @@ teamRoutes.post(
         z.object({
             membersEditFavorites: z.boolean().optional(),
             vendorRanking: z.array(z.enum(Vendor)).optional(),
+            genericVendor: z.enum(GenericVendorPolicy).optional(),
             colors: z
                 .array(
                     z

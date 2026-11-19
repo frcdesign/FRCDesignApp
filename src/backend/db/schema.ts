@@ -21,6 +21,7 @@ import {
 } from "../features/configurations/contract";
 import { BuildIssue, knownBuildIssues } from "../features/build-checker/issues";
 import {
+    GenericVendorPolicy,
     OrganizationKind,
     Program,
     TeamRole
@@ -339,6 +340,10 @@ export const teams = sqliteTable(
             .$type<string[]>()
             .notNull()
             .default([]),
+        genericVendor: text("generic_vendor")
+            .$type<GenericVendorPolicy>()
+            .notNull()
+            .default(GenericVendorPolicy.ANY),
         registeredAt: integer("registered_at", {
             mode: "timestamp_ms"
         }).notNull(),

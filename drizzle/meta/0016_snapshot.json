@@ -1,7 +1,7 @@
 {
     "version": "6",
     "dialect": "sqlite",
-    "id": "9d20a4c1-402f-4466-8eb0-c944a84ccbac",
+    "id": "2fd2499a-1459-4cca-9090-9e23f94b160e",
     "prevId": "ff62ef01-c8b8-43fc-8665-bcae522a5613",
     "tables": {
         "configurations": {
@@ -1199,6 +1199,14 @@
                     "notNull": true,
                     "autoincrement": false,
                     "default": "'[]'"
+                },
+                "generic_vendor": {
+                    "name": "generic_vendor",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false,
+                    "default": "'any'"
                 },
                 "registered_at": {
                     "name": "registered_at",

@@ -56,7 +56,8 @@ export function toSettings(team: TeamRow): TeamSettings {
     return {
         membersEditFavorites: team.membersEditFavorites,
         vendorRanking: team.vendorRanking,
-        colors: team.colors
+        colors: team.colors,
+        genericVendor: team.genericVendor
     };
 }
 

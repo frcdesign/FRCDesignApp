@@ -26,10 +26,13 @@ import {
     isCountersunk,
     type PartChoice,
     type ScrewChoice,
+    GENERIC,
+    partVendors,
     settlePart,
     settleScrew,
     StudioInput
 } from "@backend/features/auto-assembly/studios";
+import { GenericVendorPolicy } from "@backend/features/teams/contract";
 import { type Vendor } from "@backend/features/library/vendors";
 import { preferredVendor } from "../teams/vendor-ranking";
 import { FORM_PARAMETERS, FormInput, formParameter } from "./parameters";
@@ -82,62 +85,109 @@ export interface SettledChoices {
     form: Selection;
     mode: FastenerMode;
     screw: ScrewChoice;
+    /** The team's, which decides which vendor inputs show. */
+    generic: GenericVendorPolicy;
     /** Undefined where nobody makes the part in the screw's size. */
     parts: Record<Part, PartChoice | undefined>;
     /** Which parts go in: added, made in the size, and allowed by the rest. */
     added: Record<Part, boolean>;
 }
 
-/** The team's best-ranked screw vendor, until somebody picks one; washers and nuts follow it. */
-export function withPreferredScrewVendor(
+/** What the current team asks of vendors; `NO_PREFERENCES` off a team. */
+export interface VendorPreferences {
+    ranking: Vendor[];
+    generic: GenericVendorPolicy;
+}
+
+export const NO_PREFERENCES: VendorPreferences = {
+    ranking: [],
+    generic: GenericVendorPolicy.ANY
+};
+
+/**
+ * The screw's vendor as the team's preferences have it. Require and Ban hold
+ * whatever was picked; the rest only fill a vendor nobody picked.
+ */
+function preferredScrewVendor(
     set: FastenerSet,
-    choices: Choices,
-    ranking: Vendor[]
-): Choices {
-    if (choices.screw[StudioInput.VENDOR] !== undefined) return choices;
-    const screwVendors = new Set(
-        set.catalog.screws.map((screw) => screw.vendor)
-    );
-    const vendor = preferredVendor(
-        set.catalog.vendors.filter((each) => screwVendors.has(each.id)),
-        ranking
+    picked: string | undefined,
+    { ranking, generic }: VendorPreferences
+): string | undefined {
+    const makers = new Set(set.catalog.screws.map((screw) => screw.vendor));
+    const vendors = set.catalog.vendors.filter((each) => makers.has(each.id));
+    const others = vendors.filter((each) => each.id !== GENERIC);
+    const bestOther = () => (preferredVendor(others, ranking) ?? others[0])?.id;
+    const makesGeneric = makers.has(GENERIC);
+
+    switch (generic) {
+        case GenericVendorPolicy.REQUIRE:
+            return makesGeneric ? GENERIC : picked;
+        case GenericVendorPolicy.BAN:
+            return picked !== undefined && picked !== GENERIC
+                ? picked
+                : bestOther();
+        case GenericVendorPolicy.PREFER:
+            return picked ?? (makesGeneric ? GENERIC : bestOther());
+        case GenericVendorPolicy.AVOID:
+            return picked ?? bestOther();
+        case GenericVendorPolicy.ANY:
+            return picked ?? preferredVendor(vendors, ranking)?.id;
+    }
+}
+
+/** Under Ban, a part settled onto Generic moves to the first other vendor making it, or goes. */
+function withoutGeneric(
+    set: FastenerSet,
+    kind: FastenerKind,
+    choice: PartialSelection,
+    screw: ScrewChoice,
+    settled: PartChoice | undefined
+): PartChoice | undefined {
+    if (settled?.vendor !== GENERIC) return settled;
+    const vendor = partVendors(set, kind, screw.size).find(
+        (each) => each !== GENERIC
     );
     return vendor === undefined
-        ? choices
-        : {
-              ...choices,
-              screw: { ...choices.screw, [StudioInput.VENDOR]: vendor.id }
-          };
+        ? undefined
+        : settlePart(
+              set,
+              kind,
+              { ...choice, [StudioInput.VENDOR]: vendor },
+              screw
+          );
 }
 
 export function settleChoices(
     set: FastenerSet,
-    choices: Choices
+    choices: Choices,
+    preferences: VendorPreferences = NO_PREFERENCES
 ): SettledChoices {
     const form = normalizeSelection(
         toSelection(choices.form, FORM_PARAMETERS),
         FORM_PARAMETERS
     );
-    const screw = settleScrew(set, choices.screw);
+    const vendor = preferredScrewVendor(
+        set,
+        choices.screw[StudioInput.VENDOR],
+        preferences
+    );
+    const screw = settleScrew(
+        set,
+        vendor === undefined
+            ? choices.screw
+            : { ...choices.screw, [StudioInput.VENDOR]: vendor }
+    );
+    const part = (each: Part) => {
+        const kind = PART_KIND[each];
+        const settled = settlePart(set, kind, choices.parts[each], screw);
+        return preferences.generic === GenericVendorPolicy.BAN
+            ? withoutGeneric(set, kind, choices.parts[each], screw, settled)
+            : settled;
+    };
     const parts = {
-        [Part.SCREW_WASHER]: settlePart(
-            set,
-            FastenerKind.WASHER,
-            choices.parts[Part.SCREW_WASHER],
-            screw
-        ),
-        [Part.NUT]: settlePart(
-            set,
-            FastenerKind.NUT,
-            choices.parts[Part.NUT],
-            screw
-        ),
-        [Part.NUT_WASHER]: settlePart(
-            set,
-            FastenerKind.WASHER,
-            choices.parts[Part.NUT_WASHER],
-            screw
-        )
+        [Part.SCREW_WASHER]: part(Part.SCREW_WASHER),
+        [Part.NUT]: part(Part.NUT),
+        [Part.NUT_WASHER]: part(Part.NUT_WASHER)
     };
     const nut = choices.added[Part.NUT] && parts[Part.NUT] !== undefined;
     return {
@@ -145,6 +195,7 @@ export function settleChoices(
         form,
         mode: choices.mode,
         screw,
+        generic: preferences.generic,
         parts,
         added: {
             // A washer can't go under a flat head, which sits in its countersink

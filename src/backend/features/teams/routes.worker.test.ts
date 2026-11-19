@@ -30,6 +30,7 @@ import { AppFeature, UseSource } from "../analytics/usage";
 import { ElementType } from "../../lib/onshape/element-type";
 import {
     ALL_USES,
+    GenericVendorPolicy,
     MIN_RANKED_TEAMS,
     PERSONAL,
     Program,
@@ -452,6 +453,18 @@ describe("team administration", () => {
         expect(ok.status).toBe(200);
         const team = await db.select().from(teams).get();
         expect(team?.colors).toEqual(["#ff0000", "#00ff00"]);
+
+        const policy = (genericVendor: string) =>
+            createTestApp({ userId: "admin" }).request(
+                url,
+                jsonRequest("POST", { genericVendor }),
+                env
+            );
+        expect((await policy("sometimes")).status).toBe(400);
+        expect((await policy(GenericVendorPolicy.BAN)).status).toBe(200);
+        expect((await db.select().from(teams).get())?.genericVendor).toBe(
+            GenericVendorPolicy.BAN
+        );
     });
 
     it("keeps the last admin", async () => {

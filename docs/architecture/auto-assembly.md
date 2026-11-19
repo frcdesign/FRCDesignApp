@@ -1115,9 +1115,11 @@ to the one value made there, from the catalog, as the feature resolves it
 (`settle` in `studios.ts`); and each part into the screw's size from a vendor
 making it (`settlePart`: the one chosen, else the screw's, else Generic, else
 the first making it). Changing the screw's vendor moves every part to it, where
-it makes them. Until somebody picks the screw's vendor, it is the current team's
-best-ranked vendor that makes screws (`withPreferredScrewVendor`, see
-[teams.md](./teams.md#vendor-ranking)), and the studio's default off a team.
+it makes them. `settleChoices` also takes the current team's
+`VendorPreferences`: its vendor ranking and its Generic fasteners policy, which
+can fill or hold the screw's vendor and keep Generic out of every part (see
+[teams.md](./teams.md#auto-assembly-vendors)). Off a team the studio's default
+stands.
 
 ### Picking what to fasten
 

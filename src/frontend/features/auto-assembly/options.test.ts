@@ -17,9 +17,9 @@ import {
     defaultChoices,
     fastenerOptions,
     Part,
-    settleChoices,
-    withPreferredScrewVendor
+    settleChoices
 } from "./options";
+import { GenericVendorPolicy } from "@backend/features/teams/contract";
 import { FormInput } from "./parameters";
 
 function choices(extra: Partial<Choices> = {}): Choices {
@@ -130,26 +130,72 @@ describe("settleChoices", () => {
     });
 });
 
-describe("withPreferredScrewVendor", () => {
-    it("opens on the team's best-ranked vendor making screws, by code or name", () => {
-        const preferred = withPreferredScrewVendor(FASTENER_SET, choices(), [
-            Vendor.VEX,
-            Vendor.MCM,
-            Vendor.WCP
-        ]);
-        const options = fastenerOptions(settleChoices(FASTENER_SET, preferred));
-        expect(options.screw.vendor).toBe("MCMASTER");
-        expect(options.nut?.vendor).toBe("MCMASTER");
+describe("the team's vendor preferences", () => {
+    function settledWith(
+        generic: GenericVendorPolicy,
+        extra: Partial<Choices> = {},
+        ranking: Vendor[] = [Vendor.VEX, Vendor.MCM, Vendor.WCP]
+    ) {
+        return settleChoices(FASTENER_SET, choices(extra), {
+            ranking,
+            generic
+        });
+    }
+    const pickedGeneric = { screw: { [StudioInput.VENDOR]: GENERIC } };
+    const pickedWcp = { screw: { [StudioInput.VENDOR]: "WCP" } };
+
+    it("opens on the best-ranked vendor making screws, by code or name", () => {
+        const settled = settledWith(GenericVendorPolicy.ANY);
+        expect(settled.screw.vendor).toBe("MCMASTER");
+        expect(settled.parts[Part.NUT]?.vendor).toBe("MCMASTER");
+        // A ranking naming none of the catalog's leaves the studio's default.
+        expect(
+            settledWith(GenericVendorPolicy.ANY, {}, [Vendor.VEX]).screw.vendor
+        ).toBe(GENERIC);
     });
 
-    it("leaves a vendor somebody picked, and a team ranking none of the catalog's", () => {
-        const picked = choices({ screw: { [StudioInput.VENDOR]: GENERIC } });
+    it("keeps a vendor somebody picked, but under Require and Ban", () => {
         expect(
-            withPreferredScrewVendor(FASTENER_SET, picked, [Vendor.MCM])
-        ).toBe(picked);
-        const unranked = choices();
+            settledWith(GenericVendorPolicy.ANY, pickedWcp).screw.vendor
+        ).toBe("WCP");
         expect(
-            withPreferredScrewVendor(FASTENER_SET, unranked, [Vendor.VEX])
-        ).toBe(unranked);
+            settledWith(GenericVendorPolicy.AVOID, pickedGeneric).screw.vendor
+        ).toBe(GENERIC);
+        expect(
+            settledWith(GenericVendorPolicy.REQUIRE, pickedWcp).screw.vendor
+        ).toBe(GENERIC);
+        expect(
+            settledWith(GenericVendorPolicy.BAN, pickedGeneric).screw.vendor
+        ).toBe("MCMASTER");
+    });
+
+    it("opens on Generic when preferred, and on the best other vendor when avoided", () => {
+        expect(settledWith(GenericVendorPolicy.PREFER).screw.vendor).toBe(
+            GENERIC
+        );
+        expect(
+            settledWith(GenericVendorPolicy.AVOID, {}, [Vendor.WCP]).screw
+                .vendor
+        ).toBe("WCP");
+        // Nothing ranked: the catalog's first other vendor.
+        expect(
+            settledWith(GenericVendorPolicy.AVOID, {}, []).screw.vendor
+        ).not.toBe(GENERIC);
+    });
+
+    it("keeps Generic out of every part under Ban", () => {
+        for (const vendor of ["WCP", "MCMASTER", "REV", "ANDYMARK"]) {
+            const settled = settledWith(GenericVendorPolicy.BAN, {
+                screw: { [StudioInput.VENDOR]: vendor },
+                parts: {
+                    [Part.SCREW_WASHER]: { [StudioInput.VENDOR]: GENERIC },
+                    [Part.NUT]: { [StudioInput.VENDOR]: GENERIC },
+                    [Part.NUT_WASHER]: {}
+                }
+            });
+            for (const part of Object.values(Part)) {
+                expect(settled.parts[part]?.vendor).not.toBe(GENERIC);
+            }
+        }
     });
 });

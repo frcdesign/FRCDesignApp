@@ -236,6 +236,21 @@ interface TeamSettings {
     vendorRanking: Vendor[];
     /** `#rrggbb`, in the order offered. At most `MAX_TEAM_COLORS`. */
     colors: string[];
+    genericVendor: GenericVendorPolicy;
+}
+
+/** How Auto Assembly treats the Generic vendor, which sells every standard length without part numbers. */
+enum GenericVendorPolicy {
+    /** Always Generic; the vendor inputs are hidden. */
+    REQUIRE = "require",
+    /** Generic until somebody picks another. */
+    PREFER = "prefer",
+    /** The vendor ranking decides, as for any vendor. */
+    ANY = "any",
+    /** The best-ranked other vendor until somebody picks Generic. */
+    AVOID = "avoid",
+    /** Never Generic; it is left out of the vendor inputs. */
+    BAN = "ban"
 }
 
 /** One of the caller's teams. A team is its own id: several may claim one FIRST number. */
@@ -367,7 +382,8 @@ insertables:
   province, country, rookie year, and the latest season FIRST listed it in.
   Primary key on program and number. A team FIRST stops listing keeps its row.
 - `teams` — a registered team: its id, the program and number it claims,
-  `members_edit_favorites`, `vendor_ranking` and `colors`, and who registered
+  `members_edit_favorites`, `vendor_ranking`, `colors` and `generic_vendor`,
+  and who registered
   it when. Several rows may claim one number.
 - `team_organizations` — one organization registered to one team: its company
   id and kind, the name Onshape gave it, and `subteam_id` with
@@ -506,13 +522,33 @@ The current team's `vendor_ranking`:
 - orders the vendor filter menu, ranked vendors first;
 - breaks ties between search results of equal score, the better-ranked vendor
   first (`breakTiesByVendor`);
-- picks the screw vendor Auto Assembly opens on, until somebody picks one
-  (`withPreferredScrewVendor`): the best-ranked vendor in the fastener catalog
-  that makes screws. Washers and nuts follow the screw's vendor, as always.
+- picks Auto Assembly's screw vendor, below.
+
+A ranking never hides a part.
+
+### Auto Assembly vendors
+
+`settleChoices` takes the team's `VendorPreferences` and decides the screw's
+vendor before settling the rest. Washers and nuts follow the screw's vendor,
+as always. The team's **Generic fasteners** setting (`GenericVendorPolicy`)
+says how:
+
+| Setting           | Screw vendor                                                       | Vendor inputs                                     |
+| ----------------- | ------------------------------------------------------------------ | ------------------------------------------------- |
+| **Require**       | Always Generic, whatever was picked                                | Hidden, screw's and parts' alike                  |
+| **Prefer**        | Generic until somebody picks another                               | Shown                                             |
+| **No preference** | The best-ranked vendor making screws until somebody picks one      | Shown                                             |
+| **Avoid**         | The best-ranked other vendor until somebody picks one, Generic too | Shown                                             |
+| **Ban**           | Never Generic: a pick of it moves to the best-ranked other vendor  | Generic left out; hidden where one vendor remains |
+
+Under **Ban** a washer or nut settled onto Generic moves to the first other
+vendor making it in the screw's size. With none, that part isn't offered.
+Where the ranking names none of the catalog's vendors, the catalog's first
+other vendor stands in.
 
 A catalog's vendor is a library's when its id or name matches the library
 vendor's code or name, ignoring case and punctuation (`preferredVendor`), so
-`MCMASTER` and "McMaster-Carr" are `MCM`. A ranking never hides a part.
+`MCMASTER` and "McMaster-Carr" are `MCM`.
 
 ### The Color control
 
@@ -548,6 +584,8 @@ list.
 - Every global rollup counts a use the same with a team or without.
 - Every team rollup is derivable from `events` alone.
 - Vendor ranking orders results; it never filters them.
+- Under **Require** no Auto Assembly part is from a vendor but Generic, and
+  under **Ban** none is from Generic.
 
 ## Failure and recovery
 

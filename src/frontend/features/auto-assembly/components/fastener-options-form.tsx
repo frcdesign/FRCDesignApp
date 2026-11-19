@@ -1,4 +1,5 @@
 import { Text } from "@mantine/core";
+import { GenericVendorPolicy } from "@backend/features/teams/contract";
 import { type ReactNode } from "react";
 import {
     type ConfigurationParameter,
@@ -124,6 +125,21 @@ export function FastenerOptionsForm(
     );
 }
 
+/**
+ * A Vendor input as the team's Generic policy leaves it: none under Require,
+ * since Generic is all there is, and none where Ban leaves a single vendor.
+ */
+function allowedVendors(
+    parameter: ConfigurationParameter,
+    generic: GenericVendorPolicy
+): ConfigurationParameter | undefined {
+    if (parameter.type !== ParameterType.ENUM) return parameter;
+    if (generic === GenericVendorPolicy.REQUIRE) return undefined;
+    if (generic !== GenericVendorPolicy.BAN) return parameter;
+    const options = parameter.options.filter((option) => option.id !== GENERIC);
+    return options.length > 1 ? { ...parameter, options } : undefined;
+}
+
 interface ScrewInputsProps {
     settled: SettledChoices;
 }
@@ -165,12 +181,19 @@ function ScrewInputs(props: ScrewInputsProps): ReactNode {
                 ) {
                     return sizing;
                 }
+                const shown =
+                    parameter.id === StudioInput.VENDOR
+                        ? allowedVendors(parameter, settled.generic)
+                        : parameter;
+                if (!shown) {
+                    return sizing;
+                }
                 return [
                     sizing,
                     <ParameterInput
                         key={parameter.id}
                         inputId={`screw-${parameter.id}`}
-                        parameter={parameter}
+                        parameter={shown}
                         value={selection[parameter.id]}
                         selection={selection}
                         parameters={parameters}
@@ -222,14 +245,16 @@ function PartGroup(props: PartGroupProps): ReactNode {
             return [];
         }
         const vendors = partVendors(settled.set, kind, settled.screw.size);
-        return [
+        const allowed = allowedVendors(
             {
                 ...parameter,
                 options: parameter.options.filter((option) =>
                     vendors.includes(option.id)
                 )
-            }
-        ];
+            },
+            settled.generic
+        );
+        return allowed ? [allowed] : [];
     });
 
     return (

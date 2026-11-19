@@ -18,6 +18,7 @@ import {
 } from "@phosphor-icons/react";
 import { ReactNode, useId, useState } from "react";
 import {
+    GenericVendorPolicy,
     MAX_TEAM_COLORS,
     PERSONAL,
     TeamContextSource,
@@ -126,6 +127,21 @@ export function TeamAdminSettings(): ReactNode {
     return <TeamAdminForm team={team} />;
 }
 
+function genericVendorLabel(policy: GenericVendorPolicy): string {
+    switch (policy) {
+        case GenericVendorPolicy.REQUIRE:
+            return m.teamGenericRequire();
+        case GenericVendorPolicy.PREFER:
+            return m.teamGenericPrefer();
+        case GenericVendorPolicy.ANY:
+            return m.teamGenericAny();
+        case GenericVendorPolicy.AVOID:
+            return m.teamGenericAvoid();
+        case GenericVendorPolicy.BAN:
+            return m.teamGenericBan();
+    }
+}
+
 interface TeamAdminFormProps {
     team: MyTeam;
 }
@@ -165,6 +181,24 @@ function TeamAdminForm(props: TeamAdminFormProps): ReactNode {
                         vendorRanking: value
                     })
                 }
+            />
+            <Select
+                label={m.teamGenericVendor()}
+                description={m.teamGenericVendorDescription()}
+                data={Object.values(GenericVendorPolicy).map((policy) => ({
+                    value: policy,
+                    label: genericVendorLabel(policy)
+                }))}
+                value={settings.genericVendor}
+                allowDeselect={false}
+                checkIconPosition="right"
+                onChange={(value) => {
+                    if (value) {
+                        settingsMutation.mutate({
+                            genericVendor: value
+                        });
+                    }
+                }}
             />
             <Stack gap={4}>
                 <Text size="sm" fw={500}>
