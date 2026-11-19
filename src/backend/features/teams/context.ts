@@ -3,12 +3,20 @@ import { getDb } from "../../db/client";
 import { type AppBindings } from "../../lib/context";
 import { describeError } from "../../lib/error-text";
 import { PERSONAL_COMPANY_ID } from "../auth/personal-company";
-import { PERSONAL, TeamContextSource } from "./contract";
+import {
+    NO_PREFERENCES,
+    PERSONAL,
+    TeamContextSource,
+    toVendorPreferences,
+    type VendorPreferences
+} from "./contract";
 import {
     chosenTeamStore,
     documentOwnerStore,
     getMemberships,
-    getOrganizationRegistrations
+    getOrganizationRegistrations,
+    getTeamsById,
+    toSettings
 } from "./store";
 
 export interface TeamContext {
@@ -72,5 +80,26 @@ export async function creditedTeamId(
     } catch (error) {
         console.error(`Failed to resolve a team: ${describeError(error)}`);
         return null;
+    }
+}
+
+/** The caller's team's vendor preferences in this document; none off a team, or on any failure. */
+export async function vendorPreferencesFor(
+    env: AppBindings,
+    userId: string,
+    documentId: string | undefined
+): Promise<VendorPreferences> {
+    try {
+        const context = await resolveTeamContext(env, userId, documentId);
+        if (!context) return NO_PREFERENCES;
+        const team = (await getTeamsById(getDb(env.DB), [context.teamId])).get(
+            context.teamId
+        );
+        return toVendorPreferences(team && toSettings(team.team));
+    } catch (error) {
+        console.error(
+            `Failed to read a team's vendor preferences: ${describeError(error)}`
+        );
+        return NO_PREFERENCES;
     }
 }

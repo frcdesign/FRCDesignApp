@@ -27,7 +27,7 @@ export enum TeamContextSource {
 /** Who chose Personal: their uses count toward no team until they choose one. */
 export const PERSONAL = "personal";
 
-/** How Auto Assembly treats the Generic vendor, which sells every standard length without part numbers. */
+/** How Vendor lists and Auto Assembly treat the Generic vendor, which sells every standard length without part numbers. */
 export enum GenericVendorPolicy {
     /** Always Generic; the vendor inputs are hidden. */
     REQUIRE = "require",
@@ -39,6 +39,25 @@ export enum GenericVendorPolicy {
     AVOID = "avoid",
     /** Never Generic; it is left out of the vendor inputs. */
     BAN = "ban"
+}
+
+/** What the current team asks of vendors; `NO_PREFERENCES` off a team. */
+export interface VendorPreferences {
+    ranking: Vendor[];
+    generic: GenericVendorPolicy;
+}
+
+export const NO_PREFERENCES: VendorPreferences = {
+    ranking: [],
+    generic: GenericVendorPolicy.ANY
+};
+
+export function toVendorPreferences(
+    settings: TeamSettings | undefined
+): VendorPreferences {
+    return settings
+        ? { ranking: settings.vendorRanking, generic: settings.genericVendor }
+        : NO_PREFERENCES;
 }
 
 export const MAX_TEAM_COLORS = 6;

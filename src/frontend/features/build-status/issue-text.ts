@@ -1,6 +1,7 @@
 import {
     type BuildIssue,
-    BuildIssueType
+    BuildIssueType,
+    type VendorOptionProblem
 } from "@backend/features/build-checker/issues";
 import {
     AUTO_INDEX_THRESHOLD,
@@ -45,7 +46,20 @@ export function getIssueTitle(issue: BuildIssue): string {
             return m.buildIssueLoadFailed();
         case BuildIssueType.NOT_LOADED:
             return m.buildIssueNotLoaded();
+        case BuildIssueType.VENDOR_OPTIONS:
+            return m.buildIssueVendorOptions({ count: issue.problems.length });
     }
+}
+
+/** Each misnamed option's fix, a sentence apiece. */
+function vendorOptionsHelp(problems: VendorOptionProblem[]): string {
+    return problems
+        .map(({ option, expected }) =>
+            expected === undefined
+                ? m.buildIssueVendorOptionUnknown({ option })
+                : m.buildIssueVendorOptionRename({ option, expected })
+        )
+        .join(" ");
 }
 
 /** The fix or reason, only where knowing Onshape doesn't make it plain. */
@@ -69,6 +83,8 @@ export function getIssueDescription(issue: BuildIssue): string | undefined {
             return m.buildIssueNotPublicHelp();
         case BuildIssueType.NOT_LOADED:
             return m.buildIssueNotLoadedHelp();
+        case BuildIssueType.VENDOR_OPTIONS:
+            return vendorOptionsHelp(issue.problems);
         default:
             return undefined;
     }

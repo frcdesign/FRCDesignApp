@@ -1,4 +1,6 @@
 import { eq } from "drizzle-orm";
+import { NO_PREFERENCES, type VendorPreferences } from "../../teams/contract";
+import { applyVendorPreferences } from "../../teams/vendor-policy";
 import z from "zod";
 import { type Db } from "../../../db/client";
 import { configurations } from "../../../db/schema";
@@ -15,7 +17,8 @@ export const selectionSchema = z.record(z.string(), z.string()).optional();
 export async function readSelection(
     db: Db,
     insertableId: string,
-    requested: Selection | undefined
+    requested: Selection | undefined,
+    preferences: VendorPreferences = NO_PREFERENCES
 ): Promise<{
     selection: Selection | undefined;
     parameters: ConfigurationParameter[];
@@ -31,7 +34,13 @@ export async function readSelection(
         selection:
             parameters.length === 0
                 ? undefined
-                : toSelection(requested ?? {}, parameters),
+                : applyVendorPreferences(
+                      toSelection(requested ?? {}, parameters),
+                      parameters,
+                      preferences,
+                      // A part asked for at its defaults, as a quick insert from a list.
+                      Object.keys(requested ?? {}).length === 0
+                  ),
         parameters
     };
 }

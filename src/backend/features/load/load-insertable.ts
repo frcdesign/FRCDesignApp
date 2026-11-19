@@ -122,7 +122,11 @@ export async function loadInsertable(
         isOpenComposite: probed.isOpenComposite,
         buildIssues: addBuildIssue(
             probed.hasParts
-                ? checkInsertable({ vendors: probed.vendors, thumbnailUrls })
+                ? checkInsertable({
+                      vendors: probed.vendors,
+                      parameters: probed.configuration.parameters,
+                      thumbnailUrls
+                  })
                 : [],
             ...probed.buildIssues
         ),

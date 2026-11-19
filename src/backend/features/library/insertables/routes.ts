@@ -1,4 +1,5 @@
 import { and, eq } from "drizzle-orm";
+import { vendorPreferencesFor } from "../../teams/context";
 import { handledError, internalError } from "../../../lib/api-error";
 import { getFastenerSet } from "../../auto-assembly/fastener-set";
 import { generatedFeatures } from "../../generated-parts/store";
@@ -335,7 +336,12 @@ insertableRoutes.post(
                 const { selection, parameters } = await readSelection(
                     db,
                     insertableId,
-                    body.selection
+                    body.selection,
+                    await vendorPreferencesFor(
+                        c.env,
+                        await c.var.getUserId(),
+                        targetPath.documentId
+                    )
                 );
 
                 const feature = new DerivedFeature(
@@ -439,7 +445,12 @@ insertableRoutes.post(
                 const { selection, parameters } = await readSelection(
                     db,
                     insertableId,
-                    body.selection
+                    body.selection,
+                    await vendorPreferencesFor(
+                        c.env,
+                        await c.var.getUserId(),
+                        targetPath.documentId
+                    )
                 );
 
                 // Only the overrides: a whole selection can exceed what Onshape accepts.

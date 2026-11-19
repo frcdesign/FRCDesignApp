@@ -13,28 +13,28 @@ or the load that probes Onshape ([loading.md](./loading.md)); both consume it.
 
 ## Code map
 
-| Path                                                                      | Role                                                                        |
-| ------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| `src/backend/features/configurations/contract.ts`                         | Parameter, `Selection`, `ConfigurationKey`, record and result types         |
-| `src/backend/features/configurations/selection.ts`                        | The only place a selection or key is built; see the invariants              |
-| `src/backend/features/configurations/utils.ts`                            | Visibility conditions, option resolution, configuration text encodings      |
-| `src/backend/features/configurations/input-parser.ts`                     | Parses and evaluates typed quantity expressions (`(2 + 3) in`)              |
-| `src/backend/features/configurations/combinations.ts`                     | Indexing limits and bands, enumeration and counting of combinations         |
-| `src/backend/features/configurations/roles.ts`                            | Recognizes parameter roles by name (derivation variable, color, ...)        |
-| `src/backend/features/configurations/instances.ts`                        | Splits a parameter by the choices that filter it, for reporting             |
-| `src/backend/features/configurations/units.ts`                            | A workspace's display units, cached in KV                                   |
-| `src/backend/features/configurations/part-number.ts`                      | Placeholder and meaningless part numbers                                    |
-| `src/backend/features/configurations/stored-selections.ts`                | Reads a selection a favorite or recent stored against the part as it is now |
-| `src/backend/features/configurations/routes.ts`                           | `GET /api/configuration/...`, `GET /api/unit-info`                          |
-| `src/backend/features/load/parse-configuration.ts`                        | Onshape's configuration response to our parameters, roles attached          |
-| `src/backend/features/load/parse-configuration-records.ts`                | `decideIndexing`, probing each combination into a record                    |
-| `src/backend/features/search/records.ts`                                  | Records to search records, each with its thumbnail key                      |
-| `src/frontend/features/insert/components/configurations.tsx`              | The parameter panel in the insert menu                                      |
-| `src/frontend/components/parameter-input.tsx`                             | `ParameterInput` and `ParameterGrid`: each parameter's row, shared          |
-| `src/frontend/lib/unit-info.ts`                                           | `useUnitInfo`: the document's units, which quantities show in               |
-| `src/frontend/features/insert/components/configuration-hover-card.tsx`    | A row's icon whose card lists the configuration it opens on                 |
-| `src/frontend/features/build-status/components/configuration-section.tsx` | The admin card's parameter table and indexing controls                      |
-| `src/frontend/features/build-status/indexing-draft.ts`                    | Indexing edits held until saved                                             |
+| Path                                                                      | Role                                                                         |
+| ------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `src/backend/features/configurations/contract.ts`                         | Parameter, `Selection`, `ConfigurationKey`, record and result types          |
+| `src/backend/features/configurations/selection.ts`                        | The only place a selection or key is built; see the invariants               |
+| `src/backend/features/configurations/utils.ts`                            | Visibility conditions, option resolution, configuration text encodings       |
+| `src/backend/features/configurations/input-parser.ts`                     | Parses and evaluates typed quantity expressions (`(2 + 3) in`)               |
+| `src/backend/features/configurations/combinations.ts`                     | Indexing limits and bands, enumeration and counting of combinations          |
+| `src/backend/features/configurations/roles.ts`                            | Recognizes parameter roles by name (vendor, derivation variable, color, ...) |
+| `src/backend/features/configurations/instances.ts`                        | Splits a parameter by the choices that filter it, for reporting              |
+| `src/backend/features/configurations/units.ts`                            | A workspace's display units, cached in KV                                    |
+| `src/backend/features/configurations/part-number.ts`                      | Placeholder and meaningless part numbers                                     |
+| `src/backend/features/configurations/stored-selections.ts`                | Reads a selection a favorite or recent stored against the part as it is now  |
+| `src/backend/features/configurations/routes.ts`                           | `GET /api/configuration/...`, `GET /api/unit-info`                           |
+| `src/backend/features/load/parse-configuration.ts`                        | Onshape's configuration response to our parameters, roles attached           |
+| `src/backend/features/load/parse-configuration-records.ts`                | `decideIndexing`, probing each combination into a record                     |
+| `src/backend/features/search/records.ts`                                  | Records to search records, each with its thumbnail key                       |
+| `src/frontend/features/insert/components/configurations.tsx`              | The parameter panel in the insert menu                                       |
+| `src/frontend/components/parameter-input.tsx`                             | `ParameterInput` and `ParameterGrid`: each parameter's row, shared           |
+| `src/frontend/lib/unit-info.ts`                                           | `useUnitInfo`: the document's units, which quantities show in                |
+| `src/frontend/features/insert/components/configuration-hover-card.tsx`    | A row's icon whose card lists the configuration it opens on                  |
+| `src/frontend/features/build-status/components/configuration-section.tsx` | The admin card's parameter table and indexing controls                       |
+| `src/frontend/features/build-status/indexing-draft.ts`                    | Indexing edits held until saved                                              |
 
 ## Storage
 
@@ -100,17 +100,27 @@ every row there opens on the defaults.
 
 1. The load fetches the element's configuration and `parse-configuration.ts`
    turns it into `ConfigurationParameter`s, visibility conditions included.
-2. `withRoles` marks parameters whose names say they are a derivation variable,
-   a color or its channels, or tessellation. A parameter with a role is never
-   indexed; no list or checkbox in the libraries has one yet, so today that
-   excludes nothing. The configuration inputs draw a color's channels, or a
-   text color, as one Color control (see [teams.md](./teams.md#the-color-control)).
+2. `withRoles` marks parameters whose names say what they are:
+    - a **vendor**: a list named Vendor whose options mostly name a vendor or
+      Generic (`looksLikeVendorOptions` in `library/vendor-options.ts`);
+    - a derivation variable, a color or its channels, or tessellation, the
+      `DRAWING_ROLES`.
+
+    A drawing role is never indexed; no list or checkbox in the libraries has
+    one yet, so today that excludes nothing. A Vendor list is indexed like any
+    list, since each vendor is its own part number. The configuration inputs
+    draw a color's channels, or a text color, as one Color control (see
+    [teams.md](./teams.md#the-color-control)). A Vendor list follows the
+    current team's vendor preferences (see
+    [teams.md](./teams.md#vendor-dropdowns)), and the load checks its options
+    (`VENDOR_OPTIONS`, see [build-issues.md](./build-issues.md)).
+
 3. The parameters are stored on the `configurations` row.
 
 ### Indexing
 
 1. `countConfigurations` enumerates the combinations of the **indexed**
-   parameters: enums and booleans without a role, minus
+   parameters: enums and booleans without a drawing role, minus
    `excluded_parameter_ids`. Visibility is honored, so a hidden parameter keeps
    its default.
 2. The count sets the band (`bandOf`): under `AUTO_INDEX_THRESHOLD` (128) indexes

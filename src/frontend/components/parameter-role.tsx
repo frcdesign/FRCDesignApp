@@ -4,6 +4,7 @@ import {
     type Icon,
     PaletteIcon,
     PolygonIcon,
+    StorefrontIcon,
     SwatchesIcon
 } from "@phosphor-icons/react";
 import { ReactNode } from "react";
@@ -12,6 +13,7 @@ import { IconSize } from "../lib/style-constants";
 import { AppIcon, type AppIconProps } from "./app-icon";
 
 const ROLE_LABELS: Record<ParameterRole, string> = {
+    [ParameterRole.VENDOR]: "Vendor",
     [ParameterRole.DERIVATION_VARIABLE]: "Derivation variable",
     [ParameterRole.COLOR]: "Color",
     [ParameterRole.COLOR_CHANNEL]: "Color channel",
@@ -19,6 +21,7 @@ const ROLE_LABELS: Record<ParameterRole, string> = {
 };
 
 const ROLE_ICONS: Record<ParameterRole, Icon> = {
+    [ParameterRole.VENDOR]: StorefrontIcon,
     [ParameterRole.DERIVATION_VARIABLE]: GitForkIcon,
     [ParameterRole.COLOR]: PaletteIcon,
     [ParameterRole.COLOR_CHANNEL]: SwatchesIcon,

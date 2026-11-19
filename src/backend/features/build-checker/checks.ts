@@ -1,10 +1,17 @@
 import { ThumbnailUrls } from "../thumbnails/contract";
-import { Vendor } from "../library/vendors";
+import { getVendorName, Vendor } from "../library/vendors";
+import { readVendorOption, VendorOptionMatch } from "../library/vendor-options";
+import {
+    type ConfigurationParameter,
+    ParameterRole,
+    ParameterType
+} from "../configurations/contract";
 import {
     addBuildIssue,
     BuildIssue,
     BuildIssueType,
-    clearBuildIssue
+    clearBuildIssue,
+    type VendorOptionProblem
 } from "./issues";
 
 interface GroupCheckInput {
@@ -60,6 +67,8 @@ export function checkVisibility(
 
 interface InsertableCheckInput {
     vendors: Vendor[];
+    /** Its Vendor parameters' options are checked against the library's vendors. */
+    parameters: ConfigurationParameter[];
     /** The stored thumbnail URLs, or `null` when the render has not landed. */
     thumbnailUrls: ThumbnailUrls | null;
 }
@@ -78,5 +87,38 @@ export function checkInsertable(input: InsertableCheckInput): BuildIssue[] {
         issues = addBuildIssue(issues, { type: BuildIssueType.NO_VENDORS });
     }
 
+    const problems = vendorOptionProblems(input.parameters);
+    if (problems.length > 0) {
+        issues = addBuildIssue(issues, {
+            type: BuildIssueType.VENDOR_OPTIONS,
+            problems
+        });
+    }
+
     return issues;
+}
+
+/** Every option of a Vendor parameter that isn't Generic or a vendor's exact name. */
+export function vendorOptionProblems(
+    parameters: ConfigurationParameter[]
+): VendorOptionProblem[] {
+    const options = parameters.flatMap((parameter) =>
+        parameter.role === ParameterRole.VENDOR &&
+        parameter.type === ParameterType.ENUM
+            ? parameter.options.map((option) => option.name)
+            : []
+    );
+    return [...new Set(options)].flatMap((option): VendorOptionProblem[] => {
+        const read = readVendorOption(option);
+        switch (read.match) {
+            case VendorOptionMatch.EXACT:
+            case VendorOptionMatch.GENERIC:
+                return [];
+            case VendorOptionMatch.ABBREVIATION:
+            case VendorOptionMatch.MISSPELLED:
+                return [{ option, expected: getVendorName(read.vendor) }];
+            case VendorOptionMatch.UNKNOWN:
+                return [{ option }];
+        }
+    });
 }

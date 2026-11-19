@@ -1,4 +1,5 @@
 import { and, eq } from "drizzle-orm";
+import { vendorPreferencesFor } from "../teams/context";
 import { HttpStatus } from "http-status-ts";
 import z from "zod";
 import { getDb, type Db } from "../../db/client";
@@ -69,7 +70,12 @@ downloadRoutes.post(
         const { selection, parameters } = await readSelection(
             db,
             insertableId,
-            body.selection
+            body.selection,
+            await vendorPreferencesFor(
+                c.env,
+                await c.var.getUserId(),
+                undefined
+            )
         );
         const translation = await startStepExport(
             await c.var.getOnshapeApi(),

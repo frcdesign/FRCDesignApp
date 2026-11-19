@@ -188,6 +188,36 @@ async function getTeamReport(
 ): Promise<TeamReportOut | undefined>;
 ```
 
+`src/backend/features/teams/vendor-policy.ts`, a leaf the insert menu shares
+with `readSelection`
+
+```ts
+// Each Vendor parameter held to the policy; on `opening` a part at its
+// defaults, an untouched Vendor also takes the team's preference.
+function applyVendorPreferences(
+    selection: Selection,
+    parameters: ConfigurationParameter[],
+    preferences: VendorPreferences,
+    opening: boolean
+): Selection;
+// Undefined to hide it: under Require, or where Ban leaves one option.
+function offeredVendorParameter(
+    parameter: ConfigurationParameter,
+    generic: GenericVendorPolicy
+): ConfigurationParameter | undefined;
+```
+
+`src/backend/features/teams/context.ts` also has
+
+```ts
+// The caller's team's, in that document; `NO_PREFERENCES` off a team or on failure.
+async function vendorPreferencesFor(
+    env: AppBindings,
+    userId: string,
+    documentId: string | undefined
+): Promise<VendorPreferences>;
+```
+
 `src/backend/features/teams/contract.ts`, a leaf the frontend imports
 
 ```ts
@@ -239,7 +269,13 @@ interface TeamSettings {
     genericVendor: GenericVendorPolicy;
 }
 
-/** How Auto Assembly treats the Generic vendor, which sells every standard length without part numbers. */
+/** What the current team asks of vendors; `NO_PREFERENCES` off a team. */
+interface VendorPreferences {
+    ranking: Vendor[];
+    generic: GenericVendorPolicy;
+}
+
+/** How Vendor lists and Auto Assembly treat the Generic vendor, which sells every standard length without part numbers. */
 enum GenericVendorPolicy {
     /** Always Generic; the vendor inputs are hidden. */
     REQUIRE = "require",
@@ -550,6 +586,31 @@ A catalog's vendor is a library's when its id or name matches the library
 vendor's code or name, ignoring case and punctuation (`preferredVendor`), so
 `MCMASTER` and "McMaster-Carr" are `MCM`.
 
+### Vendor dropdowns
+
+Every other Vendor list, a parameter with `ParameterRole.VENDOR`, follows the
+same setting, through `features/teams/vendor-policy.ts`:
+
+- **Require** sets it to Generic and hides it, where it offers Generic.
+- **Ban** moves it off Generic, to the best-ranked other option, and leaves
+  Generic out of its options. One option left, it is hidden.
+- A part opened at its defaults, with nothing chosen, from a list or a quick
+  insert, also takes the team's preference for a Vendor still at its default:
+  Generic under **Prefer**, the best-ranked other option under **Avoid**, the
+  best-ranked option under **No preference**. A ranking naming none of its
+  options leaves the default.
+
+`readSelection` applies it on the server to every insert and download, with
+the caller's team in the target document (`vendorPreferencesFor`), so a quick
+insert follows it too. The insert menu applies the same functions, so what it
+shows is what is inserted. The menu never waits for the team: it renders at
+once, and a preference arriving later still fills a Vendor nobody edited.
+
+An option names a vendor by `readVendorOption` (`library/vendor-options.ts`):
+its exact name, Generic, the vendor's code, or a near spelling. The load warns
+of every option that isn't exact or Generic (see
+[build-issues.md](./build-issues.md)).
+
 ### The Color control
 
 The configuration inputs show one **Color** in place of three channel
@@ -584,8 +645,11 @@ list.
 - Every global rollup counts a use the same with a team or without.
 - Every team rollup is derivable from `events` alone.
 - Vendor ranking orders results; it never filters them.
-- Under **Require** no Auto Assembly part is from a vendor but Generic, and
-  under **Ban** none is from Generic.
+- Under **Require** no inserted part's Vendor, nor Auto Assembly's, is anything
+  but Generic where Generic is offered; under **Ban** none is Generic where
+  another is offered. The server holds it, not only the menu.
+- A team's vendor preference never changes a vendor somebody chose, a
+  favorite's or recent's, or a search hit's.
 
 ## Failure and recovery
 

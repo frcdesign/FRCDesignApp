@@ -28,7 +28,21 @@ export enum BuildIssueType {
     NOT_PUBLIC = "not-public",
     LOAD_FAILED = "load-failed",
     /** A document added but not yet loaded, until its first load saves it. */
-    NOT_LOADED = "not-loaded"
+    NOT_LOADED = "not-loaded",
+    /** A Vendor parameter's options that don't spell a vendor as the library does. */
+    VENDOR_OPTIONS = "vendor-options"
+}
+
+/** One misnamed option of a Vendor parameter. */
+export interface VendorOptionProblem {
+    /** As the parameter spells it. */
+    option: string;
+    /** The vendor's name as the library spells it; undefined for an unknown vendor. */
+    expected?: string;
+}
+
+interface VendorOptionsBuildIssue extends BuildIssueOf<BuildIssueType.VENDOR_OPTIONS> {
+    problems: VendorOptionProblem[];
 }
 
 interface BuildIssueOf<T extends BuildIssueType> {
@@ -64,7 +78,8 @@ export type BuildIssue =
     | BuildIssueOf<BuildIssueType.INSERTABLES_FAILED>
     | BuildIssueOf<BuildIssueType.NOT_PUBLIC>
     | BuildIssueOf<BuildIssueType.LOAD_FAILED>
-    | BuildIssueOf<BuildIssueType.NOT_LOADED>;
+    | BuildIssueOf<BuildIssueType.NOT_LOADED>
+    | VendorOptionsBuildIssue;
 
 /** The card links to the first; the rest are counted. */
 export function toConfigurationIssue(
@@ -110,6 +125,7 @@ export function getIssueSeverity(issue: BuildIssue): BuildIssueSeverity {
         case BuildIssueType.CONFIGURATION_LIMIT_EXCEEDED:
         case BuildIssueType.MANUAL_INDEXING_REQUIRED:
         case BuildIssueType.NOT_LOADED:
+        case BuildIssueType.VENDOR_OPTIONS:
             return BuildIssueSeverity.WARNING;
         case BuildIssueType.NO_VENDORS:
             return BuildIssueSeverity.INFO;

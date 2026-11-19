@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
-import { screen } from "@testing-library/react";
+import { cleanup, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
     type ConfigurationResult,
@@ -23,17 +23,27 @@ import { configurationQueryKey } from "../../../lib/query-keys";
 import { QuantityType, Unit } from "@backend/features/configurations/enums";
 import {
     DEFAULT_TEAM_SETTINGS,
+    GenericVendorPolicy,
     type TeamSettings
 } from "@backend/features/teams/contract";
+import { Vendor } from "@backend/features/library/vendors";
 
 const mocks = vi.hoisted(() => ({
     teamSettings: undefined as TeamSettings | undefined
 }));
 
 // The team's colors come from its context, which needs a router to resolve.
-vi.mock("../../teams/queries", () => ({
-    useCurrentTeamSettings: () => mocks.teamSettings
-}));
+vi.mock("../../teams/queries", async () => {
+    const { toVendorPreferences } =
+        await import("@backend/features/teams/contract");
+    return {
+        useCurrentTeamSettings: () => mocks.teamSettings,
+        useVendorPreferences: () => ({
+            preferences: toVendorPreferences(mocks.teamSettings),
+            isSettled: true
+        })
+    };
+});
 
 const { ConfigurationWrapper } = await import("./configurations");
 type SelectionReport = import("./configurations").SelectionReport;
@@ -233,6 +243,47 @@ describe("ConfigurationWrapper", () => {
             Red: "255",
             Green: "128",
             Blue: "0"
+        });
+        mocks.teamSettings = undefined;
+    });
+
+    it("holds a Vendor list to the team's Generic policy", async () => {
+        const user = userEvent.setup();
+        const vendor = {
+            ...enumParam("vendor", []),
+            name: "Vendor",
+            default: "generic",
+            options: [
+                { id: "generic", name: "Generic" },
+                { id: "wcp", name: "West Coast Products" },
+                { id: "rev", name: "REV Robotics" }
+            ],
+            role: ParameterRole.VENDOR
+        };
+        mocks.teamSettings = {
+            ...DEFAULT_TEAM_SETTINGS,
+            vendorRanking: [Vendor.REV],
+            genericVendor: GenericVendorPolicy.BAN
+        };
+        const banned = renderPanel({ parameters: [vendor], records: [] });
+
+        await user.click(await screen.findByLabelText("Vendor"));
+        expect(screen.queryByRole("option", { name: "Generic" })).toBeNull();
+        expect(banned.lastReport().selection).toEqual({ vendor: "rev" });
+        cleanup();
+
+        mocks.teamSettings = {
+            ...DEFAULT_TEAM_SETTINGS,
+            genericVendor: GenericVendorPolicy.REQUIRE
+        };
+        const required = renderPanel(
+            { parameters: [size, vendor], records: [] },
+            { vendor: "wcp" }
+        );
+        await screen.findByLabelText("size");
+        expect(screen.queryByLabelText("Vendor")).toBeNull();
+        expect(required.lastReport().selection).toMatchObject({
+            vendor: "generic"
         });
         mocks.teamSettings = undefined;
     });

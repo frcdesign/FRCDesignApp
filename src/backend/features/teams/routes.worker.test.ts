@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { eq } from "drizzle-orm";
 import { getDb } from "../../db/client";
 import {
+    configurations,
     firstTeams,
     teamMembers,
     teamOrganizations,
@@ -24,6 +25,10 @@ import {
     jsonRequest,
     seedPartStudio
 } from "../../../__test_utils__";
+import { ParameterRole, ParameterType } from "../configurations/contract";
+import { Vendor } from "../library/vendors";
+import { readSelection } from "../library/insertables/read-selection";
+import { vendorPreferencesFor } from "./context";
 import { dailyTeamMetrics, dailyTeamUsers, events } from "../analytics/schema";
 import { recordInserts } from "../analytics/tracking";
 import { AppFeature, UseSource } from "../analytics/usage";
@@ -710,5 +715,61 @@ describe("refreshFirstTeams", () => {
         const rows = await db.select().from(firstTeams);
         expect(rows.map((row) => row.number).sort()).toEqual([1, 2]);
         expect(rows[0].lastSeason).toBe(2026);
+    });
+});
+
+describe("vendor preferences on insert", () => {
+    it("holds a quick insert at the defaults to the team's Generic policy and ranking", async () => {
+        await seedPartStudio(db);
+        await db.insert(configurations).values({
+            insertableId: TEST_PART_STUDIO_ID,
+            parameters: [
+                {
+                    id: "vendor",
+                    name: "Vendor",
+                    type: ParameterType.ENUM,
+                    default: "generic",
+                    options: [
+                        { id: "generic", name: "Generic" },
+                        { id: "wcp", name: "West Coast Products" },
+                        { id: "rev", name: "REV Robotics" }
+                    ],
+                    optionConditions: [],
+                    role: ParameterRole.VENDOR
+                }
+            ]
+        });
+        const teamId = await seedTeam({ members: [TEST_USER_ID] });
+        await db
+            .update(teams)
+            .set({
+                genericVendor: GenericVendorPolicy.BAN,
+                vendorRanking: [Vendor.REV]
+            })
+            .where(eq(teams.id, teamId));
+
+        const preferences = await vendorPreferencesFor(
+            env,
+            TEST_USER_ID,
+            undefined
+        );
+        const atDefaults = await readSelection(
+            db,
+            TEST_PART_STUDIO_ID,
+            undefined,
+            preferences
+        );
+        expect(atDefaults.selection).toEqual({ vendor: "rev" });
+        // Chosen in the menu: the team's ranking leaves it alone.
+        const chosen = await readSelection(
+            db,
+            TEST_PART_STUDIO_ID,
+            { vendor: "wcp" },
+            preferences
+        );
+        expect(chosen.selection).toEqual({ vendor: "wcp" });
+        // Off a team, the part's own default.
+        const offTeam = await readSelection(db, TEST_PART_STUDIO_ID, undefined);
+        expect(offTeam.selection).toEqual({ vendor: "generic" });
     });
 });

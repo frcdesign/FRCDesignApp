@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { produce } from "immer";
+import { useMemo } from "react";
 import {
     type FirstTeam,
     type MyTeam,
@@ -8,7 +9,9 @@ import {
     type TeamAdminOut,
     type TeamContextOut,
     type TeamReportOut,
-    type TeamSettings
+    type TeamSettings,
+    toVendorPreferences,
+    type VendorPreferences
 } from "@backend/features/teams/contract";
 import type { FavoritesData } from "@backend/features/favorites/contract";
 import type { RecentsData } from "@backend/features/recents/contract";
@@ -301,4 +304,19 @@ export function useTeamFavoriteInsertableIds(): Set<string> {
             (favorite) => favorite.insertableId
         )
     );
+}
+
+/** The current team's vendor preferences, and whether they are known yet. */
+export function useVendorPreferences(): {
+    preferences: VendorPreferences;
+    isSettled: boolean;
+} {
+    const query = useTeamContextQuery();
+    const settings = useCurrentTeamSettings();
+    // A query disabled while signed out never loads, and has nothing to wait for.
+    const preferences = useMemo(
+        () => toVendorPreferences(settings),
+        [settings]
+    );
+    return { preferences, isSettled: !query.isLoading };
 }

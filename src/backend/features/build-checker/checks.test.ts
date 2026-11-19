@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 import { ThumbnailSize, ThumbnailUrls } from "../thumbnails/contract";
 import { Vendor } from "../library/vendors";
 import { type BuildIssue, BuildIssueType } from "./issues";
-import { DEFAULT_CONFIGURATION_KEY } from "../configurations/contract";
+import {
+    type ConfigurationParameter,
+    DEFAULT_CONFIGURATION_KEY,
+    ParameterRole
+} from "../configurations/contract";
+import { enumParam } from "../../../__test_utils__/configuration-fixtures";
 import { thumbnailUrl } from "../thumbnails/keys";
 import { checkGroup, checkInsertable, checkVisibility } from "./checks";
 
@@ -95,8 +100,68 @@ describe("checkVisibility", () => {
 describe("checkInsertable", () => {
     const HEALTHY_INSERTABLE = {
         vendors: [Vendor.REV],
+        parameters: [],
         thumbnailUrls: THUMBNAILS
     };
+
+    function vendorParameter(...options: string[]): ConfigurationParameter {
+        return {
+            ...enumParam(
+                "vendor",
+                options.map((_, index) => `option-${index}`)
+            ),
+            name: "Vendor",
+            options: options.map((name, index) => ({
+                id: `option-${index}`,
+                name
+            })),
+            role: ParameterRole.VENDOR
+        };
+    }
+
+    it("passes a Vendor parameter naming vendors exactly, and Generic", () => {
+        const issues = checkInsertable({
+            ...HEALTHY_INSERTABLE,
+            parameters: [
+                vendorParameter(
+                    "Generic",
+                    "West Coast Products",
+                    "McMaster-Carr"
+                )
+            ]
+        });
+        expect(issues).toEqual([]);
+    });
+
+    it("warns of a Vendor parameter's abbreviated, misspelled and unknown options", () => {
+        const issues = checkInsertable({
+            ...HEALTHY_INSERTABLE,
+            parameters: [
+                vendorParameter(
+                    "WCP",
+                    "mcmaster carr",
+                    "Thrifty Bot",
+                    "Swerve Drive Specialities",
+                    "Acme Hardware"
+                )
+            ]
+        });
+        expect(issues).toEqual([
+            {
+                type: BuildIssueType.VENDOR_OPTIONS,
+                problems: [
+                    { option: "WCP", expected: "West Coast Products" },
+                    { option: "mcmaster carr", expected: "McMaster-Carr" },
+                    { option: "Thrifty Bot", expected: "The Thrifty Bot" },
+                    {
+                        option: "Swerve Drive Specialities",
+                        expected: "Swerve Drive Specialties"
+                    },
+                    { option: "Acme Hardware" }
+                ]
+            }
+        ]);
+    });
 
     it("returns no issues when vendors are parsed and thumbnails generated", () => {
         expect(checkInsertable(HEALTHY_INSERTABLE)).toEqual([]);

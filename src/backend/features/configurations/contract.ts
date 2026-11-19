@@ -92,8 +92,10 @@ export type ConfigurationParameter =
     | BooleanParameter
     | StringParameter;
 
-/** Parameters about how a part is derived or drawn, not which part it is; see `roles.ts`. */
+/** What a parameter is recognized as by its name; see `roles.ts`. */
 export enum ParameterRole {
+    /** Which vendor sells the part; its options name vendors. Indexed like any list. */
+    VENDOR = "vendor",
     /** The insert menu fills it with a unique value, so each derive is its own configuration. */
     DERIVATION_VARIABLE = "derivation-variable",
     COLOR = "color",
@@ -101,6 +103,14 @@ export enum ParameterRole {
     COLOR_CHANNEL = "color-channel",
     TESSELLATION = "tessellation"
 }
+
+/** Roles about how a part is derived or drawn, not which part it is: never indexed. */
+export const DRAWING_ROLES: readonly ParameterRole[] = [
+    ParameterRole.DERIVATION_VARIABLE,
+    ParameterRole.COLOR,
+    ParameterRole.COLOR_CHANNEL,
+    ParameterRole.TESSELLATION
+];
 
 interface ConfigurationParameterBase {
     id: string;

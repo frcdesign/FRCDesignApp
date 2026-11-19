@@ -4,6 +4,7 @@ import {
     ParameterRole,
     ParameterType
 } from "./contract";
+import { looksLikeVendorOptions } from "../library/vendor-options";
 
 /** A color's channels, when a part spells one out as three parameters. */
 const COLOR_CHANNELS = [
@@ -29,6 +30,13 @@ function identifyRole(
     }
     if (/\bcolou?r\b/.test(name)) {
         return ParameterRole.COLOR;
+    }
+    if (
+        /^vendors?$/.test(name) &&
+        parameter.type === ParameterType.ENUM &&
+        looksLikeVendorOptions(parameter.options.map((option) => option.name))
+    ) {
+        return ParameterRole.VENDOR;
     }
     if (/tess?ell?ation/.test(name)) {
         return ParameterRole.TESSELLATION;

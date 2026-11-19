@@ -4,7 +4,8 @@ import {
     ReactNode,
     useCallback,
     useEffect,
-    useMemo
+    useMemo,
+    useRef
 } from "react";
 import {
     type PartialSelection,
@@ -12,6 +13,7 @@ import {
     type ConfigurationKey,
     ConfigurationResult,
     ConfigurationParameter,
+    ParameterRole,
     SearchRecord
 } from "@backend/features/configurations/contract";
 import {
@@ -32,7 +34,15 @@ import {
     ParameterInput
 } from "../../../components/parameter-input";
 import { withParameterValue } from "../parameter-value";
-import { useCurrentTeamSettings } from "../../teams/queries";
+import {
+    useCurrentTeamSettings,
+    useVendorPreferences
+} from "../../teams/queries";
+import { toVendorPreferences } from "@backend/features/teams/contract";
+import {
+    applyVendorPreferences,
+    offeredVendorParameter
+} from "@backend/features/teams/vendor-policy";
 import { controlledParameters, findColorControl } from "../../teams/color";
 import { ColorRow } from "../../teams/components/color-row";
 
@@ -96,6 +106,10 @@ export function ConfigurationWrapper(
     } = props;
 
     const query = useConfigurationQuery(insertableId, microversionId);
+    const vendors = useVendorPreferences();
+    // Opened at its defaults: the team's preferred vendor fills an untouched
+    // Vendor, once the team is known. Read and cleared only by the effect below.
+    const opening = useRef(Object.keys(selection ?? {}).length === 0);
 
     const parameters = query.data?.parameters;
     // A search hit names only its overrides, so fill in the rest and apply the
@@ -103,30 +117,53 @@ export function ConfigurationWrapper(
     const whole = useMemo(
         () =>
             parameters
-                ? fillDerivationValues(
-                      normalizeSelection(
-                          toSelection(selection ?? {}, parameters),
+                ? applyVendorPreferences(
+                      fillDerivationValues(
+                          normalizeSelection(
+                              toSelection(selection ?? {}, parameters),
+                              parameters
+                          ),
                           parameters
                       ),
-                      parameters
+                      parameters,
+                      vendors.preferences,
+                      false
                   )
                 : undefined,
-        [parameters, selection]
+        [parameters, selection, vendors.preferences]
     );
 
     // The menu inserts the selection it holds, so settling has to reach it.
     // `sameSelection` stops the loop once normalizeSelection reaches a fixed point.
     useEffect(() => {
-        if (whole && !sameSelection(selection, whole)) {
-            setSelection(whole);
+        if (!whole || !parameters) return;
+        const settled = opening.current
+            ? applyVendorPreferences(
+                  whole,
+                  parameters,
+                  vendors.preferences,
+                  true
+              )
+            : whole;
+        if (vendors.isSettled) opening.current = false;
+        if (!sameSelection(selection, settled)) {
+            setSelection(settled);
         }
-    }, [whole, selection, setSelection]);
+    }, [
+        whole,
+        parameters,
+        selection,
+        setSelection,
+        vendors.preferences,
+        vendors.isSettled
+    ]);
 
     useReportSelection(query.data, whole, onReport);
 
     const editSelection = useCallback(
         (newSelection: Selection) => {
             onEdit?.();
+            opening.current = false;
             setSelection(newSelection);
         },
         [onEdit, setSelection]
@@ -168,7 +205,9 @@ function ConfigurationParameters(
     props: ConfigurationParametersProps
 ): ReactNode {
     const { configurationResult, selection, setSelection } = props;
-    const teamColors = useCurrentTeamSettings()?.colors ?? [];
+    const teamSettings = useCurrentTeamSettings();
+    const teamColors = teamSettings?.colors ?? [];
+    const generic = toVendorPreferences(teamSettings).generic;
     const { parameters } = configurationResult;
 
     const colorControl = useMemo(
@@ -204,10 +243,15 @@ function ConfigurationParameters(
                     );
                 }
                 if (colorParameters.includes(parameter)) return null;
+                const offered =
+                    parameter.role === ParameterRole.VENDOR
+                        ? offeredVendorParameter(parameter, generic)
+                        : parameter;
+                if (!offered) return null;
                 return (
                     <ParameterRow
                         key={parameter.id}
-                        parameter={parameter}
+                        parameter={offered}
                         selection={selection}
                         setSelection={setSelection}
                         parameters={parameters}

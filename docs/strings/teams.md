@@ -40,23 +40,23 @@ the backend (`features/teams/`), and the app shows them as they come.
 
 ## Team settings
 
-| String                                                         | Kind                   | Where                   | When                                          | Review    |
-| -------------------------------------------------------------- | ---------------------- | ----------------------- | --------------------------------------------- | --------- |
-| "Members edit favorites"                                       | Switch label           | Team settings           | Always                                        | **⚑** New |
-| "Lets members add, order and remove team favorites."           | Description            | Under the switch        | Always                                        | **⚑** New |
-| "Preferred vendors"                                            | Multi-select label     | Team settings           | Always                                        | **⚑** New |
-| "In the order picked: first listed first."                     | Description            | Under Preferred vendors | Always                                        | **⚑** New |
-| "Generic fasteners"                                            | Select label           | Team settings           | Always                                        | **⚑** New |
-| "Whether Auto Assembly uses Generic screws, washers and nuts." | Description            | Under Generic fasteners | Always                                        | **⚑** New |
-| "Require" / "Prefer" / "No preference" / "Avoid" / "Ban"       | Options                | Generic fasteners       | Always                                        | **⚑** New |
-| "Team colors" / "Add" / "Remove color"                         | Label, button, tooltip | Team settings           | Add while under six colors                    | **⚑** New |
-| "Organizations"                                                | Heading                | Team settings           | Always                                        | **⚑** New |
-| "{organization}, {n} Onshape team member(s)"                   | Row                    | Under Organizations     | A subteam registration                        | **⚑** New |
-| "Refresh members" / "Remove"                                   | Tooltips               | An organization's row   | Refresh only for a subteam                    | **⚑** New |
-| "{n} member(s)"                                                | Heading                | Team settings           | Always                                        | **⚑** New |
-| "Admin" / "Member"                                             | Options                | A member's role         | Always                                        |           |
-| "A team needs an admin."                                       | Error, from the server |                         | The last admin leaves or is demoted           | **⚑** New |
-| "Failed to save team settings" / "Failed to update team"       | Error toasts           |                         | A setting, member or organization edit failed |           |
+| String                                                   | Kind                   | Where                   | When                                          | Review    |
+| -------------------------------------------------------- | ---------------------- | ----------------------- | --------------------------------------------- | --------- |
+| "Members edit favorites"                                 | Switch label           | Team settings           | Always                                        | **⚑** New |
+| "Lets members add, order and remove team favorites."     | Description            | Under the switch        | Always                                        | **⚑** New |
+| "Preferred vendors"                                      | Multi-select label     | Team settings           | Always                                        | **⚑** New |
+| "In the order picked: first listed first."               | Description            | Under Preferred vendors | Always                                        | **⚑** New |
+| "Generic fasteners"                                      | Select label           | Team settings           | Always                                        | **⚑** New |
+| "Whether Vendor lists and Auto Assembly use Generic."    | Description            | Under Generic fasteners | Always                                        | **⚑** New |
+| "Require" / "Prefer" / "No preference" / "Avoid" / "Ban" | Options                | Generic fasteners       | Always                                        | **⚑** New |
+| "Team colors" / "Add" / "Remove color"                   | Label, button, tooltip | Team settings           | Add while under six colors                    | **⚑** New |
+| "Organizations"                                          | Heading                | Team settings           | Always                                        | **⚑** New |
+| "{organization}, {n} Onshape team member(s)"             | Row                    | Under Organizations     | A subteam registration                        | **⚑** New |
+| "Refresh members" / "Remove"                             | Tooltips               | An organization's row   | Refresh only for a subteam                    | **⚑** New |
+| "{n} member(s)"                                          | Heading                | Team settings           | Always                                        | **⚑** New |
+| "Admin" / "Member"                                       | Options                | A member's role         | Always                                        |           |
+| "A team needs an admin."                                 | Error, from the server |                         | The last admin leaves or is demoted           | **⚑** New |
+| "Failed to save team settings" / "Failed to update team" | Error toasts           |                         | A setting, member or organization edit failed |           |
 
 ## Favorites, recents and color
 

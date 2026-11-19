@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { isDerivationVariable, withRoles } from "./roles";
 import { type ConfigurationParameter, ParameterRole } from "./contract";
+import { isIndexedParameter } from "./combinations";
 import {
     enumParam,
     stringParam
@@ -31,6 +32,21 @@ describe("recognizing roles", () => {
             expect(rolesOf(named(name))).toEqual([undefined]);
         }
     );
+
+    it("recognizes a Vendor list whose options name vendors, and keeps it indexed", () => {
+        const vendor = (...names: string[]): ConfigurationParameter => ({
+            ...enumParam("vendor", []),
+            name: "Vendor",
+            options: names.map((name, index) => ({ id: `o${index}`, name }))
+        });
+        const [recognized] = withRoles([
+            vendor("Generic", "WCP", "McMaster-Carr")
+        ]);
+        expect(recognized.role).toBe(ParameterRole.VENDOR);
+        expect(isIndexedParameter(recognized)).toBe(true);
+        // Mostly not vendors: an ordinary list that happens to be named Vendor.
+        expect(rolesOf(vendor("Small", "Large", "WCP"))).toEqual([undefined]);
+    });
 
     it("recognizes a color channel beside its two siblings", () => {
         expect(rolesOf(named("R"), named("G"), named("B"))).toEqual([

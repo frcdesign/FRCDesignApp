@@ -1,5 +1,6 @@
 /** Only indexed enum and boolean parameters vary; the rest keep their defaults. */
 import {
+    DRAWING_ROLES,
     type PartialSelection,
     BooleanParameter,
     ConfigurationParameter,
@@ -84,9 +85,9 @@ export function bandOf(count: number | undefined): IndexingBand {
 }
 
 /**
- * Never one with a role, which changes how a part is drawn, not which part it
- * is. No list or checkbox in the libraries has a role yet, so this only guards
- * a future color or tessellation list. Shared with the admin card.
+ * Never one with a drawing role, which changes how a part is drawn, not which
+ * part it is. A Vendor list is indexed: each vendor is its own part number.
+ * Shared with the admin card.
  */
 export function isIndexedParameter(
     parameter: ConfigurationParameter,
@@ -95,7 +96,8 @@ export function isIndexedParameter(
     return (
         (parameter.type === ParameterType.ENUM ||
             parameter.type === ParameterType.BOOLEAN) &&
-        parameter.role === undefined &&
+        (parameter.role === undefined ||
+            !DRAWING_ROLES.includes(parameter.role)) &&
         !excludedParameterIds.includes(parameter.id)
     );
 }

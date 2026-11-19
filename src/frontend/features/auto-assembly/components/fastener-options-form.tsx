@@ -1,5 +1,5 @@
 import { Text } from "@mantine/core";
-import { GenericVendorPolicy } from "@backend/features/teams/contract";
+import { offeredVendorParameter } from "@backend/features/teams/vendor-policy";
 import { type ReactNode } from "react";
 import {
     type ConfigurationParameter,
@@ -125,21 +125,6 @@ export function FastenerOptionsForm(
     );
 }
 
-/**
- * A Vendor input as the team's Generic policy leaves it: none under Require,
- * since Generic is all there is, and none where Ban leaves a single vendor.
- */
-function allowedVendors(
-    parameter: ConfigurationParameter,
-    generic: GenericVendorPolicy
-): ConfigurationParameter | undefined {
-    if (parameter.type !== ParameterType.ENUM) return parameter;
-    if (generic === GenericVendorPolicy.REQUIRE) return undefined;
-    if (generic !== GenericVendorPolicy.BAN) return parameter;
-    const options = parameter.options.filter((option) => option.id !== GENERIC);
-    return options.length > 1 ? { ...parameter, options } : undefined;
-}
-
 interface ScrewInputsProps {
     settled: SettledChoices;
 }
@@ -183,7 +168,7 @@ function ScrewInputs(props: ScrewInputsProps): ReactNode {
                 }
                 const shown =
                     parameter.id === StudioInput.VENDOR
-                        ? allowedVendors(parameter, settled.generic)
+                        ? offeredVendorParameter(parameter, settled.generic)
                         : parameter;
                 if (!shown) {
                     return sizing;
@@ -245,7 +230,7 @@ function PartGroup(props: PartGroupProps): ReactNode {
             return [];
         }
         const vendors = partVendors(settled.set, kind, settled.screw.size);
-        const allowed = allowedVendors(
+        const allowed = offeredVendorParameter(
             {
                 ...parameter,
                 options: parameter.options.filter((option) =>

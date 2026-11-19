@@ -43,12 +43,8 @@ import {
     PLANAR_FACES,
     SOLID_BODIES
 } from "../../../lib/messages";
-import {
-    fastenerOptions,
-    selectionMode,
-    NO_PREFERENCES,
-    settleChoices
-} from "../options";
+import { fastenerOptions, selectionMode, settleChoices } from "../options";
+import { toVendorPreferences } from "@backend/features/teams/contract";
 import { useCurrentTeamSettings } from "../../teams/queries";
 import { FLIP_SCREWS_PARAMETER, FormInput } from "../parameters";
 import {
@@ -128,17 +124,7 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
     const insertMutation = useInsertMutation(assembly);
     const teamSettings = useCurrentTeamSettings();
     const settled = useMemo(
-        () =>
-            settleChoices(
-                set,
-                choices,
-                teamSettings
-                    ? {
-                          ranking: teamSettings.vendorRanking,
-                          generic: teamSettings.genericVendor
-                      }
-                    : NO_PREFERENCES
-            ),
+        () => settleChoices(set, choices, toVendorPreferences(teamSettings)),
         [set, choices, teamSettings]
     );
     const mode = selectionMode(settled);

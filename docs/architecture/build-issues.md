@@ -79,14 +79,17 @@ enum BuildIssueType {
     NOT_PUBLIC = "not-public",
     LOAD_FAILED = "load-failed",
     /** A document added but not yet loaded, until its first load saves it. */
-    NOT_LOADED = "not-loaded"
+    NOT_LOADED = "not-loaded",
+    /** A Vendor parameter's options that don't spell a vendor as the library does. */
+    VENDOR_OPTIONS = "vendor-options"
 }
 
 type BuildIssue =
     | BuildIssueOf<BuildIssueType.THUMBNAIL_FAILED>
-    // ...one BuildIssueOf per type, except these two:
+    // ...one BuildIssueOf per type, except these three:
     | ConfigurationBuildIssueOf<BuildIssueType.CONFIGURATION_MULTIPLE_PARTS>
-    | ConfigurationBuildIssueOf<BuildIssueType.UNSTABLE_COMPOSITE>;
+    | ConfigurationBuildIssueOf<BuildIssueType.UNSTABLE_COMPOSITE>
+    | VendorOptionsBuildIssue;
 
 interface BuildIssueOf<T extends BuildIssueType> {
     type: T;
@@ -105,6 +108,18 @@ interface ConfigurationBuildIssueOf<
 type ConfigurationIssueType =
     | BuildIssueType.CONFIGURATION_MULTIPLE_PARTS
     | BuildIssueType.UNSTABLE_COMPOSITE;
+
+interface VendorOptionsBuildIssue extends BuildIssueOf<BuildIssueType.VENDOR_OPTIONS> {
+    problems: VendorOptionProblem[];
+}
+
+/** One misnamed option of a Vendor parameter. */
+interface VendorOptionProblem {
+    /** As the parameter spells it. */
+    option: string;
+    /** The vendor's name as the library spells it; undefined for an unknown vendor. */
+    expected?: string;
+}
 ```
 
 `src/backend/features/build-checker/checks.ts` and
@@ -114,6 +129,11 @@ type ConfigurationIssueType =
 // Pure: the load resolves the signals.
 function checkGroup(input: GroupCheckInput): BuildIssue[];
 function checkInsertable(input: InsertableCheckInput): BuildIssue[];
+// Every option of a Vendor parameter that isn't Generic or a vendor's exact
+// name, as `readVendorOption` (`library/vendor-options.ts`) reads it.
+function vendorOptionProblems(
+    parameters: ConfigurationParameter[]
+): VendorOptionProblem[];
 // Re-runs the one group check that showing or hiding an insertable changes.
 function checkVisibility(
     issues: BuildIssue[],
@@ -136,6 +156,8 @@ interface GroupCheckInput {
 
 interface InsertableCheckInput {
     vendors: Vendor[];
+    /** Its Vendor parameters' options are checked against the library's vendors. */
+    parameters: ConfigurationParameter[];
     /** The stored thumbnail URLs, or `null` when the render has not landed. */
     thumbnailUrls: ThumbnailUrls | null;
 }

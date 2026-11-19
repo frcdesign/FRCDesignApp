@@ -32,8 +32,11 @@ import {
     settleScrew,
     StudioInput
 } from "@backend/features/auto-assembly/studios";
-import { GenericVendorPolicy } from "@backend/features/teams/contract";
-import { type Vendor } from "@backend/features/library/vendors";
+import {
+    GenericVendorPolicy,
+    NO_PREFERENCES,
+    type VendorPreferences
+} from "@backend/features/teams/contract";
 import { preferredVendor } from "../teams/vendor-ranking";
 import { FORM_PARAMETERS, FormInput, formParameter } from "./parameters";
 
@@ -92,17 +95,6 @@ export interface SettledChoices {
     /** Which parts go in: added, made in the size, and allowed by the rest. */
     added: Record<Part, boolean>;
 }
-
-/** What the current team asks of vendors; `NO_PREFERENCES` off a team. */
-export interface VendorPreferences {
-    ranking: Vendor[];
-    generic: GenericVendorPolicy;
-}
-
-export const NO_PREFERENCES: VendorPreferences = {
-    ranking: [],
-    generic: GenericVendorPolicy.ANY
-};
 
 /**
  * The screw's vendor as the team's preferences have it. Require and Ban hold
