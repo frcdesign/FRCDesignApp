@@ -3,7 +3,8 @@ import {
     AssemblyJobOutcome,
     AssemblyTaskAction,
     AssemblyTaskState,
-    type AssemblyJobStatus
+    type AssemblyJobStatus,
+    type AssemblyTask
 } from "@backend/features/auto-assembly/contract";
 import { m } from "../../paraglide/messages";
 import { Status } from "../../lib/status";
@@ -27,12 +28,31 @@ function taskRunning(action: AssemblyTaskAction): string {
     }
 }
 
-/** "Indexing holes...", or whichever step is going. */
-export function runningHeadline(status: AssemblyJobStatus): string {
-    const task = status.tasks?.find(
+function runningTask(status: AssemblyJobStatus): AssemblyTask | undefined {
+    return status.tasks?.find(
         (each) => each.state === AssemblyTaskState.RUNNING
     );
+}
+
+/** "Indexing holes...", or whichever step is going. */
+export function runningHeadline(status: AssemblyJobStatus): string {
+    const task = runningTask(status);
     return task ? taskRunning(task.action) : m.autoAssemblyInserting();
+}
+
+/** "Indexing holes. You can keep working.", or whichever step is going. */
+export function runningCallout(status: AssemblyJobStatus): string {
+    switch (runningTask(status)?.action) {
+        case AssemblyTaskAction.INDEX:
+            return m.autoAssemblyIndexingCallout();
+        case AssemblyTaskAction.REMOVE:
+            return m.autoAssemblyDeletingCallout();
+        case AssemblyTaskAction.FASTEN:
+            return m.autoAssemblyFasteningCallout();
+        case AssemblyTaskAction.INSERT:
+        case undefined:
+            return m.autoAssemblyInsertingCallout();
+    }
 }
 
 /** "Inserted 12 parts", "Updated 3 screws", or how it stopped short. */

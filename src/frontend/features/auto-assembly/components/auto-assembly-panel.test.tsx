@@ -144,14 +144,23 @@ describe("AutoAssemblyPanel", () => {
         expect(screen.getByText("Edges to exclude")).toBeTruthy();
     });
 
-    it("inserts what's picked with the parts chosen, then clears the picks", async () => {
+    it("inserts what's picked with the parts chosen, stopping selecting, then clears the picks", async () => {
         renderPanel();
         await choose("Select by", "Faces");
         expect(insertButton().disabled).toBe(true);
 
         await userEvent.click(screen.getByText("Faces", { selector: "p" }));
         select(face("F"));
+        // Above Insert, in the footer, so nothing on the page is under it
+        act(() => useOnshapeSelection.setState({ filtering: "selection-1" }));
+        const stop = screen.getByRole("button", { name: "Stop selecting" });
+        expect(insertButton().parentElement?.contains(stop)).toBe(true);
         await userEvent.click(insertButton());
+
+        expect(useOnshapeSelection.getState()).toMatchObject({
+            focused: undefined,
+            isFinished: true
+        });
 
         expect(apiPost).toHaveBeenCalledWith("/auto-assembly/insert", {
             body: expect.objectContaining({
@@ -205,7 +214,7 @@ describe("AutoAssemblyPanel", () => {
         expect(useAutoAssemblyStore.getState().replaced).toEqual([]);
     });
 
-    it("says a run is going and that it can be left, and holds the next one", () => {
+    it("says a run is going and that work can go on, and holds the next one", () => {
         useAutoAssemblyStore.setState({ targets: [face("F")] });
         const queryClient = createTestQueryClient();
         queryClient.setQueryData(assemblyJobQueryKey(ASSEMBLY), {
@@ -220,7 +229,7 @@ describe("AutoAssemblyPanel", () => {
         renderPanel(queryClient);
 
         expect(
-            screen.getByText("Indexing holes... You can leave this page.")
+            screen.getByText("Indexing holes. You can keep working.")
         ).toBeTruthy();
         expect(insertButton().disabled).toBe(true);
     });
@@ -616,6 +625,31 @@ describe("JobDetails", () => {
             }),
             "*"
         );
+    });
+
+    it("says why a run stopped, to try again, with a report to send", () => {
+        const queryClient = createTestQueryClient();
+        queryClient.setQueryData(assemblyJobQueryKey(ASSEMBLY), {
+            state: AssemblyJobState.FAILED,
+            error: "The run stopped unexpectedly.",
+            tasks: [
+                {
+                    action: AssemblyTaskAction.INDEX,
+                    state: AssemblyTaskState.FAILED
+                }
+            ]
+        });
+        renderWithProviders(<JobDetails assembly={ASSEMBLY} />, queryClient);
+
+        expect(screen.getByText("The run stopped unexpectedly.")).toBeTruthy();
+        expect(
+            screen.getByText(
+                "Try again. If the problem persists, send a report."
+            )
+        ).toBeTruthy();
+        expect(
+            screen.getByRole("button", { name: "Send a report" })
+        ).toBeTruthy();
     });
 
     it("lists each screw's steps, lighting up what one inserted on hover, and says it updated screws", async () => {

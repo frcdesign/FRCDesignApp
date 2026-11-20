@@ -36,7 +36,8 @@ import {
     isFace,
     type OnshapeSelection,
     selectionKey,
-    toSelectedEntities
+    toSelectedEntities,
+    useOnshapeSelection
 } from "../../../lib/selection";
 import {
     CIRCULAR_EDGES,
@@ -201,6 +202,7 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
             ...picks,
             options: fastenerOptions(settled)
         };
+        useOnshapeSelection.getState().finishSelecting();
         insertMutation.mutate(body, { onSuccess: finishRun });
     };
 

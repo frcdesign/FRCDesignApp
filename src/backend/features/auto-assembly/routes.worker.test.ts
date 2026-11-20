@@ -7,6 +7,7 @@ import { ASSEMBLY, BODY } from "../../../__test_utils__/auto-assembly-fixtures";
 import { Program } from "./catalog";
 import {
     AssemblyJobState,
+    AssemblyTaskAction,
     AssemblyTaskState,
     HoleStatus,
     type AssemblyJobStatus,
@@ -220,6 +221,63 @@ describe("POST /api/auto-assembly/insert", () => {
                 })
             ).status
         ).toBe(400);
+    });
+});
+
+describe("GET /api/auto-assembly/job", () => {
+    const readJob = async () =>
+        (
+            await app.request(
+                "/api/auto-assembly/job?documentId=doc&instanceId=ws&elementId=asm",
+                {},
+                env
+            )
+        ).json<AssemblyJobStatus>();
+
+    const runEnded = (status: object) =>
+        vi.spyOn(env.AUTO_ASSEMBLY_WORKFLOW, "get").mockResolvedValue({
+            status: () => Promise.resolve(status)
+        } as unknown as WorkflowInstance);
+
+    // KV, read here, can lag what the run wrote from elsewhere
+    it("takes how a finished run ended from the run, while KV still says it's going", async () => {
+        await reportJob(env, ASSEMBLY, {
+            state: AssemblyJobState.RUNNING,
+            jobId: "done"
+        });
+        runEnded({
+            status: "complete",
+            output: {
+                state: AssemblyJobState.COMPLETE,
+                jobId: "done",
+                result: { inserted: 4, fastened: 4, replaced: 0 }
+            }
+        });
+
+        const status = await readJob();
+
+        expect(status.state).toBe(AssemblyJobState.COMPLETE);
+        expect(status.error).toBeUndefined();
+        expect(status.result?.inserted).toBe(4);
+    });
+
+    it("reads a run that died without reporting as stopped", async () => {
+        await reportJob(env, ASSEMBLY, {
+            state: AssemblyJobState.RUNNING,
+            jobId: "died",
+            tasks: [
+                {
+                    action: AssemblyTaskAction.INDEX,
+                    state: AssemblyTaskState.RUNNING
+                }
+            ]
+        });
+        runEnded({ status: "errored" });
+
+        const status = await readJob();
+
+        expect(status.state).toBe(AssemblyJobState.FAILED);
+        expect(status.tasks?.[0].state).toBe(AssemblyTaskState.FAILED);
     });
 });
 

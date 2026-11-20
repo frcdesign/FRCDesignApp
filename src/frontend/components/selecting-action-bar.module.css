@@ -1,0 +1,17 @@
+/* Over the page's last rows only while it scrolls, and clicks pass beside the bar. */
+.dock {
+    position: sticky;
+    bottom: var(--mantine-spacing-md);
+    z-index: 2;
+    margin-top: auto;
+    padding-inline: var(--mantine-spacing-md);
+    pointer-events: none;
+}
+
+.dock:empty {
+    display: none;
+}
+
+.dock > * {
+    pointer-events: auto;
+}

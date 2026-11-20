@@ -1,38 +1,31 @@
-import { Box } from "@mantine/core";
-import { type ReactNode, useEffect, useRef } from "react";
+import { Box, Stack } from "@mantine/core";
+import { type ReactNode, useEffect } from "react";
 import styles from "../lib/styles.module.css";
 import classes from "./panel-footer.module.css";
-
-/** Its height, on the document, so what floats over the panel's bottom sits above it. */
-export const PANEL_FOOTER_HEIGHT = "--panel-footer-height";
+import { usePanelFooter } from "./panel-footer-store";
+import { SelectingBar } from "./selecting-bar";
 
 interface PanelFooterProps {
     children: ReactNode;
 }
 
-/** Stuck to the bottom of the panel, over whatever scrolls under it: a page's main action. */
+/**
+ * Stuck to the bottom of the panel, over whatever scrolls under it: a page's
+ * main action, and above it the selecting bar while a list limits picks.
+ */
 export function PanelFooter(props: PanelFooterProps): ReactNode {
-    const ref = useRef<HTMLDivElement>(null);
-
     useEffect(() => {
-        const footer = ref.current;
-        if (!footer) {
-            return;
-        }
-        const root = document.documentElement.style;
-        const observer = new ResizeObserver(() =>
-            root.setProperty(PANEL_FOOTER_HEIGHT, `${footer.offsetHeight}px`)
-        );
-        observer.observe(footer);
-        return () => {
-            observer.disconnect();
-            root.removeProperty(PANEL_FOOTER_HEIGHT);
-        };
+        usePanelFooter.setState((state) => ({ count: state.count + 1 }));
+        return () =>
+            usePanelFooter.setState((state) => ({ count: state.count - 1 }));
     }, []);
 
     return (
-        <Box ref={ref} className={`${classes.footer} ${styles.dividerTop}`}>
-            {props.children}
+        <Box className={`${classes.footer} ${styles.dividerTop}`}>
+            <Stack gap="sm">
+                <SelectingBar />
+                {props.children}
+            </Stack>
         </Box>
     );
 }
