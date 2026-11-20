@@ -8,7 +8,7 @@ import { renderWithProviders } from "../../../../__test_utils__/render";
 import { ContextBar } from "../../../components/context-bar";
 import { SelectingActionBar } from "../../../components/selecting-action-bar";
 import { ParameterGrid } from "../../../components/parameter-input";
-import { apiPost } from "../../../lib/api-client";
+import { apiGet, apiPost } from "../../../lib/api-client";
 import { useOnshapeLaunch } from "../../../lib/onshape-params";
 import { queryClient } from "../../../lib/query-client";
 import {
@@ -315,6 +315,41 @@ describe("fasten picks", () => {
         expect(
             screen.queryByRole("button", { name: "Add insert location" })
         ).toBeNull();
+    });
+
+    it("asks again on focus once its answer is old, offering Add insert location once the marker is gone", async () => {
+        queryClient.setQueryData(
+            insertLocationQueryKey(ASSEMBLY),
+            { instanceId: "marker" },
+            { updatedAt: Date.now() - 60 * 1000 }
+        );
+        vi.mocked(apiGet).mockResolvedValueOnce({ instanceId: undefined });
+        renderBar();
+        expect(
+            screen.queryByRole("button", { name: "Add insert location" })
+        ).toBeNull();
+
+        act(() => {
+            window.dispatchEvent(new Event("focus"));
+        });
+
+        expect(
+            await screen.findByRole("button", { name: "Add insert location" })
+        ).toBeTruthy();
+        expect(apiGet).toHaveBeenCalledWith(
+            "/insert-location",
+            expect.anything()
+        );
+    });
+
+    it("doesn't ask again on focus while its answer is fresh", () => {
+        seedInsertLocation("marker");
+        renderBar();
+        const asked = vi.mocked(apiGet).mock.calls.length;
+        act(() => {
+            window.dispatchEvent(new Event("focus"));
+        });
+        expect(vi.mocked(apiGet).mock.calls).toHaveLength(asked);
     });
 
     it("hands the bar's picks to the insert menu while one is open", () => {

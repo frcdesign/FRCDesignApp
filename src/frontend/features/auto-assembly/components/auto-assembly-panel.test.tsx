@@ -17,7 +17,7 @@ import {
     createTestQueryClient,
     renderWithProviders
 } from "../../../../__test_utils__/render";
-import { apiPost } from "../../../lib/api-client";
+import { apiGet, apiPost } from "../../../lib/api-client";
 import {
     FASTENER_SET_QUERY_KEY,
     assemblyJobQueryKey,
@@ -107,15 +107,29 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe("AutoAssemblyPanel", () => {
-    it("says so until the library has loaded the fasteners", () => {
+    it("says so until the library has loaded the fasteners, asking again each time it opens", async () => {
         const queryClient = createTestQueryClient();
         queryClient.setQueryData(FASTENER_SET_QUERY_KEY, null);
+        vi.mocked(apiGet).mockResolvedValueOnce(null);
+        const { unmount } = renderWithProviders(
+            <AutoAssemblyPanel assembly={ASSEMBLY} />,
+            queryClient
+        );
+        expect(screen.getByText("No fasteners are loaded yet")).toBeTruthy();
+        expect(screen.queryByRole("button", { name: "Insert" })).toBeNull();
+        await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+        unmount();
+
+        // Loaded since: the panel opening again shows the form
+        vi.mocked(apiGet).mockResolvedValueOnce(FASTENER_SET);
         renderWithProviders(
             <AutoAssemblyPanel assembly={ASSEMBLY} />,
             queryClient
         );
-        expect(screen.getByText("No fasteners are loaded yet.")).toBeTruthy();
-        expect(screen.queryByRole("button", { name: "Insert" })).toBeNull();
+        expect(
+            await screen.findByRole("button", { name: "Insert" })
+        ).toBeTruthy();
+        expect(apiGet).toHaveBeenCalledWith("/auto-assembly/parts");
     });
 
     it("picks circular edges by default, or faces with edges to exclude", async () => {

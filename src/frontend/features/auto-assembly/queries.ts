@@ -34,7 +34,8 @@ export function useFastenerSetQuery() {
     return useQuery<FastenerSet | null>({
         queryKey: FASTENER_SET_QUERY_KEY,
         queryFn: () => apiGet("/auto-assembly/parts"),
-        staleTime: 10 * 60 * 1000
+        // None yet is asked again each time the panel opens, as a load may have finished since
+        staleTime: (query) => (query.state.data ? 10 * 60 * 1000 : 0)
     });
 }
 

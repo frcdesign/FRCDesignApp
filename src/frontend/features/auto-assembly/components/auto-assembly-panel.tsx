@@ -84,7 +84,6 @@ export function AutoAssemblyPanel(props: AutoAssemblyPanelProps): ReactNode {
                     <StatusIcon status={Status.WARNING} size={IconSize.PAGE} />
                 }
                 title={m.autoAssemblyNoFastenersTitle()}
-                description={m.autoAssemblyNoFastenersDescription()}
             />
         );
     }

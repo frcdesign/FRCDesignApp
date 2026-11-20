@@ -306,7 +306,10 @@ enum MateLocation {
 2. In an assembly, signed in, a library page's header ends in the context bar
    (`ContextBar`). Its **Preselection** button counts the picks held. It
    carries the plugs icon parts that fasten show, in the primary color.
-   **Add insert location** shows beside it while the assembly has none.
+   **Add insert location** shows beside it while the assembly has none
+   (`useInsertLocationQuery`). That's asked when the app opens, and again when
+   the panel regains focus with an answer over 30 seconds old, since the marker
+   may have been deleted in Onshape.
    Once it adds one, the button turns green and reads **Insert location
    added** for as long as the bar is up.
     - A part that can insert and fasten (`useCanFasten`) has a plugs icon

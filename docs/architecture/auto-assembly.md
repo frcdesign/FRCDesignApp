@@ -1061,7 +1061,9 @@ closes the menu and switches to the page.
 
 The panel first reads the fasteners the library loaded (`useFastenerSetQuery`,
 `GET /api/auto-assembly/parts`). Until FRCDesignLib's Fasteners group has
-loaded them it says so, and offers nothing to insert.
+loaded them it says so, centered on the page, and offers nothing to insert.
+An answer of none is asked again each time the panel opens. A `LIBRARY` push
+for `FASTENER_LIBRARY` refetches either answer.
 
 The panel is a `ParameterGrid` of the configuration dialog's own inputs
 (`ParameterInput`), in groups (`ParameterGroup`), as an Onshape feature

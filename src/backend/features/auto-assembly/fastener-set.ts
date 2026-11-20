@@ -4,17 +4,15 @@ import { type Db } from "../../db/client";
 import { configurations, insertables } from "../../db/schema";
 import { getGeneratedSet } from "../generated-parts/store";
 import { type GeneratedFeature } from "../generated-parts/manifest";
-import { LibraryId } from "../library/library-id";
+import { type LibraryId } from "../library/library-id";
 import { catalogSchema } from "./catalog";
 import {
+    FASTENER_LIBRARY,
     FASTENERS,
     FastenerKind,
     type FastenerSet,
     type FastenerStudio
 } from "./studios";
-
-/** The library Auto Assembly's FRC fasteners are loaded into. */
-export const FASTENER_LIBRARY = LibraryId.FRC_DESIGN_LIB;
 
 /**
  * Its manifest's catalog and each kind's loaded studio; undefined until a load
