@@ -53,6 +53,48 @@ describe("partName", () => {
         );
     });
 
+    it("names a configuration by a generated record leaving out an input with one option", () => {
+        const finish: ConfigurationParameter = {
+            type: ParameterType.ENUM,
+            id: "finish",
+            name: "Finish",
+            default: "STAINLESS",
+            options: [
+                { id: "BLACK", name: "Black" },
+                { id: "STAINLESS", name: "Stainless" }
+            ],
+            optionConditions: []
+        };
+        // Made only in black at 2 in, so its record doesn't name the finish
+        const stored: StoredParts = {
+            ...STORED,
+            parameters: [LENGTH, finish],
+            records: [
+                {
+                    ...PART,
+                    values: { length: "IN_2" },
+                    name: "2 in, black"
+                },
+                {
+                    ...PART,
+                    values: { length: "IN_3", finish: "BLACK" },
+                    name: "3 in, black"
+                },
+                {
+                    ...PART,
+                    values: { length: "IN_3", finish: "STAINLESS" },
+                    name: "3 in, stainless"
+                }
+            ]
+        };
+        const choose = (values: Record<string, string>) =>
+            partName(stored, toSelection(values, stored.parameters));
+
+        expect(choose({ length: "IN_2", finish: "BLACK" })).toBe("2 in, black");
+        expect(choose({ length: "IN_3", finish: "BLACK" })).toBe("3 in, black");
+        expect(choose({ length: "IN_3" })).toBe("3 in, stainless");
+    });
+
     it("falls back to the tab's name for a configuration nothing indexed", () => {
         expect(partName(STORED, selected("IN_3"))).toBe("Screw");
         expect(

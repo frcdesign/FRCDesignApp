@@ -357,7 +357,9 @@ enum MateLocation {
    answers 400 and inserts nothing.
 3. It inserts the part at the insert location, then names its mates after the
    part: its configuration's indexed record's name, the element's own part's at
-   the defaults, else the tab's (`partName`, `readStoredParts`):
+   the defaults, else the tab's (`partName`, `readStoredParts`). A generated
+   record leaves out an input with one option where it's made, so with no exact
+   match, the record agreeing with every value it names is taken:
     - **No picks**: adds a fasten mate naming only the part's connector, and
       answers its `featureId`; the client opens the mate dialog to finish it.
     - **Picks**: `fastenToCircularEdges` mates the inserted instance to the
