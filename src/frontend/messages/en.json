@@ -1049,22 +1049,26 @@
     ],
     "teamRefreshSubteam": "Refresh members",
     "teamRemove": "Remove",
-    "teamMembers": [
+    "teamMemberCounts": [
         {
             "declarations": [
-                "input count",
-                "local countPlural = count: plural",
-                "local formatted = count: number"
+                "input members",
+                "input admins",
+                "local membersPlural = members: plural",
+                "local adminsPlural = admins: plural",
+                "local membersFormatted = members: number",
+                "local adminsFormatted = admins: number"
             ],
-            "selectors": ["countPlural"],
+            "selectors": ["membersPlural", "adminsPlural"],
             "match": {
-                "countPlural=one": "{formatted} member",
-                "countPlural=other": "{formatted} members"
+                "membersPlural=one adminsPlural=one": "{membersFormatted} member, {adminsFormatted} admin",
+                "membersPlural=one adminsPlural=other": "{membersFormatted} member, {adminsFormatted} admins",
+                "membersPlural=other adminsPlural=one": "{membersFormatted} members, {adminsFormatted} admin",
+                "membersPlural=other adminsPlural=other": "{membersFormatted} members, {adminsFormatted} admins"
             }
         }
     ],
-    "teamRoleAdmin": "Admin",
-    "teamRoleMember": "Member",
+    "teamRolesFromOnshape": "Admins of your organizations or Onshape teams are the team's admins.",
     "teamFirstTeams": "FIRST teams",
     "teamRefreshFirst": "Refresh",
     "teamRefreshedFirst": "FIRST teams refreshed",

@@ -60,6 +60,19 @@ export function toVendorPreferences(
         : NO_PREFERENCES;
 }
 
+/** An Onshape team's member, as a registration keeps it. */
+export interface SubteamMember {
+    userId: string;
+    /** Administers the Onshape team, which makes them the team's admin. */
+    admin: boolean;
+}
+
+/** A membership no launch has proven again in this long lapses. */
+export const MEMBERSHIP_DAYS = 90;
+
+/** How long a role or a subteam's members are trusted before a launch asks Onshape again. */
+export const ONSHAPE_RECHECK_HOURS = 24;
+
 export const MAX_TEAM_COLORS = 6;
 /** Low enough that reordering stays one batch, as a user's favorites are. */
 export const MAX_TEAM_FAVORITES = 250;
@@ -144,17 +157,12 @@ export interface TeamOrganizationOut {
     subteamMemberCount?: number;
 }
 
-export interface TeamMemberOut {
-    userId: string;
-    role: TeamRole;
-    /** Milliseconds since the epoch. */
-    lastSeenAt: number;
-}
-
-/** What a team admin sees and manages. */
+/** What a team admin sees and manages. Members are counted, never listed. */
 export interface TeamAdminOut {
     organizations: TeamOrganizationOut[];
-    members: TeamMemberOut[];
+    /** Members proven within `MEMBERSHIP_DAYS`. */
+    memberCount: number;
+    adminCount: number;
 }
 
 /** What a team is ranked in: every use, and each feature's. */

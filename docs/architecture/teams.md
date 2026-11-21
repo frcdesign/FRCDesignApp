@@ -25,10 +25,11 @@ It is not:
 - **Library editing.** A library's admin team (see [auth.md](./auth.md)) is an
   Onshape team that decides who edits a library. Nothing here grants a library
   access level. In this document and its code, "team" means a FIRST team.
-- **An account system.** Membership comes from editing an organization's
-  documents, and identity from Onshape sign-in.
-- **A roster.** The app knows a member only by Onshape user id. It shows ids to
-  the team's admins alone, and no names to anyone.
+- **An account system.** Membership and roles are inherited from Onshape:
+  editing an organization's documents makes a member, administering the
+  organization or its Onshape team makes an admin. Nobody edits them here.
+- **A roster.** The app knows a member only by Onshape user id, and shows
+  admins only counts.
 
 ## Code map
 
@@ -142,8 +143,6 @@ POST   /api/teams/chosen                                          { teamId?: str
 POST   /api/teams/refresh-first                                   owner
 GET    /api/teams/:teamId/admin                                   admin: TeamAdminOut
 POST   /api/teams/:teamId/settings                                admin: Partial<TeamSettings>
-POST   /api/teams/:teamId/members/:userId                         admin: { role }
-DELETE /api/teams/:teamId/members/:userId                         admin, or the member leaving
 DELETE /api/teams/:teamId/organizations/:organizationId           admin
 POST   /api/teams/:teamId/organizations/:organizationId/refresh   admin: syncs a subteam
 GET    /api/teams/:teamId/favorites/library/:libraryId            member: FavoritesData
@@ -362,8 +361,8 @@ interface TeamReportOut {
 }
 ```
 
-`TeamOrganizationOut`, `TeamMemberOut` and `TeamAdminOut` are the admin view's
-rows. `Program` is `analytics/seasons.ts`'s.
+`TeamOrganizationOut` and `TeamAdminOut`, its organizations and its member and
+admin counts, are the admin view's. `Program` is `analytics/seasons.ts`'s.
 
 `src/frontend/features/teams/`
 
@@ -423,10 +422,13 @@ insertables:
   it when. Several rows may claim one number.
 - `team_organizations` — one organization registered to one team: its company
   id and kind, the name Onshape gave it, and `subteam_id` with
-  `subteam_members`. An empty `subteam_id` means every editor. Unique on
+  `subteam_members` (each member's id and whether they administer it, as last
+  read) and `synced_at`. An empty `subteam_id` means every editor. Unique on
   company and subteam, and on team and company.
-- `team_members` — team, user, role, `joined_at` and `last_seen_at`. Primary
-  key on team and user; indexed on user.
+- `team_members` — a cache of what Onshape says: team, user, role,
+  `joined_at`, `last_seen_at` and `role_checked_at`. A row counts only while
+  `last_seen_at` is within `MEMBERSHIP_DAYS` (90). Primary key on team and
+  user; indexed on user.
 - `team_favorites` — a user's favorite's shape, owned by a team, with
   `created_by`. Unique on team, library and insertable.
 - `team_recent_inserts` — a user's recent's shape, owned by a team, with who
@@ -492,13 +494,23 @@ list. `uiState.sections` holds Team settings' open state.
 
 1. `/init` reads the launch's document in `checkLaunchDocument`.
 2. `recordLaunch` saves its owner under `document-owner:`.
-3. When a company owns it and the grant has `WRITE`, the caller joins each team
-   the company registered: every editor's, and any subteam's they are in. A
-   member already there only moves `last_seen_at`.
-4. A team admin can change a role or remove a member. A member can leave.
-   Nothing else writes membership.
-5. **Refresh members** beside a subteam re-reads its members under the admin's
-   session. Those no longer in it stay members until removed.
+3. When a company owns it and the grant has `WRITE`, `joinOrganizationTeams`
+   takes each team the company registered.
+4. A subteam's members read more than `ONSHAPE_RECHECK_HOURS` (24) ago are
+   read again under the caller's session (`readSubteam`). If Onshape won't say,
+   the stored members stand.
+5. The caller joins every team registered for all the company's editors, and
+   each subteam's they are in. Joining moves `last_seen_at` to now.
+6. Their role is inherited. An admin of the company (`getCompany`'s `admin`) or
+   of the subteam is the team's admin; anyone else is a member. The company is
+   asked once a day: while every one of the caller's memberships here was
+   checked within `ONSHAPE_RECHECK_HOURS`, the stored roles stand, and so they
+   do when Onshape won't say.
+7. A membership no launch proves again within `MEMBERSHIP_DAYS` lapses: no
+   read counts it.
+8. Registration writes its registrant as an admin, since it just checked.
+   **Refresh members** beside a subteam re-reads it under the admin's session.
+   Nothing else writes membership or a role.
 
 ### Team context
 
@@ -630,18 +642,22 @@ list.
 - A company and subteam belong to at most one team; a company joins a team at
   most once.
 - Only a company's admin, as Onshape reports it, registers that company.
-- Membership is written only by `/init`, from a document the grant can write and
-  a registered company owns, by registration, or by a team admin.
-- A team always has an admin: the last one can't leave or become a member.
+- Membership and roles come only from Onshape: written by `/init`, from a
+  document the grant can write and a registered company owns, and by
+  registration. No route sets a role or a member.
+- A team's admin administers one of its organizations or its Onshape team, as
+  Onshape last said within a day of their latest launch.
+- A membership counts only while a launch proved it within `MEMBERSHIP_DAYS`.
 - `resolveTeamContext` is the one place that decides a use's team.
 - A use is credited to a team only while the user is its member.
 - Team context never changes what a request does, only where it is counted.
   Resolving it never fails a request: a failure gives no team.
-- No team route but registration and **Refresh members** calls Onshape.
+- No team route but registration and **Refresh members** calls Onshape. A
+  launch asks Onshape about a role or a subteam at most once a day each.
 - Team favorites, recents and the report are read only by the team's members.
 - The report never names another team, and never ranks among fewer than
   `MIN_RANKED_TEAMS`.
-- Members are shown by id to the team's admins alone.
+- No route lists a team's members; admins see counts.
 - Every global rollup counts a use the same with a team or without.
 - Every team rollup is derivable from `events` alone.
 - Vendor ranking orders results; it never filters them.
@@ -653,15 +669,17 @@ list.
 
 ## Failure and recovery
 
-| Failure                                            | Result                                                  | Recovery                                  |
-| -------------------------------------------------- | ------------------------------------------------------- | ----------------------------------------- |
-| FIRST's API refuses or is down                     | That program's refresh stops; last week's list stays    | The next run, or **Refresh** as the owner |
-| A team is new and not yet listed                   | It can't be registered                                  | The next refresh                          |
-| No FIRST credentials                               | The refresh skips the program                           | Set the secrets                           |
-| `document-owner:` expired for a document           | Uses there go to the chosen team                        | The next launch from that document        |
-| Onshape won't say the caller administers a company | Registration refused                                    | A company admin registers it              |
-| A member leaves the organization or subteam        | They stay a member; its documents stop proving it again | An admin removes them                     |
-| Someone registers the wrong team number            | Its members' uses are credited to that team             | The team's admin removes the organization |
+| Failure                                            | Result                                                   | Recovery                                  |
+| -------------------------------------------------- | -------------------------------------------------------- | ----------------------------------------- |
+| FIRST's API refuses or is down                     | That program's refresh stops; last week's list stays     | The next run, or **Refresh** as the owner |
+| A team is new and not yet listed                   | It can't be registered                                   | The next refresh                          |
+| No FIRST credentials                               | The refresh skips the program                            | Set the secrets                           |
+| `document-owner:` expired for a document           | Uses there go to the chosen team                         | The next launch from that document        |
+| Onshape won't say the caller administers a company | Registration refused                                     | A company admin registers it              |
+| A member leaves the organization                   | They stay a member until 90 days after their last launch | Automatic                                 |
+| An admin stops administering the company           | They stay an admin until their next launch a day on      | Automatic                                 |
+| Onshape won't say who administers a company        | Stored roles stand                                       | The next launch a day on                  |
+| Someone registers the wrong team number            | Its members' uses are credited to that team              | The team's admin removes the organization |
 
 ## Decisions
 
@@ -676,6 +694,12 @@ list.
   reads the document's owner and the caller's permissions, so a member is
   proven by editing the organization's work at no extra call. Listing a
   company's members needs an admin's session on every sync.
+- **Roles inherited from Onshape, not set here.** The people who run a school's
+  Onshape already decide who administers it; mirroring that keeps one place to
+  change it and needs no member list. A role is cached and asked again once a
+  day, so a launch costs at most one extra call a day.
+- **Memberships lapse after 90 days.** A student who left stops counting with
+  nobody removing them; a season's break is shorter.
 - **A subteam narrows an organization.** A school enterprise often holds an FRC
   and an FTC team. Its documents are the enterprise's, never a subteam's, so the
   document can't say which. Each team names an Onshape team, and the

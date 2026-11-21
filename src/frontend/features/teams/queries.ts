@@ -174,12 +174,6 @@ export function useTeamAdminMutation<T>(run: (input: T) => Promise<unknown>) {
 }
 
 export const teamApi = {
-    setRole: (teamId: string, userId: string, role: string) =>
-        apiPost(`${toTeamPath(teamId)}/members/${userId}`, {
-            body: { role }
-        }),
-    removeMember: (teamId: string, userId: string) =>
-        apiDelete(`${toTeamPath(teamId)}/members/${userId}`),
     removeOrganization: (teamId: string, organizationId: string) =>
         apiDelete(`${toTeamPath(teamId)}/organizations/${organizationId}`),
     refreshOrganization: (teamId: string, organizationId: string) =>

@@ -6,11 +6,10 @@ import { getDb } from "../../db/client";
 import { firstTeams, teamOrganizations, teams } from "../../db/schema";
 import { forbiddenError, handledError } from "../../lib/api-error";
 import { type AppContext } from "../../lib/context";
-import { type OAuthApi } from "../../lib/onshape/client";
 import { getCompany } from "../../lib/onshape/endpoints/companies";
 import { getDocument } from "../../lib/onshape/endpoints/documents";
-import { getTeam, getTeamMembers } from "../../lib/onshape/endpoints/teams";
 import { type RegisterTeamIn, TeamRole } from "./contract";
+import { readSubteam } from "./subteam";
 import { toDocumentOwner } from "./membership";
 import { documentOwnerStore, getRole, upsertMember } from "./store";
 
@@ -130,6 +129,7 @@ export async function registerOrganization(
             name: company.name,
             subteamId,
             subteamMembers,
+            syncedAt: request.subteamId ? now : null,
             registeredAt: now,
             registeredBy: userId
         }),
@@ -137,21 +137,4 @@ export async function registerOrganization(
     );
     await db.batch([writes[0], ...writes.slice(1)]);
     return teamId;
-}
-
-/** The members of an Onshape team, refused unless the organization owns it. */
-export async function readSubteam(
-    api: OAuthApi,
-    subteamId: string,
-    companyId: string
-): Promise<string[]> {
-    const team = await getTeam(api, subteamId);
-    if (team.owner.id !== companyId) {
-        throw handledError(
-            "That Onshape team isn't in this organization.",
-            HttpStatus.BAD_REQUEST
-        );
-    }
-    const members = await getTeamMembers(api, subteamId);
-    return members.map((member) => member.member.id);
 }

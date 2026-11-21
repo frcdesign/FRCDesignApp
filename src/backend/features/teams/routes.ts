@@ -32,7 +32,6 @@ import {
 } from "./contract";
 import { refreshFirstTeams } from "./first-teams";
 import {
-    getCallerRole,
     getRequiredParam,
     getTeamParam,
     requireTeamAdminMiddleware,
@@ -40,7 +39,8 @@ import {
     teamRoute
 } from "./guards";
 import { getTeamRecents } from "./recents";
-import { readSubteam, registerOrganization } from "./register";
+import { registerOrganization } from "./register";
+import { readSubteam } from "./subteam";
 import { getTeamReport } from "./report";
 import {
     chosenTeamStore,
@@ -48,6 +48,7 @@ import {
     getMyTeams,
     getOrganizationRegistrations,
     getTeamsById,
+    isCurrentMember,
     toFirstTeam
 } from "./store";
 
@@ -200,10 +201,9 @@ teamRoutes.get(
                 .where(eq(teamOrganizations.teamId, teamId))
                 .all(),
             db
-                .select()
+                .select({ role: teamMembers.role })
                 .from(teamMembers)
-                .where(eq(teamMembers.teamId, teamId))
-                .orderBy(asc(teamMembers.joinedAt))
+                .where(and(eq(teamMembers.teamId, teamId), isCurrentMember()))
                 .all()
         ]);
         return c.json({
@@ -217,11 +217,10 @@ teamRoutes.get(
                     ? organization.subteamMembers.length
                     : undefined
             })),
-            members: members.map((member) => ({
-                userId: member.userId,
-                role: member.role,
-                lastSeenAt: member.lastSeenAt.getTime()
-            }))
+            memberCount: members.length,
+            adminCount: members.filter(
+                (member) => member.role === TeamRole.ADMIN
+            ).length
         } satisfies TeamAdminOut);
     }
 );
@@ -263,84 +262,6 @@ teamRoutes.post(
                 })
                 .where(eq(teams.id, getTeamParam(c)));
         }
-        return c.json({ success: true });
-    }
-);
-
-/** Refused when it would leave the team with no admin. */
-async function requireAnotherAdmin(
-    teamId: string,
-    userId: string,
-    db: ReturnType<typeof getDb>
-): Promise<void> {
-    const admins = await db
-        .select({ userId: teamMembers.userId })
-        .from(teamMembers)
-        .where(
-            and(
-                eq(teamMembers.teamId, teamId),
-                eq(teamMembers.role, TeamRole.ADMIN)
-            )
-        )
-        .all();
-    if (admins.every((admin) => admin.userId === userId)) {
-        throw handledError("A team needs an admin.", HttpStatus.CONFLICT);
-    }
-}
-
-/** POST /api/teams/:teamId/members/:userId: `{ role }`. */
-teamRoutes.post(
-    teamRoute() + "/members/:userId",
-    requireTeamAdminMiddleware,
-    validate("json", z.object({ role: z.enum(TeamRole) })),
-    async (c) => {
-        const teamId = getTeamParam(c);
-        const memberId = getRequiredParam(c, "userId");
-        const { role } = c.req.valid("json");
-        const db = getDb(c.env.DB);
-        if (role === TeamRole.MEMBER) {
-            await requireAnotherAdmin(teamId, memberId, db);
-        }
-        await db
-            .update(teamMembers)
-            .set({ role })
-            .where(
-                and(
-                    eq(teamMembers.teamId, teamId),
-                    eq(teamMembers.userId, memberId)
-                )
-            );
-        return c.json({ success: true });
-    }
-);
-
-/** DELETE /api/teams/:teamId/members/:userId: an admin removing anyone, or a member leaving. */
-teamRoutes.delete(
-    teamRoute() + "/members/:userId",
-    requireTeamMemberMiddleware,
-    async (c) => {
-        const teamId = getTeamParam(c);
-        const memberId = getRequiredParam(c, "userId");
-        const userId = await c.var.getUserId();
-        if (
-            memberId !== userId &&
-            (await getCallerRole(c)) !== TeamRole.ADMIN
-        ) {
-            throw handledError(
-                "Only the team's admins can remove a member.",
-                HttpStatus.FORBIDDEN
-            );
-        }
-        const db = getDb(c.env.DB);
-        await requireAnotherAdmin(teamId, memberId, db);
-        await db
-            .delete(teamMembers)
-            .where(
-                and(
-                    eq(teamMembers.teamId, teamId),
-                    eq(teamMembers.userId, memberId)
-                )
-            );
         return c.json({ success: true });
     }
 );
@@ -397,7 +318,7 @@ teamRoutes.post(
         );
         await db
             .update(teamOrganizations)
-            .set({ subteamMembers })
+            .set({ subteamMembers, syncedAt: new Date() })
             .where(eq(teamOrganizations.id, organization.id));
         return c.json({ memberCount: subteamMembers.length });
     }

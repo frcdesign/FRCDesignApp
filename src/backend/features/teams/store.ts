@@ -1,5 +1,5 @@
 /** Reads and writes of who is on which team, and what each document's organization is. */
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, gte, inArray } from "drizzle-orm";
 import { type Db } from "../../db/client";
 import {
     firstTeams,
@@ -9,6 +9,7 @@ import {
 } from "../../db/schema";
 import { kvStore } from "../../lib/kv-store";
 import {
+    MEMBERSHIP_DAYS,
     OrganizationKind,
     TeamRole,
     type FirstTeam,
@@ -109,11 +110,21 @@ export async function getMyTeams(db: Db, userId: string): Promise<MyTeam[]> {
     });
 }
 
+/** The earliest last-seen a membership can have and still count. */
+export function membershipCutoff(now = Date.now()): Date {
+    return new Date(now - MEMBERSHIP_DAYS * 24 * 60 * 60 * 1000);
+}
+
+/** Only memberships a launch proved within `MEMBERSHIP_DAYS`. */
+export function isCurrentMember() {
+    return gte(teamMembers.lastSeenAt, membershipCutoff());
+}
+
 export function getMemberships(db: Db, userId: string) {
     return db
         .select({ teamId: teamMembers.teamId, role: teamMembers.role })
         .from(teamMembers)
-        .where(eq(teamMembers.userId, userId))
+        .where(and(eq(teamMembers.userId, userId), isCurrentMember()))
         .orderBy(desc(teamMembers.lastSeenAt))
         .all();
 }
@@ -127,7 +138,11 @@ export async function getRole(
         .select({ role: teamMembers.role })
         .from(teamMembers)
         .where(
-            and(eq(teamMembers.teamId, teamId), eq(teamMembers.userId, userId))
+            and(
+                eq(teamMembers.teamId, teamId),
+                eq(teamMembers.userId, userId),
+                isCurrentMember()
+            )
         )
         .get();
     return row?.role;
@@ -142,18 +157,31 @@ export function getOrganizationRegistrations(db: Db, companyId: string) {
 }
 
 /** Joins a member, or moves an existing one's last seen; never changes a role. */
+/**
+ * Joins a member or moves an existing one's last seen. A role Onshape was just
+ * asked about replaces the stored one; without one, the stored role stands.
+ */
 export function upsertMember(
     db: Db,
     teamId: string,
     userId: string,
-    role: TeamRole,
+    checked: TeamRole | undefined,
     now: Date
 ) {
     return db
         .insert(teamMembers)
-        .values({ teamId, userId, role, joinedAt: now, lastSeenAt: now })
+        .values({
+            teamId,
+            userId,
+            role: checked ?? TeamRole.MEMBER,
+            joinedAt: now,
+            lastSeenAt: now,
+            roleCheckedAt: checked ? now : new Date(0)
+        })
         .onConflictDoUpdate({
             target: [teamMembers.teamId, teamMembers.userId],
-            set: { lastSeenAt: now }
+            set: checked
+                ? { lastSeenAt: now, role: checked, roleCheckedAt: now }
+                : { lastSeenAt: now }
         });
 }

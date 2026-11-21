@@ -171,6 +171,9 @@ the app makes of them.
 - **Who administers a company**: `GET /companies/{cid}` answers `BTCompanyInfo`,
   whose `admin` says whether the caller administers it. Registering a team
   relies on it — _unverified_, and unverified for a classroom in particular.
+- **Who may read a team's members**: a launch re-reads a registered Onshape
+  team's members under the launching member's own session, and keeps the last
+  list when refused. Whether an ordinary member may read them — _unverified_.
 - **A company's documents are the company's**: a document in an enterprise is
   owned by it, never by an Onshape team in it, so nothing on the document says
   which of its teams it belongs to — _unverified_.

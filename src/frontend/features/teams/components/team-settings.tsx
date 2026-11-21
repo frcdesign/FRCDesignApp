@@ -256,7 +256,7 @@ interface TeamPeopleProps {
     teamId: string;
 }
 
-/** Its organizations and members. Members are shown by Onshape id: the app knows no names. */
+/** Its organizations, and how many members and admins Onshape gives it. */
 function TeamPeople(props: TeamPeopleProps): ReactNode {
     const { teamId } = props;
     const adminQuery = useTeamAdminQuery(teamId);
@@ -266,16 +266,9 @@ function TeamPeople(props: TeamPeopleProps): ReactNode {
     const refreshOrganization = useTeamAdminMutation((id: string) =>
         teamApi.refreshOrganization(teamId, id)
     );
-    const setRole = useTeamAdminMutation(
-        ({ userId, role }: { userId: string; role: TeamRole }) =>
-            teamApi.setRole(teamId, userId, role)
-    );
-    const removeMember = useTeamAdminMutation((userId: string) =>
-        teamApi.removeMember(teamId, userId)
-    );
 
     if (!adminQuery.data) return null;
-    const { organizations, members } = adminQuery.data;
+    const { organizations, memberCount, adminCount } = adminQuery.data;
 
     return (
         <>
@@ -323,53 +316,14 @@ function TeamPeople(props: TeamPeopleProps): ReactNode {
                 </Group>
             ))}
             <Text size="sm" fw={500}>
-                {m.teamMembers({ count: members.length })}
+                {m.teamMemberCounts({
+                    members: memberCount,
+                    admins: adminCount
+                })}
             </Text>
-            {members.map((member) => (
-                <Group
-                    key={member.userId}
-                    justify="space-between"
-                    wrap="nowrap"
-                >
-                    <Text size="sm" ff="monospace" truncate>
-                        {member.userId}
-                    </Text>
-                    <Group gap={4} wrap="nowrap">
-                        <Select
-                            w={110}
-                            size="xs"
-                            data={[
-                                {
-                                    value: TeamRole.ADMIN,
-                                    label: m.teamRoleAdmin()
-                                },
-                                {
-                                    value: TeamRole.MEMBER,
-                                    label: m.teamRoleMember()
-                                }
-                            ]}
-                            value={member.role}
-                            allowDeselect={false}
-                            onChange={(role) => {
-                                if (role) {
-                                    setRole.mutate({
-                                        userId: member.userId,
-                                        role: role
-                                    });
-                                }
-                            }}
-                        />
-                        <ActionIcon
-                            variant="subtle"
-                            color="red"
-                            title={m.teamRemove()}
-                            onClick={() => removeMember.mutate(member.userId)}
-                        >
-                            <TrashIcon />
-                        </ActionIcon>
-                    </Group>
-                </Group>
-            ))}
+            <Text size="xs" c="dimmed">
+                {m.teamRolesFromOnshape()}
+            </Text>
         </>
     );
 }

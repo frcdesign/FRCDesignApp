@@ -31,6 +31,7 @@ CREATE TABLE `team_members` (
 	`role` text NOT NULL,
 	`joined_at` integer NOT NULL,
 	`last_seen_at` integer NOT NULL,
+	`role_checked_at` integer NOT NULL,
 	PRIMARY KEY(`team_id`, `user_id`),
 	FOREIGN KEY (`team_id`) REFERENCES `teams`(`id`) ON UPDATE no action ON DELETE cascade
 );
@@ -44,6 +45,7 @@ CREATE TABLE `team_organizations` (
 	`name` text NOT NULL,
 	`subteam_id` text DEFAULT '' NOT NULL,
 	`subteam_members` text DEFAULT '[]' NOT NULL,
+	`synced_at` integer,
 	`registered_at` integer NOT NULL,
 	`registered_by` text NOT NULL,
 	FOREIGN KEY (`team_id`) REFERENCES `teams`(`id`) ON UPDATE no action ON DELETE cascade

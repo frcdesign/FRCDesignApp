@@ -24,6 +24,7 @@ import {
     GenericVendorPolicy,
     OrganizationKind,
     Program,
+    type SubteamMember,
     TeamRole
 } from "../features/teams/contract";
 
@@ -371,11 +372,13 @@ export const teamOrganizations = sqliteTable(
         name: text("name").notNull(),
         // Empty for every editor: SQLite's unique lets nulls repeat.
         subteamId: text("subteam_id").notNull().default(""),
-        // The subteam's member ids as last synced; empty without one.
+        // The subteam's members as last synced from Onshape; empty without one.
         subteamMembers: text("subteam_members", { mode: "json" })
-            .$type<string[]>()
+            .$type<SubteamMember[]>()
             .notNull()
             .default([]),
+        // When `subteam_members` was last read from Onshape; a launch re-reads it a day on.
+        syncedAt: integer("synced_at", { mode: "timestamp_ms" }),
         registeredAt: integer("registered_at", {
             mode: "timestamp_ms"
         }).notNull(),
@@ -395,10 +398,15 @@ export const teamMembers = sqliteTable(
             .notNull()
             .references(() => teams.id, { onDelete: "cascade" }),
         userId: text("user_id").notNull(),
+        // Inherited from Onshape: an admin of a registered organization or subteam.
         role: text("role").$type<TeamRole>().notNull(),
         joinedAt: integer("joined_at", { mode: "timestamp_ms" }).notNull(),
-        // Moved by every launch that proves membership again.
-        lastSeenAt: integer("last_seen_at", { mode: "timestamp_ms" }).notNull()
+        // Moved by every launch that proves membership again; lapses past `MEMBERSHIP_DAYS`.
+        lastSeenAt: integer("last_seen_at", { mode: "timestamp_ms" }).notNull(),
+        // When Onshape last said whether they administer it; a launch asks again a day on.
+        roleCheckedAt: integer("role_checked_at", {
+            mode: "timestamp_ms"
+        }).notNull()
     },
     (t) => [
         primaryKey({ columns: [t.teamId, t.userId] }),

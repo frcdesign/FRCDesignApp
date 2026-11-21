@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { getDb } from "../../db/client";
 import {
     configurations,
@@ -41,6 +41,7 @@ import {
     Program,
     TeamContextSource,
     TeamRole,
+    type SubteamMember,
     type TeamContextOut,
     type TeamReportOut
 } from "./contract";
@@ -107,15 +108,18 @@ async function seedTeam(
         number?: number;
         companyId?: string;
         subteamId?: string;
-        subteamMembers?: string[];
+        subteamMembers?: SubteamMember[];
         admins?: string[];
         members?: string[];
+        /** When their memberships were last proven and their roles checked. */
+        seenAt?: Date;
     } = {}
 ): Promise<string> {
     const id = options.id ?? crypto.randomUUID();
     const number = options.number ?? 254;
     await seedFirst(number);
     const now = new Date();
+    const seenAt = options.seenAt ?? now;
     await db.insert(teams).values({
         id,
         program: Program.FRC,
@@ -131,6 +135,7 @@ async function seedTeam(
             name: "School",
             subteamId: options.subteamId ?? "",
             subteamMembers: options.subteamMembers ?? [],
+            syncedAt: options.subteamId ? now : null,
             registeredAt: now,
             registeredBy: "someone"
         });
@@ -144,8 +149,9 @@ async function seedTeam(
                 teamId: id,
                 userId,
                 role,
-                joinedAt: now,
-                lastSeenAt: now
+                joinedAt: seenAt,
+                lastSeenAt: seenAt,
+                roleCheckedAt: seenAt
             });
         }
     }
@@ -203,25 +209,111 @@ describe("membership at launch", () => {
         const teamId = await seedTeam({
             companyId: COMPANY,
             subteamId: "onshape-team",
-            subteamMembers: ["in-subteam"]
+            subteamMembers: [{ userId: "in-subteam", admin: false }]
         });
         await launch(orgDocument(), "in-subteam");
         await launch(orgDocument(), "outsider");
         expect(await memberIds(teamId)).toEqual(["in-subteam"]);
     });
 
-    it("never changes an admin's role", async () => {
+    function roleOf(teamId: string, userId = TEST_USER_ID) {
+        return db
+            .select({ role: teamMembers.role })
+            .from(teamMembers)
+            .where(
+                and(
+                    eq(teamMembers.teamId, teamId),
+                    eq(teamMembers.userId, userId)
+                )
+            )
+            .get()
+            .then((row) => row?.role);
+    }
+
+    function companyAdmin(admin: boolean) {
+        return vi
+            .spyOn(Companies, "getCompany")
+            .mockResolvedValue({ id: COMPANY, name: "School", admin });
+    }
+
+    it("makes a company's admin the team's admin, and its other editors members", async () => {
+        const teamId = await seedTeam({ companyId: COMPANY });
+        companyAdmin(true);
+        await launch(orgDocument());
+        expect(await roleOf(teamId)).toBe(TeamRole.ADMIN);
+
+        vi.restoreAllMocks();
+        companyAdmin(false);
+        await launch(orgDocument(), "student");
+        expect(await roleOf(teamId, "student")).toBe(TeamRole.MEMBER);
+    });
+
+    it("asks Onshape about a role once a day, then follows its answer", async () => {
         const teamId = await seedTeam({
             companyId: COMPANY,
             admins: [TEST_USER_ID]
         });
+        const asked = companyAdmin(false);
         await launch(orgDocument());
-        const row = await db
-            .select({ role: teamMembers.role })
-            .from(teamMembers)
-            .where(eq(teamMembers.teamId, teamId))
-            .get();
-        expect(row?.role).toBe(TeamRole.ADMIN);
+        expect(asked).not.toHaveBeenCalled();
+        expect(await roleOf(teamId)).toBe(TeamRole.ADMIN);
+
+        const dayAgo = new Date(Date.now() - 25 * 60 * 60 * 1000);
+        await db
+            .update(teamMembers)
+            .set({ roleCheckedAt: dayAgo })
+            .where(eq(teamMembers.teamId, teamId));
+        await launch(orgDocument());
+        expect(asked).toHaveBeenCalledOnce();
+        expect(await roleOf(teamId)).toBe(TeamRole.MEMBER);
+    });
+
+    it("keeps the stored role when Onshape won't say", async () => {
+        const teamId = await seedTeam({
+            companyId: COMPANY,
+            admins: [TEST_USER_ID],
+            seenAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
+        });
+        vi.spyOn(Companies, "getCompany").mockRejectedValue(new Error("403"));
+        await launch(orgDocument());
+        expect(await roleOf(teamId)).toBe(TeamRole.ADMIN);
+    });
+
+    it("makes an Onshape team's admin the team's admin, re-reading a day-old subteam", async () => {
+        const teamId = await seedTeam({
+            companyId: COMPANY,
+            subteamId: "onshape-team",
+            subteamMembers: []
+        });
+        await db
+            .update(teamOrganizations)
+            .set({ syncedAt: new Date(Date.now() - 25 * 60 * 60 * 1000) })
+            .where(eq(teamOrganizations.teamId, teamId));
+        vi.spyOn(Teams, "getTeam").mockResolvedValue({
+            id: "onshape-team",
+            name: "FRC",
+            owner: { type: OnshapeOwnerType.COMPANY, id: COMPANY }
+        });
+        vi.spyOn(Teams, "getTeamMembers").mockResolvedValue([
+            { admin: true, member: { id: TEST_USER_ID } }
+        ]);
+        companyAdmin(false);
+        await launch(orgDocument());
+        expect(await roleOf(teamId)).toBe(TeamRole.ADMIN);
+    });
+
+    it("lets a membership no launch proved in 90 days lapse", async () => {
+        const teamId = await seedTeam({
+            members: [TEST_USER_ID],
+            seenAt: new Date(Date.now() - 91 * 24 * 60 * 60 * 1000)
+        });
+        expect((await getContext()).teams).toEqual([]);
+        const report = await createTestApp().request(
+            `/api/teams/${teamId}/report`,
+            jsonRequest("GET"),
+            env
+        );
+        expect(report.status).toBe(403);
     });
 });
 
@@ -275,7 +367,7 @@ describe("team context", () => {
         const frc = await seedTeam({
             companyId: COMPANY,
             subteamId: "frc",
-            subteamMembers: [TEST_USER_ID]
+            subteamMembers: [{ userId: TEST_USER_ID, admin: false }]
         });
         const ftc = await seedTeam({ number: 9999 });
         await db.insert(teamOrganizations).values({
@@ -284,7 +376,7 @@ describe("team context", () => {
             kind: "enterprise" as never,
             name: "School",
             subteamId: "ftc",
-            subteamMembers: [TEST_USER_ID],
+            subteamMembers: [{ userId: TEST_USER_ID, admin: false }],
             registeredAt: new Date(),
             registeredBy: "someone"
         });
@@ -409,7 +501,9 @@ describe("POST /api/teams/register", () => {
         });
         expect(res.status).toBe(200);
         const row = await db.select().from(teamOrganizations).get();
-        expect(row?.subteamMembers).toEqual(["student"]);
+        expect(row?.subteamMembers).toEqual([
+            { userId: "student", admin: false }
+        ]);
     });
 
     it("refuses a subteam another company owns", async () => {
@@ -472,49 +566,20 @@ describe("team administration", () => {
         );
     });
 
-    it("keeps the last admin", async () => {
+    it("counts members and admins rather than listing them", async () => {
         const teamId = await seedTeam({
             admins: [TEST_USER_ID],
-            members: ["member"]
+            members: ["a", "b"]
         });
-        const leave = await createTestApp().request(
-            `/api/teams/${teamId}/members/${TEST_USER_ID}`,
-            jsonRequest("DELETE"),
+        const res = await createTestApp().request(
+            `/api/teams/${teamId}/admin`,
+            jsonRequest("GET"),
             env
         );
-        expect(leave.status).toBe(409);
-
-        await createTestApp().request(
-            `/api/teams/${teamId}/members/member`,
-            jsonRequest("POST", { role: TeamRole.ADMIN }),
-            env
-        );
-        const again = await createTestApp().request(
-            `/api/teams/${teamId}/members/${TEST_USER_ID}`,
-            jsonRequest("DELETE"),
-            env
-        );
-        expect(again.status).toBe(200);
-        expect(await memberIds(teamId)).toEqual(["member"]);
-    });
-
-    it("lets a member leave but not remove another", async () => {
-        const teamId = await seedTeam({
-            admins: ["admin"],
-            members: [TEST_USER_ID, "other"]
+        expect(await res.json()).toMatchObject({
+            memberCount: 3,
+            adminCount: 1
         });
-        const removeOther = await createTestApp().request(
-            `/api/teams/${teamId}/members/other`,
-            jsonRequest("DELETE"),
-            env
-        );
-        expect(removeOther.status).toBe(403);
-        const leave = await createTestApp().request(
-            `/api/teams/${teamId}/members/${TEST_USER_ID}`,
-            jsonRequest("DELETE"),
-            env
-        );
-        expect(leave.status).toBe(200);
     });
 });
 
