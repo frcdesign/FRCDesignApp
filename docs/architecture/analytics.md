@@ -912,7 +912,9 @@ const NUDGES: readonly Nudge[];
 
 interface Nudge {
     feature: AppFeature;
-    kind: NudgeKind; // a blue dot, or a tip toast
+    kind: NudgeKind; // a blue dot, a tip toast, or a suggestion on the feature's page
+    /** Which one, labelling its marker in place of its kind. */
+    name?: NudgeName;
     change: NudgeChange; // added, or removed
     /** The day it reached `main`, which deploys to production; absent until then. */
     day?: string;

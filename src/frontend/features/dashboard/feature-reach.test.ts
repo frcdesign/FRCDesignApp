@@ -12,7 +12,7 @@ import {
     ReachMeasure,
     toReachSeries
 } from "./feature-reach";
-import { NUDGES, NudgeChange, NudgeKind } from "./nudges";
+import { NUDGES, NudgeChange, NudgeKind, NudgeName } from "./nudges";
 
 // 2026-10-26 is a Monday.
 const REACH: FeatureReachOut = {
@@ -202,6 +202,26 @@ describe("nudgeMarks", () => {
                 tip
             ])
         ).toEqual([{ bucket: "2026-10-26", label: "Blue dot · Tip" }]);
+    });
+
+    it("labels a named nudge by its name", () => {
+        const links = {
+            ...dot,
+            kind: NudgeKind.SUGGESTION,
+            name: NudgeName.SUGGESTED_LINKS
+        };
+        const withdrawn = { ...links, change: NudgeChange.REMOVED };
+
+        expect(
+            nudgeMarks(AppFeature.VERSION_MANAGER, points, ReachInterval.WEEK, [
+                links
+            ])
+        ).toEqual([{ bucket: "2026-10-26", label: "Suggested links" }]);
+        expect(
+            nudgeMarks(AppFeature.VERSION_MANAGER, points, ReachInterval.WEEK, [
+                withdrawn
+            ])
+        ).toEqual([{ bucket: "2026-10-26", label: "Suggested links removed" }]);
     });
 
     it("leaves a nudge unmarked until it has shipped", () => {
