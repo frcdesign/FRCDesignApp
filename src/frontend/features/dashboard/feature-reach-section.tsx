@@ -3,21 +3,16 @@ import {
     type LineChartProps,
     type LineChartSeries
 } from "@mantine/charts";
-import {
-    Card,
-    Group,
-    Paper,
-    SegmentedControl,
-    SimpleGrid,
-    Text
-} from "@mantine/core";
+import { Card, Group, Paper, SimpleGrid, Text } from "@mantine/core";
 import { type UseQueryResult } from "@tanstack/react-query";
-import { useNavigate, useSearch } from "@tanstack/react-router";
 import { type ReactNode } from "react";
-import type { FeatureReachOut } from "@backend/features/analytics/contract";
+import {
+    ReachInterval,
+    type FeatureReachOut
+} from "@backend/features/analytics/contract";
 import { type AppFeature } from "@backend/features/analytics/usage";
 import { Section } from "../../components/section";
-import { MUTED_MARK, PrimaryColor } from "../../lib/style-constants";
+import { MUTED_MARK } from "../../lib/style-constants";
 import { formatCount, formatPercent } from "./format";
 import { DashboardEmpty, DashboardState } from "./dashboard-state";
 import { ChartRangeControl } from "./range-control";
@@ -29,7 +24,6 @@ import {
     latestPoint,
     nudgeMarks,
     ReachMeasure,
-    ReachView,
     toReachSeries,
     type ReachCount,
     type ReachPoint
@@ -47,11 +41,11 @@ const PERCENT_TICKS = [0, 50, 100];
 /** A count's axis climbs to fit, in about this many steps. */
 const COUNT_TICK_COUNT = 3;
 
-/** As many week labels as fit under a panel without crowding. */
+/** As many labels as fit under a panel without crowding. */
 const MAX_TICKS = 5;
 
 /** A year of weeks still reads with dots; past that they crowd. */
-const MAX_DOTTED_WEEKS = 60;
+const MAX_DOTTED_POINTS = 60;
 
 /**
  * Checked apart in both themes and for color blindness; the dash tells them
@@ -61,34 +55,24 @@ const EXISTING_COLOR = "frcGreen.7";
 const NEW_COLOR = "blue.6";
 const NEW_DASH = "5 3";
 
-function useReachView(): ReachView {
-    const search = useSearch({ from: "/dashboard" });
-    return search.reach ?? ReachView.ALL;
-}
-
 interface FeatureReachSectionProps {
     query: UseQueryResult<FeatureReachOut>;
 }
 
 /**
- * One panel per feature, each with its own nudges marked, over the section's
- * own range. Its controls stay while a new range loads.
+ * One panel per feature, existing and new users apart, each with its own
+ * nudges marked, over the section's own range. Its controls stay while a new
+ * range loads.
  */
 export function FeatureReachSection({
     query
 }: FeatureReachSectionProps): ReactNode {
-    const view = useReachView();
     return (
         <Section
             title={m.dashboardFeatureReach()}
-            aside={
-                <Group gap="sm" wrap="wrap" preventGrowOverflow={false}>
-                    <ReachViewControl view={view} />
-                    <ChartRangeControl searchKey="featureRange" />
-                </Group>
-            }
+            aside={<ChartRangeControl searchKey="featureRange" />}
         >
-            {view === ReachView.NEW_VS_EXISTING && <SplitLegend />}
+            <SplitLegend />
             {query.data ? (
                 <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }}>
                     {featureOrder().map((feature) => (
@@ -96,7 +80,7 @@ export function FeatureReachSection({
                             key={feature}
                             feature={feature}
                             points={toReachSeries(query.data, feature)}
-                            view={view}
+                            interval={query.data.interval}
                         />
                     ))}
                 </SimpleGrid>
@@ -107,36 +91,6 @@ export function FeatureReachSection({
                 />
             )}
         </Section>
-    );
-}
-
-interface ReachViewControlProps {
-    view: ReachView;
-}
-
-function ReachViewControl({ view }: ReachViewControlProps): ReactNode {
-    const navigate = useNavigate();
-    return (
-        <SegmentedControl
-            size="xs"
-            value={view}
-            onChange={(value) =>
-                void navigate({
-                    to: ".",
-                    search: (search) => ({ ...search, reach: value })
-                })
-            }
-            data={[
-                {
-                    value: ReachView.ALL,
-                    label: m.dashboardFeatureReachViewAll()
-                },
-                {
-                    value: ReachView.NEW_VS_EXISTING,
-                    label: m.dashboardFeatureReachViewSplit()
-                }
-            ]}
-        />
     );
 }
 
@@ -182,43 +136,30 @@ function LegendItem({ color, dash, label }: LegendItemProps): ReactNode {
     );
 }
 
-function seriesFor(view: ReachView, feature: AppFeature): LineChartSeries[] {
-    switch (view) {
-        case ReachView.ALL:
-            return [
-                {
-                    name: "value",
-                    label: featureLabel(feature),
-                    color: PrimaryColor.FILLED
-                }
-            ];
-        case ReachView.NEW_VS_EXISTING:
-            return [
-                {
-                    name: "existingValue",
-                    label: m.dashboardFeatureReachExisting(),
-                    color: EXISTING_COLOR
-                },
-                {
-                    name: "newValue",
-                    label: m.dashboardFeatureReachNew(),
-                    color: NEW_COLOR,
-                    strokeDasharray: NEW_DASH
-                }
-            ];
+const SERIES: LineChartSeries[] = [
+    {
+        name: "existingValue",
+        label: m.dashboardFeatureReachExisting(),
+        color: EXISTING_COLOR
+    },
+    {
+        name: "newValue",
+        label: m.dashboardFeatureReachNew(),
+        color: NEW_COLOR,
+        strokeDasharray: NEW_DASH
     }
-}
+];
 
 interface FeatureReachPanelProps {
     feature: AppFeature;
     points: ReachPoint[];
-    view: ReachView;
+    interval: ReachInterval;
 }
 
 function FeatureReachPanel({
     feature,
     points,
-    view
+    interval
 }: FeatureReachPanelProps): ReactNode {
     const latest = latestPoint(points);
     const measure = featureMeasure(feature);
@@ -229,9 +170,10 @@ function FeatureReachPanel({
                 <Text fw={700}>{featureLabel(feature)}</Text>
                 {latest?.value != null && (
                     <Text c="dimmed">
-                        {m.dashboardFeatureReachLatest({
-                            value: formatHeadline(latest.value, measure)
-                        })}
+                        {latestLabel(
+                            interval,
+                            formatHeadline(latest.value, measure)
+                        )}
                     </Text>
                 )}
             </Group>
@@ -251,7 +193,7 @@ function FeatureReachPanel({
                     yAxisProps={axisFor(measure)}
                     valueFormatter={(value) => formatValue(value, measure)}
                     curveType="monotone"
-                    withDots={points.length <= MAX_DOTTED_WEEKS}
+                    withDots={points.length <= MAX_DOTTED_POINTS}
                     tooltipProps={{
                         content: ({ payload }) => (
                             <ReachTooltip
@@ -260,23 +202,25 @@ function FeatureReachPanel({
                                         | ReachPoint
                                         | undefined
                                 }
-                                view={view}
+                                interval={interval}
                                 measure={measure}
                             />
                         )
                     }}
-                    referenceLines={nudgeMarks(feature, points).map((mark) => ({
-                        x: mark.bucket,
-                        color: MUTED_MARK,
-                        strokeDasharray: "4 4",
-                        label: mark.label,
-                        // Toward the middle, so a label at either end stays on the card.
-                        labelPosition:
-                            mark.bucket > middle
-                                ? "insideTopRight"
-                                : "insideTopLeft"
-                    }))}
-                    series={seriesFor(view, feature)}
+                    referenceLines={nudgeMarks(feature, points, interval).map(
+                        (mark) => ({
+                            x: mark.bucket,
+                            color: MUTED_MARK,
+                            strokeDasharray: "4 4",
+                            label: mark.label,
+                            // Toward the middle, so a label at either end stays on the card.
+                            labelPosition:
+                                mark.bucket > middle
+                                    ? "insideTopRight"
+                                    : "insideTopLeft"
+                        })
+                    )}
+                    series={SERIES}
                 />
             ) : (
                 <DashboardEmpty title={m.dashboardFeatureReachNoData()} />
@@ -287,19 +231,24 @@ function FeatureReachPanel({
 
 interface ReachTooltipProps {
     point: ReachPoint | undefined;
-    view: ReachView;
+    interval: ReachInterval;
     measure: ReachMeasure;
 }
 
-/** The value with what it's a share of, since a small week swings it. */
-function ReachTooltip({ point, view, measure }: ReachTooltipProps): ReactNode {
+/** The value with what it's a share of, since a small day or week swings it. */
+function ReachTooltip({
+    point,
+    interval,
+    measure
+}: ReachTooltipProps): ReactNode {
     if (point?.value == null) return null;
-    const newCount =
-        view === ReachView.NEW_VS_EXISTING ? point.newCount : undefined;
+    const newCount = point.newCount;
     return (
         <Paper px="md" py="sm" withBorder shadow="md">
             <Text fw={700}>
-                {m.dashboardFeatureReachWeekOf({ week: point.label })}
+                {interval === ReachInterval.WEEK
+                    ? m.dashboardFeatureReachWeekOf({ week: point.label })
+                    : point.label}
             </Text>
             {newCount ? (
                 <>
@@ -368,6 +317,15 @@ function axisFor(measure: ReachMeasure): LineChartProps["yAxisProps"] {
                 tickCount: COUNT_TICK_COUNT,
                 tickFormatter: (value: number) => formatCount(value)
             };
+    }
+}
+
+function latestLabel(interval: ReachInterval, value: string): string {
+    switch (interval) {
+        case ReachInterval.DAY:
+            return m.dashboardFeatureReachLatestDay({ value });
+        case ReachInterval.WEEK:
+            return m.dashboardFeatureReachLatest({ value });
     }
 }
 

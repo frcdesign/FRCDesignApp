@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import type { FeatureReachOut } from "@backend/features/analytics/contract";
+import {
+    ReachInterval,
+    type FeatureReachOut
+} from "@backend/features/analytics/contract";
 import { AppFeature } from "@backend/features/analytics/usage";
 import {
     evenTicks,
@@ -13,16 +16,17 @@ import { NUDGES, NudgeChange, NudgeKind } from "./nudges";
 
 // 2026-10-26 is a Monday.
 const REACH: FeatureReachOut = {
-    weeks: [
-        { week: "2026-10-19", activeUsers: 10, users: {} },
+    interval: ReachInterval.WEEK,
+    buckets: [
+        { start: "2026-10-19", activeUsers: 10, users: {} },
         {
-            week: "2026-10-26",
+            start: "2026-10-26",
             activeUsers: 8,
             users: { [AppFeature.INSERT_LOCATION]: 2 }
         },
-        { week: "2026-11-02", activeUsers: 0, users: {} },
+        { start: "2026-11-02", activeUsers: 0, users: {} },
         {
-            week: "2026-11-09",
+            start: "2026-11-09",
             activeUsers: 5,
             users: { [AppFeature.SEARCH]: 5 }
         }
@@ -66,18 +70,19 @@ describe("toReachSeries", () => {
 
 describe("toReachSeries, new and existing users", () => {
     const split: FeatureReachOut = {
-        weeks: [
+        interval: ReachInterval.WEEK,
+        buckets: [
             // Too near when tracking began to tell new users apart.
-            { week: "2026-10-26", activeUsers: 6, users: {} },
+            { start: "2026-10-26", activeUsers: 6, users: {} },
             {
-                week: "2026-11-02",
+                start: "2026-11-02",
                 activeUsers: 10,
                 users: { [AppFeature.SEARCH]: 6 },
                 newActiveUsers: 4,
                 newUsers: { [AppFeature.SEARCH]: 1 }
             },
             {
-                week: "2026-11-09",
+                start: "2026-11-09",
                 activeUsers: 5,
                 users: { [AppFeature.SEARCH]: 5 },
                 newActiveUsers: 0,
@@ -120,6 +125,44 @@ describe("toReachSeries, new and existing users", () => {
     });
 });
 
+describe("toReachSeries, a point a day", () => {
+    const daily: FeatureReachOut = {
+        interval: ReachInterval.DAY,
+        buckets: [
+            { start: "2026-10-29", activeUsers: 4, users: {} },
+            {
+                start: "2026-10-30",
+                activeUsers: 4,
+                users: { [AppFeature.INSERT_LOCATION]: 1 }
+            }
+        ],
+        firstUsed: { [AppFeature.INSERT_LOCATION]: "2026-10-30" }
+    };
+
+    it("starts a feature's line the day its record does, labelled by day", () => {
+        const points = toReachSeries(daily, AppFeature.INSERT_LOCATION);
+
+        expect(points.map((point) => point.value)).toEqual([null, 25]);
+        expect(points[1].label).not.toBe(points[0].label);
+    });
+
+    it("marks a nudge on the day it shipped", () => {
+        const points = toReachSeries(daily, AppFeature.INSERT_LOCATION);
+        const nudge = {
+            feature: AppFeature.INSERT_LOCATION,
+            kind: NudgeKind.DOT,
+            change: NudgeChange.ADDED,
+            day: "2026-10-30"
+        };
+
+        expect(
+            nudgeMarks(AppFeature.INSERT_LOCATION, points, ReachInterval.DAY, [
+                nudge
+            ])
+        ).toEqual([{ bucket: "2026-10-30", label: "Blue dot" }]);
+    });
+});
+
 describe("toReachSeries, counted", () => {
     it("counts the week's users, a quiet week at zero", () => {
         const points = toReachSeries(
@@ -154,7 +197,10 @@ describe("nudgeMarks", () => {
 
     it("marks a nudge on the week it shipped in, joining a week's nudges", () => {
         expect(
-            nudgeMarks(AppFeature.VERSION_MANAGER, points, [dot, tip])
+            nudgeMarks(AppFeature.VERSION_MANAGER, points, ReachInterval.WEEK, [
+                dot,
+                tip
+            ])
         ).toEqual([{ bucket: "2026-10-26", label: "Blue dot · Tip" }]);
     });
 
@@ -162,16 +208,22 @@ describe("nudgeMarks", () => {
         const unshipped = { ...dot, day: undefined };
 
         expect(
-            nudgeMarks(AppFeature.VERSION_MANAGER, points, [unshipped])
+            nudgeMarks(AppFeature.VERSION_MANAGER, points, ReachInterval.WEEK, [
+                unshipped
+            ])
         ).toEqual([]);
     });
 
     it("marks only the feature's own nudges, inside the range", () => {
         const outside = { ...dot, day: "2026-12-01" };
 
-        expect(nudgeMarks(AppFeature.SEARCH, points, [dot])).toEqual([]);
         expect(
-            nudgeMarks(AppFeature.VERSION_MANAGER, points, [outside])
+            nudgeMarks(AppFeature.SEARCH, points, ReachInterval.WEEK, [dot])
+        ).toEqual([]);
+        expect(
+            nudgeMarks(AppFeature.VERSION_MANAGER, points, ReachInterval.WEEK, [
+                outside
+            ])
         ).toEqual([]);
     });
 });

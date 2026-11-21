@@ -408,6 +408,7 @@
     "dashboardFeatureReach": "Feature usage",
     "dashboardFeatureReachNoData": "No recorded use yet.",
     "dashboardFeatureReachLatest": "Latest week: {value}",
+    "dashboardFeatureReachLatestDay": "Latest day: {value}",
     "dashboardFeatureReachWeekOf": "Week of {week}",
     "dashboardFeatureReachUsers": [
         {
@@ -425,8 +426,6 @@
             }
         }
     ],
-    "dashboardFeatureReachViewAll": "All users",
-    "dashboardFeatureReachViewSplit": "New vs existing",
     "dashboardFeatureReachExisting": "Existing users",
     "dashboardFeatureReachNew": "New users",
     "dashboardFeatureReachUserCount": [

@@ -472,8 +472,8 @@ async function getHealthCounts(
     db: Db,
     libraryId?: LibraryId
 ): Promise<LibraryHealthCounts>;
-// `feature-reach.ts`: each week's active users and each feature's users among
-// them, all and only the new, and each feature's first recorded use.
+// `feature-reach.ts`: each day's or week's active users and each feature's
+// users among them, all and only the new, and each feature's first recorded use.
 async function getFeatureReach(
     db: Db,
     range: DayRange,
@@ -708,13 +708,22 @@ interface FeatureScriptUsageOut {
 /** How recently a person must have been first seen to count as new: this week or the three before. */
 const NEW_USER_WEEKS = 4;
 
-/** One week of feature usage: who was about, and who used each feature. */
-interface FeatureReachWeek {
-    /** The Monday it starts on, which may fall before the range does. */
-    week: string;
-    /** Everybody active that week, every feature's users among them. */
+/** How long each point of feature usage covers. */
+enum ReachInterval {
+    DAY = "day",
+    WEEK = "week"
+}
+
+/** The longest range feature usage shows a point a day for; a week a point past it. */
+const REACH_DAILY_DAYS = 90;
+
+/** One day or week of feature usage: who was about, and who used each feature. */
+interface FeatureReachBucket {
+    /** The day, or the Monday a week starts on, which may fall before the range does. */
+    start: string;
+    /** Everybody active then, every feature's users among them. */
     activeUsers: number;
-    /** Distinct users of each feature that week; a feature nobody used is absent. */
+    /** Distinct users of each feature then; a feature nobody used is absent. */
     users: Partial<Record<AppFeature, number>>;
     /** Of `activeUsers`, the new; absent while the window reaches back to when tracking began. */
     newActiveUsers?: number;
@@ -722,9 +731,10 @@ interface FeatureReachWeek {
     newUsers?: Partial<Record<AppFeature, number>>;
 }
 
-/** Each week of the range, oldest first, and where each feature's record starts. */
+/** Each day or week of the range, oldest first, and where each feature's record starts. */
 interface FeatureReachOut {
-    weeks: FeatureReachWeek[];
+    interval: ReachInterval;
+    buckets: FeatureReachBucket[];
     /** Each feature's first recorded use, all time; absent for one never used. */
     firstUsed: Partial<Record<AppFeature, string>>;
 }
@@ -893,7 +903,7 @@ interface DashboardEmptyProps {
 ```
 
 `src/frontend/features/dashboard/nudges.ts`, every nudge toward a feature and
-the day it shipped; `feature-reach.ts` turns the route's weeks into each
+the day it shipped; `feature-reach.ts` turns the route's days or weeks into each
 feature's line and places the nudges on it; `feature-reach-section.tsx` draws
 them
 
@@ -1069,9 +1079,11 @@ no foreign key crosses between them):
   write it: a use by where it started and its flags, a version run, a
   FeatureScript add, a signed-in report, a default configuration. An Auto
   Assembly run's uses count only toward `AUTO_ASSEMBLY`, not toward fasten or
-  the other flags they set. It starts empty at migration
-  `0015_feature_reach.sql`: nothing fills it from history. `at_insert_location`
-  and `default_selection` begin with it, at schema version 4.
+  the other flags they set. Its history before migration
+  `0015_feature_reach.sql` is filled from the event log by
+  `scripts/backfill-feature-users.ts`, run by hand: one statement a feature a
+  week (`featureUsersBackfill`), whose conditions match `featuresOf`.
+  `at_insert_location` and `default_selection` begin with schema version 4.
 - `users`, in `db/schema.ts`, is each person's record. `record` creates it,
   dated `created_at`, in the same batch as their first event that names a
   person (`namesPerson`): activity, an open, or a use of a feature. For most
@@ -1198,37 +1210,43 @@ panel. Its routes read only rollups and return only aggregates:
 - **Unused** — parts and options at or below a usage threshold.
 
 The overview has no page-wide range. **Uses over time** and **Feature usage**
-each pick their own (All time, 1 year or 90 days, `CHART_RANGE_PRESETS`;
-90 days unless chosen), kept in the url as `usesRange` and `featureRange`.
-**Overall** totals all time, and draws its sparklines and changes over the last
-30 days (`trendFrom`). Every other section covers the last 30 days
-(`OVERVIEW_TOTALS_PRESET`). Each says which beside its title; **Libraries** is
-standing now. The library, part and
+each pick their own (All time, 1 year, 90 days or 30 days,
+`CHART_RANGE_PRESETS`; 90 days unless chosen), kept in the url as `usesRange`
+and `featureRange`. **Overall** totals all time, and draws its sparklines and
+changes over the last 30 days (`trendFrom`). **Version Manager**,
+**FeatureScripts** and **Reports** are all time. The rest cover the last 30
+days (`OVERVIEW_TOTALS_PRESET`). Each says which beside its title;
+**Libraries** is standing now.
+
+Changing a range, the threshold or another switch keeps the page where it is
+(`resetScroll: false`). A section keeps its last answer on screen while the
+next loads (`keepPreviousData`), so it doesn't shrink to a loader and move the
+page; a library's sections only for the same library. The library, part and
 unused dashboards keep the range picker in the navbar, which the overview
 hides.
 
-**Feature usage** is one small chart per `AppFeature`: for each week of the
-range, the share of that week's active users who used the feature that week,
-on a shared 0–100% axis, or for search, STEP downloads and reports the number
-of people who did, on an axis that fits it (`featureMeasure`). Active is `activeUserRows` unioned with the week's
+**Feature usage** is one small chart per `AppFeature`, a point a day over a
+range of 90 days or less after clamping (`REACH_DAILY_DAYS`, `reachInterval`),
+a point a week past it. For each point, the share of its active users who used
+the feature then, on a shared 0–100% axis, or for search, STEP downloads and
+reports the number of people who did, on an axis that fits it
+(`featureMeasure`). Active is `activeUserRows` unioned with the point's
 feature users, so a share never passes 100%. Weeks are Monday to Sunday; the
 first may begin before the range, and only its days inside it count. A
-feature's line starts the week of its first recorded use, all time, and a week
-with nobody about is left blank. A dashed line marks the week each of the
+feature's line starts at its first recorded use, all time, and a point with
+nobody about is left blank. A dashed line marks the day or week each of the
 feature's nudges (`NUDGES`) shipped or was withdrawn; features with a nudge
 come first. A nudge still on cert has no day and no marker until it reaches
 `main`. The tooltip gives a share's users and active users beside it.
 
-**New vs existing** (`reach=new-vs-existing` in the url) draws two lines per
-chart in place of one. A person is new in a week when their first day
-(`users.created_at`) falls in that week or the `NEW_USER_WEEKS` − 1 before it.
-The week's window starts at UTC midnight, hours from the reporting day's.
-Everybody else active that week is existing.
-The split is left out of a week whose window starts on or before the day
-tracking began, since somebody first seen then may have used the app long
-before.
+Each chart draws two lines, existing and new users. A person is new at a point
+when their first day (`users.created_at`) falls in the `NEW_USER_WEEKS` weeks
+ending with its last day. The window starts at UTC midnight, hours from the
+reporting day's. Everybody else active then is existing. The split is left
+out of a point whose window starts on or before the day tracking began, since
+somebody first seen then may have used the app long before.
 
-The ranges, threshold and views live in the url, so a view can be shared.
+The ranges and threshold live in the url, so a view can be shared.
 
 Every loading, empty and failed section is a notice (`app-notice.tsx`), as
 the rest of the app's are. A section whose query is still loading says what it
@@ -1315,18 +1333,25 @@ is withheld while its baseline reaches back before tracking began.
   it counts toward no library's uses, users or parts, and rolls up into tables
   of its own; the owner reads them in each feature's card
   (`GET /api/featurescripts/stats`), and the overview's FeatureScripts section
-  over the range.
+  all time.
 - **The overview's charts pick their range; its totals don't.** One range for
   the whole page left Feature usage with one or two weekly points on 7 or 30
   days, and a chart is where a longer view is worth choosing. A total reads
   best over a window everyone knows without looking up, so each says which.
   The headline totals are all time, the app's size; its changes are recent,
   since an all-time change moves too slowly to notice.
-- **Feature usage is weekly, over that week's active users.** The goal is
-  every active user using each feature, so the share is of the people about
-  that week, not of everyone ever seen, which only rises and is weighed down
-  by people long gone. A day holds too few people for a share to mean much; a
-  week is the shortest span that does, and a nudge that works shows as a step.
+- **Feature usage is over each point's active users, daily up to 90 days.**
+  The goal is every active user using each feature, so the share is of the
+  people about then, not of everyone ever seen, which only rises and is
+  weighed down by people long gone. Over a month or a quarter, a day a point
+  shows a nudge's effect the day it lands, which the owner asked for, though a
+  quiet day's share swings. Past 90 days, a week a point keeps the chart
+  readable.
+- **Feature usage always splits new from existing users.** Whether a feature
+  reaches newcomers or only the people who were already using the app is
+  what the chart is read for, so there's no view without it.
+- **The Version Manager, FeatureScripts and reports are all time.** They're
+  used rarely enough that a month of them says little.
 - **New means first seen in the last four weeks, across every rollup.** Four
   weeks covers a newcomer's first sessions without keeping them new for a
   whole season.
