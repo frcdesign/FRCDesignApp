@@ -1,15 +1,12 @@
-import { Button, Divider, Select, Stack } from "@mantine/core";
+import { Button, Divider, Stack } from "@mantine/core";
 import {
     ArrowLeftIcon,
     ChatCircleTextIcon,
     SignOutIcon
 } from "@phosphor-icons/react";
 import { useIsDashboard } from "../../dashboard/dashboard-nav";
-import {
-    SETTING_CONTROL_WIDTH,
-    StatusColor
-} from "../../../lib/style-constants";
-import { ReactNode, useId, useState } from "react";
+import { StatusColor } from "../../../lib/style-constants";
+import { ReactNode, useState } from "react";
 import {
     AccessLevel,
     hasEditorAccess,
@@ -18,6 +15,7 @@ import {
 import { LibraryId } from "@backend/features/library/library-id";
 import { type AppTab, getTabPath } from "../../../lib/app-tab";
 import { InputRow } from "../../../components/input-row";
+import { SettingSelect } from "../../../components/setting-select";
 import { OpenUrlButton } from "../../../components/open-url-button";
 import { AppSection, AppSections } from "../../../components/app-section";
 import { useEveryLibraryAccess } from "../../auth/access-level";
@@ -60,42 +58,6 @@ const DASHBOARD_URL = "/dashboard";
 /** Capitalizes the first letter of a string and lower cases everything else. */
 function capitalize(value: string) {
     return value[0].toUpperCase() + value.slice(1).toLowerCase();
-}
-
-interface SettingSelectProps<T extends string> {
-    label: string;
-    value: T;
-    /** In the order given. */
-    options: T[];
-    optionLabel: (option: T) => string;
-    onSelect: (value: T) => void;
-}
-
-/** A setting chosen from a short list of named values. */
-function SettingSelect<T extends string>(props: SettingSelectProps<T>) {
-    const { label, value, options, optionLabel, onSelect } = props;
-    const id = useId();
-
-    return (
-        <InputRow label={label} htmlFor={id}>
-            <Select
-                id={id}
-                w={SETTING_CONTROL_WIDTH}
-                data={options.map((option) => ({
-                    value: option,
-                    label: optionLabel(option)
-                }))}
-                value={value}
-                allowDeselect={false}
-                checkIconPosition="right"
-                onChange={(selected) => {
-                    if (selected !== null) {
-                        onSelect(selected);
-                    }
-                }}
-            />
-        </InputRow>
-    );
 }
 
 export function SettingsMenuContent(): ReactNode {

@@ -16,10 +16,10 @@ import { m } from "../../../paraglide/messages";
 import { useFirstTeamSearch, useRegisterTeamMutation } from "../queries";
 import { parseOnshapeTeamId } from "../onshape-team";
 
-enum Mode {
-    NEW = "new",
-    EXISTING = "existing"
-}
+/** A team of the caller's, which the organization joins. */
+const TEAM_PREFIX = "team:";
+/** A FIRST team's number, which a new team claims. */
+const FIRST_PREFIX = "first:";
 
 interface RegisterTeamFormProps {
     documentId: string;
@@ -27,38 +27,83 @@ interface RegisterTeamFormProps {
     teams: MyTeam[];
 }
 
-/** Registers the launch's organization: to a new team, or as another of a team the caller administers. */
+/** Registers the launch's organization to a team of the caller's, or to a new one. */
 export function RegisterTeamForm(props: RegisterTeamFormProps): ReactNode {
     const { documentId, organization, teams } = props;
     const modal = useAppModal();
-    const adminTeams = teams.filter((team) => team.role === TeamRole.ADMIN);
-    const memberTeams = teams.filter((team) => team.role !== TeamRole.ADMIN);
-    const [mode, setMode] = useState(Mode.NEW);
     const [program, setProgram] = useState(Program.FRC);
     const [search, setSearch] = useState("");
     const [debounced] = useDebouncedValue(search, 250);
-    const [number, setNumber] = useState<string | null>(null);
-    const [teamId, setTeamId] = useState<string | null>(
-        adminTeams[0]?.id ?? null
-    );
+    const [value, setValue] = useState<string | null>(null);
     const [subteam, setSubteam] = useState("");
     const searchQuery = useFirstTeamSearch(program, debounced);
     const registerMutation = useRegisterTeamMutation();
 
+    const typed = search.trim().toLowerCase();
+    // Shown so a member sees their team, but only an admin adds to it.
+    const yourTeams = teams
+        .filter(
+            (team) =>
+                value === TEAM_PREFIX + team.id ||
+                teamLabel(team.first).toLowerCase().includes(typed)
+        )
+        .sort(
+            (a, b) =>
+                Number(b.role === TeamRole.ADMIN) -
+                Number(a.role === TeamRole.ADMIN)
+        );
+    const firstTeams = (searchQuery.data ?? []).filter(
+        (first) =>
+            !teams.some(
+                (team) =>
+                    team.first.program === first.program &&
+                    team.first.number === first.number
+            )
+    );
+    const data = [
+        ...(yourTeams.length > 0
+            ? [
+                  {
+                      group: m.teamRegisterYourTeams(),
+                      items: yourTeams.map((team) => ({
+                          value: TEAM_PREFIX + team.id,
+                          label: teamLabel(team.first),
+                          disabled: team.role !== TeamRole.ADMIN
+                      }))
+                  }
+              ]
+            : []),
+        ...(firstTeams.length > 0
+            ? [
+                  {
+                      group: m.teamRegisterFirstTeams({ program }),
+                      items: firstTeams.map((first) => ({
+                          value: FIRST_PREFIX + first.number,
+                          label: teamLabel(first)
+                      }))
+                  }
+              ]
+            : [])
+    ];
+
     const subteamId = subteam.trim() ? parseOnshapeTeamId(subteam) : undefined;
     const subteamInvalid = subteam.trim() !== "" && subteamId === undefined;
-    const ready =
-        !subteamInvalid &&
-        (mode === Mode.NEW ? number !== null : teamId !== null);
+    const ready = !subteamInvalid && value !== null;
 
     const register = () => {
+        if (value === null) return;
         registerMutation.mutate(
             {
                 documentId,
                 subteamId,
-                ...(mode === Mode.NEW
-                    ? { first: { program, number: Number(number) } }
-                    : { teamId: teamId ?? undefined })
+                ...(value.startsWith(TEAM_PREFIX)
+                    ? { teamId: value.slice(TEAM_PREFIX.length) }
+                    : {
+                          first: {
+                              program,
+                              number: Number(value.slice(FIRST_PREFIX.length))
+                          }
+                      })
             },
             {
                 onSuccess: () => {
@@ -81,64 +126,31 @@ export function RegisterTeamForm(props: RegisterTeamFormProps): ReactNode {
                         })}
                     </div>
                 )}
-                {teams.length > 0 && (
-                    <SegmentedControl
-                        value={mode}
-                        onChange={(value) => setMode(value)}
-                        data={[
-                            { value: Mode.NEW, label: m.teamRegisterNew() },
-                            {
-                                value: Mode.EXISTING,
-                                label: m.teamRegisterExisting()
-                            }
-                        ]}
-                    />
-                )}
-                {mode === Mode.NEW ? (
-                    <>
-                        <SegmentedControl
-                            value={program}
-                            onChange={(value) => {
-                                setProgram(value);
-                                setNumber(null);
-                            }}
-                            data={Object.values(Program)}
-                        />
-                        <Select
-                            label={m.teamRegisterTeam()}
-                            placeholder={m.teamRegisterTeamPlaceholder()}
-                            searchable
-                            searchValue={search}
-                            onSearchChange={setSearch}
-                            // The server searched already.
-                            filter={({ options }) => options}
-                            data={(searchQuery.data ?? []).map((team) => ({
-                                value: String(team.number),
-                                label: teamLabel(team)
-                            }))}
-                            value={number}
-                            onChange={setNumber}
-                            nothingFoundMessage={
-                                debounced && !searchQuery.isPending
-                                    ? m.teamRegisterNoTeam()
-                                    : undefined
-                            }
-                        />
-                    </>
-                ) : (
-                    <Select
-                        label={m.teamRegisterTeam()}
-                        // Shown so a member sees their team, but only an admin adds to it.
-                        data={[...adminTeams, ...memberTeams].map((team) => ({
-                            value: team.id,
-                            label: teamLabel(team.first),
-                            disabled: team.role !== TeamRole.ADMIN
-                        }))}
-                        value={teamId}
-                        onChange={setTeamId}
-                        allowDeselect={false}
-                    />
-                )}
+                <SegmentedControl
+                    value={program}
+                    onChange={(next) => {
+                        setProgram(next);
+                        if (value?.startsWith(FIRST_PREFIX)) setValue(null);
+                    }}
+                    data={Object.values(Program)}
+                />
+                <Select
+                    label={m.teamRegisterTeam()}
+                    placeholder={m.teamRegisterTeamPlaceholder()}
+                    searchable
+                    searchValue={search}
+                    onSearchChange={setSearch}
+                    // The server searched FIRST's teams; the caller's are always offered.
+                    filter={({ options }) => options}
+                    data={data}
+                    value={value}
+                    onChange={setValue}
+                    nothingFoundMessage={
+                        debounced && !searchQuery.isPending
+                            ? m.teamRegisterNoTeam()
+                            : undefined
+                    }
+                />
                 <TextInput
                     label={m.teamRegisterSubteam()}
                     description={m.teamRegisterSubteamDescription()}

@@ -2,12 +2,7 @@ import { and, asc, eq, like, or, sql } from "drizzle-orm";
 import { HttpStatus } from "http-status-ts";
 import { z } from "zod";
 import { getDb } from "../../db/client";
-import {
-    firstTeams,
-    teamMembers,
-    teamOrganizations,
-    teams
-} from "../../db/schema";
+import { firstTeams, teamOrganizations, teams } from "../../db/schema";
 import { handledError } from "../../lib/api-error";
 import { cacheMiddleware } from "../../lib/cache";
 import { type AppContext, getApp } from "../../lib/context";
@@ -22,13 +17,10 @@ import { Vendor } from "../library/vendors";
 import { resolveTeamContext } from "./context";
 import {
     GenericVendorPolicy,
-    INVITE_DAYS,
     MAX_COLOR_NAME_LENGTH,
     MAX_TEAM_COLORS,
-    type TeamInviteOut,
     PERSONAL,
     Program,
-    TeamRole,
     type FirstTeam,
     type TeamAdminOut,
     type TeamContextOut
@@ -52,10 +44,6 @@ import {
     getOrganizationRegistrations,
     companyAdminStore,
     getTeamsById,
-    isCurrentMember,
-    joinByInvite,
-    renewInvitedMemberships,
-    teamInviteStore,
     toFirstTeam
 } from "./store";
 import { getCompany } from "../../lib/onshape/endpoints/companies";
@@ -80,9 +68,6 @@ teamRoutes.get(
                 ? documentOwnerStore.get(c.env.KV, documentId)
                 : undefined
         ]);
-
-        // An invited member keeps their team by opening the app.
-        await renewInvitedMemberships(db, userId, new Date());
 
         let organization: TeamContextOut["organization"];
         if (owner?.kind !== undefined) {
@@ -230,33 +215,19 @@ teamRoutes.get(
     async (c) => {
         const teamId = getTeamParam(c);
         const db = getDb(c.env.DB);
-        const [organizations, members] = await Promise.all([
-            db
-                .select()
-                .from(teamOrganizations)
-                .where(eq(teamOrganizations.teamId, teamId))
-                .all(),
-            db
-                .select({ role: teamMembers.role })
-                .from(teamMembers)
-                .where(and(eq(teamMembers.teamId, teamId), isCurrentMember()))
-                .all()
-        ]);
+        const organizations = await db
+            .select()
+            .from(teamOrganizations)
+            .where(eq(teamOrganizations.teamId, teamId))
+            .all();
         return c.json({
             organizations: organizations.map((organization) => ({
                 id: organization.id,
                 companyId: organization.companyId,
                 kind: organization.kind,
                 name: organization.name,
-                subteamId: organization.subteamId || undefined,
-                subteamMemberCount: organization.subteamId
-                    ? organization.subteamMembers.length
-                    : undefined
-            })),
-            memberCount: members.length,
-            adminCount: members.filter(
-                (member) => member.role === TeamRole.ADMIN
-            ).length
+                subteamId: organization.subteamId || undefined
+            }))
         } satisfies TeamAdminOut);
     }
 );
@@ -371,47 +342,7 @@ teamRoutes.post(
             .update(teamOrganizations)
             .set({ subteamMembers, syncedAt: new Date() })
             .where(eq(teamOrganizations.id, organization.id));
-        return c.json({ memberCount: subteamMembers.length });
-    }
-);
-
-/** POST /api/teams/:teamId/invites: a link anybody signed in can join by, for `INVITE_DAYS`. */
-teamRoutes.post(
-    teamRoute() + "/invites",
-    requireTeamAdminMiddleware,
-    async (c) => {
-        const token = crypto.randomUUID();
-        await teamInviteStore.put(c.env.KV, token, { teamId: getTeamParam(c) });
-        return c.json({
-            token,
-            expiresAt: Date.now() + INVITE_DAYS * 24 * 60 * 60 * 1000
-        } satisfies TeamInviteOut);
-    }
-);
-
-/** POST /api/teams/join: `{ token }` from an invite link. */
-teamRoutes.post(
-    "/teams/join",
-    requireSignInMiddleware,
-    validate("json", z.object({ token: z.string().min(1) })),
-    async (c) => {
-        const invite = await teamInviteStore.get(
-            c.env.KV,
-            c.req.valid("json").token
-        );
-        if (!invite) {
-            throw handledError(
-                "This invite has expired.",
-                HttpStatus.NOT_FOUND
-            );
-        }
-        await joinByInvite(
-            getDb(c.env.DB),
-            invite.teamId,
-            await c.var.getUserId(),
-            new Date()
-        );
-        return c.json({ teamId: invite.teamId });
+        return c.json({});
     }
 );
 

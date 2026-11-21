@@ -9,7 +9,6 @@ import {
     type TeamAdminOut,
     type TeamContextOut,
     type TeamReportOut,
-    type TeamInviteOut,
     type TeamSettings,
     toVendorPreferences,
     type VendorPreferences
@@ -314,23 +313,4 @@ export function useVendorPreferences(): {
         [settings]
     );
     return { preferences, isSettled: !query.isLoading };
-}
-
-export function useCreateInviteMutation(teamId: string) {
-    return useMutation({
-        mutationFn: () =>
-            apiPost<TeamInviteOut>(toTeamPath(teamId) + "/invites"),
-        onError: (error) => showReportableErrorToast(m.teamEditFailed(), error)
-    });
-}
-
-export function useJoinTeamMutation() {
-    const invalidate = useInvalidateTeams();
-    return useMutation({
-        mutationFn: (token: string) =>
-            apiPost<{ teamId: string }>("/teams/join", { body: { token } }),
-        onSuccess: () => showSuccessToast(m.teamJoined()),
-        onError: (error) => showReportableErrorToast(m.teamJoinFailed(), error),
-        onSettled: invalidate
-    });
 }

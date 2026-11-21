@@ -99,22 +99,6 @@ export interface TeamColor {
 
 export const MAX_COLOR_NAME_LENGTH = 30;
 
-/** How someone joined: by Onshape (a launch or registration), or by an admin's invite link. */
-export enum MembershipSource {
-    ONSHAPE = "onshape",
-    INVITE = "invite"
-}
-
-/** How long an invite link works. */
-export const INVITE_DAYS = 7;
-
-/** `POST /api/teams/:teamId/invites`. */
-export interface TeamInviteOut {
-    token: string;
-    /** Milliseconds since the epoch. */
-    expiresAt: number;
-}
-
 export interface TeamSettings {
     /** Whether members, not only admins, may add, order and remove team favorites. */
     membersEditFavorites: boolean;
@@ -181,16 +165,11 @@ export interface TeamOrganizationOut {
     name: string;
     /** The Onshape team whose members join; undefined for every editor. */
     subteamId?: string;
-    /** How many of the subteam's members were last synced. */
-    subteamMemberCount?: number;
 }
 
-/** What a team admin sees and manages. Members are counted, never listed. */
+/** What a team admin sees and manages. */
 export interface TeamAdminOut {
     organizations: TeamOrganizationOut[];
-    /** Members proven within `MEMBERSHIP_DAYS`. */
-    memberCount: number;
-    adminCount: number;
 }
 
 /** What a team is ranked in: every use, and each feature's. */

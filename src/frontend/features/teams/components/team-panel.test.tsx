@@ -13,6 +13,7 @@ import {
     Program,
     TeamContextSource,
     TeamRole,
+    type FirstTeam,
     type MyTeam,
     type TeamAdminOut,
     type TeamContextOut
@@ -44,6 +45,7 @@ vi.mock("../../../lib/library", async (importOriginal) => ({
 
 const { teamContextQueryKey } = await import("../queries");
 const { TeamPanelContent } = await import("./team-panel");
+const { RegisterTeamForm } = await import("./register-team-form");
 
 function team(role = TeamRole.MEMBER): MyTeam {
     return {
@@ -66,9 +68,14 @@ function renderPanel(context: TeamContextOut, documentId?: string) {
     }
     queryClient.setQueryData(teamContextQueryKey(documentId), context);
     queryClient.setQueryData<TeamAdminOut>(["teams", "team-1", "admin"], {
-        organizations: [],
-        memberCount: 12,
-        adminCount: 1
+        organizations: [
+            {
+                id: "organization-1",
+                companyId: "company-1",
+                kind: OrganizationKind.CLASSROOM,
+                name: "Poof High"
+            }
+        ]
     });
     renderWithProviders(<TeamPanelContent />, queryClient);
 }
@@ -149,23 +156,84 @@ describe("the Team panel", () => {
         expect(mocks.apiPost).toHaveBeenCalledWith("/teams/team-1/settings", {
             body: { colors: [{ name: "Poof Blue", hex: "#1f3c88" }] }
         });
-        screen.getByText("12 members, 1 admin");
+        screen.getByText("Poof High");
+    });
+});
+
+describe("registering an organization", () => {
+    afterEach(() => mocks.apiPost.mockReset());
+
+    function renderForm(teams: MyTeam[]) {
+        const queryClient = createTestQueryClient();
+        for (const libraryId of Object.values(LibraryId)) {
+            queryClient.setQueryData<AccessData>(
+                accessDataQueryKey(libraryId),
+                {
+                    maxAccessLevel: AccessLevel.USER,
+                    signedIn: true,
+                    seenHints: []
+                }
+            );
+        }
+        queryClient.setQueryData<FirstTeam[]>(
+            ["teams", "first", Program.FRC, "1678"],
+            [{ program: Program.FRC, number: 1678, name: "Citrus Circuits" }]
+        );
+        renderWithProviders(
+            <RegisterTeamForm
+                documentId="doc"
+                organization={{
+                    companyId: "company-1",
+                    kind: OrganizationKind.CLASSROOM,
+                    teams: []
+                }}
+                teams={teams}
+            />,
+            queryClient
+        );
+    }
+
+    it("adds the organization to a team the caller administers", async () => {
+        const user = userEvent.setup();
+        mocks.apiPost.mockResolvedValue({ teamId: "team-1" });
+        renderForm([
+            team(TeamRole.ADMIN),
+            {
+                ...team(),
+                id: "team-2",
+                first: { program: Program.FRC, number: 971, name: "Spartan" }
+            }
+        ]);
+
+        await user.click(screen.getByRole("combobox", { name: "Team" }));
+        const member = await screen.findByRole("option", {
+            name: "FRC 971 Spartan"
+        });
+        expect(member.getAttribute("data-combobox-disabled")).toBe("true");
+        await user.click(screen.getByRole("option", { name: "FRC 254 Poofs" }));
+        await user.click(screen.getByRole("button", { name: "Register team" }));
+        expect(mocks.apiPost).toHaveBeenCalledWith("/teams/register", {
+            body: { documentId: "doc", teamId: "team-1" }
+        });
     });
 
-    it("gives an admin an invite link to add a member", async () => {
+    it("claims a FIRST team for a new team", async () => {
         const user = userEvent.setup();
-        mocks.apiPost.mockResolvedValue({
-            token: "token-1",
-            expiresAt: Date.now()
-        });
-        renderPanel({
-            teams: [team(TeamRole.ADMIN)],
-            current: { teamId: "team-1", source: TeamContextSource.CHOSEN }
-        });
+        mocks.apiPost.mockResolvedValue({ teamId: "team-3" });
+        renderForm([]);
 
-        await user.click(screen.getByRole("button", { name: "Add member" }));
-        const link =
-            await screen.findByLabelText<HTMLInputElement>("Invite link");
-        expect(link.value).toContain("joinTeam=token-1");
+        await user.type(screen.getByRole("combobox", { name: "Team" }), "1678");
+        await user.click(
+            await screen.findByRole("option", {
+                name: "FRC 1678 Citrus Circuits"
+            })
+        );
+        await user.click(screen.getByRole("button", { name: "Register team" }));
+        expect(mocks.apiPost).toHaveBeenCalledWith("/teams/register", {
+            body: {
+                documentId: "doc",
+                first: { program: Program.FRC, number: 1678 }
+            }
+        });
     });
 });

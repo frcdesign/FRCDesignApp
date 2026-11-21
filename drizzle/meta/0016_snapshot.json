@@ -1,7 +1,7 @@
 {
     "version": "6",
     "dialect": "sqlite",
-    "id": "bf7efb21-5765-4dbf-b351-95da902dbe30",
+    "id": "206e1e77-1a88-449f-8226-366a959d47d9",
     "prevId": "ff62ef01-c8b8-43fc-8665-bcae522a5613",
     "tables": {
         "configurations": {
@@ -915,14 +915,6 @@
                     "primaryKey": false,
                     "notNull": true,
                     "autoincrement": false
-                },
-                "source": {
-                    "name": "source",
-                    "type": "text",
-                    "primaryKey": false,
-                    "notNull": true,
-                    "autoincrement": false,
-                    "default": "'onshape'"
                 },
                 "joined_at": {
                     "name": "joined_at",

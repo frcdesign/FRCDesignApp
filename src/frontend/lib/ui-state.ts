@@ -33,7 +33,11 @@ export enum SectionId {
     CONFIGURATION = "configuration",
     USAGE = "usage",
     /** The settings menu's. */
-    ADMIN_SETTINGS = "admin-settings"
+    ADMIN_SETTINGS = "admin-settings",
+    /** The Team panel's, for a team's admins. */
+    TEAM_SETTINGS = "team-settings",
+    TEAM_COLORS = "team-colors",
+    TEAM_ORGANIZATIONS = "team-organizations"
 }
 
 /** Until someone opens or closes it. Favorites and Configuration are long, and wanted less. */
@@ -47,7 +51,10 @@ const OPENED_BY_DEFAULT: Record<SectionId, boolean> = {
     [SectionId.SETTINGS]: true,
     [SectionId.CONFIGURATION]: false,
     [SectionId.USAGE]: true,
-    [SectionId.ADMIN_SETTINGS]: true
+    [SectionId.ADMIN_SETTINGS]: true,
+    [SectionId.TEAM_SETTINGS]: true,
+    [SectionId.TEAM_COLORS]: true,
+    [SectionId.TEAM_ORGANIZATIONS]: true
 };
 
 interface UiState {

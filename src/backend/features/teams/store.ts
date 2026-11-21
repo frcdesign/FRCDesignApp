@@ -9,9 +9,7 @@ import {
 } from "../../db/schema";
 import { kvStore } from "../../lib/kv-store";
 import {
-    INVITE_DAYS,
     MEMBERSHIP_DAYS,
-    MembershipSource,
     ONSHAPE_RECHECK_HOURS,
     OrganizationKind,
     TeamRole,
@@ -159,7 +157,6 @@ export function getOrganizationRegistrations(db: Db, companyId: string) {
         .all();
 }
 
-/** Joins a member, or moves an existing one's last seen; never changes a role. */
 /**
  * Joins a member or moves an existing one's last seen. A role Onshape was just
  * asked about replaces the stored one; without one, the stored role stands.
@@ -179,65 +176,15 @@ export function upsertMember(
             role: checked ?? TeamRole.MEMBER,
             joinedAt: now,
             lastSeenAt: now,
-            roleCheckedAt: checked ? now : new Date(0),
-            source: MembershipSource.ONSHAPE
+            roleCheckedAt: checked ? now : new Date(0)
         })
         .onConflictDoUpdate({
             target: [teamMembers.teamId, teamMembers.userId],
-            // Onshape proving an invited member makes them Onshape's.
             set: checked
-                ? {
-                      lastSeenAt: now,
-                      role: checked,
-                      roleCheckedAt: now,
-                      source: MembershipSource.ONSHAPE
-                  }
-                : { lastSeenAt: now, source: MembershipSource.ONSHAPE }
+                ? { lastSeenAt: now, role: checked, roleCheckedAt: now }
+                : { lastSeenAt: now }
         });
 }
-
-/** Joins by an invite: a member, unless they already are one, whose role stands. */
-export function joinByInvite(
-    db: Db,
-    teamId: string,
-    userId: string,
-    now: Date
-) {
-    return db
-        .insert(teamMembers)
-        .values({
-            teamId,
-            userId,
-            role: TeamRole.MEMBER,
-            joinedAt: now,
-            lastSeenAt: now,
-            roleCheckedAt: new Date(0),
-            source: MembershipSource.INVITE
-        })
-        .onConflictDoUpdate({
-            target: [teamMembers.teamId, teamMembers.userId],
-            set: { lastSeenAt: now }
-        });
-}
-
-/** An invited member's opening the app is what keeps them on the team. */
-export function renewInvitedMemberships(db: Db, userId: string, now: Date) {
-    return db
-        .update(teamMembers)
-        .set({ lastSeenAt: now })
-        .where(
-            and(
-                eq(teamMembers.userId, userId),
-                eq(teamMembers.source, MembershipSource.INVITE),
-                isCurrentMember()
-            )
-        );
-}
-
-/** Codes an admin's invite link carries, by token. */
-export const teamInviteStore = kvStore<{ teamId: string }>("team-invite", {
-    ttlSeconds: INVITE_DAYS * 24 * 60 * 60
-});
 
 /** Whether a user administers a company, as Onshape said; asked again a day on. */
 export const companyAdminStore = kvStore<boolean>("company-admin", {

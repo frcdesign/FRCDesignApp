@@ -3,7 +3,6 @@ import {
     Button,
     ColorInput,
     ColorSwatch,
-    CopyButton,
     Divider,
     Group,
     MultiSelect,
@@ -14,10 +13,7 @@ import {
 } from "@mantine/core";
 import {
     ArrowsClockwiseIcon,
-    CheckIcon,
-    CopyIcon,
     TrashIcon,
-    UserPlusIcon,
     UsersThreeIcon,
     XIcon
 } from "@phosphor-icons/react";
@@ -34,18 +30,23 @@ import {
     type MyTeam
 } from "@backend/features/teams/contract";
 import { getVendorName, Vendor } from "@backend/features/library/vendors";
+import { AppSection, AppSections } from "../../../components/app-section";
 import { InputRow } from "../../../components/input-row";
 import { OpenUrlButton } from "../../../components/open-url-button";
+import { SettingSelect } from "../../../components/setting-select";
+import {
+    SectionId,
+    setOpenedSections,
+    useOpenedSections
+} from "../../../lib/ui-state";
 import { useOnshapeLaunch } from "../../../lib/onshape-params";
 import { useAppModal } from "../../../components/open-app-modal";
 import { m } from "../../../paraglide/messages";
 import { openRegisterTeam } from "../open-register";
-import { inviteUrl } from "../invite";
 import {
     teamApi,
     useChooseTeamMutation,
     useRefreshFirstTeamsMutation,
-    useCreateInviteMutation,
     useCurrentTeam,
     useTeamAdminMutation,
     useTeamAdminQuery,
@@ -173,80 +174,90 @@ enum FavoritesEditors {
     ADMINS = "admins"
 }
 
+function favoritesEditorsLabel(editors: FavoritesEditors): string {
+    switch (editors) {
+        case FavoritesEditors.EVERYONE:
+            return m.teamEditFavoritesEveryone();
+        case FavoritesEditors.ADMINS:
+            return m.teamEditFavoritesAdmins();
+    }
+}
+
+const TEAM_SECTION_IDS = [
+    SectionId.TEAM_SETTINGS,
+    SectionId.TEAM_COLORS,
+    SectionId.TEAM_ORGANIZATIONS
+];
+
 function TeamAdminForm(props: TeamAdminFormProps): ReactNode {
     const { team } = props;
     const settingsMutation = useTeamSettingsMutation(team.id);
+    const opened = useOpenedSections(TEAM_SECTION_IDS);
     const { settings } = team;
 
     return (
-        <Stack gap="sm">
-            <Divider label={m.teamSettings()} labelPosition="left" />
-            <Select
-                label={m.teamEditFavorites()}
-                data={[
-                    {
-                        value: FavoritesEditors.EVERYONE,
-                        label: m.teamEditFavoritesEveryone()
-                    },
-                    {
-                        value: FavoritesEditors.ADMINS,
-                        label: m.teamEditFavoritesAdmins()
-                    }
-                ]}
-                value={
-                    settings.membersEditFavorites
-                        ? FavoritesEditors.EVERYONE
-                        : FavoritesEditors.ADMINS
-                }
-                allowDeselect={false}
-                checkIconPosition="right"
-                onChange={(value) => {
-                    if (value) {
-                        settingsMutation.mutate({
-                            membersEditFavorites:
-                                value === FavoritesEditors.EVERYONE
-                        });
-                    }
-                }}
-            />
-            <Select
-                label={m.teamGenericVendor()}
-                data={Object.values(GenericVendorPolicy).map((policy) => ({
-                    value: policy,
-                    label: genericVendorLabel(policy)
-                }))}
-                value={settings.genericVendor}
-                allowDeselect={false}
-                checkIconPosition="right"
-                onChange={(value) => {
-                    if (value) {
-                        settingsMutation.mutate({
-                            genericVendor: value
-                        });
-                    }
-                }}
-            />
-            <MultiSelect
-                label={m.teamPreferredVendors()}
-                description={m.teamPreferredVendorsDescription()}
-                data={Object.values(Vendor).map((vendor) => ({
-                    value: vendor,
-                    label: getVendorName(vendor)
-                }))}
-                value={settings.vendorRanking}
-                searchable
-                onChange={(value) =>
-                    settingsMutation.mutate({
-                        vendorRanking: value
-                    })
-                }
-            />
-            <TeamColors
-                colors={settings.colors}
-                onChange={(colors) => settingsMutation.mutate({ colors })}
-            />
-            <TeamPeople teamId={team.id} />
-        </Stack>
+        <AppSections
+            compact
+            opened={opened}
+            onChange={(next) => setOpenedSections(TEAM_SECTION_IDS, next)}
+        >
+            <AppSection value={SectionId.TEAM_SETTINGS} name={m.teamSettings()}>
+                <Stack gap="sm">
+                    <SettingSelect
+                        label={m.teamEditFavorites()}
+                        value={
+                            settings.membersEditFavorites
+                                ? FavoritesEditors.EVERYONE
+                                : FavoritesEditors.ADMINS
+                        }
+                        options={Object.values(FavoritesEditors)}
+                        optionLabel={favoritesEditorsLabel}
+                        onSelect={(value) =>
+                            settingsMutation.mutate({
+                                membersEditFavorites:
+                                    value === FavoritesEditors.EVERYONE
+                            })
+                        }
+                    />
+                    <SettingSelect
+                        label={m.teamGenericVendor()}
+                        value={settings.genericVendor}
+                        options={Object.values(GenericVendorPolicy)}
+                        optionLabel={genericVendorLabel}
+                        onSelect={(value) =>
+                            settingsMutation.mutate({ genericVendor: value })
+                        }
+                    />
+                    <MultiSelect
+                        label={m.teamPreferredVendors()}
+                        description={m.teamPreferredVendorsDescription()}
+                        data={Object.values(Vendor).map((vendor) => ({
+                            value: vendor,
+                            label: getVendorName(vendor)
+                        }))}
+                        value={settings.vendorRanking}
+                        searchable
+                        onChange={(value) =>
+                            settingsMutation.mutate({ vendorRanking: value })
+                        }
+                    />
+                </Stack>
+            </AppSection>
+            <Divider my="sm" />
+            <AppSection value={SectionId.TEAM_COLORS} name={m.teamColors()}>
+                <TeamColors
+                    colors={settings.colors}
+                    onChange={(colors) => settingsMutation.mutate({ colors })}
+                />
+            </AppSection>
+            <Divider my="sm" />
+            <AppSection
+                value={SectionId.TEAM_ORGANIZATIONS}
+                name={m.teamOrganizations()}
+            >
+                <TeamOrganizations teamId={team.id} />
+            </AppSection>
+        </AppSections>
     );
 }
 
@@ -264,9 +275,6 @@ function TeamColors(props: TeamColorsProps): ReactNode {
 
     return (
         <Stack gap={4}>
-            <Text size="sm" fw={500}>
-                {m.teamColors()}
-            </Text>
             {colors.map((color) => (
                 <Group key={color.hex} justify="space-between" wrap="nowrap">
                     <Group gap="xs" wrap="nowrap">
@@ -323,12 +331,12 @@ function TeamColors(props: TeamColorsProps): ReactNode {
     );
 }
 
-interface TeamPeopleProps {
+interface TeamOrganizationsProps {
     teamId: string;
 }
 
-/** Its organizations, and how many members and admins Onshape gives it. */
-function TeamPeople(props: TeamPeopleProps): ReactNode {
+/** The organizations and Onshape teams whose people are the team. */
+function TeamOrganizations(props: TeamOrganizationsProps): ReactNode {
     const { teamId } = props;
     const adminQuery = useTeamAdminQuery(teamId);
     const removeOrganization = useTeamAdminMutation((id: string) =>
@@ -339,14 +347,10 @@ function TeamPeople(props: TeamPeopleProps): ReactNode {
     );
 
     if (!adminQuery.data) return null;
-    const { organizations, memberCount, adminCount } = adminQuery.data;
 
     return (
-        <>
-            <Text size="sm" fw={500}>
-                {m.teamOrganizations()}
-            </Text>
-            {organizations.map((organization) => (
+        <Stack gap={4}>
+            {adminQuery.data.organizations.map((organization) => (
                 <Group
                     key={organization.id}
                     justify="space-between"
@@ -355,8 +359,7 @@ function TeamPeople(props: TeamPeopleProps): ReactNode {
                     <Text size="sm">
                         {organization.subteamId
                             ? m.teamOrganizationSubteam({
-                                  organization: organization.name,
-                                  count: organization.subteamMemberCount ?? 0
+                                  organization: organization.name
                               })
                             : organization.name}
                     </Text>
@@ -386,68 +389,7 @@ function TeamPeople(props: TeamPeopleProps): ReactNode {
                     </Group>
                 </Group>
             ))}
-            <Text size="sm" fw={500}>
-                {m.teamMemberCounts({
-                    members: memberCount,
-                    admins: adminCount
-                })}
-            </Text>
-            <Text size="xs" c="dimmed">
-                {m.teamRolesFromOnshape()}
-            </Text>
-            <TeamInvite teamId={teamId} />
-        </>
-    );
-}
-
-interface TeamInviteProps {
-    teamId: string;
-}
-
-/** A link anybody signed in joins the team by, until it expires. */
-function TeamInvite(props: TeamInviteProps): ReactNode {
-    const { teamId } = props;
-    const inviteMutation = useCreateInviteMutation(teamId);
-    const invite = inviteMutation.data;
-    if (!invite) {
-        return (
-            <Button
-                variant="default"
-                leftSection={<UserPlusIcon />}
-                loading={inviteMutation.isPending}
-                onClick={() => inviteMutation.mutate()}
-            >
-                {m.teamAddMember()}
-            </Button>
-        );
-    }
-    const url = inviteUrl(invite.token);
-    return (
-        <TextInput
-            label={m.teamInviteLink()}
-            description={m.teamInviteExpires({
-                date: new Date(invite.expiresAt).toLocaleDateString()
-            })}
-            value={url}
-            readOnly
-            rightSection={
-                <CopyButton value={url}>
-                    {({ copied, copy }) => (
-                        <ActionIcon
-                            variant="subtle"
-                            title={
-                                copied
-                                    ? m.teamInviteCopied()
-                                    : m.teamInviteCopy()
-                            }
-                            onClick={copy}
-                        >
-                            {copied ? <CheckIcon /> : <CopyIcon />}
-                        </ActionIcon>
-                    )}
-                </CopyButton>
-            }
-        />
+        </Stack>
     );
 }
 
