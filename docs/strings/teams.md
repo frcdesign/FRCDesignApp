@@ -75,16 +75,18 @@ the backend (`features/teams/`), and the app shows them as they come.
 
 At `/dashboard/teams/:teamId`.
 
-| String                                         | Kind                   | Where                 | When                                     | Review    |
-| ---------------------------------------------- | ---------------------- | --------------------- | ---------------------------------------- | --------- |
-| "Sign in to see your team" / "Sign in"         | Notice, button         | The page              | Signed out                               | **⚑** New |
-| "Loading team..." / "Failed to load team"      | Loading, error         | The page              |                                          |           |
-| "{year}, September to August"                  | Subtitle               | Under the team's name | Always                                   | **⚑** New |
-| "Uses" / "Active members"                      | Tile labels            | Top row               | Always                                   |           |
-| "All uses"                                     | Card title             | Top row               | Always                                   | **⚑** New |
-| "Top {percent}%"                               | Card value             | Each category         | Ten or more teams used it                | **⚑** New |
-| "Ranked once {count} teams use it"             | Card value             | Each category         | Fewer than ten teams used it             | **⚑** New |
-| "Not used yet"                                 | Card value             | Each category         | The team never used it this year         | **⚑** New |
-| "{n} use(s), {perMember} per member"           | Card caption           | Each category         | Always                                   | **⚑** New |
-| "Gold" / "Silver" / "Bronze"                   | Badge                  | A category card       | Top 10%, 25%, 50%                        | **⚑** New |
-| "Team favorites" / "Team's recently used list" | Feature, source labels | The public dashboard  | Feature usage and How people use the app | **⚑** New |
+| String                                         | Kind                   | Where                            | When                                     | Review    |
+| ---------------------------------------------- | ---------------------- | -------------------------------- | ---------------------------------------- | --------- |
+| "Sign in to see your team" / "Sign in"         | Notice, button         | The page                         | Signed out                               | **⚑** New |
+| "Loading team..." / "Failed to load team"      | Loading, error         | The page                         |                                          |           |
+| "{year}, September to August"                  | Subtitle               | Under the team's name            | Always                                   | **⚑** New |
+| "Uses" / "Active members"                      | Tile labels            | Top row                          | Always                                   |           |
+| "All uses"                                     | Card title             | Top row                          | Always                                   | **⚑** New |
+| "Top {percent}%"                               | Card value             | Each category                    | Ten or more teams used it                | **⚑** New |
+| "Ranked once {count} teams use it"             | Card value             | Each category                    | Fewer than ten teams used it             | **⚑** New |
+| "Not used yet"                                 | Card value             | Each category                    | The team never used it this year         | **⚑** New |
+| "{n} use(s), {perMember} per member"           | Card caption           | Each category                    | Always                                   | **⚑** New |
+| "Gold" / "Silver" / "Bronze"                   | Medal icon tooltip     | A category card's corner         | Top 10%, 25%, 50%                        | **⚑** New |
+| "Your team" / "Others"                         | Chart legend           | A ranked category's distribution | Ranked                                   | **⚑** New |
+| "Teams" / "Uses per member"                    | Chart tooltip          | A ranked category's distribution | Hovering a bar                           | **⚑** New |
+| "Team favorites" / "Team's recently used list" | Feature, source labels | The public dashboard             | Feature usage and How people use the app | **⚑** New |

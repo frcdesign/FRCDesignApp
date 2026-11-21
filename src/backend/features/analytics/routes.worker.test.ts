@@ -3,6 +3,7 @@ import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
 import { configurations, insertables } from "../../db/schema";
 import {
+    userStats,
     dailyAppOpens,
     dailyConfigurationMetrics,
     dailyFeatureUsers,
@@ -50,7 +51,8 @@ import {
     type UnusedOptionOut,
     type InsertableReportOut,
     type LibraryHealthCounts,
-    type PartUsageOut
+    type PartUsageOut,
+    type DistributionsOut
 } from "./contract";
 import { MONTH_DAYS } from "./measures";
 import { addDays, toDayKey, toReportingDay } from "./day";
@@ -1366,6 +1368,43 @@ describe("analytics routes", () => {
                 errorCount: 1,
                 healthyItems: 1
             });
+        });
+
+        it("spreads uses and favorites across everybody who used a part", async () => {
+            await seedPartStudio(db);
+            const seen = new Date();
+            const stats = (
+                userId: string,
+                libraryId: LibraryId,
+                useCount: number
+            ) =>
+                db.insert(userStats).values({
+                    userId,
+                    libraryId,
+                    useCount,
+                    firstSeenAt: seen,
+                    lastSeenAt: seen
+                });
+            await stats("user-a", LibraryId.FRC_DESIGN_LIB, 3);
+            await stats("user-a", LibraryId.CONFIG_LIB, 4);
+            await stats("user-b", LibraryId.FRC_DESIGN_LIB, 1);
+            await seedFavorite(db, TEST_PART_STUDIO_ID, "user-a");
+
+            const res = await anonymousGet(
+                "/api/analytics/overview/distributions"
+            );
+            const body: DistributionsOut = await res.json();
+
+            expect(body.users).toBe(2);
+            // user-a's 7 uses across both libraries, user-b's 1
+            expect(body.usesPerUser.bins).toEqual([
+                { from: 1, to: 2, count: 1 },
+                { from: 2, to: 5, count: 0 },
+                { from: 5, to: 10, count: 1 }
+            ]);
+            expect(body.favoritesPerUser.bins.map((bin) => bin.count)).toEqual([
+                1, 1
+            ]);
         });
 
         it("counts the visible parts by kind on the overview", async () => {

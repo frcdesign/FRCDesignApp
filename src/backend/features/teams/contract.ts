@@ -2,6 +2,7 @@
 import { Program } from "../analytics/seasons";
 import { AppFeature } from "../analytics/usage";
 import { Vendor } from "../library/vendors";
+import { type Histogram } from "../analytics/histogram";
 
 export { Program };
 
@@ -170,9 +171,19 @@ export type TeamCategory = typeof ALL_USES | AppFeature;
 
 export const ALL_USES = "uses";
 
+/** Lists one person keeps for themselves aren't something a team does better or worse. */
+const UNRANKED_FEATURES: readonly AppFeature[] = [
+    AppFeature.FAVORITES,
+    AppFeature.RECENTS,
+    AppFeature.TEAM_FAVORITES,
+    AppFeature.TEAM_RECENTS
+];
+
 export const TEAM_CATEGORIES: TeamCategory[] = [
     ALL_USES,
-    ...Object.values(AppFeature)
+    ...Object.values(AppFeature).filter(
+        (feature) => !UNRANKED_FEATURES.includes(feature)
+    )
 ];
 
 /** A ranking means nothing among fewer teams, and would point at one. */
@@ -195,6 +206,10 @@ export interface TeamStanding {
         /** "Top 4%": the share of ranked teams at or above this team, rounded up. */
         topPercent: number;
         medal?: Medal;
+        /** Every ranked team's uses per member, binned; no bin names a team. */
+        distribution: Histogram;
+        /** This team's bin in `distribution`. */
+        teamBin: number;
     };
 }
 

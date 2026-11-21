@@ -13,6 +13,7 @@ import {
     type TeamStanding
 } from "./contract";
 import { getTeamsById } from "./store";
+import { binOf, toHistogram } from "../analytics/histogram";
 
 /** September to August: a team's year spans either program's season and its build. */
 export interface TeamYear {
@@ -48,9 +49,12 @@ export function rank(value: number, values: number[]): TeamStanding["ranking"] {
     // Ties share the best rank among them.
     const rank = 1 + values.filter((other) => other > value).length;
     const fraction = rank / values.length;
+    const distribution = toHistogram(values, false);
     return {
         topPercent: Math.ceil(fraction * 100),
-        medal: MEDAL_CUTOFFS.find(([cutoff]) => fraction <= cutoff)?.[1]
+        medal: MEDAL_CUTOFFS.find(([cutoff]) => fraction <= cutoff)?.[1],
+        distribution,
+        teamBin: binOf(distribution.bins, value) ?? 0
     };
 }
 

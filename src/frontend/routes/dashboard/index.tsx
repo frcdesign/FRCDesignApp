@@ -8,6 +8,7 @@ import {
     getOverviewFeatureReachQuery,
     getOverviewFeatureScriptsQuery,
     getOverviewHealthQuery,
+    getOverviewDistributionsQuery,
     getOverviewReportsQuery,
     getOverviewSeriesQuery,
     getOverviewSourcesQuery,
@@ -39,6 +40,7 @@ import { FeatureScriptUsageSection } from "../../features/dashboard/featurescrip
 import { OverviewReports } from "../../features/dashboard/report-summary";
 import { HealthTiles } from "../../features/dashboard/health-report";
 import { FeatureReachSection } from "../../features/dashboard/feature-reach-section";
+import { DistributionsSection } from "../../features/dashboard/distributions-section";
 import { m } from "../../paraglide/messages";
 
 export const Route = createFileRoute("/dashboard/")({
@@ -68,6 +70,7 @@ function DashboardOverview(): ReactNode {
     const series = useQuery(getOverviewSeriesQuery(usesRange));
     const sources = useQuery(getOverviewSourcesQuery(range));
     const health = useQuery(getOverviewHealthQuery());
+    const distributions = useQuery(getOverviewDistributionsQuery());
     const versionManager = useQuery(getVersionManagerQuery(range));
     const featureScripts = useQuery(getOverviewFeatureScriptsQuery(range));
     const reports = useQuery(getOverviewReportsQuery(range));
@@ -111,6 +114,8 @@ function DashboardOverview(): ReactNode {
             </SectionCard>
 
             <FeatureReachSection query={featureReach} />
+
+            <DistributionsSection query={distributions} />
 
             <Section title={m.dashboardHealthLibraries()}>
                 {health.data ? (

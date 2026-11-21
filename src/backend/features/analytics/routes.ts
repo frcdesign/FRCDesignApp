@@ -1,4 +1,5 @@
 import { and, eq } from "drizzle-orm";
+import { getDistributions } from "./distribution-queries";
 import { HttpStatus } from "http-status-ts";
 import { internalError } from "../../lib/api-error";
 import { CachePolicy, cacheMiddleware } from "../../lib/cache";
@@ -13,6 +14,7 @@ import type {
     FeatureScriptUsageOut,
     InsertableReportOut,
     LibraryHealthCounts,
+    DistributionsOut,
     OverviewUsageOut,
     LibrarySummaryOut,
     PartUsageOut,
@@ -152,6 +154,12 @@ analyticsRoutes.get(
         return c.json(reach satisfies FeatureReachOut);
     }
 );
+
+/** GET /api/analytics/overview/distributions — all time. */
+analyticsRoutes.get("/analytics/overview/distributions", async (c) => {
+    const db = getDb(c.env.DB);
+    return c.json((await getDistributions(db)) satisfies DistributionsOut);
+});
 
 /** GET /api/analytics/overview/health — every library's together, standing now. */
 analyticsRoutes.get("/analytics/overview/health", async (c) => {

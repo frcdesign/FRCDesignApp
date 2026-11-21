@@ -331,6 +331,9 @@ interface RegisterTeamIn {
 /** What a team is ranked in: every use, and each feature's. */
 type TeamCategory = typeof ALL_USES | AppFeature;
 const ALL_USES = "uses";
+// Every use, and each feature but the four lists one person keeps for themselves:
+// favorites, recents, and their team counterparts.
+const TEAM_CATEGORIES: TeamCategory[];
 
 enum Medal {
     GOLD = "gold",
@@ -349,6 +352,10 @@ interface TeamStanding {
         /** "Top 4%": the share of ranked teams at or above this team, rounded up. */
         topPercent: number;
         medal?: Medal;
+        /** Every ranked team's uses per member, binned; no bin names a team. */
+        distribution: Histogram;
+        /** This team's bin in `distribution`. */
+        teamBin: number;
     };
 }
 
@@ -538,13 +545,18 @@ by this document".
    use. Every other rollup is written as before.
 3. `/dashboard/teams/:teamId`, linked from **Team dashboard**, shows the team's
    year, September to August (`teamYear`): its uses, active members, and a card
-   per category.
+   per category in `TEAM_CATEGORIES`, ranked ones first. The favorites and
+   recents lists aren't ranked: keeping a list isn't something a team does
+   better or worse.
 4. A category's value is the team's count over its active members that year.
    It is ranked among every team of the program with any use of it. Below
    `MIN_RANKED_TEAMS` such teams it says when it will be ranked instead.
 5. A ranking is "Top N%": the share of ranked teams at or above this one,
    rounded up. Ties share the best rank. The top 10% are gold, to 25% silver,
-   to 50% bronze.
+   to 50% bronze, each a medal icon in its metal's color.
+6. A ranked card draws every ranked team's uses per member as a histogram
+   (`toHistogram`, `analytics/histogram.ts`), the team's own share of its bar
+   apart under **Your team**. Bins count teams; none names one.
 
 ### Team favorites
 
@@ -655,8 +667,8 @@ list.
 - No team route but registration and **Refresh members** calls Onshape. A
   launch asks Onshape about a role or a subteam at most once a day each.
 - Team favorites, recents and the report are read only by the team's members.
-- The report never names another team, and never ranks among fewer than
-  `MIN_RANKED_TEAMS`.
+- The report never names another team, and never ranks or draws a distribution
+  among fewer than `MIN_RANKED_TEAMS`.
 - No route lists a team's members; admins see counts.
 - Every global rollup counts a use the same with a team or without.
 - Every team rollup is derivable from `events` alone.

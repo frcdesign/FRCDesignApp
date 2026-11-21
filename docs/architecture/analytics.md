@@ -387,6 +387,7 @@ GET /api/analytics/overview/version-manager                         VersionManag
 GET /api/analytics/overview/featurescripts                          FeatureScriptUsageOut
 GET /api/analytics/overview/feature-reach                           FeatureReachOut
 GET /api/analytics/overview/health                                  LibraryHealthCounts, every library's
+GET /api/analytics/overview/distributions                           DistributionsOut, all time
 GET /api/analytics/overview/reports                                 ReportSummary
 GET /api/analytics/summary/library/:libraryId                       LibrarySummaryOut
 GET /api/analytics/health/library/:libraryId?v=                     LibraryHealthCounts, cached by the library's version
@@ -394,6 +395,42 @@ GET /api/analytics/parts/library/:libraryId                         PartUsageOut
 GET /api/analytics/unused/library/:libraryId?threshold=             PartUsageOut[], at or below the threshold
 GET /api/analytics/unused-options/library/:libraryId?threshold=     UnusedOptionOut[]
 GET /api/analytics/insertable/library/:libraryId/element/:elementId InsertableReportOut
+```
+
+`src/backend/features/analytics/histogram.ts`, a leaf the dashboard and the
+team page share
+
+```ts
+interface HistogramBin {
+    /** Inclusive. */
+    from: number;
+    /** Exclusive. */
+    to: number;
+    count: number;
+}
+
+interface Histogram {
+    bins: HistogramBin[];
+    /** Counts of whole things, so a bin reads "2–4" rather than "2–5". */
+    integer: boolean;
+}
+
+// Edges at 0, 1, 2, 5, 10, 20, 50, ... past the largest; empty leading bins dropped.
+function toHistogram(values: number[], integer: boolean): Histogram;
+```
+
+`src/backend/features/analytics/distribution-queries.ts`
+
+```ts
+async function getDistributions(db: Db): Promise<DistributionsOut>;
+
+/** All time, over everybody who used a part. */
+interface DistributionsOut {
+    users: number;
+    usesPerUser: Histogram;
+    /** Including those who keep none. */
+    favoritesPerUser: Histogram;
+}
 ```
 
 `src/backend/features/analytics/metric-queries.ts`, `growth.ts`,
@@ -1192,7 +1229,11 @@ The dashboard is a sibling of `/app`, a full-screen page outside the Onshape
 panel. Its routes read only rollups and return only aggregates:
 
 - **Overview** — one route per area, each fetched by its own query, so every
-  section shows as soon as its numbers arrive: **usage** (totals, the metric
+  section shows as soon as its numbers arrive: **distributions** (all time,
+  among everybody with a use in `user_stats`: their uses summed across
+  libraries, and the favorites they keep, none included; `getDistributions`
+  bins both with `toHistogram` at 1, 2, 5, 10, 20, 50 and on, dropping empty
+  leading bins), **usage** (totals, the metric
   series behind the headline tiles, growth), **series**
   (uses per library per day, which the chart plots a day per point up to 90
   days and a week per point past that, `pickChartGranularity`), **sources**

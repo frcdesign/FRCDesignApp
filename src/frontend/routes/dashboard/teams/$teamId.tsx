@@ -1,15 +1,15 @@
 import {
-    Badge,
     Button,
     Card,
     Group,
     SimpleGrid,
     Stack,
     Text,
-    Title
+    Title,
+    Tooltip
 } from "@mantine/core";
 import { createFileRoute } from "@tanstack/react-router";
-import { SignInIcon, UsersThreeIcon } from "@phosphor-icons/react";
+import { MedalIcon, SignInIcon, UsersThreeIcon } from "@phosphor-icons/react";
 import { type ReactNode } from "react";
 import {
     ALL_USES,
@@ -24,6 +24,7 @@ import { useNeedsSignIn } from "../../../features/auth/access-level";
 import { startSignIn } from "../../../features/auth/sign-in";
 import { featureLabel } from "../../../features/dashboard/feature-reach";
 import { StatTile } from "../../../features/dashboard/stat-tiles";
+import { DistributionChart } from "../../../features/dashboard/distribution-chart";
 import {
     PageError,
     PageLoading,
@@ -67,7 +68,9 @@ function TeamDashboard(): ReactNode {
         );
     }
     const report = reportQuery.data;
-    const [uses, ...features] = report.standings;
+    const [uses] = report.standings;
+    const ranked = report.standings.filter((standing) => standing.ranking);
+    const unranked = report.standings.filter((standing) => !standing.ranking);
 
     return (
         <Stack gap="lg">
@@ -77,19 +80,30 @@ function TeamDashboard(): ReactNode {
                     {m.teamDashboardYear({ year: report.year })}
                 </Text>
             </div>
-            <SimpleGrid cols={{ base: 1, sm: 3 }}>
+            <SimpleGrid cols={{ base: 1, sm: 2 }}>
                 <StatTile label={m.teamDashboardUses()} value={uses.uses} />
                 <StatTile
                     label={m.teamDashboardActiveMembers()}
                     value={report.activeMembers}
                 />
-                <StandingCard standing={uses} />
             </SimpleGrid>
-            <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }}>
-                {features.map((standing) => (
-                    <StandingCard key={standing.category} standing={standing} />
-                ))}
-            </SimpleGrid>
+            {/* Apart, so a card with no chart isn't stretched to one's height. */}
+            {[ranked, unranked].map(
+                (standings) =>
+                    standings.length > 0 && (
+                        <SimpleGrid
+                            key={standings[0].category}
+                            cols={{ base: 1, sm: 2, md: 3 }}
+                        >
+                            {standings.map((standing) => (
+                                <StandingCard
+                                    key={standing.category}
+                                    standing={standing}
+                                />
+                            ))}
+                        </SimpleGrid>
+                    )
+            )}
         </Stack>
     );
 }
@@ -100,16 +114,15 @@ function categoryLabel(category: TeamCategory): string {
         : featureLabel(category);
 }
 
-function medalColor(medal: Medal): string {
-    switch (medal) {
-        case Medal.GOLD:
-            return "yellow.5";
-        case Medal.SILVER:
-            return "gray.4";
-        case Medal.BRONZE:
-            return "orange.8";
-    }
-}
+/** The metals themselves: a medal is a medal in any theme. */
+const MEDAL_COLORS: Record<Medal, string> = {
+    [Medal.GOLD]: "#d4a017",
+    [Medal.SILVER]: "#a8b2bd",
+    [Medal.BRONZE]: "#b8732e"
+};
+
+const MEDAL_SIZE = 28;
+const DISTRIBUTION_HEIGHT = 150;
 
 function medalLabel(medal: Medal): string {
     switch (medal) {
@@ -145,12 +158,13 @@ function StandingCard(props: StandingCardProps): ReactNode {
                     {categoryLabel(standing.category)}
                 </Text>
                 {ranking?.medal && (
-                    <Badge
-                        color={medalColor(ranking.medal)}
-                        c={ranking.medal === Medal.BRONZE ? "white" : "dark.8"}
-                    >
-                        {medalLabel(ranking.medal)}
-                    </Badge>
+                    <Tooltip label={medalLabel(ranking.medal)}>
+                        <MedalIcon
+                            size={MEDAL_SIZE}
+                            weight="fill"
+                            color={MEDAL_COLORS[ranking.medal]}
+                        />
+                    </Tooltip>
                 )}
             </Group>
             <Title order={3}>{standingTitle(standing)}</Title>
@@ -160,6 +174,19 @@ function StandingCard(props: StandingCardProps): ReactNode {
                     perMember: Math.round(standing.usesPerMember * 10) / 10
                 })}
             </Text>
+            {ranking && (
+                <DistributionChart
+                    compact
+                    h={DISTRIBUTION_HEIGHT}
+                    histogram={ranking.distribution}
+                    countLabel={m.teamDashboardTeams()}
+                    valueLabel={m.teamDashboardUsesPerMember()}
+                    mark={{
+                        bin: ranking.teamBin,
+                        label: m.teamDashboardYourTeam()
+                    }}
+                />
+            )}
         </Card>
     );
 }

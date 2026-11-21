@@ -1,4 +1,5 @@
 import { LibraryId } from "../library/library-id";
+import { type Histogram } from "./histogram";
 import type { ElementPath } from "../../lib/onshape/path";
 import { type AppFeature, UseSource, UseTarget } from "./usage";
 import type {
@@ -292,4 +293,12 @@ export interface FeatureReachOut {
      * Before it, nothing tells a week nobody used it from one nothing recorded.
      */
     firstUsed: Partial<Record<AppFeature, string>>;
+}
+
+/** `GET /api/analytics/overview/distributions`: all time, over everybody who used a part. */
+export interface DistributionsOut {
+    users: number;
+    usesPerUser: Histogram;
+    /** Including those who keep none. */
+    favoritesPerUser: Histogram;
 }

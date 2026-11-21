@@ -7,6 +7,7 @@ import type {
     LibrarySummaryOut,
     InsertableReportOut,
     LibraryHealthCounts,
+    DistributionsOut,
     OverviewUsageOut,
     PartUsageOut,
     ReportSummary,
@@ -69,6 +70,14 @@ export function getOverviewFeatureScriptsQuery(range: DayRange) {
 
 export function getOverviewFeatureReachQuery(range: DayRange) {
     return overviewQuery<FeatureReachOut>("feature-reach", range);
+}
+
+/** All time, whatever the page's ranges. */
+export function getOverviewDistributionsQuery() {
+    return queryOptions<DistributionsOut>({
+        queryKey: ["analytics", "overview", "distributions"],
+        queryFn: () => apiGet("/analytics/overview/distributions")
+    });
 }
 
 /** Every library's together; it changes with a reload, not with the range. */

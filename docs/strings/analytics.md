@@ -127,3 +127,15 @@ On the overview.
 | "{n} recorded"                               | Caption      | Beside each parameter's name | Always                     |                                                              |
 | "Default"                                    | Badge        | Beside the default value     | Always                     |                                                              |
 | "This part has no configuration parameters." | Empty notice | In place of the cards        | The part has no parameters | **⚑** Was "This insertable has no configuration parameters." |
+
+## How usage spreads
+
+On the overview, all time.
+
+| String                                     | Kind          | Where        | When    | Review    |
+| ------------------------------------------ | ------------- | ------------ | ------- | --------- |
+| "How usage spreads"                        | Section title | The overview | Always  | **⚑** New |
+| "Uses per person" / "Favorites per person" | Card titles   | Under it     | Always  | **⚑** New |
+| "People" / "Uses" / "Favorites"            | Axis labels   | Each chart   | Always  |           |
+| "{from}–{to}"                              | Bin labels    | The x axis   | Always  |           |
+| "Loading distributions..."                 | Loading       | The section  | Loading |           |

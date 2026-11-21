@@ -379,6 +379,14 @@
     "dashboardPartsColumnGroup": "Group",
     "dashboardUsesPerMonth": "Uses per month",
     "dashboardUses": "Uses",
+    "dashboardBinRange": "{from: number}–{to: number}",
+    "dashboardDistributions": "How usage spreads",
+    "dashboardLoadingDistributions": "Loading distributions...",
+    "dashboardUsesPerPerson": "Uses per person",
+    "dashboardFavoritesPerPerson": "Favorites per person",
+    "dashboardPeople": "People",
+    "dashboardOthers": "Others",
+    "dashboardFavorites": "Favorites",
     "dashboardPartsNoMatch": "No matching part.",
     "dashboardPartsHidden": "Hidden",
     "dashboardLibraryMostUsed": "Most used parts",
@@ -1109,5 +1117,8 @@
     ],
     "teamMedalGold": "Gold",
     "teamMedalSilver": "Silver",
-    "teamMedalBronze": "Bronze"
+    "teamMedalBronze": "Bronze",
+    "teamDashboardTeams": "Teams",
+    "teamDashboardUsesPerMember": "Uses per member",
+    "teamDashboardYourTeam": "Your team"
 }
