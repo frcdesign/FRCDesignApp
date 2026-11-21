@@ -26,18 +26,6 @@ import {
     featureScriptsLoadStatusQueryKey
 } from "../../../lib/query-keys";
 import { updateUiState } from "../../../lib/ui-state";
-import { useOnshapeLaunch } from "../../../lib/onshape-params";
-import { teamContextQueryKey } from "../../teams/queries";
-import {
-    DEFAULT_TEAM_SETTINGS,
-    OrganizationKind,
-    PERSONAL,
-    Program,
-    TeamContextSource,
-    TeamRole,
-    type MyTeam,
-    type TeamContextOut
-} from "@backend/features/teams/contract";
 
 const mocks = vi.hoisted(() => ({
     shownLibraryId: undefined as string | undefined,
@@ -214,73 +202,5 @@ describe("the admin settings", () => {
         renderSettings({}, AccessLevel.USER);
 
         expect(screen.queryByText("Admin settings")).toBeNull();
-    });
-});
-
-describe("the team rows", () => {
-    const team: MyTeam = {
-        id: "team-1",
-        first: { program: Program.FRC, number: 254, name: "Poofs" },
-        role: TeamRole.MEMBER,
-        settings: DEFAULT_TEAM_SETTINGS
-    };
-
-    function renderWithContext(context: TeamContextOut, documentId?: string) {
-        useOnshapeLaunch.setState({ documentId });
-        renderSettings({}, AccessLevel.USER, (queryClient) =>
-            queryClient.setQueryData(teamContextQueryKey(documentId), context)
-        );
-    }
-
-    afterEach(() => {
-        mocks.apiPost.mockReset();
-        useOnshapeLaunch.setState({ documentId: undefined });
-    });
-
-    it("switches to Personal outside a team's document", async () => {
-        mocks.apiPost.mockResolvedValue({});
-        renderWithContext({
-            teams: [team],
-            current: { teamId: team.id, source: TeamContextSource.CHOSEN }
-        });
-
-        expect(valueOf("Team")).toBe("FRC 254");
-        await userEvent.click(screen.getByLabelText("Team"));
-        await userEvent.click(await screen.findByText("Personal"));
-        expect(mocks.apiPost).toHaveBeenCalledWith("/teams/chosen", {
-            body: { teamId: PERSONAL }
-        });
-    });
-
-    it("leaves the team to the document that decides it", () => {
-        renderWithContext(
-            {
-                teams: [team],
-                current: { teamId: team.id, source: TeamContextSource.DOCUMENT }
-            },
-            "doc"
-        );
-
-        expect(screen.getByLabelText<HTMLInputElement>("Team").disabled).toBe(
-            true
-        );
-        screen.getByText("Set by this document");
-    });
-
-    it("offers registering from an organization's document", () => {
-        renderWithContext(
-            {
-                teams: [],
-                organization: {
-                    companyId: "company-1",
-                    kind: OrganizationKind.ENTERPRISE,
-                    teams: []
-                }
-            },
-            "doc"
-        );
-
-        screen.getByRole("button", { name: "Register team" });
-        expect(screen.queryByLabelText("Team")).toBeNull();
     });
 });

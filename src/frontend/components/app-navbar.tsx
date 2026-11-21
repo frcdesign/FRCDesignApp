@@ -44,6 +44,7 @@ import { DotIndicator } from "./dot-indicator";
 import { LibraryStatusBadge } from "./library-status-badge";
 import { MenuSection } from "./app-menu";
 import { openSettingsMenu } from "../features/settings/open-settings-menu";
+import { TeamButton } from "../features/teams/components/team-button";
 import { VendorMenu } from "../features/settings/components/vendor-filters";
 import { getUiState, Theme, updateUiState, useUiState } from "../lib/ui-state";
 import {
@@ -322,11 +323,12 @@ function PagePicker(): ReactNode {
     );
 }
 
-/** The theme toggle and settings, flush: a pair of icons, not two controls. */
+/** The theme toggle, the team and settings, flush: a row of icons, not separate controls. */
 export function SettingsControls(): ReactNode {
     return (
         <Group gap={0}>
             <ThemeToggle />
+            <TeamButton />
             <SettingsButton />
         </Group>
     );

@@ -3,23 +3,30 @@ import {
     Button,
     ColorInput,
     ColorSwatch,
+    CopyButton,
+    Divider,
     Group,
     MultiSelect,
     Select,
     Stack,
-    Switch,
-    Text
+    Text,
+    TextInput
 } from "@mantine/core";
 import {
     ArrowsClockwiseIcon,
+    CheckIcon,
+    CopyIcon,
     TrashIcon,
+    UserPlusIcon,
     UsersThreeIcon,
     XIcon
 } from "@phosphor-icons/react";
 import { ReactNode, useId, useState } from "react";
 import {
     GenericVendorPolicy,
+    MAX_COLOR_NAME_LENGTH,
     MAX_TEAM_COLORS,
+    type TeamColor,
     PERSONAL,
     TeamContextSource,
     TeamRole,
@@ -29,15 +36,16 @@ import {
 import { getVendorName, Vendor } from "@backend/features/library/vendors";
 import { InputRow } from "../../../components/input-row";
 import { OpenUrlButton } from "../../../components/open-url-button";
-import { SETTING_CONTROL_WIDTH } from "../../../lib/style-constants";
 import { useOnshapeLaunch } from "../../../lib/onshape-params";
 import { useAppModal } from "../../../components/open-app-modal";
 import { m } from "../../../paraglide/messages";
 import { openRegisterTeam } from "../open-register";
+import { inviteUrl } from "../invite";
 import {
     teamApi,
     useChooseTeamMutation,
     useRefreshFirstTeamsMutation,
+    useCreateInviteMutation,
     useCurrentTeam,
     useTeamAdminMutation,
     useTeamAdminQuery,
@@ -45,8 +53,21 @@ import {
     useTeamSettingsMutation
 } from "../queries";
 
-/** The settings menu's team rows: which team, registering one, and its dashboard. */
-export function TeamSection(): ReactNode {
+/** The Team panel: which team, its dashboard, registering, and the current team's settings for its admins. */
+export function TeamPanelContent(): ReactNode {
+    return (
+        <Stack gap="md">
+            <TeamSection />
+            <TeamAdminSettings />
+        </Stack>
+    );
+}
+
+/** Wide enough for a team's number and the start of its name. */
+const TEAM_SELECT_WIDTH = 240;
+
+/** Which team, its dashboard, and registering the document's organization. */
+function TeamSection(): ReactNode {
     const contextQuery = useTeamContextQuery();
     const chooseMutation = useChooseTeamMutation();
     const documentId = useOnshapeLaunch((state) => state.documentId);
@@ -64,11 +85,11 @@ export function TeamSection(): ReactNode {
                 <InputRow label={m.teamLabel()} htmlFor={id}>
                     <Select
                         id={id}
-                        w={SETTING_CONTROL_WIDTH}
+                        w={TEAM_SELECT_WIDTH}
                         data={[
                             ...teams.map((team) => ({
                                 value: team.id,
-                                label: `${team.first.program} ${team.first.number}`
+                                label: teamLabel(team.first)
                             })),
                             // Only where a choice decides anything.
                             ...(decidedByDocument
@@ -121,7 +142,7 @@ export function TeamSection(): ReactNode {
 }
 
 /** The current team's settings, for its admins. */
-export function TeamAdminSettings(): ReactNode {
+function TeamAdminSettings(): ReactNode {
     const team = useCurrentTeam();
     if (team?.role !== TeamRole.ADMIN) return null;
     return <TeamAdminForm team={team} />;
@@ -146,26 +167,64 @@ interface TeamAdminFormProps {
     team: MyTeam;
 }
 
+/** Who edits the team's favorites; a switch's two states, read as who. */
+enum FavoritesEditors {
+    EVERYONE = "everyone",
+    ADMINS = "admins"
+}
+
 function TeamAdminForm(props: TeamAdminFormProps): ReactNode {
     const { team } = props;
     const settingsMutation = useTeamSettingsMutation(team.id);
     const { settings } = team;
-    const [newColor, setNewColor] = useState("");
-
-    const setColors = (colors: string[]) => settingsMutation.mutate({ colors });
 
     return (
         <Stack gap="sm">
-            <Text fw={600}>{teamLabel(team.first)}</Text>
-            <Switch
-                label={m.teamMembersEditFavorites()}
-                description={m.teamMembersEditFavoritesDescription()}
-                checked={settings.membersEditFavorites}
-                onChange={(event) =>
-                    settingsMutation.mutate({
-                        membersEditFavorites: event.currentTarget.checked
-                    })
+            <Divider label={m.teamSettings()} labelPosition="left" />
+            <Select
+                label={m.teamEditFavorites()}
+                data={[
+                    {
+                        value: FavoritesEditors.EVERYONE,
+                        label: m.teamEditFavoritesEveryone()
+                    },
+                    {
+                        value: FavoritesEditors.ADMINS,
+                        label: m.teamEditFavoritesAdmins()
+                    }
+                ]}
+                value={
+                    settings.membersEditFavorites
+                        ? FavoritesEditors.EVERYONE
+                        : FavoritesEditors.ADMINS
                 }
+                allowDeselect={false}
+                checkIconPosition="right"
+                onChange={(value) => {
+                    if (value) {
+                        settingsMutation.mutate({
+                            membersEditFavorites:
+                                value === FavoritesEditors.EVERYONE
+                        });
+                    }
+                }}
+            />
+            <Select
+                label={m.teamGenericVendor()}
+                data={Object.values(GenericVendorPolicy).map((policy) => ({
+                    value: policy,
+                    label: genericVendorLabel(policy)
+                }))}
+                value={settings.genericVendor}
+                allowDeselect={false}
+                checkIconPosition="right"
+                onChange={(value) => {
+                    if (value) {
+                        settingsMutation.mutate({
+                            genericVendor: value
+                        });
+                    }
+                }}
             />
             <MultiSelect
                 label={m.teamPreferredVendors()}
@@ -182,72 +241,84 @@ function TeamAdminForm(props: TeamAdminFormProps): ReactNode {
                     })
                 }
             />
-            <Select
-                label={m.teamGenericVendor()}
-                description={m.teamGenericVendorDescription()}
-                data={Object.values(GenericVendorPolicy).map((policy) => ({
-                    value: policy,
-                    label: genericVendorLabel(policy)
-                }))}
-                value={settings.genericVendor}
-                allowDeselect={false}
-                checkIconPosition="right"
-                onChange={(value) => {
-                    if (value) {
-                        settingsMutation.mutate({
-                            genericVendor: value
-                        });
-                    }
-                }}
+            <TeamColors
+                colors={settings.colors}
+                onChange={(colors) => settingsMutation.mutate({ colors })}
             />
-            <Stack gap={4}>
-                <Text size="sm" fw={500}>
-                    {m.teamColors()}
-                </Text>
-                <Group gap="xs">
-                    {settings.colors.map((color) => (
-                        <Group key={color} gap={2} wrap="nowrap">
-                            <ColorSwatch color={color} size={20} />
-                            <ActionIcon
-                                size="sm"
-                                variant="subtle"
-                                title={m.teamRemoveColor()}
-                                onClick={() =>
-                                    setColors(
-                                        settings.colors.filter(
-                                            (each) => each !== color
-                                        )
-                                    )
-                                }
-                            >
-                                <XIcon />
-                            </ActionIcon>
-                        </Group>
-                    ))}
-                </Group>
-                {settings.colors.length < MAX_TEAM_COLORS && (
-                    <Group gap="xs" wrap="nowrap">
-                        <ColorInput
-                            flex={1}
-                            format="hex"
-                            value={newColor}
-                            onChange={setNewColor}
-                            placeholder={m.teamColorPlaceholder()}
-                        />
-                        <Button
-                            variant="default"
-                            disabled={!/^#[0-9a-f]{6}$/i.test(newColor)}
-                            onClick={() => {
-                                setColors([...settings.colors, newColor]);
-                                setNewColor("");
-                            }}
-                        >
-                            {m.teamAddColor()}
-                        </Button>
-                    </Group>
-                )}
-            </Stack>
             <TeamPeople teamId={team.id} />
+        </Stack>
+    );
+}
+
+interface TeamColorsProps {
+    colors: TeamColor[];
+    onChange: (colors: TeamColor[]) => void;
+}
+
+/** Each color under its name, and a row adding another. */
+function TeamColors(props: TeamColorsProps): ReactNode {
+    const { colors, onChange } = props;
+    const [name, setName] = useState("");
+    const [hex, setHex] = useState("");
+    const canAdd = name.trim() !== "" && /^#[0-9a-f]{6}$/i.test(hex);
+
+    return (
+        <Stack gap={4}>
+            <Text size="sm" fw={500}>
+                {m.teamColors()}
+            </Text>
+            {colors.map((color) => (
+                <Group key={color.hex} justify="space-between" wrap="nowrap">
+                    <Group gap="xs" wrap="nowrap">
+                        <ColorSwatch color={color.hex} size={20} />
+                        <Text size="sm">{color.name}</Text>
+                    </Group>
+                    <ActionIcon
+                        size="sm"
+                        variant="subtle"
+                        title={m.teamRemoveColor()}
+                        onClick={() =>
+                            onChange(
+                                colors.filter((each) => each.hex !== color.hex)
+                            )
+                        }
+                    >
+                        <XIcon />
+                    </ActionIcon>
+                </Group>
+            ))}
+            {colors.length < MAX_TEAM_COLORS && (
+                <Group gap="xs" wrap="nowrap" align="flex-start">
+                    <TextInput
+                        flex={1}
+                        placeholder={m.teamColorName()}
+                        maxLength={MAX_COLOR_NAME_LENGTH}
+                        value={name}
+                        onChange={(event) => setName(event.currentTarget.value)}
+                    />
+                    <ColorInput
+                        flex={1}
+                        format="hex"
+                        value={hex}
+                        onChange={setHex}
+                        placeholder={m.teamColorPlaceholder()}
+                    />
+                    <Button
+                        variant="default"
+                        disabled={!canAdd}
+                        onClick={() => {
+                            onChange([
+                                ...colors,
+                                { name: name.trim(), hex: hex.toLowerCase() }
+                            ]);
+                            setName("");
+                            setHex("");
+                        }}
+                    >
+                        {m.teamAddColor()}
+                    </Button>
+                </Group>
+            )}
         </Stack>
     );
 }
@@ -324,7 +395,59 @@ function TeamPeople(props: TeamPeopleProps): ReactNode {
             <Text size="xs" c="dimmed">
                 {m.teamRolesFromOnshape()}
             </Text>
+            <TeamInvite teamId={teamId} />
         </>
+    );
+}
+
+interface TeamInviteProps {
+    teamId: string;
+}
+
+/** A link anybody signed in joins the team by, until it expires. */
+function TeamInvite(props: TeamInviteProps): ReactNode {
+    const { teamId } = props;
+    const inviteMutation = useCreateInviteMutation(teamId);
+    const invite = inviteMutation.data;
+    if (!invite) {
+        return (
+            <Button
+                variant="default"
+                leftSection={<UserPlusIcon />}
+                loading={inviteMutation.isPending}
+                onClick={() => inviteMutation.mutate()}
+            >
+                {m.teamAddMember()}
+            </Button>
+        );
+    }
+    const url = inviteUrl(invite.token);
+    return (
+        <TextInput
+            label={m.teamInviteLink()}
+            description={m.teamInviteExpires({
+                date: new Date(invite.expiresAt).toLocaleDateString()
+            })}
+            value={url}
+            readOnly
+            rightSection={
+                <CopyButton value={url}>
+                    {({ copied, copy }) => (
+                        <ActionIcon
+                            variant="subtle"
+                            title={
+                                copied
+                                    ? m.teamInviteCopied()
+                                    : m.teamInviteCopy()
+                            }
+                            onClick={copy}
+                        >
+                            {copied ? <CheckIcon /> : <CopyIcon />}
+                        </ActionIcon>
+                    )}
+                </CopyButton>
+            }
+        />
     );
 }
 

@@ -41,6 +41,8 @@ import {
     Program,
     TeamContextSource,
     TeamRole,
+    MembershipSource,
+    type TeamInviteOut,
     type SubteamMember,
     type TeamContextOut,
     type TeamReportOut
@@ -539,19 +541,28 @@ describe("team administration", () => {
 
         const bad = await createTestApp({ userId: "admin" }).request(
             url,
-            jsonRequest("POST", { colors: ["red"] }),
+            jsonRequest("POST", { colors: [{ name: "Red", hex: "red" }] }),
             env
         );
         expect(bad.status).toBe(400);
 
         const ok = await createTestApp({ userId: "admin" }).request(
             url,
-            jsonRequest("POST", { colors: ["#FF0000", "#ff0000", "#00ff00"] }),
+            jsonRequest("POST", {
+                colors: [
+                    { name: "Poof Red", hex: "#FF0000" },
+                    { name: "Again", hex: "#ff0000" },
+                    { name: " Field Green ", hex: "#00ff00" }
+                ]
+            }),
             env
         );
         expect(ok.status).toBe(200);
         const team = await db.select().from(teams).get();
-        expect(team?.colors).toEqual(["#ff0000", "#00ff00"]);
+        expect(team?.colors).toEqual([
+            { name: "Poof Red", hex: "#ff0000" },
+            { name: "Field Green", hex: "#00ff00" }
+        ]);
 
         const policy = (genericVendor: string) =>
             createTestApp({ userId: "admin" }).request(
@@ -836,5 +847,94 @@ describe("vendor preferences on insert", () => {
         // Off a team, the part's own default.
         const offTeam = await readSelection(db, TEST_PART_STUDIO_ID, undefined);
         expect(offTeam.selection).toEqual({ vendor: "generic" });
+    });
+});
+
+describe("invites", () => {
+    async function invite(teamId: string, userId = "admin") {
+        return createTestApp({ userId }).request(
+            `/api/teams/${teamId}/invites`,
+            jsonRequest("POST"),
+            env
+        );
+    }
+
+    function join(token: string, userId = "newcomer") {
+        return createTestApp({ userId }).request(
+            "/api/teams/join",
+            jsonRequest("POST", { token }),
+            env
+        );
+    }
+
+    it("lets an admin's link make anybody a member, but not a member's", async () => {
+        const teamId = await seedTeam({
+            admins: ["admin"],
+            members: ["member"]
+        });
+        expect((await invite(teamId, "member")).status).toBe(403);
+
+        const res = await invite(teamId);
+        const { token } = await res.json<TeamInviteOut>();
+        expect((await join(token)).status).toBe(200);
+        expect((await join(token, "another")).status).toBe(200);
+        expect(await memberIds(teamId)).toEqual([
+            "admin",
+            "another",
+            "member",
+            "newcomer"
+        ]);
+        expect((await join("expired")).status).toBe(404);
+    });
+
+    it("keeps an invited member on by their opening the app, and Onshape takes them over", async () => {
+        const teamId = await seedTeam({
+            companyId: COMPANY,
+            admins: ["admin"]
+        });
+        const { token } = await (await invite(teamId)).json<TeamInviteOut>();
+        await join(token, TEST_USER_ID);
+        const longAgo = new Date(Date.now() - 80 * 24 * 60 * 60 * 1000);
+        await db
+            .update(teamMembers)
+            .set({ lastSeenAt: longAgo })
+            .where(eq(teamMembers.userId, TEST_USER_ID));
+
+        await getContext();
+        const renewed = await db
+            .select()
+            .from(teamMembers)
+            .where(eq(teamMembers.userId, TEST_USER_ID))
+            .get();
+        expect(renewed?.lastSeenAt.getTime()).toBeGreaterThan(
+            longAgo.getTime()
+        );
+        expect(renewed?.source).toBe(MembershipSource.INVITE);
+
+        await launch(orgDocument());
+        const proven = await db
+            .select({ source: teamMembers.source })
+            .from(teamMembers)
+            .where(eq(teamMembers.userId, TEST_USER_ID))
+            .get();
+        expect(proven?.source).toBe(MembershipSource.ONSHAPE);
+    });
+
+    it("says whether the caller administers the document's organization, asking Onshape once a day", async () => {
+        await seedTeam({ companyId: COMPANY });
+        vi.spyOn(Documents, "getDocument").mockResolvedValue(
+            orgDocument([OnshapePermission.READ])
+        );
+        await createTestApp().request(
+            `/init?documentId=${ORG_DOC}`,
+            jsonRequest("GET"),
+            env
+        );
+        const asked = vi
+            .spyOn(Companies, "getCompany")
+            .mockResolvedValue({ id: COMPANY, name: "School", admin: true });
+        expect((await getContext(ORG_DOC)).organization?.isAdmin).toBe(true);
+        expect((await getContext(ORG_DOC)).organization?.isAdmin).toBe(true);
+        expect(asked).toHaveBeenCalledOnce();
     });
 });

@@ -5,57 +5,64 @@ in `src/frontend/messages/en.json`, keyed `team…`, and the dashboard's
 `dashboardFeatureTeam…` and `dashboardSourceTeam…`. The errors are written by
 the backend (`features/teams/`), and the app shows them as they come.
 
-## Settings menu
+## Team panel
 
-| String                              | Kind              | Where                        | When                                                     | Review    |
-| ----------------------------------- | ----------------- | ---------------------------- | -------------------------------------------------------- | --------- |
-| "Team"                              | Select label      | The settings menu            | Signed in, on a team                                     | **⚑** New |
-| "FRC 254" / "Personal"              | Options           | Team                         | Personal only outside a team's document                  | **⚑** New |
-| "Set by this document"              | Description       | Under Team, disabled         | The document's organization registered one of your teams | **⚑** New |
-| "Team dashboard" / "Open dashboard" | Row label, button | The settings menu            | On a team                                                | **⚑** New |
-| "Organization" / "Register team"    | Row label, button | The settings menu            | Launched from a company's document                       | **⚑** New |
-| "Team settings"                     | Section title     | The settings menu            | An admin of the current team                             | **⚑** New |
-| "FIRST teams" / "Refresh"           | Row label, button | Admin settings, FRCDesignApp | The owner                                                | **⚑** New |
-| "FIRST teams refreshed"             | Success toast     |                              | The refresh finished                                     |           |
-| "Failed to switch team"             | Error toast       |                              | Choosing a team failed                                   |           |
+Opened by **Team**, beside settings in the navbar.
+
+| String                                    | Kind                        | Where                        | When                                                     | Review    |
+| ----------------------------------------- | --------------------------- | ---------------------------- | -------------------------------------------------------- | --------- |
+| "Team"                                    | Button tooltip, modal title | The navbar                   | Signed in                                                | **⚑** New |
+| "Team"                                    | Select label                | The Team panel               | On a team                                                | **⚑** New |
+| "FRC 254 The Cheesy Poofs" / "Personal"   | Options                     | Team                         | Personal only outside a team's document                  | **⚑** New |
+| "Set by this document"                    | Description                 | Under Team, disabled         | The document's organization registered one of your teams | **⚑** New |
+| "Team dashboard" / "Open dashboard"       | Row label, button           | The Team panel               | On a team                                                | **⚑** New |
+| "Organization" / "Register team"          | Row label, button           | The Team panel               | Launched from a company's document                       | **⚑** New |
+| "Joined the team" / "Failed to join team" | Toasts                      |                              | Opening an invite link                                   | **⚑** New |
+| "This invite has expired."                | Error, from the server      |                              | An invite link past `INVITE_DAYS`                        | **⚑** New |
+| "FIRST teams" / "Refresh"                 | Row label, button           | Admin settings, FRCDesignApp | The owner                                                | **⚑** New |
+| "FIRST teams refreshed"                   | Success toast               |                              | The refresh finished                                     |           |
+| "Failed to switch team"                   | Error toast                 |                              | Choosing a team failed                                   |           |
 
 ## Register team
 
-| String                                                                          | Kind                   | Where            | When                                      | Review          |
-| ------------------------------------------------------------------------------- | ---------------------- | ---------------- | ----------------------------------------- | --------------- |
-| "Register team"                                                                 | Modal title, button    |                  | Opened from the menu                      | **⚑** New       |
-| "Links {organization} to a FIRST team."                                         | Description            | Top of the modal | The organization has a name on record     | **⚑** New       |
-| "New team" / "My team"                                                          | Segmented control      | Top of the modal | The caller administers a team             | **⚑** New       |
-| "FRC" / "FTC"                                                                   | Segmented control      | New team         | Always                                    |                 |
-| "Team" / "Number or name"                                                       | Select label, hint     |                  | Always                                    | **⚑** New       |
-| "No team found"                                                                 | Empty dropdown         | Team             | The search matched nothing                |                 |
-| "Onshape team"                                                                  | Input label            |                  | Always                                    | **⚑** New       |
-| "Only its members join. Leave empty for everyone in the organization."          | Description            | Onshape team     | Always                                    | **⚑** Two ideas |
-| "Invalid Onshape team link"                                                     | Input error            | Onshape team     | No team id in what was typed              | **⚑** New       |
-| "Team registered" / "Failed to register team"                                   | Success, error toast   |                  | After Register                            |                 |
-| "Only an admin of {company} can register it to a team."                         | Error, from the server |                  | The caller doesn't administer the company | **⚑** New       |
-| "{company} is already registered." / "That Onshape team is already registered." | Error, from the server |                  | The company or subteam has a team         | **⚑** New       |
-| "FIRST doesn't list that team."                                                 | Error, from the server |                  | The number isn't in FIRST's list          | **⚑** New       |
-| "That Onshape team isn't in this organization."                                 | Error, from the server |                  | Another company owns the Onshape team     | **⚑** New       |
+| String                                                                          | Kind                   | Where            | When                                                         | Review          |
+| ------------------------------------------------------------------------------- | ---------------------- | ---------------- | ------------------------------------------------------------ | --------------- |
+| "Register team"                                                                 | Modal title, button    |                  | From the Team panel, or by Team itself for a company's admin | **⚑** New       |
+| "Links {organization} to a FIRST team."                                         | Description            | Top of the modal | The organization has a name on record                        | **⚑** New       |
+| "New team" / "Add another team"                                                 | Segmented control      | Top of the modal | The caller is on a team                                      | **⚑** New       |
+| "FRC" / "FTC"                                                                   | Segmented control      | New team         | Always                                                       |                 |
+| "Team" / "Number or name"                                                       | Select label, hint     |                  | Always                                                       | **⚑** New       |
+| "No team found"                                                                 | Empty dropdown         | Team             | The search matched nothing                                   |                 |
+| "Onshape team"                                                                  | Input label            |                  | Always                                                       | **⚑** New       |
+| "Only its members join. Leave empty for everyone in the organization."          | Description            | Onshape team     | Always                                                       | **⚑** Two ideas |
+| "Invalid Onshape team link"                                                     | Input error            | Onshape team     | No team id in what was typed                                 | **⚑** New       |
+| "Team registered" / "Failed to register team"                                   | Success, error toast   |                  | After Register                                               |                 |
+| "Only an admin of {company} can register it to a team."                         | Error, from the server |                  | The caller doesn't administer the company                    | **⚑** New       |
+| "{company} is already registered." / "That Onshape team is already registered." | Error, from the server |                  | The company or subteam has a team                            | **⚑** New       |
+| "FIRST doesn't list that team."                                                 | Error, from the server |                  | The number isn't in FIRST's list                             | **⚑** New       |
+| "That Onshape team isn't in this organization."                                 | Error, from the server |                  | Another company owns the Onshape team                        | **⚑** New       |
 
 ## Team settings
 
-| String                                                                 | Kind                   | Where                   | When                                          | Review    |
-| ---------------------------------------------------------------------- | ---------------------- | ----------------------- | --------------------------------------------- | --------- |
-| "Members edit favorites"                                               | Switch label           | Team settings           | Always                                        | **⚑** New |
-| "Lets members add, order and remove team favorites."                   | Description            | Under the switch        | Always                                        | **⚑** New |
-| "Preferred vendors"                                                    | Multi-select label     | Team settings           | Always                                        | **⚑** New |
-| "In the order picked: first listed first."                             | Description            | Under Preferred vendors | Always                                        | **⚑** New |
-| "Generic fasteners"                                                    | Select label           | Team settings           | Always                                        | **⚑** New |
-| "Whether Vendor lists and Auto Assembly use Generic."                  | Description            | Under Generic fasteners | Always                                        | **⚑** New |
-| "Require" / "Prefer" / "No preference" / "Avoid" / "Ban"               | Options                | Generic fasteners       | Always                                        | **⚑** New |
-| "Team colors" / "Add" / "Remove color"                                 | Label, button, tooltip | Team settings           | Add while under six colors                    | **⚑** New |
-| "Organizations"                                                        | Heading                | Team settings           | Always                                        | **⚑** New |
-| "{organization}, {n} Onshape team member(s)"                           | Row                    | Under Organizations     | A subteam registration                        | **⚑** New |
-| "Refresh members" / "Remove"                                           | Tooltips               | An organization's row   | Refresh only for a subteam                    | **⚑** New |
-| "{n} member(s), {m} admin(s)"                                          | Heading                | Team settings           | Always                                        | **⚑** New |
-| "Admins of your organizations or Onshape teams are the team's admins." | Note                   | Under the counts        | Always                                        | **⚑** New |
-| "Failed to save team settings" / "Failed to update team"               | Error toasts           |                         | A setting, member or organization edit failed |           |
+In the Team panel, for an admin of the current team.
+
+| String                                                                 | Kind                                 | Where                   | When                                          | Review    |
+| ---------------------------------------------------------------------- | ------------------------------------ | ----------------------- | --------------------------------------------- | --------- |
+| "Team settings"                                                        | Divider                              | The Team panel          | Always                                        | **⚑** New |
+| "Edit favorites" / "Everyone" / "Admins only"                          | Select label, options                | Team settings           | Always                                        | **⚑** New |
+| "Generic vendor"                                                       | Select label                         | Team settings           | Always                                        | **⚑** New |
+| "Require" / "Prefer" / "No preference" / "Avoid" / "Ban"               | Options                              | Generic vendor          | Always                                        | **⚑** New |
+| "Preferred vendors"                                                    | Multi-select label                   | Team settings           | Always                                        | **⚑** New |
+| "In the order picked: first listed first."                             | Description                          | Under Preferred vendors | Always                                        | **⚑** New |
+| "Team colors" / "Name" / "Hex or RGB" / "Add" / "Remove color"         | Label, placeholders, button, tooltip | Team settings           | Add while under six colors                    | **⚑** New |
+| "Organizations"                                                        | Heading                              | Team settings           | Always                                        | **⚑** New |
+| "{organization}, {n} Onshape team member(s)"                           | Row                                  | Under Organizations     | A subteam registration                        | **⚑** New |
+| "Refresh members" / "Remove"                                           | Tooltips                             | An organization's row   | Refresh only for a subteam                    | **⚑** New |
+| "{n} member(s), {m} admin(s)"                                          | Heading                              | Team settings           | Always                                        | **⚑** New |
+| "Admins of your organizations or Onshape teams are the team's admins." | Note                                 | Under the counts        | Always                                        | **⚑** New |
+| "Add member"                                                           | Button                               | Under the note          | Always                                        | **⚑** New |
+| "Invite link" / "Works until {date}" / "Copy link" / "Copied"          | Input label, description, tooltips   | In place of Add member  | Once made                                     | **⚑** New |
+| "Failed to save team settings" / "Failed to update team"               | Error toasts                         |                         | A setting, member or organization edit failed |           |
 
 ## Favorites, recents and color
 

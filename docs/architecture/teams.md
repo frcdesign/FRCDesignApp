@@ -140,6 +140,8 @@ GET    /api/teams/context?documentId=                             TeamContextOut
 GET    /api/teams/first?program=&q=                               FirstTeam[], by number or name
 POST   /api/teams/register                                        RegisterTeamIn → { teamId }
 POST   /api/teams/chosen                                          { teamId?: string | "personal" }
+POST   /api/teams/:teamId/invites                                 admin: TeamInviteOut, a token for INVITE_DAYS
+POST   /api/teams/join                                            { token } → { teamId }
 POST   /api/teams/refresh-first                                   owner
 GET    /api/teams/:teamId/admin                                   admin: TeamAdminOut
 POST   /api/teams/:teamId/settings                                admin: Partial<TeamSettings>
@@ -263,9 +265,22 @@ interface TeamSettings {
     membersEditFavorites: boolean;
     /** Most preferred first; a vendor left out ranks after every listed one. */
     vendorRanking: Vendor[];
-    /** `#rrggbb`, in the order offered. At most `MAX_TEAM_COLORS`. */
-    colors: string[];
+    /** In the order offered. At most `MAX_TEAM_COLORS`. */
+    colors: TeamColor[];
     genericVendor: GenericVendorPolicy;
+}
+
+/** A color a team offers, under the name its people know it by. */
+interface TeamColor {
+    name: string;
+    /** `#rrggbb`. */
+    hex: string;
+}
+
+/** How someone joined: by Onshape (a launch or registration), or by an admin's invite link. */
+enum MembershipSource {
+    ONSHAPE = "onshape",
+    INVITE = "invite"
 }
 
 /** What the current team asks of vendors; `NO_PREFERENCES` off a team. */
@@ -406,14 +421,15 @@ function breakTiesByVendor<T>(
 ): T[];
 ```
 
-| Path                                                            | Role                                                        |
-| --------------------------------------------------------------- | ----------------------------------------------------------- |
-| `src/frontend/features/teams/components/team-settings.tsx`      | The settings menu's team rows and the team admin's settings |
-| `src/frontend/features/teams/components/register-team-form.tsx` | **Register team**: a new team, or the caller's              |
-| `src/frontend/features/teams/components/team-favorites.tsx`     | Team favorite rows, the team icon, and the part menu's item |
-| `src/frontend/features/teams/components/color-row.tsx`          | The Color control                                           |
-| `src/frontend/features/recents/components/recents-list.tsx`     | **Mine** and **Team** on Recently Used                      |
-| `src/frontend/routes/dashboard/teams/$teamId.tsx`               | The team's page                                             |
+| Path                                                            | Role                                                                  |
+| --------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `src/frontend/features/teams/components/team-button.tsx`        | The navbar's **Team**, beside settings, and joining by an invite link |
+| `src/frontend/features/teams/components/team-panel.tsx`         | The Team panel: the team select, and the admin's settings             |
+| `src/frontend/features/teams/components/register-team-form.tsx` | **Register team**: a new team, or the caller's                        |
+| `src/frontend/features/teams/components/team-favorites.tsx`     | Team favorite rows, the team icon, and the part menu's item           |
+| `src/frontend/features/teams/components/color-row.tsx`          | The Color control                                                     |
+| `src/frontend/features/recents/components/recents-list.tsx`     | **Mine** and **Team** on Recently Used                                |
+| `src/frontend/routes/dashboard/teams/$teamId.tsx`               | The team's page                                                       |
 
 ## Storage
 
@@ -433,9 +449,9 @@ insertables:
   read) and `synced_at`. An empty `subteam_id` means every editor. Unique on
   company and subteam, and on team and company.
 - `team_members` — a cache of what Onshape says: team, user, role,
-  `joined_at`, `last_seen_at` and `role_checked_at`. A row counts only while
-  `last_seen_at` is within `MEMBERSHIP_DAYS` (90). Primary key on team and
-  user; indexed on user.
+  `joined_at`, `last_seen_at`, `role_checked_at` and `source`
+  (`MembershipSource`). A row counts only while `last_seen_at` is within
+  `MEMBERSHIP_DAYS` (90). Primary key on team and user; indexed on user.
 - `team_favorites` — a user's favorite's shape, owned by a team, with
   `created_by`. Unique on team, library and insertable.
 - `team_recent_inserts` — a user's recent's shape, owned by a team, with who
@@ -455,6 +471,9 @@ deletes its team favorites and recents, and hiding one deletes them too.
   and by registration; 30 days.
 - `chosen-team:` — by user id, the team chosen or `personal`. Kept until
   changed.
+- `team-invite:` — by token, the team an invite link joins. `INVITE_DAYS` (7).
+- `company-admin:` — by company and user, whether Onshape says the user
+  administers the company. `ONSHAPE_RECHECK_HOURS` (24).
 
 **Secrets**: `FIRST_FRC_API_USERNAME`, `FIRST_FRC_API_TOKEN`,
 `FIRST_FTC_API_USERNAME`, `FIRST_FTC_API_TOKEN` (see [auth.md](./auth.md)).
@@ -482,19 +501,23 @@ list. `uiState.sections` holds Team settings' open state.
 
 ### Registering an organization
 
-1. The settings menu shows **Register team** under **Organization** whenever the
+1. The Team panel shows **Register team** under **Organization** whenever the
    launch's document belongs to a company the server knows of.
-2. The form registers it to a new team, picked from FIRST's list by number or
-   name, or to a team the caller administers. An Onshape team link or id is
-   optional.
-3. `registerOrganization` reads the document (`getDocument`). A document no
+2. Pressing **Team** opens the register dialog itself when the caller
+   administers that company (`organization.isAdmin`) and the document isn't
+   one of their teams'.
+3. The dialog registers it to a **New team**, picked from FIRST's list by number
+   or name, or with **Add another team** to a team the caller administers. That
+   team select lists the teams they administer, then those they only belong
+   to, disabled. An Onshape team link or id is optional.
+4. `registerOrganization` reads the document (`getDocument`). A document no
    company owns is refused.
-4. It reads the company (`getCompany`). Anyone but its admin is refused.
-5. With an Onshape team, `readSubteam` checks the company owns it and reads its
+5. It reads the company (`getCompany`). Anyone but its admin is refused.
+6. With an Onshape team, `readSubteam` checks the company owns it and reads its
    members.
-6. A company and subteam already registered is refused, as is a company already
+7. A company and subteam already registered is refused, as is a company already
    on the chosen team. A new team's number must be in `first_teams`.
-7. One batch writes the team when new, the organization, and the caller as the
+8. One batch writes the team when new, the organization, and the caller as the
    team's admin.
 
 ### Becoming a member
@@ -517,7 +540,12 @@ list. `uiState.sections` holds Team settings' open state.
    read counts it.
 8. Registration writes its registrant as an admin, since it just checked.
    **Refresh members** beside a subteam re-reads it under the admin's session.
-   Nothing else writes membership or a role.
+9. An admin's **Add member** makes an invite link, good for `INVITE_DAYS`.
+   Anybody signed in who opens it joins as a member (`joinByInvite`,
+   `MembershipSource.INVITE`); the app drops the token from the url. Their
+   opening the app renews them (`renewInvitedMemberships`, on
+   `/api/teams/context`). A launch that proves them makes them Onshape's.
+10. Nothing else writes membership or a role.
 
 ### Team context
 
@@ -531,9 +559,16 @@ list. `uiState.sections` holds Team settings' open state.
 4. Otherwise the chosen team, if the user is still on it, else the one last
    seen. Nobody starts on Personal.
 
-The settings menu's **Team** select lists the user's teams, and **Personal**
-outside a team's document. In a team's document it is disabled, and says "Set
-by this document".
+The navbar's **Team**, beside settings and shown signed in, opens the Team
+panel (`openTeamPanel`). Its **Team** select lists the user's teams, and
+**Personal** outside a team's document. In a team's document it is disabled,
+and says "Set by this document". An admin of the current team sees its
+settings below:
+
+- **Edit favorites**: Everyone or Admins only (`membersEditFavorites`);
+- **Generic vendor** (`GenericVendorPolicy`) and **Preferred vendors**;
+- **Team colors**, each a name and a color;
+- **Organizations**, the member and admin counts, and **Add member**.
 
 ### Usage and the team page
 
@@ -654,18 +689,22 @@ list.
 - A company and subteam belong to at most one team; a company joins a team at
   most once.
 - Only a company's admin, as Onshape reports it, registers that company.
-- Membership and roles come only from Onshape: written by `/init`, from a
-  document the grant can write and a registered company owns, and by
-  registration. No route sets a role or a member.
+- Roles come only from Onshape. Membership comes from Onshape (`/init`, from a
+  document the grant can write and a registered company owns, and
+  registration) or from an admin's invite link. No route sets a role or names a
+  member.
 - A team's admin administers one of its organizations or its Onshape team, as
   Onshape last said within a day of their latest launch.
-- A membership counts only while a launch proved it within `MEMBERSHIP_DAYS`.
+- A membership counts only while it was proven within `MEMBERSHIP_DAYS`: by a
+  launch, or for an invited member, by opening the app.
 - `resolveTeamContext` is the one place that decides a use's team.
 - A use is credited to a team only while the user is its member.
 - Team context never changes what a request does, only where it is counted.
   Resolving it never fails a request: a failure gives no team.
-- No team route but registration and **Refresh members** calls Onshape. A
-  launch asks Onshape about a role or a subteam at most once a day each.
+- Only registration, **Refresh members**, and `/api/teams/context` for a
+  company's document call Onshape. The context asks whether the caller
+  administers the company at most once a day (`company-admin:`). A launch asks
+  about a role or a subteam at most once a day each.
 - Team favorites, recents and the report are read only by the team's members.
 - The report never names another team, and never ranks or draws a distribution
   among fewer than `MIN_RANKED_TEAMS`.
@@ -710,6 +749,13 @@ list.
   Onshape already decide who administers it; mirroring that keeps one place to
   change it and needs no member list. A role is cached and asked again once a
   day, so a launch costs at most one extra call a day.
+- **Invite links beside Onshape.** Somebody working only in their own documents
+  can't prove a membership by a launch, so an admin can bring them in. A link
+  anybody may open is simpler than naming an Onshape user, which the app can't
+  look up; seven days bounds how far a shared link travels.
+- **A Team button, not a settings section.** A team is something people switch
+  and run, not a preference, and registering opens straight from it in the
+  document that needs it.
 - **Memberships lapse after 90 days.** A student who left stops counting with
   nobody removing them; a season's break is shorter.
 - **A subteam narrows an organization.** A school enterprise often holds an FRC

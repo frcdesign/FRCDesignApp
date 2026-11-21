@@ -29,6 +29,7 @@ CREATE TABLE `team_members` (
 	`team_id` text NOT NULL,
 	`user_id` text NOT NULL,
 	`role` text NOT NULL,
+	`source` text DEFAULT 'onshape' NOT NULL,
 	`joined_at` integer NOT NULL,
 	`last_seen_at` integer NOT NULL,
 	`role_checked_at` integer NOT NULL,

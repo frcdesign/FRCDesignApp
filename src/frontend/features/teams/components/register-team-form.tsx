@@ -27,11 +27,12 @@ interface RegisterTeamFormProps {
     teams: MyTeam[];
 }
 
-/** Registers the launch's organization: to a new team, or to one the caller administers. */
+/** Registers the launch's organization: to a new team, or as another of a team the caller administers. */
 export function RegisterTeamForm(props: RegisterTeamFormProps): ReactNode {
     const { documentId, organization, teams } = props;
     const modal = useAppModal();
     const adminTeams = teams.filter((team) => team.role === TeamRole.ADMIN);
+    const memberTeams = teams.filter((team) => team.role !== TeamRole.ADMIN);
     const [mode, setMode] = useState(Mode.NEW);
     const [program, setProgram] = useState(Program.FRC);
     const [search, setSearch] = useState("");
@@ -80,7 +81,7 @@ export function RegisterTeamForm(props: RegisterTeamFormProps): ReactNode {
                         })}
                     </div>
                 )}
-                {adminTeams.length > 0 && (
+                {teams.length > 0 && (
                     <SegmentedControl
                         value={mode}
                         onChange={(value) => setMode(value)}
@@ -127,9 +128,11 @@ export function RegisterTeamForm(props: RegisterTeamFormProps): ReactNode {
                 ) : (
                     <Select
                         label={m.teamRegisterTeam()}
-                        data={adminTeams.map((team) => ({
+                        // Shown so a member sees their team, but only an admin adds to it.
+                        data={[...adminTeams, ...memberTeams].map((team) => ({
                             value: team.id,
-                            label: teamLabel(team.first)
+                            label: teamLabel(team.first),
+                            disabled: team.role !== TeamRole.ADMIN
                         }))}
                         value={teamId}
                         onChange={setTeamId}

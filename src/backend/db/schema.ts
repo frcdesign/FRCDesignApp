@@ -22,9 +22,11 @@ import {
 import { BuildIssue, knownBuildIssues } from "../features/build-checker/issues";
 import {
     GenericVendorPolicy,
+    MembershipSource,
     OrganizationKind,
     Program,
     type SubteamMember,
+    type TeamColor,
     TeamRole
 } from "../features/teams/contract";
 
@@ -338,7 +340,7 @@ export const teams = sqliteTable(
             .notNull()
             .default([]),
         colors: text("colors", { mode: "json" })
-            .$type<string[]>()
+            .$type<TeamColor[]>()
             .notNull()
             .default([]),
         genericVendor: text("generic_vendor")
@@ -400,6 +402,11 @@ export const teamMembers = sqliteTable(
         userId: text("user_id").notNull(),
         // Inherited from Onshape: an admin of a registered organization or subteam.
         role: text("role").$type<TeamRole>().notNull(),
+        // An invite's membership is renewed by the member opening the app; Onshape's only by a launch.
+        source: text("source")
+            .$type<MembershipSource>()
+            .notNull()
+            .default(MembershipSource.ONSHAPE),
         joinedAt: integer("joined_at", { mode: "timestamp_ms" }).notNull(),
         // Moved by every launch that proves membership again; lapses past `MEMBERSHIP_DAYS`.
         lastSeenAt: integer("last_seen_at", { mode: "timestamp_ms" }).notNull(),

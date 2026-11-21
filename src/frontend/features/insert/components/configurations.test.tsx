@@ -215,7 +215,10 @@ describe("ConfigurationWrapper", () => {
 
     it("draws three color channels as one Color, offering the team's", async () => {
         const user = userEvent.setup();
-        mocks.teamSettings = { ...DEFAULT_TEAM_SETTINGS, colors: ["#ff8000"] };
+        mocks.teamSettings = {
+            ...DEFAULT_TEAM_SETTINGS,
+            colors: [{ name: "Poof Orange", hex: "#ff8000" }]
+        };
         const channel = (name: string) => ({
             ...quantityParam(name, {
                 quantityType: QuantityType.INTEGER,
@@ -236,7 +239,7 @@ describe("ConfigurationWrapper", () => {
         });
 
         await user.click(await screen.findByLabelText("Color"));
-        await user.click(await screen.findByText("#ff8000"));
+        await user.click(await screen.findByText("Poof Orange"));
 
         expect(screen.queryByLabelText("Red")).toBeNull();
         expect(lastReport().selection).toMatchObject({

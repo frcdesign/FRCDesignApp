@@ -52,13 +52,7 @@ import { RefreshAdminTeamButton } from "../../admin-team/components/refresh-admi
 import { AdminTeamSetting } from "../../admin-team/components/admin-team-setting";
 import { FeatureScriptsReloadButton } from "../../featurescripts/components/featurescripts-reload-button";
 import { FeatureScriptsLoadCallout } from "../../featurescripts/components/featurescripts-load-callout";
-import {
-    RefreshFirstTeamsButton,
-    TeamAdminSettings,
-    TeamSection
-} from "../../teams/components/team-settings";
-import { useCurrentTeam } from "../../teams/queries";
-import { TeamRole } from "@backend/features/teams/contract";
+import { RefreshFirstTeamsButton } from "../../teams/components/team-panel";
 
 /** The usage dashboard, served standalone and needing no sign-in. */
 const DASHBOARD_URL = "/dashboard";
@@ -110,11 +104,6 @@ export function SettingsMenuContent(): ReactNode {
     return (
         <>
             <UserSettings />
-            <RequireSignIn>
-                <Divider my="md" />
-                <TeamSection />
-                <TeamSettingsSection />
-            </RequireSignIn>
             {/* Unlike all other checks, this one uses maxAccessLevel so you can
                 still switch back up from user to admin. */}
             {hasEditorAccess(maxAccessLevel) && (
@@ -225,26 +214,6 @@ function OpenAppButton(props: OpenAppButtonProps): ReactNode {
 const TESTBENCH_URL = "/testbench";
 
 const ADMIN_SECTION_IDS = [SectionId.ADMIN_SETTINGS];
-const TEAM_SECTION_IDS = [SectionId.TEAM_SETTINGS];
-
-/** Only for an admin of the current team. */
-function TeamSettingsSection(): ReactNode {
-    const opened = useOpenedSections(TEAM_SECTION_IDS);
-    const team = useCurrentTeam();
-    if (team?.role !== TeamRole.ADMIN) return null;
-    return (
-        <AppSections
-            compact
-            opened={opened}
-            onChange={(next) => setOpenedSections(TEAM_SECTION_IDS, next)}
-        >
-            <AppSection value={SectionId.TEAM_SETTINGS} name={m.teamSettings()}>
-                <TeamAdminSettings />
-            </AppSection>
-        </AppSections>
-    );
-}
-
 function AdminSettingsSection(): ReactNode {
     const opened = useOpenedSections(ADMIN_SECTION_IDS);
     return (

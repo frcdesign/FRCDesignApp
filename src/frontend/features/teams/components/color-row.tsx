@@ -8,6 +8,7 @@ import {
 } from "@mantine/core";
 import { type Dispatch, ReactNode, useState } from "react";
 import { type Selection } from "@backend/features/configurations/contract";
+import { type TeamColor } from "@backend/features/teams/contract";
 import { LabeledRow } from "../../../components/parameter-input";
 import { m } from "../../../paraglide/messages";
 import { type ColorControl, readColor, writeColor } from "../color";
@@ -19,7 +20,7 @@ interface ColorRowProps {
     selection: Selection;
     setSelection: Dispatch<Selection>;
     /** The current team's, offered first; empty off a team. */
-    teamColors: string[];
+    teamColors: TeamColor[];
 }
 
 /** One Color in place of the inputs a part spells its color with. */
@@ -27,7 +28,7 @@ export function ColorRow(props: ColorRowProps): ReactNode {
     const { control, selection, setSelection, teamColors } = props;
     const color = readColor(control, selection);
     const [isCustom, setIsCustom] = useState(
-        color === undefined || !teamColors.includes(color)
+        color === undefined || !teamColors.some((each) => each.hex === color)
     );
     const inputId = `color-${control.kind}`;
 
@@ -57,7 +58,10 @@ export function ColorRow(props: ColorRowProps): ReactNode {
                 <Select
                     id={inputId}
                     data={[
-                        ...teamColors.map((value) => ({ value, label: value })),
+                        ...teamColors.map((each) => ({
+                            value: each.hex,
+                            label: each.name
+                        })),
                         { value: CUSTOM, label: m.teamColorCustom() }
                     ]}
                     value={isCustom ? CUSTOM : (color ?? CUSTOM)}

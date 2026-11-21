@@ -10,7 +10,7 @@ import {
 } from "../../db/schema";
 import { handledError } from "../../lib/api-error";
 import { cacheMiddleware } from "../../lib/cache";
-import { getApp } from "../../lib/context";
+import { type AppContext, getApp } from "../../lib/context";
 import { getLibraryParam, libraryRoute } from "../../lib/route-params";
 import { validate } from "../../lib/validate";
 import {
@@ -22,7 +22,10 @@ import { Vendor } from "../library/vendors";
 import { resolveTeamContext } from "./context";
 import {
     GenericVendorPolicy,
+    INVITE_DAYS,
+    MAX_COLOR_NAME_LENGTH,
     MAX_TEAM_COLORS,
+    type TeamInviteOut,
     PERSONAL,
     Program,
     TeamRole,
@@ -47,10 +50,16 @@ import {
     documentOwnerStore,
     getMyTeams,
     getOrganizationRegistrations,
+    companyAdminStore,
     getTeamsById,
     isCurrentMember,
+    joinByInvite,
+    renewInvitedMemberships,
+    teamInviteStore,
     toFirstTeam
 } from "./store";
+import { getCompany } from "../../lib/onshape/endpoints/companies";
+import { describeError } from "../../lib/error-text";
 
 export const teamRoutes = getApp();
 
@@ -72,6 +81,9 @@ teamRoutes.get(
                 : undefined
         ]);
 
+        // An invited member keeps their team by opening the app.
+        await renewInvitedMemberships(db, userId, new Date());
+
         let organization: TeamContextOut["organization"];
         if (owner?.kind !== undefined) {
             const registrations = await getOrganizationRegistrations(
@@ -86,6 +98,7 @@ teamRoutes.get(
                 companyId: owner.companyId,
                 kind: owner.kind,
                 name: registrations[0]?.name,
+                isAdmin: await isCompanyAdmin(c, owner.companyId, userId),
                 teams: [...byId.values()].map(({ team, first }) => ({
                     id: team.id,
                     first
@@ -102,6 +115,29 @@ teamRoutes.get(
 );
 
 const SEARCH_LIMIT = 20;
+
+/** Whether the caller administers the company, cached a day; undefined when Onshape won't say. */
+async function isCompanyAdmin(
+    c: AppContext,
+    companyId: string,
+    userId: string
+): Promise<boolean | undefined> {
+    const key = `${companyId}:${userId}`;
+    const cached = await companyAdminStore.get(c.env.KV, key);
+    if (cached !== undefined) return cached;
+    try {
+        const admin =
+            (await getCompany(await c.var.getOnshapeApi(), companyId)).admin ===
+            true;
+        await companyAdminStore.put(c.env.KV, key, admin);
+        return admin;
+    } catch (error) {
+        console.warn(
+            `Failed to read a company's admins: ${describeError(error)}`
+        );
+        return undefined;
+    }
+}
 
 /** GET /api/teams/first?program=&q=: by number's leading digits, or name. */
 teamRoutes.get(
@@ -239,10 +275,17 @@ teamRoutes.post(
             genericVendor: z.enum(GenericVendorPolicy).optional(),
             colors: z
                 .array(
-                    z
-                        .string()
-                        .transform((color) => color.toLowerCase())
-                        .pipe(z.string().regex(HEX_COLOR))
+                    z.object({
+                        name: z
+                            .string()
+                            .trim()
+                            .min(1)
+                            .max(MAX_COLOR_NAME_LENGTH),
+                        hex: z
+                            .string()
+                            .transform((color) => color.toLowerCase())
+                            .pipe(z.string().regex(HEX_COLOR))
+                    })
                 )
                 .max(MAX_TEAM_COLORS)
                 .optional()
@@ -258,7 +301,15 @@ teamRoutes.post(
                     vendorRanking: settings.vendorRanking && [
                         ...new Set(settings.vendorRanking)
                     ],
-                    colors: settings.colors && [...new Set(settings.colors)]
+                    // One name per color: the first a list gives it wins.
+                    colors:
+                        settings.colors &&
+                        settings.colors.filter(
+                            (color, index, all) =>
+                                all.findIndex(
+                                    (each) => each.hex === color.hex
+                                ) === index
+                        )
                 })
                 .where(eq(teams.id, getTeamParam(c)));
         }
@@ -321,6 +372,46 @@ teamRoutes.post(
             .set({ subteamMembers, syncedAt: new Date() })
             .where(eq(teamOrganizations.id, organization.id));
         return c.json({ memberCount: subteamMembers.length });
+    }
+);
+
+/** POST /api/teams/:teamId/invites: a link anybody signed in can join by, for `INVITE_DAYS`. */
+teamRoutes.post(
+    teamRoute() + "/invites",
+    requireTeamAdminMiddleware,
+    async (c) => {
+        const token = crypto.randomUUID();
+        await teamInviteStore.put(c.env.KV, token, { teamId: getTeamParam(c) });
+        return c.json({
+            token,
+            expiresAt: Date.now() + INVITE_DAYS * 24 * 60 * 60 * 1000
+        } satisfies TeamInviteOut);
+    }
+);
+
+/** POST /api/teams/join: `{ token }` from an invite link. */
+teamRoutes.post(
+    "/teams/join",
+    requireSignInMiddleware,
+    validate("json", z.object({ token: z.string().min(1) })),
+    async (c) => {
+        const invite = await teamInviteStore.get(
+            c.env.KV,
+            c.req.valid("json").token
+        );
+        if (!invite) {
+            throw handledError(
+                "This invite has expired.",
+                HttpStatus.NOT_FOUND
+            );
+        }
+        await joinByInvite(
+            getDb(c.env.DB),
+            invite.teamId,
+            await c.var.getUserId(),
+            new Date()
+        );
+        return c.json({ teamId: invite.teamId });
     }
 );
 

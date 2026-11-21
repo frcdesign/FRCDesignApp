@@ -90,13 +90,38 @@ export interface FirstTeam {
     country?: string;
 }
 
+/** A color a team offers, under the name its people know it by. */
+export interface TeamColor {
+    name: string;
+    /** `#rrggbb`. */
+    hex: string;
+}
+
+export const MAX_COLOR_NAME_LENGTH = 30;
+
+/** How someone joined: by Onshape (a launch or registration), or by an admin's invite link. */
+export enum MembershipSource {
+    ONSHAPE = "onshape",
+    INVITE = "invite"
+}
+
+/** How long an invite link works. */
+export const INVITE_DAYS = 7;
+
+/** `POST /api/teams/:teamId/invites`. */
+export interface TeamInviteOut {
+    token: string;
+    /** Milliseconds since the epoch. */
+    expiresAt: number;
+}
+
 export interface TeamSettings {
     /** Whether members, not only admins, may add, order and remove team favorites. */
     membersEditFavorites: boolean;
     /** Most preferred first; a vendor left out ranks after every listed one. */
     vendorRanking: Vendor[];
-    /** `#rrggbb`, in the order offered. At most `MAX_TEAM_COLORS`. */
-    colors: string[];
+    /** In the order offered. At most `MAX_TEAM_COLORS`. */
+    colors: TeamColor[];
     genericVendor: GenericVendorPolicy;
 }
 
@@ -121,6 +146,8 @@ export interface DocumentOrganization {
     kind: OrganizationKind;
     /** Undefined until somebody registers it, which asks Onshape for its name. */
     name?: string;
+    /** Whether the caller administers it, as Onshape said within a day; undefined when it wouldn't say. */
+    isAdmin?: boolean;
     /** The teams it registered, the caller's or not. */
     teams: { id: string; first: FirstTeam }[];
 }
