@@ -171,8 +171,10 @@ export function createAppTheme(primaryColor: string) {
             }),
             Input: Input.extend({ styles: { section: ICON_SECTION } }),
             Modal: Modal.extend({ defaultProps: { centered: true } }),
-            // A select reads as a field, not a dropdown button
-            Select: Select.extend({ defaultProps: { rightSection: null } }),
+            // Its list opens against the field, with no arrow between them
+            Select: Select.extend({
+                defaultProps: { comboboxProps: { withArrow: false } }
+            }),
             Table: Table.extend({
                 defaultProps: { highlightOnHover: true },
                 // Headings the weight of other labels, not Mantine's bold.
