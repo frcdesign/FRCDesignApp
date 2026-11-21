@@ -122,6 +122,12 @@ default" — goes through `canonicalValue`/`canonicalValues`, never through a ke
 Don't add a third form: if something needs a different view of a selection, it
 wants a function in `selection.ts`, not a new shape.
 
+A part's vendor is the first thing asked of it, as in robot-code's lookup
+tables, dialogs and generated Part Studios (its `docs/featurescript-style.md`,
+"Vendor goes first"). Where the app lays a part's choices out itself — a form
+such as Auto Assembly's, a filter, a list of options — Vendor comes first; a
+configuration's own parameters keep the order Onshape gives them.
+
 # User-facing strings
 
 Text the app shows is a message in `src/frontend/messages/en.json`, compiled by
