@@ -1061,10 +1061,10 @@
             ],
             "selectors": ["membersPlural", "adminsPlural"],
             "match": {
-                "membersPlural=one adminsPlural=one": "{membersFormatted} member, {adminsFormatted} admin",
-                "membersPlural=one adminsPlural=other": "{membersFormatted} member, {adminsFormatted} admins",
-                "membersPlural=other adminsPlural=one": "{membersFormatted} members, {adminsFormatted} admin",
-                "membersPlural=other adminsPlural=other": "{membersFormatted} members, {adminsFormatted} admins"
+                "membersPlural=one, adminsPlural=one": "{membersFormatted} member, {adminsFormatted} admin",
+                "membersPlural=one, adminsPlural=other": "{membersFormatted} member, {adminsFormatted} admins",
+                "membersPlural=other, adminsPlural=one": "{membersFormatted} members, {adminsFormatted} admin",
+                "membersPlural=other, adminsPlural=other": "{membersFormatted} members, {adminsFormatted} admins"
             }
         }
     ],

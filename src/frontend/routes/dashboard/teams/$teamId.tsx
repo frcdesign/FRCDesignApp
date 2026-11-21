@@ -103,11 +103,11 @@ function categoryLabel(category: TeamCategory): string {
 function medalColor(medal: Medal): string {
     switch (medal) {
         case Medal.GOLD:
-            return "yellow";
+            return "yellow.5";
         case Medal.SILVER:
-            return "gray";
+            return "gray.4";
         case Medal.BRONZE:
-            return "orange";
+            return "orange.8";
     }
 }
 
@@ -145,7 +145,10 @@ function StandingCard(props: StandingCardProps): ReactNode {
                     {categoryLabel(standing.category)}
                 </Text>
                 {ranking?.medal && (
-                    <Badge color={medalColor(ranking.medal)}>
+                    <Badge
+                        color={medalColor(ranking.medal)}
+                        c={ranking.medal === Medal.BRONZE ? "white" : "dark.8"}
+                    >
                         {medalLabel(ranking.medal)}
                     </Badge>
                 )}

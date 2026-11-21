@@ -37,6 +37,8 @@ import { filterInsertables } from "../../search/filter";
 import { searchList } from "../../search/list-search";
 import { type SearchHit } from "../../search/search";
 import { useVendorFilters } from "../../settings/vendor-filters";
+import { FavoriteButton } from "../../favorites/components/favorite-button";
+import { useFavorite } from "../../favorites/queries";
 import {
     useCanEditTeamFavorites,
     useTeamFavoritesMutations,
@@ -134,6 +136,7 @@ function TeamFavoriteCard(props: TeamFavoriteCardProps): ReactNode {
     const canEdit = useCanEditTeamFavorites();
     const vendorFilters = useVendorFilters();
     const { remove, reorder } = useTeamFavoritesMutations();
+    const ownFavorite = useFavorite(insertable.id);
     if (isHidden) return null;
 
     const match: RowMatch = {
@@ -192,12 +195,21 @@ function TeamFavoriteCard(props: TeamFavoriteCardProps): ReactNode {
                 />
             }
             actions={
-                <QuickInsertButton
-                    insertable={insertable}
-                    selection={favorite.defaultSelection}
-                    isFavorite={false}
-                    source={UseSource.TEAM_FAVORITES}
-                />
+                <Group gap={4} wrap="nowrap">
+                    <QuickInsertButton
+                        insertable={insertable}
+                        selection={favorite.defaultSelection}
+                        isFavorite={ownFavorite !== undefined}
+                        source={UseSource.TEAM_FAVORITES}
+                    />
+                    {/* The user's own heart, as on every other row. */}
+                    <FavoriteButton
+                        favorite={ownFavorite}
+                        insertable={insertable}
+                        selection={favorite.defaultSelection}
+                        configurationKey={favorite.configurationKey}
+                    />
+                </Group>
             }
             menuItems={
                 <>
