@@ -75,7 +75,9 @@ link reopens it.
 - **Configuration key** (`ConfigurationKey`): derived from a selection only to
   name its thumbnail. It holds what the selection overrides, canonically spelled
   (base units, hidden parameters and derivation variables left out), so
-  selections that render the same part share a render.
+  selections that render the same part share a render. A parameter is hidden
+  when its condition doesn't hold, or when it's a list none of whose options
+  show (`appliedValues`).
   `DEFAULT_CONFIGURATION_KEY` is the empty string.
 
 Comparing or counting values (analytics, "is this the default") goes through
@@ -192,6 +194,12 @@ record for a selection, since records name only what enumeration varied.
 | A parameter is added after a favorite was saved | Favorite's selection is short one parameter                          | `toSelection` defaults it on read                      |
 
 ## Decisions
+
+- **A list with no options showing is hidden.** Onshape hides it, and refuses
+  a configuration setting it off its default, so it's left out of what Onshape
+  is sent, of keys and of counts, as a parameter hidden by its condition is.
+  Its value is whatever it last held, so it can't tell two parts apart either:
+  a generated studio's records leave it out, and match exactly without it.
 
 - **Quantities collapse, in their own unit.** One configuration then has one
   spelling everywhere it is held: a favorite, a recent, the url, the insert

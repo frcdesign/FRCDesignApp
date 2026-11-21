@@ -9,11 +9,7 @@ import {
     type PartMetadata,
     type Selection
 } from "../../configurations/contract";
-import {
-    canonicalValue,
-    toKey,
-    toSelection
-} from "../../configurations/selection";
+import { toKey, toSelection } from "../../configurations/selection";
 
 export interface StoredParts {
     /** The tab's name, for a part nothing indexed. */
@@ -38,49 +34,14 @@ export function partName(
     const record =
         key === DEFAULT_CONFIGURATION_KEY
             ? stored.partMetadata
-            : (stored.records?.find(
+            : stored.records?.find(
                   (each) =>
                       toKey(
                           toSelection(each.values, parameters),
                           parameters
                       ) === key
-              ) ?? namedBy(stored.records ?? [], selection, parameters));
+              );
     return record?.name || stored.tabName;
-}
-
-/**
- * The record agreeing with every value it names, the one naming most. A
- * generated record leaves out an input with one option where it's made, which
- * the selection still sends.
- */
-function namedBy(
-    records: ConfigurationRecord[],
-    selection: Selection | undefined,
-    parameters: ConfigurationParameter[]
-): ConfigurationRecord | undefined {
-    if (!selection) {
-        return undefined;
-    }
-    const full = toSelection(selection, parameters);
-    let best: ConfigurationRecord | undefined;
-    for (const record of records) {
-        const named = Object.entries(record.values);
-        const agrees = named.every(([id, value]) => {
-            const parameter = parameters.find((each) => each.id === id);
-            const chosen = full[id];
-            return (
-                parameter !== undefined &&
-                chosen !== undefined &&
-                value !== undefined &&
-                canonicalValue(parameter, chosen) ===
-                    canonicalValue(parameter, value)
-            );
-        });
-        if (agrees && named.length > Object.keys(best?.values ?? {}).length) {
-            best = record;
-        }
-    }
-    return best;
 }
 
 /** An insertable's stored parts, as `partName` reads them; undefined when there's no such insertable. */

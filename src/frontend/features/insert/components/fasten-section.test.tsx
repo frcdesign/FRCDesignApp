@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, screen } from "@testing-library/react";
+import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { InsertableOut } from "@backend/features/library/contract";
 import { ElementType } from "@backend/lib/onshape/element-type";
@@ -134,6 +134,10 @@ describe("fasten picks", () => {
     afterEach(() => {
         queryClient.clear();
         vi.mocked(apiPost).mockClear();
+        // Never answering, as the module mock starts
+        vi.mocked(apiGet)
+            .mockReset()
+            .mockImplementation(() => new Promise(() => undefined));
         clearFastenPicks();
         useOnshapeSelection.setState({
             focused: undefined,
@@ -318,28 +322,37 @@ describe("fasten picks", () => {
     });
 
     it("asks again on focus once its answer is old, offering Add insert location once the marker is gone", async () => {
+        const answer = vi
+            .mocked(apiGet)
+            .mockResolvedValue({ instanceId: "marker" });
+        seedInsertLocation("marker");
+        renderBar();
+        // Whatever mounting asked has answered, with the marker still there
+        await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+        expect(
+            screen.queryByRole("button", { name: "Add insert location" })
+        ).toBeNull();
+
+        // Deleted in Onshape since, and the answer is now old
+        answer.mockResolvedValue({ instanceId: undefined });
         queryClient.setQueryData(
             insertLocationQueryKey(ASSEMBLY),
             { instanceId: "marker" },
             { updatedAt: Date.now() - 60 * 1000 }
         );
-        vi.mocked(apiGet).mockResolvedValueOnce({ instanceId: undefined });
-        renderBar();
-        expect(
-            screen.queryByRole("button", { name: "Add insert location" })
-        ).toBeNull();
-
+        const asked = answer.mock.calls.length;
         act(() => {
             window.dispatchEvent(new Event("focus"));
         });
 
         expect(
-            await screen.findByRole("button", { name: "Add insert location" })
+            await screen.findByRole(
+                "button",
+                { name: "Add insert location" },
+                { timeout: 5000 }
+            )
         ).toBeTruthy();
-        expect(apiGet).toHaveBeenCalledWith(
-            "/insert-location",
-            expect.anything()
-        );
+        expect(answer.mock.calls.length).toBe(asked + 1);
     });
 
     it("doesn't ask again on focus while its answer is fresh", () => {

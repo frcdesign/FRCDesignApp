@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
     type ConfigurationParameter,
-    ParameterType
+    OptionVisibilityType,
+    ParameterType,
+    VisibilityType
 } from "../../configurations/contract";
 import { toSelection } from "../../configurations/selection";
 import { partName, type StoredParts } from "./part-name";
@@ -53,7 +55,8 @@ describe("partName", () => {
         );
     });
 
-    it("names a configuration by a generated record leaving out an input with one option", () => {
+    it("names a configuration by a generated record, which leaves out a list hidden for having one option", () => {
+        // Shown only at 3 in, the one length made in both finishes
         const finish: ConfigurationParameter = {
             type: ParameterType.ENUM,
             id: "finish",
@@ -63,9 +66,19 @@ describe("partName", () => {
                 { id: "BLACK", name: "Black" },
                 { id: "STAINLESS", name: "Stainless" }
             ],
-            optionConditions: []
+            optionConditions: [
+                {
+                    type: OptionVisibilityType.LIST,
+                    controlledOptions: ["BLACK", "STAINLESS"],
+                    condition: {
+                        type: VisibilityType.EQUAL,
+                        id: "length",
+                        value: "IN_3"
+                    }
+                }
+            ]
         };
-        // Made only in black at 2 in, so its record doesn't name the finish
+        // Made only in black at 2 in, so the finish is hidden there and its record doesn't name it
         const stored: StoredParts = {
             ...STORED,
             parameters: [LENGTH, finish],

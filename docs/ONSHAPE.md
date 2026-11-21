@@ -97,6 +97,14 @@ the app makes of them.
 - A parameter or an enum option can be hidden by a **visibility condition**.
   An always-visible parameter carries a no-op condition,
   `BTParameterVisibilityCondition-177` — _observed_.
+- **A list none of whose options show is hidden**, as a parameter hidden by its
+  condition is — _observed_.
+    - A configuration setting such a list to anything but its default regenerates
+      nothing: the part studio answers no parts, and an instance inserted with it
+      errors. The same configuration without it answers the part. Seen with the
+      Fasteners washer studio: `vendor=WCP;type=OD_3_8_X_0_031;finish=BLACK`
+      gave no part, `vendor=WCP;type=OD_3_8_X_0_031` gave the washer —
+      _observed_.
 - Onshape doesn't mark what a parameter is for. A part number, a derivation
   variable or a channel is only recognized by its name — _observed_.
 - **A configuration is sent as text**, `id=value;id=value`.

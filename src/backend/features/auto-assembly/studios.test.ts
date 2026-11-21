@@ -176,6 +176,20 @@ describe("studioConfiguration", () => {
         ).toEqual({ length: "IN_1" });
     });
 
+    // Onshape refuses a configuration setting a hidden list off its default
+    it("leaves out a finish the washer is made in alone, which its studio hides", () => {
+        const washer = settlePart(
+            FASTENER_SET,
+            FastenerKind.WASHER,
+            { vendor: "WCP", type: "OD_3_8_X_0_031" },
+            settleScrew(FASTENER_SET, { vendor: "MCMASTER", size: "NO_10_32" })
+        );
+        expect(washer?.finish).toBe("BLACK");
+        expect(
+            studioConfiguration(FASTENER_SET, FastenerKind.WASHER, washer!)
+        ).toEqual({ vendor: "WCP", type: "OD_3_8_X_0_031" });
+    });
+
     it("sends a configuration even at the studio's defaults, which Onshape needs to insert", () => {
         const nut = settlePart(FASTENER_SET, FastenerKind.NUT, {}, SCREW);
         expect(nut).toBeDefined();
