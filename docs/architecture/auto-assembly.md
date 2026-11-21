@@ -355,6 +355,8 @@ interface PlannedHole {
     reason?: string;
     /** The screw size the hole is made for, where it's one the catalog has. */
     madeFor?: string;
+    /** Its circular edge is a countersink's rim: the hole is made for a flat head. */
+    isCountersunk?: boolean;
     /** What's off about how it's fastened, in words: a screw that doesn't fit as it should, or no nut. */
     warning?: string;
     end?: HoleEnd;
@@ -630,6 +632,12 @@ function getLengths(
 ): CatalogLength[];
 // Each studio input settled onto what's made: hidden and fixed ones from the catalog.
 function settleScrew(set: FastenerSet, choice: PartialSelection): ScrewChoice;
+// The head a hole asks for, where `head` doesn't suit it; undefined to leave it.
+function headForHole(
+    set: FastenerSet,
+    head: string,
+    isHoleCountersunk: boolean
+): string | undefined;
 // A part's overrides of its studio's defaults, as inserted.
 function studioConfiguration(
     set: FastenerSet,
@@ -1106,7 +1114,14 @@ The groups:
 The screw follows what's picked, as an Onshape feature's editing logic sets one
 input from another (`followScrew`):
 
-- Size follows the size the first hole picked is made for (`holeSize`).
+- The first hole picked made for a size sets the screw (`holeSize`,
+  `isHoleCountersunk`). Size follows its size. Head follows its countersink
+  where the head doesn't suit it (`headForHole`): a flat head in a countersink,
+  the studio's default head out of one. A head that suits it stays, so a socket
+  head over a plain hole stays a socket head.
+- Later picks never change the screw. A hole picked for another screw than the
+  one chosen gets a warning on its row and is fastened as asked (see the
+  planner's last step, under `planHoles`).
 - Every screw input follows the first existing screw picked (`existingScrew`).
 - An input chosen by hand stops following (`chosenScrewInputs`). A run
   starting frees them all again (`finishRun`).
@@ -1183,8 +1198,8 @@ options (`planHoles`), and answers each pick's problem (`pickProblems` in
 
 It also answers what the screw follows in the form:
 
-- `holeSize`: the size the first hole picked is made for, from the targets,
-  then the screws to update (`pickedHoleSize`).
+- `holeSize` and `isHoleCountersunk`: the first hole picked made for a size,
+  from the targets, then the screws to update (`pickedHole`).
 - `existingScrew`: the first screw to update's configuration, its studio's
   defaults filled in (`firstScrew`).
 
@@ -1248,7 +1263,10 @@ recorded with why, and the steps after it are skipped.
        edge at their far end, can't be flipped: **no fit**. Then:
         1. A library screw already on its axis, seated there: **fastened**.
         2. Every hole on the axis, nearest first. The first must start at the
-           circular edge (or within a flat head's countersink of it).
+           circular edge, or below it within the deepest flat head's
+           countersink in the same part, whatever head is chosen. One below it
+           is countersunk (`isCountersunk`); another part's below it is past a
+           gap, not a countersink.
         3. The size the first hole is made for (`holeSize`): its threads'
            size, else the size it's a clearance of (from the major diameter to
            a little past free clearance), else the size it's a tap drill of.
@@ -1287,6 +1305,10 @@ recorded with why, and the steps after it are skipped.
               millimetres for FTC (`formatDistance`).
         8. The nut chosen, only out the far side, with the far side's circular
            edge and its radius.
+        9. A ready hole picked for another screw is fastened as asked, with a
+           warning: made for another size (it's no thread, clearance or tap
+           drill of the screw's, `isMadeFor`), a countersink under a head
+           that isn't flat, or a flat head over no countersink.
     7. Stores each hole's plan with the status, and each pick with the problem
        the check would mark it with (`runPicks`, from `pickProblems`). With any
        pick's problem, the step finishes with a warning saying how many.
@@ -1516,9 +1538,14 @@ In [strings/auto-assembly.md](../strings/auto-assembly.md).
   chosen.
 - **One size per run, set from the first hole.** A clearance hole fits more
   than one size, and a hole at 0.201" is both #10's clearance and 1/4-20's tap
-  drill, so a per-hole size can guess wrong. Size follows the first hole picked
-  until it's chosen by hand, the way Onshape's editing logic fills one input
-  from another. The person sees the guess and can change it.
+  drill, so a per-hole size can guess wrong. Size and head follow the first
+  hole picked until chosen by hand, the way Onshape's editing logic fills one
+  input from another. The person sees the guess and can change it.
+- **A later pick warns rather than steers.** A second hole of another size, or
+  countersunk differently, picked by accident must not change the screw under
+  the first. Picked on purpose, it must still be fastened. So only the first
+  hole sets the screw, and a hole that doesn't match it is fastened with a
+  warning on its row.
 - **Every scan is sent the picked ids, not a `queries` body.** The lambda is
   wrapped to build its queries from `qTransient`, whose form std documents.
 

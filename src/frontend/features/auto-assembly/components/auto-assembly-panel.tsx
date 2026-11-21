@@ -13,6 +13,8 @@ import {
 } from "@backend/features/auto-assembly/contract";
 import {
     type FastenerSet,
+    headForHole,
+    settleScrew,
     StudioInput
 } from "@backend/features/auto-assembly/studios";
 import { type ElementPath } from "@backend/lib/onshape/path";
@@ -176,15 +178,28 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
                   },
         [assembly, mode, isFtc, settled, picks, pickCount]
     );
-    const { problems, holeSize, existingScrew, isChecking } =
+    const { problems, holeSize, isHoleCountersunk, existingScrew, isChecking } =
         usePickProblems(checkBody);
 
-    // The screw follows what's picked until chosen by hand, as an Onshape feature's editing logic does
+    // The screw follows the first hole picked until chosen by hand, as an Onshape feature's editing logic does
     useEffect(() => {
-        if (holeSize) {
-            followScrew({ [StudioInput.SIZE]: holeSize });
+        if (!holeSize) {
+            return;
         }
-    }, [holeSize, followScrew]);
+        const { screw } = useAutoAssemblyStore.getState();
+        const head =
+            isHoleCountersunk === undefined
+                ? undefined
+                : headForHole(
+                      set,
+                      settleScrew(set, screw).head,
+                      isHoleCountersunk
+                  );
+        followScrew({
+            [StudioInput.SIZE]: holeSize,
+            ...(head ? { [StudioInput.HEAD]: head } : {})
+        });
+    }, [holeSize, isHoleCountersunk, set, followScrew]);
     useEffect(() => {
         if (existingScrew) {
             followScrew(existingScrew);

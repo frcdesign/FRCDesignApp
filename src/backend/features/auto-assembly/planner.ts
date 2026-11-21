@@ -222,6 +222,42 @@ export function holeSize(
     );
 }
 
+/** The deepest a flat head sits in its countersink, in any size. */
+function countersinkAllowance(catalog: Catalog): number {
+    return Math.max(
+        0,
+        ...catalog.heads.flatMap((head) =>
+            Object.values(head.sizes).map((each) =>
+                each.countersunk ? each.height : 0
+            )
+        )
+    );
+}
+
+/** A hole below the circular edge is its countersink's only in the same part; another part's is past a gap. */
+function isSamePart(hole: AssemblyHole, circularEdge: AssemblyCircularEdge) {
+    return (
+        hole.occurrencePath.join("/") === circularEdge.occurrencePath.join("/")
+    );
+}
+
+/** Whether the hole is a thread, clearance or tap drill for this size: `holeSize` names one, where a hole can be several. */
+function isMadeFor(hole: AssemblyHole, size: CatalogSize): boolean {
+    if (hole.threaded && hole.majorDiameter !== undefined) {
+        return (
+            Math.abs(size.majorDiameter - hole.majorDiameter) < LINEAR_TOLERANCE
+        );
+    }
+    const diameter = 2 * hole.radius;
+    return (
+        (diameter >= size.majorDiameter - LINEAR_TOLERANCE &&
+            diameter <=
+                size.freeClearanceDiameter * (1 + CLEARANCE_SLACK_RATIO)) ||
+        Math.abs(diameter - size.tapDrillDiameter) <=
+            size.tapDrillDiameter * TAP_DRILL_RATIO
+    );
+}
+
 function planHole(
     circularEdge: AssemblyCircularEdge,
     holes: AssemblyHole[],
@@ -244,18 +280,14 @@ function planHole(
     }
 
     const segments = alongAxis(circularEdge, into, holes);
-    // A flat head's countersink is above its first hole, as deep as the head is in any size
-    const heads = Object.values(
-        getHead(options.catalog, options.screw.head)?.sizes ?? {}
-    );
-    const allowance = Math.max(
-        0,
-        ...heads.map((each) => (each.countersunk ? each.height : 0))
-    );
+    // A countersink is above its part's first hole, as deep as a flat head is in any size, whatever head is chosen
+    const allowance = countersinkAllowance(options.catalog);
     const first = segments.find(
         (segment) =>
-            segment.near <= allowance + LINEAR_TOLERANCE &&
-            segment.far > LINEAR_TOLERANCE
+            segment.far > LINEAR_TOLERANCE &&
+            (segment.near <= LINEAR_TOLERANCE ||
+                (segment.near <= allowance + LINEAR_TOLERANCE &&
+                    isSamePart(segment.hole, circularEdge)))
     );
     if (!first) {
         return plan({
@@ -264,11 +296,16 @@ function planHole(
         });
     }
 
-    const madeFor = holeSize(first.hole, options.catalog)?.id;
+    const madeFor = holeSize(first.hole, options.catalog);
+    const isCountersunk = first.near > LINEAR_TOLERANCE;
     const sized = (planned: Omit<PlannedHole, "key">): HolePlan =>
-        plan({ ...planned, ...(madeFor ? { madeFor } : {}) });
+        plan({
+            ...planned,
+            ...(madeFor ? { madeFor: madeFor.id } : {}),
+            ...(isCountersunk ? { isCountersunk } : {})
+        });
     // A face's holes are fastened only where they're made for the screw
-    if (circularEdge.isFromFace && madeFor !== options.screw.size) {
+    if (circularEdge.isFromFace && madeFor?.id !== options.screw.size) {
         return sized({ status: HoleStatus.SKIPPED });
     }
 
@@ -311,11 +348,18 @@ function planHole(
     if ("error" in picked) {
         return sized({ status: HoleStatus.NO_FIT, reason: picked.error, end });
     }
-    // A countersink puts the first hole below the circular edge; a flat head over a plain one stands proud
-    const isPlain = head.countersunk && first.near <= LINEAR_TOLERANCE;
+    // Picked for another screw than this one: fastened as asked, but said so
     const warning = [
         picked.warning,
-        isPlain ? "The hole isn't countersunk for a flat head." : undefined
+        madeFor && !isMadeFor(first.hole, size)
+            ? `Made for a ${madeFor.name} screw.`
+            : undefined,
+        head.countersunk && !isCountersunk
+            ? "The hole isn't countersunk for a flat head."
+            : undefined,
+        !head.countersunk && isCountersunk
+            ? "The hole is countersunk for a flat head."
+            : undefined
     ]
         .filter((each) => each !== undefined)
         .join(" ");
@@ -347,7 +391,8 @@ function planHole(
         planned: {
             key: circularEdge.key,
             ...planned,
-            ...(madeFor ? { madeFor } : {}),
+            ...(madeFor ? { madeFor: madeFor.id } : {}),
+            ...(isCountersunk ? { isCountersunk } : {}),
             nut,
             ...(washers.end ? { nutWasher: washers.end } : {})
         },

@@ -22,7 +22,7 @@ import { getFastenerSet } from "./fastener-set";
 import { getJobStatus, reportJob } from "./jobs";
 import { indexHoles } from "./index-holes";
 import { planHoles } from "./planner";
-import { pickedHoleSize, pickProblems } from "./check";
+import { pickedHole, pickProblems } from "./check";
 import {
     entitySchema,
     INCONSISTENT_PICK_MESSAGE,
@@ -223,10 +223,9 @@ autoAssemblyRoutes.post(
                   { stopPlane: indexed.stopPlane }
               ).map((plan) => plan.planned)
             : undefined;
-        const holeSize = planned && pickedHoleSize(request, indexed, planned);
         return c.json({
             problems: pickProblems(request, indexed, planned),
-            ...(holeSize ? { holeSize } : {}),
+            ...(planned ? pickedHole(request, indexed, planned) : {}),
             ...(indexed.firstScrew ? { existingScrew: indexed.firstScrew } : {})
         } satisfies PickCheckOut);
     }

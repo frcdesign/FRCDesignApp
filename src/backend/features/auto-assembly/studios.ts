@@ -60,6 +60,30 @@ export function isCountersunk(set: FastenerSet, head: string): boolean {
     return Object.values(sizes ?? {}).some((size) => size.countersunk);
 }
 
+/**
+ * The head a hole asks for, where `head` isn't one: a flat head in a
+ * countersink, else the studio's default. Undefined to leave `head` as it is.
+ */
+export function headForHole(
+    set: FastenerSet,
+    head: string,
+    isHoleCountersunk: boolean
+): string | undefined {
+    if (isCountersunk(set, head) === isHoleCountersunk) {
+        return undefined;
+    }
+    const studioDefault = set.studios[FastenerKind.SCREW].parameters.find(
+        (parameter) => parameter.id === StudioInput.HEAD
+    )?.default;
+    const candidates = [
+        ...(studioDefault ? [studioDefault] : []),
+        ...set.catalog.heads.map((each) => each.id)
+    ];
+    return candidates.find(
+        (each) => isCountersunk(set, each) === isHoleCountersunk
+    );
+}
+
 /** The vendor offering every standard length, without part numbers. */
 export const GENERIC = "GENERIC";
 

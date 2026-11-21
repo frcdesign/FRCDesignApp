@@ -340,6 +340,51 @@ describe("AutoAssemblyPanel", () => {
         expect(useAutoAssemblyStore.getState().screw.size).toBe("QUARTER_20");
     });
 
+    it("takes a flat head for a countersunk first hole, and the default head back for a plain one", async () => {
+        const queryClient = createTestQueryClient();
+        renderPanel(queryClient);
+        await userEvent.click(
+            screen.getByText("Circular edges", { selector: "p" })
+        );
+        select({ ...face("E"), entityType: "EDGE" });
+        const studioDefault = FASTENER_SET.studios[
+            FastenerKind.SCREW
+        ].parameters.find((parameter) => parameter.id === "head")?.default;
+        // Answers the check the panel sends now with the first hole as described
+        const answer = (isHoleCountersunk: boolean) => {
+            const state = useAutoAssemblyStore.getState();
+            queryClient.setQueryData(
+                pickCheckQueryKey({
+                    assembly: ASSEMBLY,
+                    selectionMode: SelectionMode.LOCATIONS,
+                    targets: toSelectedEntities(state.targets),
+                    excluded: [],
+                    replaced: [],
+                    flipped: [],
+                    flipScrews: false,
+                    options: fastenerOptions(settleChoices(FASTENER_SET, state))
+                }),
+                { problems: [], holeSize: "NO_10_32", isHoleCountersunk }
+            );
+        };
+
+        answer(true);
+        await waitFor(() =>
+            expect(useAutoAssemblyStore.getState().screw.head).toBe("FLAT")
+        );
+        answer(false);
+        await waitFor(() =>
+            expect(useAutoAssemblyStore.getState().screw.head).toBe(
+                studioDefault
+            )
+        );
+
+        // Chosen by hand, the head stays whatever the hole
+        await choose("Head", "Socket head");
+        useAutoAssemblyStore.getState().followScrew({ head: "FLAT" });
+        expect(useAutoAssemblyStore.getState().screw.head).toBe("SOCKET");
+    });
+
     it("takes the first existing screw picked as the screw, but what's chosen by hand", async () => {
         const queryClient = createTestQueryClient();
         renderPanel(queryClient);

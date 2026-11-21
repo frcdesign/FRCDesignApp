@@ -202,6 +202,46 @@ describe("planHoles", () => {
         );
     });
 
+    it("fastens a countersunk hole under another head, warning it's made for a flat head", () => {
+        const sunk = [
+            hole("top", 0.1, 0.25, 0.201),
+            hole("bottom", 0.25, 0.5, 0.201)
+        ];
+        const button = plan(sunk).planned;
+        expect(button.status).toBe(HoleStatus.READY);
+        expect(button.isCountersunk).toBe(true);
+        expect(button.madeFor).toBe("NO_10_32");
+        expect(button.warning).toContain(
+            "The hole is countersunk for a flat head."
+        );
+        expect(
+            plan(sunk, { screw: { head: "FLAT" } }).planned.isCountersunk
+        ).toBe(true);
+        expect(plan(TWO_PLATES).planned.isCountersunk).toBeUndefined();
+    });
+
+    // A plate past a gap isn't the picked part's countersink
+    it("takes no countersink from another part's hole below the circular edge", () => {
+        const { planned } = plan([hole("bottom", 0.1, 0.35, 0.201)]);
+        expect(planned.status).toBe(HoleStatus.NO_FIT);
+        expect(planned.reason).toBe(
+            "No hole goes into the part from this circular edge."
+        );
+    });
+
+    it("fastens a hole made for another size with the screw chosen, saying what it's made for", () => {
+        const quarter = [
+            hole("top", 0, 0.25, 0.257),
+            hole("bottom", 0.25, 0.5, 0.257)
+        ];
+        const planned = plan(quarter).planned;
+        expect(planned.status).toBe(HoleStatus.READY);
+        expect(planned.warning).toContain("Made for a 1/4-20 screw.");
+        expect(plan(TWO_PLATES).planned.warning ?? "").not.toContain(
+            "Made for"
+        );
+    });
+
     it("counts the screw and nut washers chosen", () => {
         const { planned } = plan(TWO_PLATES, {
             screwWasher: WASHER,

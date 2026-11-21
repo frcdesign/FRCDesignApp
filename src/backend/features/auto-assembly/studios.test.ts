@@ -5,11 +5,14 @@ import { getVisibleOptions } from "../configurations/utils";
 import {
     FastenerKind,
     GENERIC,
+    headForHole,
+    isCountersunk,
     isMade,
     partVendors,
     settlePart,
     settleScrew,
-    studioConfiguration
+    studioConfiguration,
+    StudioInput
 } from "./studios";
 
 const SCREW = {
@@ -163,6 +166,25 @@ describe("settlePart", () => {
         expect(
             partVendors(FASTENER_SET, FastenerKind.WASHER, "NO_6_32")
         ).toEqual([GENERIC, "MCMASTER", "ANDYMARK"]);
+    });
+});
+
+describe("headForHole", () => {
+    const studioDefault = FASTENER_SET.studios[
+        FastenerKind.SCREW
+    ].parameters.find(
+        (parameter) => parameter.id === StudioInput.HEAD
+    )?.default;
+
+    it("asks for a flat head in a countersink, and the studio's default out of one", () => {
+        expect(headForHole(FASTENER_SET, studioDefault!, true)).toBe("FLAT");
+        expect(headForHole(FASTENER_SET, "FLAT", false)).toBe(studioDefault);
+        expect(isCountersunk(FASTENER_SET, studioDefault!)).toBe(false);
+    });
+
+    it("leaves a head alone that already suits the hole", () => {
+        expect(headForHole(FASTENER_SET, "SOCKET", false)).toBeUndefined();
+        expect(headForHole(FASTENER_SET, "FLAT", true)).toBeUndefined();
     });
 });
 
