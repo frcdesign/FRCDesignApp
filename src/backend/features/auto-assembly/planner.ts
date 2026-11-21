@@ -52,6 +52,8 @@ export interface AssemblyHole {
     closedAtEnd: boolean;
     threaded: boolean;
     majorDiameter?: number;
+    /** A Hole feature countersank it. */
+    countersunk?: boolean;
     edges: { id: string; at: number }[];
 }
 
@@ -234,7 +236,7 @@ function countersinkAllowance(catalog: Catalog): number {
     );
 }
 
-/** A hole below the circular edge is its countersink's only in the same part; another part's is past a gap. */
+/** The circular edge is its countersink's rim only in the hole's own part. */
 function isSamePart(hole: AssemblyHole, circularEdge: AssemblyCircularEdge) {
     return (
         hole.occurrencePath.join("/") === circularEdge.occurrencePath.join("/")
@@ -280,13 +282,14 @@ function planHole(
     }
 
     const segments = alongAxis(circularEdge, into, holes);
-    // A countersink is above its part's first hole, as deep as a flat head is in any size, whatever head is chosen
+    // A Hole feature's countersink is above its hole, as deep as a flat head is in any size, whatever head is chosen
     const allowance = countersinkAllowance(options.catalog);
     const first = segments.find(
         (segment) =>
             segment.far > LINEAR_TOLERANCE &&
             (segment.near <= LINEAR_TOLERANCE ||
-                (segment.near <= allowance + LINEAR_TOLERANCE &&
+                (segment.hole.countersunk === true &&
+                    segment.near <= allowance + LINEAR_TOLERANCE &&
                     isSamePart(segment.hole, circularEdge)))
     );
     if (!first) {

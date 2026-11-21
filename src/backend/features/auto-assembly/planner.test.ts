@@ -193,7 +193,10 @@ describe("planHoles", () => {
         );
         // Countersunk: the first hole starts below the circular edge
         const sunk = plan(
-            [hole("top", 0.1, 0.25, 0.201), hole("bottom", 0.25, 0.5, 0.201)],
+            [
+                hole("top", 0.1, 0.25, 0.201, { countersunk: true }),
+                hole("bottom", 0.25, 0.5, 0.201)
+            ],
             { screw: { head: "FLAT" } }
         ).planned;
         expect(sunk.warning ?? "").not.toContain("countersunk");
@@ -204,7 +207,7 @@ describe("planHoles", () => {
 
     it("fastens a countersunk hole under another head, warning it's made for a flat head", () => {
         const sunk = [
-            hole("top", 0.1, 0.25, 0.201),
+            hole("top", 0.1, 0.25, 0.201, { countersunk: true }),
             hole("bottom", 0.25, 0.5, 0.201)
         ];
         const button = plan(sunk).planned;
@@ -220,13 +223,16 @@ describe("planHoles", () => {
         expect(plan(TWO_PLATES).planned.isCountersunk).toBeUndefined();
     });
 
-    // A plate past a gap isn't the picked part's countersink
-    it("takes no countersink from another part's hole below the circular edge", () => {
-        const { planned } = plan([hole("bottom", 0.1, 0.35, 0.201)]);
-        expect(planned.status).toBe(HoleStatus.NO_FIT);
-        expect(planned.reason).toBe(
-            "No hole goes into the part from this circular edge."
+    // Only a Hole feature's countersink counts: a hole below the circular edge is otherwise past a gap
+    it("takes a countersink only from a Hole feature's countersunk hole in the picked part", () => {
+        const noHole = "No hole goes into the part from this circular edge.";
+        expect(plan([hole("top", 0.1, 0.35, 0.201)]).planned.reason).toBe(
+            noHole
         );
+        expect(
+            plan([hole("bottom", 0.1, 0.35, 0.201, { countersunk: true })])
+                .planned.reason
+        ).toBe(noHole);
     });
 
     it("fastens a hole made for another size with the screw chosen, saying what it's made for", () => {
@@ -566,7 +572,10 @@ describe("planHoles", () => {
 
     it("lets a flat head's hole start below its countersink, with no washer under it", () => {
         const { planned } = plan(
-            [hole("top", 0.12, 0.25, 0.201), hole("bottom", 0.25, 0.5, 0.201)],
+            [
+                hole("top", 0.12, 0.25, 0.201, { countersunk: true }),
+                hole("bottom", 0.25, 0.5, 0.201)
+            ],
             { screw: { head: "FLAT" }, screwWasher: WASHER }
         );
         expect(planned.status).toBe(HoleStatus.READY);

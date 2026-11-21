@@ -693,6 +693,8 @@ interface AssemblyHole {
     closedAtEnd: boolean;
     threaded: boolean;
     majorDiameter?: number;
+    /** A Hole feature countersank it. */
+    countersunk?: boolean;
     edges: { id: string; at: number }[];
 }
 
@@ -960,9 +962,11 @@ vectors, Onshape's 4×4 transforms and `LINEAR_TOLERANCE`.
   group's insertables — the catalog and each kind's studio (its parameters and
   where it's released), as the group's last load stored them; read, never
   written, here (see [generated-parts.md](./generated-parts.md)).
-- **KV** `auto-assembly-scan:{key}` — a Part Studio's holes, by part id, for a
-  month. The key is what pins the Part Studio's geometry and its configuration
-  (`toStudioSource`): `{documentId}|v|{versionId}|…` for a part from a version,
+- **KV** `auto-assembly-scan:v{n}|{key}` — a Part Studio's holes, by part id,
+  for a month. `n` is the scan's version (`SCAN_VERSION`), bumped when what it
+  answers changes. The key is what pins the Part Studio's geometry and its
+  configuration (`toStudioSource`): `{documentId}|v|{versionId}|…` for a part
+  from a version,
   `{documentId}|e|{elementMicroversionId}|…` for one from the assembly's own
   workspace, and `{documentId}|m|{documentMicroversionId}|…` otherwise.
 - **KV** `assembly-job:{documentId}|{instanceId}|{elementId}` — the run an
@@ -1263,10 +1267,11 @@ recorded with why, and the steps after it are skipped.
        edge at their far end, can't be flipped: **no fit**. Then:
         1. A library screw already on its axis, seated there: **fastened**.
         2. Every hole on the axis, nearest first. The first must start at the
-           circular edge, or below it within the deepest flat head's
-           countersink in the same part, whatever head is chosen. One below it
-           is countersunk (`isCountersunk`); another part's below it is past a
-           gap, not a countersink.
+           circular edge. Or, where a Hole feature countersank it in the same
+           part (its attribute's `C_SINK`, `countersunk`), below it within the
+           deepest flat head's countersink, whatever head is chosen: the edge is
+           then the countersink's rim (`isCountersunk`). A hole below the edge
+           otherwise is past a gap, and a countersink made by hand isn't one.
         3. The size the first hole is made for (`holeSize`): its threads'
            size, else the size it's a clearance of (from the major diameter to
            a little past free clearance), else the size it's a tap drill of.
@@ -1541,6 +1546,11 @@ In [strings/auto-assembly.md](../strings/auto-assembly.md).
   drill, so a per-hole size can guess wrong. Size and head follow the first
   hole picked until chosen by hand, the way Onshape's editing logic fills one
   input from another. The person sees the guess and can change it.
+- **A countersink is the Hole feature's.** A hole's countersink is read from
+  the attribute its Hole feature puts on the hole's faces, not from where the
+  hole starts: a plate past a gap starts below the edge too. Countersinks are
+  almost always made with the Hole feature, so one made by hand is no
+  countersink here.
 - **A later pick warns rather than steers.** A second hole of another size, or
   countersunk differently, picked by accident must not change the screw under
   the first. Picked on purpose, it must still be fastened. So only the first

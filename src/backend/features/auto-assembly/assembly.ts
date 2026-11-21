@@ -321,6 +321,7 @@ export function toAssemblyHoles(
             ...(hole.majorDiameter !== undefined
                 ? { majorDiameter: hole.majorDiameter }
                 : {}),
+            ...(hole.countersunk ? { countersunk: true } : {}),
             edges: hole.edges
         };
     });
