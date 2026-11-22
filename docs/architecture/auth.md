@@ -221,7 +221,8 @@ each of them and each guard reads that library's access. The section and the
 `README.md` also lists `API_ACCESS_KEY` and `API_SECRET_KEY`, which no code
 reads.
 
-Bindings (`DB`, `KV`, `BLOB`, `ASSETS`, the workflows, `CLIENT_RELAY`) are
+Bindings (`DB`, `KV`, `BLOB`, `ASSETS`, the workflows, `CLIENT_RELAY`,
+`EVENT_LOG`) are
 declared in `wrangler.jsonc` per environment and typed in `AppBindings`. Run
 `npx wrangler types` after changing them.
 

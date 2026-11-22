@@ -1,6 +1,7 @@
 import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+    loggedEvents,
     TEST_LIBRARY_ID,
     TEST_PART_STUDIO_ID,
     TEST_PART_STUDIO_PATH,
@@ -167,7 +168,7 @@ describe("rollupWrites", () => {
         for (const table of ROLLUPS) {
             await db.delete(table);
         }
-        const log = await db.select().from(events).all();
+        const log = loggedEvents();
         const writes = log
             .reverse()
             .flatMap((row) => rollupWrites(db, row, SIZE_PARAMETERS));
@@ -305,6 +306,10 @@ describe("rollupWrites", () => {
                 insertableId: TEST_PART_STUDIO_ID
             });
             const recorded = await db.select().from(dailyFeatureUsers).all();
+            // As D1 still holds them where the log hasn't taken them over
+            for (const event of loggedEvents()) {
+                await db.insert(events).values(event);
+            }
             await db.delete(dailyFeatureUsers);
 
             const backfill = featureUsersBackfill({

@@ -1,3 +1,4 @@
+import { loggedEvents } from "../../../__test_utils__";
 import { env } from "cloudflare:workers";
 import { introspectWorkflowInstance } from "cloudflare:test";
 import * as FastenerSets from "./fastener-set";
@@ -36,7 +37,7 @@ import {
 import { getJobStatus } from "./jobs";
 import type { AssemblyJobParams } from "./workflow";
 import { getDb } from "../../db/client";
-import { events, dailyMetrics } from "../analytics/schema";
+import { dailyMetrics } from "../analytics/schema";
 import { UseSource } from "../analytics/usage";
 import { seedGroup, seedInsertable } from "../../../__test_utils__/seed";
 
@@ -220,7 +221,7 @@ describe("AutoAssemblyWorkflow", () => {
             }
         });
 
-        const recorded = await db.select().from(events).all();
+        const recorded = loggedEvents();
         // Washer, screw, nut
         expect(
             recorded.map((event) => [

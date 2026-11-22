@@ -268,15 +268,9 @@ async function runSteps(ctx: RunContext, request: AutoAssemblyIn) {
     }
     // Whatever fastening managed, what was inserted counts
     await ctx.step.do("record-inserts", () =>
-        recordRunInserts(
-            getDb(ctx.env.DB),
-            ctx.userId,
-            set,
-            parts,
-            paths,
-            mated
-        ).catch((error: unknown) =>
-            console.error("Failed to record Auto Assembly's inserts", error)
+        recordRunInserts(ctx.env, ctx.userId, set, parts, paths, mated).catch(
+            (error: unknown) =>
+                console.error("Failed to record Auto Assembly's inserts", error)
         )
     );
 }

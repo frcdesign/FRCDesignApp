@@ -8,7 +8,6 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { configurations, favorites, insertables } from "../../db/schema";
 import { ElementType } from "../../lib/onshape/element-type";
 import { MAX_FAVORITES } from "./contract";
-import { events } from "../analytics/schema";
 import { EventType } from "../analytics/usage";
 import {
     configurationRecord,
@@ -20,6 +19,7 @@ const partMetadata = (partNumber: string) =>
     configurationRecord({ partNumber });
 import { ApiErrorKind } from "../../lib/api-error";
 import {
+    loggedEvents,
     TEST_ASSEMBLY_ID,
     TEST_GROUP_ID,
     TEST_LIBRARY_ID,
@@ -548,7 +548,7 @@ describe("favorites routes", () => {
             await seedConfiguration(db);
             await post({ boolean: "false" });
 
-            expect(await db.select().from(events).all()).toEqual([
+            expect(loggedEvents()).toEqual([
                 expect.objectContaining({
                     type: EventType.DEFAULT_SELECTION,
                     libraryId: TEST_LIBRARY_ID,
