@@ -5,10 +5,19 @@ import { AppBreadcrumbs } from "../../../components/breadcrumbs";
 import { SectionNotice } from "../../../components/app-notice";
 import { AppColor } from "../../../theme";
 import { m } from "../../../paraglide/messages";
-import { canOpen, type MassLevel, toTiles, type MassTile } from "../mass-data";
+import { getMassUnitDisplayStr } from "@backend/features/configurations/enums";
+import {
+    canOpen,
+    type MassDisplay,
+    type MassLevel,
+    roundTo,
+    toTiles,
+    type MassTile
+} from "../mass-data";
 
 interface MassTreemapProps {
     level: MassLevel;
+    display: MassDisplay;
     /** The ids of the subassemblies to open, outermost first. */
     onOpen: (path: string[]) => void;
 }
@@ -17,8 +26,12 @@ interface MassTreemapProps {
 const CHART_HEIGHT = 360;
 
 /** The level's items by mass; a subassembly that isn't a library's opens into its own. */
-export function MassTreemap({ level, onOpen }: MassTreemapProps): ReactNode {
-    const tiles = toTiles(level.children, AppColor.MASS_ANALYSIS);
+export function MassTreemap({
+    level,
+    display,
+    onOpen
+}: MassTreemapProps): ReactNode {
+    const tiles = toTiles(level.children, AppColor.MASS_ANALYSIS, display.unit);
     const total = tiles.reduce((sum, tile) => sum + tile.value, 0);
     const openedIds = level.trail.map((assembly) => assembly.id);
 
@@ -56,10 +69,11 @@ export function MassTreemap({ level, onOpen }: MassTreemapProps): ReactNode {
                 <AppTreemap
                     nodes={tiles}
                     h={CHART_HEIGHT}
-                    valueFormatter={(pounds) =>
+                    valueFormatter={(mass) =>
                         m.massAnalysisShare({
-                            mass: pounds,
-                            share: pounds / total
+                            mass: roundTo(mass, display.precision),
+                            unit: getMassUnitDisplayStr(display.unit),
+                            share: mass / total
                         })
                     }
                     onSelect={select}

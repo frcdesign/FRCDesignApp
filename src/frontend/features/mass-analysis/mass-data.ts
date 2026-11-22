@@ -5,9 +5,38 @@ import {
     type MassPart,
     type MassReportOut
 } from "@backend/features/mass-analysis/contract";
+import { MassUnit } from "@backend/features/configurations/enums";
 import { colorVar } from "../../lib/style-constants";
 
-export const POUNDS_PER_KILOGRAM = 1 / 0.45359237;
+function kilogramsPer(unit: MassUnit): number {
+    switch (unit) {
+        case MassUnit.KILOGRAM:
+            return 1;
+        case MassUnit.GRAM:
+            return 0.001;
+        case MassUnit.POUND:
+            return 0.45359237;
+        case MassUnit.OUNCE:
+            return 0.028349523125;
+    }
+}
+
+/** How the document shows a mass. */
+export interface MassDisplay {
+    unit: MassUnit;
+    /** Decimal places. */
+    precision: number;
+}
+
+export function inUnit(kilograms: number, unit: MassUnit): number {
+    return kilograms / kilogramsPer(unit);
+}
+
+/** To `precision` decimal places, as the document shows a mass. */
+export function roundTo(value: number, precision: number): number {
+    const scale = 10 ** precision;
+    return Math.round(value * scale) / scale;
+}
 
 /** Kilograms, of every one the parent holds; a part with no mass adds nothing. */
 export function totalMass(node: MassNode): number {
@@ -47,7 +76,7 @@ export function findLevel(report: MassReportOut, path: string[]): MassLevel {
     return { trail, children };
 }
 
-/** A treemap tile; its area is its share of the level's mass, in pounds. */
+/** A treemap tile; its area is its share of the level's mass, in `unit`. */
 export interface MassTile {
     id: string;
     name: string;
@@ -59,9 +88,13 @@ export interface MassTile {
 const SHADES = [9, 8, 7, 6, 5, 4, 3];
 
 /** Massless items are left out: a zero-area tile still catches clicks. */
-export function toTiles(children: MassNode[], hue: string): MassTile[] {
+export function toTiles(
+    children: MassNode[],
+    hue: string,
+    unit: MassUnit
+): MassTile[] {
     return children
-        .map((node) => ({ node, value: totalMass(node) * POUNDS_PER_KILOGRAM }))
+        .map((node) => ({ node, value: inUnit(totalMass(node), unit) }))
         .filter(({ value }) => value > 0)
         .sort((a, b) => b.value - a.value)
         .map(({ node, value }, rank) => ({

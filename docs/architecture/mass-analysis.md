@@ -133,8 +133,11 @@ function sumMass(nodes: MassNode[]): number;
 function canOpen(node: MassNode): node is MassAssembly;
 // As deep along `path` as the report still goes.
 function findLevel(report: MassReportOut, path: string[]): MassLevel;
-// Pounds, heaviest first; massless items are left out.
-function toTiles(children: MassNode[], hue: string): MassTile[];
+// In `unit`, heaviest first; massless items are left out.
+function toTiles(children: MassNode[], hue: string, unit: MassUnit): MassTile[];
+function inUnit(kilograms: number, unit: MassUnit): number;
+// To `precision` decimal places, as the document shows a mass.
+function roundTo(value: number, precision: number): number;
 // Each part below the level with no mass, once, but those in a library's assembly.
 function missingParts(children: MassNode[]): MissingPart[];
 
@@ -144,7 +147,14 @@ interface MassLevel {
     children: MassNode[];
 }
 
-/** A treemap tile; its area is its share of the level's mass, in pounds. */
+/** How the document shows a mass. */
+interface MassDisplay {
+    unit: MassUnit;
+    /** Decimal places. */
+    precision: number;
+}
+
+/** A treemap tile; its area is its share of the level's mass, in `unit`. */
 interface MassTile {
     id: string;
     name: string;
@@ -207,7 +217,8 @@ read again on a refresh.
 ### The page
 
 1. The level opened starts at the assembly's own items.
-2. The chart's caption is the level's total, in pounds. Tiles are the level's
+2. The chart's caption is the level's total, in the document's mass unit and
+   display precision (`useUnitInfo`), or kilograms until those load. Tiles are the level's
    items with any mass, heaviest first and darkest.
    A tile's tooltip gives its mass and its share of the level.
 3. Clicking a subassembly's tile opens it, unless it is a library's. Clicking
@@ -228,7 +239,8 @@ read again on a refresh.
 
 - The feature only reads. It writes nothing to Onshape or to storage beyond
   its analytics event.
-- Masses cross the API in kilograms. Only the page converts them to pounds.
+- Masses cross the API in kilograms. Only the page converts them, to the
+  document's mass unit.
 - Every mass in the report is Onshape's: the app never computes one from a
   material and a volume.
 - A library's subassembly counts toward every total above it, but is never
@@ -261,7 +273,8 @@ read again on a refresh.
 - **Instances come from the BOM's `relatedOccurrences`**, so lighting a part up
   costs no call beyond the BOM. The assembly definition names occurrences in a
   documented shape, but is Onshape's scarcest call.
-- **Pounds on the page.** FRC's weight limit is in pounds. Onshape's document
-  units have no mass unit the app reads.
+- **The document's units, from `GET /api/unit-info`.** Its KV entry and the
+  units webhook already keep a document's units; mass is one more field on
+  them (see [configurations.md](./configurations.md)).
 - **No server cache.** A cache keyed by the workspace would need a call to find
   its microversion, which saves nothing over reading the BOM again.

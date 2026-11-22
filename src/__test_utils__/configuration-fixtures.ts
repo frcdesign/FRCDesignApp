@@ -11,7 +11,11 @@ import {
     type UnitInfo,
     ParameterRole
 } from "@backend/features/configurations/contract";
-import { QuantityType, Unit } from "@backend/features/configurations/enums";
+import {
+    MassUnit,
+    QuantityType,
+    Unit
+} from "@backend/features/configurations/enums";
 import { quantityDefault } from "@backend/features/configurations/selection";
 
 /** Builds an enum parameter whose options are named after their ids. */
@@ -105,7 +109,9 @@ export const TEST_UNIT_INFO: UnitInfo = {
     lengthUnit: Unit.INCH,
     lengthPrecision: 4,
     anglePrecision: 3,
-    realPrecision: 3
+    realPrecision: 3,
+    massUnit: MassUnit.POUND,
+    massPrecision: 3
 };
 
 /** A probe of one configuration; override whichever fields a test is about. */

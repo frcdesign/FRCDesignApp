@@ -126,6 +126,10 @@ the app makes of them.
 - **Units** are per document, and
   `onshape.model.lifecycle.updateworkspaceunits` fires when a workspace's
   change — _observed_.
+- **A document's mass unit** is `defaultUnits`' entry keyed `MASS`, one of
+  `kilogram`, `gram`, `pound` and `ounce`, with its precision in
+  `unitsDisplayPrecision` under the unit's name — _unverified_. The app shows
+  kilograms when it finds none it knows.
 
 ## Bill of materials
 

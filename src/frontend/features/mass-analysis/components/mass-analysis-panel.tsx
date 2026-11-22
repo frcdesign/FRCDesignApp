@@ -6,9 +6,17 @@ import { RefreshButton } from "../../../components/refresh-button";
 import { SectionCard } from "../../../components/section";
 import { m } from "../../../paraglide/messages";
 import {
+    getMassUnitDisplayStr,
+    MassUnit
+} from "@backend/features/configurations/enums";
+import { useUnitInfo } from "../../../lib/unit-info";
+import { DEFAULT_QUANTITY_PRECISION } from "@backend/features/configurations/utils";
+import {
     findLevel,
+    inUnit,
+    type MassDisplay,
     missingParts,
-    POUNDS_PER_KILOGRAM,
+    roundTo,
     sumMass
 } from "../mass-data";
 import { useMassReportQuery } from "../queries";
@@ -24,6 +32,7 @@ export function MassAnalysisPanel({
     assembly
 }: MassAnalysisPanelProps): ReactNode {
     const report = useMassReportQuery(assembly);
+    const unitInfo = useUnitInfo();
     const [path, setPath] = useState<string[]>([]);
 
     if (report.isPending) {
@@ -39,13 +48,21 @@ export function MassAnalysisPanel({
     }
 
     const level = findLevel(report.data, path);
-    const pounds = sumMass(level.children) * POUNDS_PER_KILOGRAM;
+    // Kilograms, Onshape's base unit, until the document's units load.
+    const display: MassDisplay = {
+        unit: unitInfo?.massUnit ?? MassUnit.KILOGRAM,
+        precision: unitInfo?.massPrecision ?? DEFAULT_QUANTITY_PRECISION
+    };
+    const total = inUnit(sumMass(level.children), display.unit);
 
     return (
         <Stack gap="md" p="md">
             <SectionCard
                 title={m.massAnalysisChartTitle()}
-                caption={m.massAnalysisPounds({ mass: pounds })}
+                caption={m.massAnalysisMass({
+                    mass: roundTo(total, display.precision),
+                    unit: getMassUnitDisplayStr(display.unit)
+                })}
                 aside={
                     <RefreshButton
                         loading={report.isFetching}
@@ -53,7 +70,7 @@ export function MassAnalysisPanel({
                     />
                 }
             >
-                <MassTreemap level={level} onOpen={setPath} />
+                <MassTreemap level={level} display={display} onOpen={setPath} />
             </SectionCard>
             <MissingMassList missing={missingParts(level.children)} />
         </Stack>

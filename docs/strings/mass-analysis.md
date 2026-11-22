@@ -23,12 +23,12 @@ page's strings are messages in `src/frontend/messages/en.json`, keyed
 
 ## The chart
 
-| String                 | Kind                   | Where                 | When                                    | Review                     |
-| ---------------------- | ---------------------- | --------------------- | --------------------------------------- | -------------------------- |
-| "Mass" / "{mass} lb"   | Section title, caption | Top of the page       | Always; the level's total               | **⚑** New                  |
-| "{mass} lb ({share}%)" | Tooltip value          | Over a tile           | Hovering a tile: its share of the level | **⚑** New                  |
-| "Assembly"             | Breadcrumb             | Above the chart       | A subassembly is open                   | **⚑** New: the root's name |
-| "No parts with a mass" | Notice title           | In place of the chart | Nothing at the level has a mass         | **⚑** New                  |
+| String                     | Kind                   | Where                 | When                                    | Review                     |
+| -------------------------- | ---------------------- | --------------------- | --------------------------------------- | -------------------------- |
+| "Mass" / "{mass} {unit}"   | Section title, caption | Top of the page       | Always; the level's total               | **⚑** New                  |
+| "{mass} {unit} ({share}%)" | Tooltip value          | Over a tile           | Hovering a tile: its share of the level | **⚑** New                  |
+| "Assembly"                 | Breadcrumb             | Above the chart       | A subassembly is open                   | **⚑** New: the root's name |
+| "No parts with a mass"     | Notice title           | In place of the chart | Nothing at the level has a mass         | **⚑** New                  |
 
 ## Parts without a mass
 

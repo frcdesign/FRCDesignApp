@@ -12,7 +12,7 @@ import { getUnitInfo } from "../../lib/onshape/endpoints/documents";
 import type { InstancePath } from "../../lib/onshape/path";
 import { watchWorkspaceUnits } from "../webhooks/transient";
 import type { UnitInfo } from "./contract";
-import { QuantityType, type Unit } from "./enums";
+import { MassUnit, QuantityType, type Unit } from "./enums";
 import { DEFAULT_QUANTITY_PRECISION } from "./utils";
 
 const unitInfos = kvStore<UnitInfo>("unit-info", {
@@ -25,9 +25,12 @@ function unitInfoId(path: InstancePath): string {
 
 /** One entry of Onshape's `defaultUnits`: which unit a quantity type is in. */
 interface OnshapeUnit {
-    key: QuantityType;
-    value: Unit;
+    key: string;
+    value: string;
 }
+
+/** Mass isn't a configuration quantity, so it has no `QuantityType`. */
+const MASS_QUANTITY = "MASS";
 
 /** Onshape names a unit for every type, so a missing one is a response we don't understand. */
 function getDefaultUnit(
@@ -41,7 +44,16 @@ function getDefaultUnit(
             HttpStatus.BAD_GATEWAY
         );
     }
-    return unit.value;
+    return unit.value as Unit;
+}
+
+/** Kilograms where Onshape names none the app knows, so units for configurations never fail on mass. */
+function getMassUnit(units: OnshapeUnit[]): MassUnit {
+    const value = units.find((entry) => entry.key === MASS_QUANTITY)?.value;
+    return (
+        Object.values(MassUnit).find((unit) => unit === value) ??
+        MassUnit.KILOGRAM
+    );
 }
 
 async function fetchUnitInfo(
@@ -52,13 +64,17 @@ async function fetchUnitInfo(
     const units = raw.defaultUnits.units as OnshapeUnit[];
     const angleUnit = getDefaultUnit(units, QuantityType.ANGLE);
     const lengthUnit = getDefaultUnit(units, QuantityType.LENGTH);
+    const massUnit = getMassUnit(units);
     return {
         angleUnit,
         lengthUnit,
         anglePrecision: raw.unitsDisplayPrecision[angleUnit],
         lengthPrecision: raw.unitsDisplayPrecision[lengthUnit],
         // Onshape carries no display precision for a unitless real.
-        realPrecision: DEFAULT_QUANTITY_PRECISION
+        realPrecision: DEFAULT_QUANTITY_PRECISION,
+        massUnit,
+        massPrecision:
+            raw.unitsDisplayPrecision[massUnit] ?? DEFAULT_QUANTITY_PRECISION
     };
 }
 
@@ -67,7 +83,8 @@ export async function getUnitInfoCached(
     path: InstancePath
 ): Promise<UnitInfo> {
     const cached = await unitInfos.get(c.env.KV, unitInfoId(path));
-    if (cached) {
+    // An entry kept without a mass unit is read again.
+    if (cached?.massUnit !== undefined) {
         return cached;
     }
     const unitInfo = await fetchUnitInfo(c, path);

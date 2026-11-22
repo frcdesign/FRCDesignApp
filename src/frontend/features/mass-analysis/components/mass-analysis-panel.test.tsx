@@ -7,12 +7,19 @@ import {
     type MassPart,
     type MassReportOut
 } from "@backend/features/mass-analysis/contract";
+import { type UnitInfo } from "@backend/features/configurations/contract";
+import { TEST_UNIT_INFO } from "../../../../__test_utils__/configuration-fixtures";
 import { renderWithProviders } from "../../../../__test_utils__/render";
 import { useOnshapeLaunch } from "../../../lib/onshape-params";
 import { massReportQueryKey } from "../../../lib/query-keys";
 import { MassAnalysisPanel } from "./mass-analysis-panel";
 
 vi.mock("../../../lib/api-client", () => ({ apiGet: vi.fn() }));
+
+const units = vi.hoisted(() => ({
+    current: undefined as UnitInfo | undefined
+}));
+vi.mock("../../../lib/unit-info", () => ({ useUnitInfo: () => units.current }));
 
 // Signed out, so the report query only reads what a test seeds
 vi.mock("../../auth/access-level", () => ({ useIsSignedIn: () => false }));
@@ -93,6 +100,7 @@ beforeEach(() => {
 
 afterEach(() => {
     vi.restoreAllMocks();
+    units.current = undefined;
 });
 
 describe("MassAnalysisPanel", () => {
@@ -135,5 +143,19 @@ describe("MassAnalysisPanel", () => {
             }),
             "*"
         );
+    });
+
+    it("shows the level's mass in the document's unit, as it rounds it", async () => {
+        units.current = { ...TEST_UNIT_INFO, massPrecision: 2 };
+        renderPanel();
+
+        // The rail's 2 kg, in pounds
+        expect(await screen.findByText("4.41 lb")).toBeTruthy();
+    });
+
+    it("shows kilograms until the document's units load", async () => {
+        renderPanel();
+
+        expect(await screen.findByText("2 kg")).toBeTruthy();
     });
 });

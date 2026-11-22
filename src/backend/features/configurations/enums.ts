@@ -42,6 +42,27 @@ export function getUnitDisplayStr(unit: Unit): string {
     }
 }
 
+/** A document's mass unit, as Onshape names it; no configuration parameter takes one. */
+export enum MassUnit {
+    KILOGRAM = "kilogram",
+    GRAM = "gram",
+    POUND = "pound",
+    OUNCE = "ounce"
+}
+
+export function getMassUnitDisplayStr(unit: MassUnit): string {
+    switch (unit) {
+        case MassUnit.KILOGRAM:
+            return "kg";
+        case MassUnit.GRAM:
+            return "g";
+        case MassUnit.POUND:
+            return "lb";
+        case MassUnit.OUNCE:
+            return "oz";
+    }
+}
+
 export enum LogicalOp {
     AND = "AND",
     OR = "OR"

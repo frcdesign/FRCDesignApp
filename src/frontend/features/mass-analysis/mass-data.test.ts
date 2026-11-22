@@ -5,10 +5,12 @@ import {
     type MassNode,
     type MassPart
 } from "@backend/features/mass-analysis/contract";
+import { MassUnit } from "@backend/features/configurations/enums";
 import {
     findLevel,
     missingParts,
-    POUNDS_PER_KILOGRAM,
+    inUnit,
+    roundTo,
     sumMass,
     toTiles,
     totalMass
@@ -84,11 +86,26 @@ describe("toTiles", () => {
     it("sizes tiles in pounds, heaviest first, leaving out the massless", () => {
         const tiles = toTiles(
             [part("Light", 1), part("None"), part("Heavy", 2)],
-            "blue"
+            "blue",
+            MassUnit.POUND
         );
 
         expect(tiles.map((tile) => tile.id)).toEqual(["Heavy", "Light"]);
-        expect(tiles[0].value).toBeCloseTo(2 * POUNDS_PER_KILOGRAM);
+        expect(tiles[0].value).toBeCloseTo(4.40925);
+    });
+});
+
+describe("units", () => {
+    it("converts kilograms to the document's unit", () => {
+        expect(inUnit(1, MassUnit.KILOGRAM)).toBe(1);
+        expect(inUnit(1, MassUnit.GRAM)).toBeCloseTo(1000);
+        expect(inUnit(0.45359237, MassUnit.POUND)).toBeCloseTo(1);
+        expect(inUnit(0.45359237, MassUnit.OUNCE)).toBeCloseTo(16);
+    });
+
+    it("rounds to the document's precision", () => {
+        expect(roundTo(4.40925, 2)).toBe(4.41);
+        expect(roundTo(4.40925, 0)).toBe(4);
     });
 });
 
