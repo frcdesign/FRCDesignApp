@@ -77,14 +77,10 @@ export interface MissingPart {
     part: MassPart;
     /** How many the level holds, through every subassembly. */
     count: number;
+    /** Every row's instances of it. */
+    occurrences: string[][];
     /** The subassembly it's first found in, below the level; undefined at the level itself. */
     within?: string;
-}
-
-function sourceKey(part: MassPart): string {
-    const { documentId, instanceId, elementId, partId, configuration } =
-        part.source;
-    return [documentId, instanceId, elementId, partId, configuration].join("|");
 }
 
 /** Every part below the level with no mass, but those inside a library's assembly. */
@@ -102,12 +98,17 @@ export function missingParts(children: MassNode[]): MissingPart[] {
                 continue;
             }
             if (node.mass !== undefined) continue;
-            const key = sourceKey(node);
-            const existing = found.get(key);
+            const existing = found.get(node.partKey);
             if (existing) {
                 existing.count += count;
+                existing.occurrences.push(...node.occurrences);
             } else {
-                found.set(key, { part: node, count, within });
+                found.set(node.partKey, {
+                    part: node,
+                    count,
+                    occurrences: [...node.occurrences],
+                    within
+                });
             }
         }
     };

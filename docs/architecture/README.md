@@ -38,7 +38,7 @@ read and comment on, the ones a branch changed first with their diffs; the
 | [download.md](./download.md)               | STEP downloads from the standalone app, and why they need sign-in                            |
 | [testbench.md](./testbench.md)             | The owner's page for probing Onshape: raw calls, rate limits, toolbar, webhooks              |
 | [featurescripts.md](./featurescripts.md)   | The FeatureScripts tab: loading the frontend document, examples, adding a feature (proposed) |
-| [mass-analysis.md](./mass-analysis.md)     | Mass Analysis: an assembly's mass by part, and setting parts' material or mass               |
+| [mass-analysis.md](./mass-analysis.md)     | Mass Analysis: an assembly's mass by part, and the parts with none                           |
 | [platform.md](./platform.md)               | Onshape client, errors, retries and timeouts, concurrency, toasts, pushes, caching           |
 
 [REFERENCE.md](../REFERENCE.md) is the tour of the whole system and links here

@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { screen, waitFor, within } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
     type MassAssembly,
@@ -8,15 +8,11 @@ import {
     type MassReportOut
 } from "@backend/features/mass-analysis/contract";
 import { renderWithProviders } from "../../../../__test_utils__/render";
-import { apiPost } from "../../../lib/api-client";
+import { useOnshapeLaunch } from "../../../lib/onshape-params";
 import { massReportQueryKey } from "../../../lib/query-keys";
-import { POUNDS_PER_KILOGRAM } from "../mass-data";
 import { MassAnalysisPanel } from "./mass-analysis-panel";
 
-vi.mock("../../../lib/api-client", () => ({
-    apiGet: vi.fn(),
-    apiPost: vi.fn(() => Promise.resolve({}))
-}));
+vi.mock("../../../lib/api-client", () => ({ apiGet: vi.fn() }));
 
 // Signed out, so the report query only reads what a test seeds
 vi.mock("../../auth/access-level", () => ({ useIsSignedIn: () => false }));
@@ -28,20 +24,18 @@ const ASSEMBLY = {
     elementId: "top"
 };
 
-function part(name: string, overrides: Partial<MassPart> = {}): MassPart {
+function part(
+    name: string,
+    occurrences: string[][],
+    overrides: Partial<MassPart> = {}
+): MassPart {
     return {
         kind: MassNodeKind.PART,
-        id: name,
+        id: `${name}-${occurrences.join(",")}`,
         name,
         quantity: 1,
-        source: {
-            ...ASSEMBLY,
-            elementId: `${name}-studio`,
-            partId: "JHD",
-            configuration: ""
-        },
-        canSetMaterial: true,
-        canSetMass: true,
+        partKey: `${name}-studio`,
+        occurrences,
         ...overrides
     };
 }
@@ -53,27 +47,24 @@ const DRIVETRAIN: MassAssembly = {
     quantity: 1,
     isLibrary: false,
     children: [
-        part("Rail", { mass: 1, quantity: 2 }),
-        part("Bracket", {
-            quantity: 4,
-            canSetMaterial: false,
-            source: {
-                documentId: "elsewhere",
-                instanceType: "v",
-                instanceId: "v1",
-                elementId: "bracket-studio",
-                partId: "JFD",
-                configuration: ""
-            }
-        })
+        part("Rail", [["D", "R"]], { mass: 1, quantity: 2 }),
+        part("Bracket", [["D", "B1"]], { quantity: 4 })
     ]
 };
 
 const REPORT: MassReportOut = {
     children: [
         DRIVETRAIN,
-        part("Plate"),
-        part("Library spacer", { canSetMaterial: false, canSetMass: false })
+        part("Bracket", [["B2"]]),
+        part("Plate", [["P"]]),
+        {
+            kind: MassNodeKind.ASSEMBLY,
+            id: "gearbox",
+            name: "Library gearbox",
+            quantity: 1,
+            isLibrary: true,
+            children: [part("Gear", [["G", "1"]])]
+        }
     ]
 };
 
@@ -85,67 +76,64 @@ function renderPanel() {
     return rendered;
 }
 
-/** The card a part's name heads. */
-async function card(name: string): Promise<HTMLElement> {
-    const heading = await screen.findByText(name);
-    const found = heading.closest<HTMLElement>(".mantine-Card-root");
-    if (!found) throw new Error(`No card for ${name}`);
+/** The row a part's name heads. */
+async function row(name: string): Promise<HTMLElement> {
+    const label = await screen.findByText(name);
+    const found = label.parentElement?.parentElement;
+    if (!found) throw new Error(`No row for ${name}`);
     return found;
 }
 
+beforeEach(() => {
+    useOnshapeLaunch.setState({
+        ...ASSEMBLY,
+        elementType: "ASSEMBLY" as never
+    });
+});
+
 afterEach(() => {
-    vi.clearAllMocks();
+    vi.restoreAllMocks();
 });
 
 describe("MassAnalysisPanel", () => {
-    it("lists each part with no mass, with how many there are and where", async () => {
+    it("lists each part with no mass once, with how many there are and where", async () => {
         renderPanel();
 
-        const bracket = await card("Bracket");
-        expect(within(bracket).getByText("×4")).toBeTruthy();
+        const bracket = await row("Bracket");
+        expect(within(bracket).getByText("×5")).toBeTruthy();
         expect(within(bracket).getByText("In Drivetrain")).toBeTruthy();
+        expect(screen.getAllByText("Bracket")).toHaveLength(1);
         expect(screen.queryByText("Rail")).toBeNull();
-        expect(screen.getByText("3 parts")).toBeTruthy();
+        expect(screen.getByText("2 parts")).toBeTruthy();
     });
 
-    it("keeps another document's material from being set", async () => {
+    it("leaves out the parts of a library's assembly", async () => {
         renderPanel();
 
-        const bracket = await card("Bracket");
-        expect(
-            within(bracket).getByRole("combobox", { name: "Material" })
-        ).toHaveProperty("disabled", true);
-        expect(
-            within(bracket).getByText("Set in the part's own document")
-        ).toBeTruthy();
+        await row("Plate");
+        expect(screen.queryByText("Gear")).toBeNull();
     });
 
-    it("offers nothing to set on a library's part", async () => {
+    it("lights up every instance of a hovered part in Onshape", async () => {
+        const posted = vi
+            .spyOn(window.parent, "postMessage")
+            .mockImplementation(vi.fn());
         renderPanel();
 
-        const spacer = await card("Library spacer");
-        expect(within(spacer).getByText("Library part")).toBeTruthy();
-        expect(within(spacer).queryByRole("button")).toBeNull();
-    });
+        await userEvent.hover(await row("Bracket"));
 
-    it("saves a mass in pounds as kilograms", async () => {
-        renderPanel();
-
-        const plate = await card("Plate");
-        const save = within(plate).getByRole("button", { name: "Save" });
-        expect(save).toHaveProperty("disabled", true);
-        await userEvent.type(within(plate).getByLabelText("Mass (lb)"), "2");
-        await userEvent.click(save);
-
-        await waitFor(() => expect(apiPost).toHaveBeenCalled());
-        const [path, options] = vi.mocked(apiPost).mock.calls[0];
-        expect(path).toBe("/mass-analysis/part");
-        expect(options?.body).toMatchObject({
-            assembly: ASSEMBLY,
-            part: { elementId: "Plate-studio", partId: "JHD" }
-        });
-        expect(
-            (options?.body as { mass: number }).mass * POUNDS_PER_KILOGRAM
-        ).toBeCloseTo(2);
+        expect(posted).toHaveBeenCalledWith(
+            expect.objectContaining({
+                messageName: "requestSelectionHighlight",
+                selections: [
+                    {
+                        selectionType: "OCCURRENCE",
+                        occurrencePath: ["D", "B1"]
+                    },
+                    { selectionType: "OCCURRENCE", occurrencePath: ["B2"] }
+                ]
+            }),
+            "*"
+        );
     });
 });

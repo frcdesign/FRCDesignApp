@@ -55,10 +55,7 @@ export function MassAnalysisPanel({
             >
                 <MassTreemap level={level} onOpen={setPath} />
             </SectionCard>
-            <MissingMassList
-                assembly={assembly}
-                missing={missingParts(level.children)}
-            />
+            <MissingMassList missing={missingParts(level.children)} />
         </Stack>
     );
 }

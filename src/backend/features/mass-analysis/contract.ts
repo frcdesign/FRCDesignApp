@@ -1,12 +1,4 @@
-/** The mass report and edits the frontend shares; a leaf, so it imports nothing of the Worker's. */
-import { type ElementPath } from "../../lib/onshape/path";
-
-/** A part, by the Part Studio the assembly references it from. */
-export interface PartSource extends ElementPath {
-    partId: string;
-    /** As the BOM row encodes it; empty for the default. */
-    configuration: string;
-}
+/** The mass report the frontend shares; a leaf, so it imports nothing of the Worker's. */
 
 export enum MassNodeKind {
     PART = "part",
@@ -25,12 +17,10 @@ export interface MassPart extends MassNodeBase {
     kind: MassNodeKind.PART;
     /** Kilograms, for one; undefined when Onshape has no mass for it. */
     mass?: number;
-    material?: string;
-    source: PartSource;
-    /** Its Part Studio is in the assembly's own workspace. */
-    canSetMaterial: boolean;
-    /** Its document is no library's. */
-    canSetMass: boolean;
+    /** The same Part Studio, part and configuration wherever it's placed. */
+    partKey: string;
+    /** Each instance of it, as a path of instance ids from the assembly down. */
+    occurrences: string[][];
 }
 
 export interface MassAssembly extends MassNodeBase {
@@ -45,14 +35,4 @@ export type MassNode = MassPart | MassAssembly;
 /** GET /api/mass-analysis: the assembly's own items, each subassembly with its own. */
 export interface MassReportOut {
     children: MassNode[];
-}
-
-/** POST /api/mass-analysis/part: at least one of `material` and `mass`. */
-export interface PartPropertiesIn {
-    assembly: ElementPath;
-    part: PartSource;
-    /** A name from `MATERIALS`. */
-    material?: string;
-    /** Kilograms, set as the part's mass override. */
-    mass?: number;
 }

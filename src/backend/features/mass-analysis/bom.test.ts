@@ -1,48 +1,35 @@
 import { describe, expect, it } from "vitest";
 import type { OnshapeBom, OnshapeBomRow } from "../../lib/onshape/types";
-import { type BomContext, parseMass, toMassReport } from "./bom";
+import { parseMass, parseOccurrences, toMassReport } from "./bom";
 import { type MassAssembly, MassNodeKind, type MassPart } from "./contract";
 
-const ASSEMBLY = {
-    documentId: "robot",
-    instanceType: "w",
-    instanceId: "main",
-    elementId: "top"
-} as const;
-
-const CONTEXT: BomContext = {
-    assembly: ASSEMBLY,
-    libraryDocumentIds: new Set(["library"])
-};
+const ASSEMBLY_DOCUMENT = "robot";
+const LIBRARY_DOCUMENTS = new Set(["library"]);
 
 const HEADERS = [
     { id: "h-name", name: "Name", propertyName: "name" },
     { id: "h-qty", name: "Quantity", propertyName: "quantity" },
     { id: "h-mass", name: "Mass", propertyName: "mass" },
-    { id: "h-override", name: "Mass override" },
-    { id: "h-material", name: "Material", propertyName: "material" }
+    { id: "h-override", name: "Mass override" }
 ];
 
 interface RowOptions {
     depth?: number;
     quantity?: number;
     mass?: unknown;
-    material?: unknown;
     documentId?: string;
-    wvmType?: string;
     partId?: string;
+    occurrences?: unknown;
 }
 
 function row(name: string, options: RowOptions = {}): OnshapeBomRow {
-    const documentId = options.documentId ?? ASSEMBLY.documentId;
     return {
         rowId: name,
         indentLevel: options.depth ?? 0,
+        relatedOccurrences: options.occurrences,
         itemSource: {
-            documentId,
-            wvmType:
-                options.wvmType ??
-                (documentId === ASSEMBLY.documentId ? "w" : "v"),
+            documentId: options.documentId ?? ASSEMBLY_DOCUMENT,
+            wvmType: "w",
             wvmId: "instance",
             elementId: `${name}-studio`,
             partId: "partId" in options ? options.partId : `${name}-part`,
@@ -52,15 +39,14 @@ function row(name: string, options: RowOptions = {}): OnshapeBomRow {
             "h-name": name,
             "h-qty": options.quantity ?? 1,
             "h-mass": options.mass,
-            "h-override": "5 lb",
-            "h-material": options.material
+            "h-override": "5 lb"
         }
     };
 }
 
 function report(rows: OnshapeBomRow[]) {
     const bom: OnshapeBom = { headers: HEADERS, rows };
-    return toMassReport(bom, CONTEXT);
+    return toMassReport(bom, LIBRARY_DOCUMENTS);
 }
 
 describe("parseMass", () => {
@@ -81,6 +67,21 @@ describe("parseMass", () => {
         "has no mass for %j",
         (value) => {
             expect(parseMass(value)).toBeUndefined();
+        }
+    );
+});
+
+describe("parseOccurrences", () => {
+    it("reads a path joined by slashes, as an array, or under `path`", () => {
+        expect(
+            parseOccurrences(["M1/M2", ["M3", "M4"], { path: ["M5"] }])
+        ).toEqual([["M1", "M2"], ["M3", "M4"], ["M5"]]);
+    });
+
+    it.each([undefined, null, "M1", [""], [[]], [{ path: "M1" }], [3]])(
+        "has no occurrences for %j",
+        (value) => {
+            expect(parseOccurrences(value)).toEqual([]);
         }
     );
 });
@@ -126,48 +127,26 @@ describe("toMassReport", () => {
         expect(part.mass).toBeUndefined();
     });
 
-    it("reads a material by its display name", () => {
-        const [part] = report([
-            row("Plate", {
-                mass: "1 kg",
-                material: { displayName: "Aluminum - 6061" }
-            })
-        ]).children as MassPart[];
-
-        expect(part.material).toBe("Aluminum - 6061");
-    });
-
-    it("lets only a part in the assembly's own workspace have its material set", () => {
-        const [own, other] = report([
-            row("Own"),
-            row("Other", { documentId: "elsewhere" })
-        ]).children as MassPart[];
-
-        expect(own).toMatchObject({ canSetMaterial: true, canSetMass: true });
-        expect(other).toMatchObject({
-            canSetMaterial: false,
-            canSetMass: true
-        });
-        expect(other.source).toMatchObject({
-            documentId: "elsewhere",
-            instanceType: "v"
-        });
-    });
-
-    it("lets nothing of a library's be set, inside its assemblies too", () => {
+    it("marks an assembly from a library's document as a library's", () => {
         const out = report([
-            row("Library part", { documentId: "library" }),
             row("Library gearbox", {
                 documentId: "library",
                 partId: undefined
             }),
             row("Its screw", { depth: 1, documentId: "elsewhere" })
         ]);
-        const [part, gearbox] = out.children as [MassPart, MassAssembly];
 
-        expect(part.canSetMass).toBe(false);
-        expect(gearbox.isLibrary).toBe(true);
-        expect(gearbox.children[0]).toMatchObject({ canSetMass: false });
+        expect(out.children[0]).toMatchObject({ isLibrary: true });
+    });
+
+    it("keys a part by where it's from, so its rows can be merged", () => {
+        const [a, b] = report([
+            row("Plate", { occurrences: ["M1"] }),
+            row("Plate", { occurrences: ["M2"] })
+        ]).children as MassPart[];
+
+        expect(a.partKey).toBe(b.partKey);
+        expect([a.occurrences, b.occurrences]).toEqual([[["M1"]], [["M2"]]]);
     });
 
     it("marks an assembly inside a library's as a library's", () => {

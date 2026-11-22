@@ -2,9 +2,7 @@
 
 What [mass-analysis.md](../architecture/mass-analysis.md) shows a person. The
 page's strings are messages in `src/frontend/messages/en.json`, keyed
-`massAnalysis…`. A save's refusals are written by the backend
-(`src/backend/features/mass-analysis/routes.ts`), and the page's toast shows
-its own message in their place.
+`massAnalysis…`. Part and subassembly names are Onshape's.
 
 ## Getting there
 
@@ -34,15 +32,9 @@ its own message in their place.
 
 ## Parts without a mass
 
-| String                               | Kind                   | Where                    | When                                         | Review                       |
-| ------------------------------------ | ---------------------- | ------------------------ | -------------------------------------------- | ---------------------------- |
-| "Parts without a mass" / "{n} parts" | Section title, caption | Under the chart          | Always; the caption with any listed          | **⚑** New                    |
-| "Every part has a mass"              | Notice title           | In place of the list     | Nothing listed                               | **⚑** New                    |
-| "×{count}"                           | Row text               | Beside a part's name     | Always: how many the level holds             | **⚑** New                    |
-| "In {assembly}"                      | Row text               | Under a part's name      | The part is in a subassembly of the level    | **⚑** New                    |
-| "Material"                           | Dropdown label         | A part's card            | A part that isn't a library's                | **⚑** New                    |
-| "Set in the part's own document"     | Dropdown description   | Under Material, disabled | The part is in another document              | **⚑** New                    |
-| "Mass (lb)"                          | Number input label     | A part's card            | A part that isn't a library's                | **⚑** New: sets the override |
-| "Save"                               | Button                 | Beside Mass              | Disabled until a material or mass is entered | **⚑** New                    |
-| "Library part"                       | Row text               | In place of the inputs   | A library's part                             | **⚑** New                    |
-| "Failed to save the part"            | Error toast            |                          | Onshape or the server refused the save       | **⚑** New                    |
+| String                               | Kind                   | Where                | When                                      | Review    |
+| ------------------------------------ | ---------------------- | -------------------- | ----------------------------------------- | --------- |
+| "Parts without a mass" / "{n} parts" | Section title, caption | Under the chart      | Always; the caption with any listed       | **⚑** New |
+| "Every part has a mass"              | Notice title           | In place of the list | Nothing listed                            | **⚑** New |
+| "×{count}"                           | Row text               | End of a part's row  | Always: how many the level holds          | **⚑** New |
+| "In {assembly}"                      | Row text               | Under a part's name  | The part is in a subassembly of the level | **⚑** New |

@@ -1004,11 +1004,5 @@
     "massAnalysisMissingNone": "Every part has a mass",
     "massAnalysisQuantity": "×{count: number}",
     "massAnalysisWithin": "In {assembly}",
-    "massAnalysisMaterial": "Material",
-    "massAnalysisMaterialOtherDocument": "Set in the part's own document",
-    "massAnalysisMassOverride": "Mass (lb)",
-    "massAnalysisSave": "Save",
-    "massAnalysisSaveFailed": "Failed to save the part",
-    "massAnalysisLibraryPart": "Library part",
     "dashboardFeatureMassAnalysis": "Mass Analysis"
 }

@@ -1,4 +1,3 @@
-import { type ElementPath, type InstanceType } from "../../lib/onshape/path";
 import type {
     OnshapeBom,
     OnshapeBomHeader,
@@ -7,15 +6,8 @@ import type {
 import {
     type MassAssembly,
     MassNodeKind,
-    type MassReportOut,
-    type PartSource
+    type MassReportOut
 } from "./contract";
-
-export interface BomContext {
-    assembly: ElementPath;
-    /** Every document a library loads from. */
-    libraryDocumentIds: ReadonlySet<string>;
-}
 
 /** Kilograms in one of each unit Onshape may write a mass in. */
 const KILOGRAMS_PER_UNIT: Record<string, number> = {
@@ -80,7 +72,6 @@ interface Columns {
     name?: string;
     quantity?: string;
     mass?: string;
-    material?: string;
 }
 
 /** Picked out by name, as the metadata's properties are; "Mass override" is its own column. */
@@ -95,8 +86,6 @@ function findColumns(headers: OnshapeBomHeader[]): Columns {
             columns.quantity ??= header.id;
         } else if (name === "mass" || property === "mass") {
             columns.mass ??= header.id;
-        } else if (name === "material" || property === "material") {
-            columns.material ??= header.id;
         }
     }
     return columns;
@@ -106,33 +95,63 @@ function cell(row: OnshapeBomRow, header: string | undefined): unknown {
     return header === undefined ? undefined : row.headerIdToValue?.[header];
 }
 
-function toInstanceType(wvmType: string | undefined): InstanceType {
-    return wvmType === "w" || wvmType === "m" ? wvmType : "v";
+interface BomItem {
+    documentId: string;
+    partId: string;
+    /** The same Part Studio, part and configuration wherever it's placed. */
+    partKey: string;
 }
 
-function toSource(row: OnshapeBomRow): PartSource | undefined {
+function toItem(row: OnshapeBomRow): BomItem | undefined {
     const source = row.itemSource;
-    if (!source?.documentId || !source.elementId || !source.wvmId) {
+    if (!source?.documentId || !source.elementId) {
         return undefined;
     }
+    const partId = source.partId ?? "";
     return {
         documentId: source.documentId,
-        instanceType: toInstanceType(source.wvmType),
-        instanceId: source.wvmId,
-        elementId: source.elementId,
-        partId: source.partId ?? "",
-        configuration: source.configuration ?? ""
+        partId,
+        partKey: [
+            source.documentId,
+            source.wvmId ?? "",
+            source.elementId,
+            partId,
+            source.configuration ?? ""
+        ].join("|")
     };
+}
+
+function isStringArray(value: unknown): value is string[] {
+    return (
+        Array.isArray(value) && value.every((each) => typeof each === "string")
+    );
+}
+
+/** Undocumented: each is taken as a path of instance ids, joined by `/` or as an array. */
+export function parseOccurrences(value: unknown): string[][] {
+    if (!Array.isArray(value)) return [];
+    return value.flatMap((occurrence: unknown) => {
+        if (typeof occurrence === "string") {
+            const path = occurrence.split("/").filter((id) => id !== "");
+            return path.length > 0 ? [path] : [];
+        }
+        if (isStringArray(occurrence) && occurrence.length > 0) {
+            return [occurrence];
+        }
+        const path = (occurrence as { path?: unknown } | null)?.path;
+        return isStringArray(path) && path.length > 0 ? [path] : [];
+    });
 }
 
 /**
  * The BOM's rows as a tree. A row is a subassembly when the row after it is
  * deeper, or it names no part; one added by hand has no geometry and is left
- * out.
+ * out. A subassembly is a library's when it, or one it's in, is from one of
+ * `libraryDocumentIds`.
  */
 export function toMassReport(
     bom: OnshapeBom,
-    context: BomContext
+    libraryDocumentIds: ReadonlySet<string>
 ): MassReportOut {
     const columns = findColumns(bom.headers ?? []);
     const rows = bom.rows ?? [];
@@ -154,18 +173,18 @@ export function toMassReport(
         while (stack.length > 1 && stack[stack.length - 1].depth > depth) {
             stack.pop();
         }
-        const source = toSource(row);
-        if (row.itemSource?.nonGeometricItemId || !source) {
+        const item = toItem(row);
+        if (row.itemSource?.nonGeometricItemId || !item) {
             return;
         }
         const id = row.rowId ?? row.id ?? String(index);
         const name =
             parseText(cell(row, columns.name)) ??
             row.name ??
-            (source.partId || id);
+            (item.partId || id);
         const quantity = parseQuantity(cell(row, columns.quantity));
         const nextDepth = rows[index + 1]?.indentLevel ?? 0;
-        const isAssembly = nextDepth > depth || source.partId === "";
+        const isAssembly = nextDepth > depth || item.partId === "";
         const parent = stack[stack.length - 1].node;
 
         if (isAssembly) {
@@ -175,30 +194,21 @@ export function toMassReport(
                 name,
                 quantity,
                 isLibrary:
-                    parent.isLibrary ||
-                    context.libraryDocumentIds.has(source.documentId),
+                    parent.isLibrary || libraryDocumentIds.has(item.documentId),
                 children: []
             };
             parent.children.push(assembly);
             stack.push({ depth: depth + 1, node: assembly });
             return;
         }
-        const isOwnWorkspace =
-            source.documentId === context.assembly.documentId &&
-            source.instanceType === "w";
         parent.children.push({
             kind: MassNodeKind.PART,
             id,
             name,
             quantity,
             mass: parseMass(cell(row, columns.mass)),
-            material: parseText(cell(row, columns.material)),
-            source,
-            canSetMaterial: isOwnWorkspace,
-            canSetMass:
-                source.instanceType !== "m" &&
-                !parent.isLibrary &&
-                !context.libraryDocumentIds.has(source.documentId)
+            partKey: item.partKey,
+            occurrences: parseOccurrences(row.relatedOccurrences)
         });
     });
 

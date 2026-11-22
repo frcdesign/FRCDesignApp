@@ -1,0 +1,7 @@
+.row {
+    border-radius: var(--mantine-radius-sm);
+}
+
+.row:hover {
+    background-color: var(--mantine-color-default-hover);
+}

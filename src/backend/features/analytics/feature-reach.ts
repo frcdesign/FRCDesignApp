@@ -39,7 +39,7 @@ export function featuresOf(event: LoggedEvent): AppFeature[] {
     if (event.type === EventType.DEFAULT_SELECTION) {
         return [AppFeature.DEFAULT_CONFIGURATION];
     }
-    if (isMassAnalysisEvent(event.type)) {
+    if (event.type === EventType.MASS_REPORT) {
         return [AppFeature.MASS_ANALYSIS];
     }
     const use = asUse(event);
@@ -58,14 +58,6 @@ export function featuresOf(event: LoggedEvent): AppFeature[] {
     if (use.atInsertLocation) features.push(AppFeature.INSERT_LOCATION);
     if (use.target === UseTarget.DOWNLOAD) features.push(AppFeature.DOWNLOAD);
     return features;
-}
-
-function isMassAnalysisEvent(type: EventType): boolean {
-    return (
-        type === EventType.MASS_REPORT ||
-        type === EventType.MATERIAL_SET ||
-        type === EventType.MASS_OVERRIDE_SET
-    );
 }
 
 function sourceFeature(source: UseSource): AppFeature | undefined {

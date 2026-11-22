@@ -384,6 +384,8 @@ export interface OnshapeBomRow {
     indentLevel?: number;
     itemSource?: OnshapeBomItemSource;
     headerIdToValue?: Record<string, unknown>;
+    /** The instances of the row's item; documented as ids, their shape undocumented. */
+    relatedOccurrences?: unknown;
 }
 
 /** GET /assemblies/.../bom response (the subset we read). */
@@ -421,19 +423,6 @@ interface OnshapeMetadataProperty {
 /** GET /metadata/.../e/{eid} (the subset we read). */
 export interface OnshapeMetadataObject {
     properties: OnshapeMetadataProperty[];
-}
-
-/** One property of a part's metadata, as one to write back. */
-export interface OnshapePartMetadataProperty {
-    name: string;
-    propertyId: string;
-    value: unknown;
-    editable?: boolean;
-}
-
-/** GET /metadata/.../e/{eid}/p/{pid} (the subset we read). */
-export interface OnshapePartMetadata {
-    properties: OnshapePartMetadataProperty[];
 }
 
 // === part studios (GET .../partstudios/.../features) ===

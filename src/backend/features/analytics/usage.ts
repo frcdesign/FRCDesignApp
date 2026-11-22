@@ -23,11 +23,7 @@ export enum EventType {
     /** A favorite's default configuration saved; see `features/favorites`. Not a use. */
     DEFAULT_SELECTION = "default_selection",
     /** An assembly's masses read; see `features/mass-analysis`. Not a use. */
-    MASS_REPORT = "mass_report",
-    /** A part's material set from Mass Analysis. Not a use. */
-    MATERIAL_SET = "material_set",
-    /** A part's mass override set from Mass Analysis. Not a use. */
-    MASS_OVERRIDE_SET = "mass_override_set"
+    MASS_REPORT = "mass_report"
 }
 
 /** A use is an insert or a download: each counts toward a part's usage. */

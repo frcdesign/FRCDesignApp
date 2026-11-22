@@ -354,62 +354,25 @@ export function trackMassReport(
     return runInBackground(c, "record a mass report", async () =>
         record(
             getDb(c.env.DB),
-            nonUseEvent(
-                EventType.MASS_REPORT,
-                await c.var.getUserId(),
-                assembly
-            ),
+            {
+                ...eventCore(
+                    EventType.MASS_REPORT,
+                    null,
+                    await c.var.getUserId()
+                ),
+                documentId: assembly.documentId,
+                instanceType: assembly.instanceType,
+                instanceId: assembly.instanceId,
+                elementId: assembly.elementId,
+                insertableId: null,
+                ...NOT_A_USE,
+                ...NOT_A_VERSION_RUN,
+                ...NOT_A_REPORT,
+                ...NOT_A_FEATURE_ADD
+            },
             []
         )
     );
-}
-
-/** What one save from Mass Analysis set; `path` is the part's Part Studio. */
-export interface MassEditEvent {
-    path: ElementPath;
-    material: boolean;
-    mass: boolean;
-}
-
-/** As `trackInsert`, once Onshape took the change: an event for each property set. */
-export function trackMassEdit(
-    c: AppContext,
-    event: MassEditEvent
-): Promise<void> {
-    return runInBackground(c, "record a mass edit", async () => {
-        const userId = await c.var.getUserId();
-        const types = [
-            ...(event.material ? [EventType.MATERIAL_SET] : []),
-            ...(event.mass ? [EventType.MASS_OVERRIDE_SET] : [])
-        ];
-        await recordBatch(
-            getDb(c.env.DB),
-            types.map((type) => ({
-                event: nonUseEvent(type, userId, event.path),
-                parameters: []
-            }))
-        );
-    });
-}
-
-/** An event of no library's, about the tab at `path`. */
-function nonUseEvent(
-    type: EventType,
-    userId: string,
-    path: ElementPath
-): LoggedEvent {
-    return {
-        ...eventCore(type, null, userId),
-        documentId: path.documentId,
-        instanceType: path.instanceType,
-        instanceId: path.instanceId,
-        elementId: path.elementId,
-        insertableId: null,
-        ...NOT_A_USE,
-        ...NOT_A_VERSION_RUN,
-        ...NOT_A_REPORT,
-        ...NOT_A_FEATURE_ADD
-    };
 }
 
 /** Batched so neither half lands without the other. */

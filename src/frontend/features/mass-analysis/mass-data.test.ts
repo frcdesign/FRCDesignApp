@@ -21,16 +21,8 @@ function part(id: string, mass?: number, quantity = 1): MassPart {
         name: id,
         quantity,
         mass,
-        source: {
-            documentId: "robot",
-            instanceType: "w",
-            instanceId: "main",
-            elementId: `${id}-studio`,
-            partId: "JHD",
-            configuration: ""
-        },
-        canSetMaterial: true,
-        canSetMass: true
+        partKey: `${id}-studio|JHD`,
+        occurrences: [[`${id}-instance`]]
     };
 }
 
@@ -112,6 +104,10 @@ describe("missingParts", () => {
 
         expect(missing).toHaveLength(1);
         expect(missing[0]).toMatchObject({ count: 9, within: "Module" });
+        expect(missing[0].occurrences).toEqual([
+            ["Bracket-instance"],
+            ["Bracket-instance"]
+        ]);
     });
 
     it("leaves out what's inside a library's assembly", () => {

@@ -1,32 +1,37 @@
-import {
-    Button,
-    Card,
-    Group,
-    NumberInput,
-    Select,
-    Stack,
-    Text
-} from "@mantine/core";
-import { type ReactNode, useState } from "react";
-import { MATERIALS } from "@backend/features/mass-analysis/materials";
-import { type ElementPath } from "@backend/lib/onshape/path";
+import { Card, Group, Stack, Text } from "@mantine/core";
+import { type ReactNode } from "react";
 import { Section } from "../../../components/section";
 import { SectionNotice } from "../../../components/app-notice";
+import { sendHighlightMessage, showFocused } from "../../../lib/messages";
+import { useTargetElement } from "../../../lib/onshape-params";
+import { StatusColor } from "../../../lib/style-constants";
 import { m } from "../../../paraglide/messages";
-import { type MissingPart, POUNDS_PER_KILOGRAM } from "../mass-data";
-import { useSetPartPropertiesMutation } from "../queries";
-
-const MATERIAL_NAMES = MATERIALS.map((material) => material.name);
+import { type MissingPart } from "../mass-data";
+import styles from "./missing-mass-list.module.css";
 
 interface MissingMassListProps {
-    assembly: ElementPath;
     missing: MissingPart[];
 }
 
-export function MissingMassList({
-    assembly,
-    missing
-}: MissingMassListProps): ReactNode {
+/** Hovering a part lights every instance of it up in Onshape. */
+export function MissingMassList({ missing }: MissingMassListProps): ReactNode {
+    const target = useTargetElement();
+
+    const show = (entry: MissingPart): void => {
+        if (target) {
+            sendHighlightMessage(
+                target,
+                entry.occurrences.map((occurrencePath) => ({ occurrencePath }))
+            );
+        }
+    };
+
+    const leave = (): void => {
+        if (target) {
+            showFocused(target);
+        }
+    };
+
     return (
         <Section
             title={m.massAnalysisMissingTitle()}
@@ -39,102 +44,49 @@ export function MissingMassList({
             {missing.length === 0 ? (
                 <SectionNotice title={m.massAnalysisMissingNone()} />
             ) : (
-                missing.map((entry) => (
-                    <MissingPartRow
-                        key={entry.part.id}
-                        assembly={assembly}
-                        missing={entry}
-                    />
-                ))
+                <Card p="xs">
+                    <Stack gap={0} onMouseLeave={leave}>
+                        {missing.map((entry) => (
+                            <MissingPartRow
+                                key={entry.part.partKey}
+                                missing={entry}
+                                onHover={() => show(entry)}
+                            />
+                        ))}
+                    </Stack>
+                </Card>
             )}
         </Section>
     );
 }
 
 interface MissingPartRowProps {
-    assembly: ElementPath;
     missing: MissingPart;
+    onHover: () => void;
 }
 
-function MissingPartRow({ assembly, missing }: MissingPartRowProps): ReactNode {
-    const save = useSetPartPropertiesMutation(assembly);
-    const [material, setMaterial] = useState<string | undefined>(undefined);
-    const [pounds, setPounds] = useState<number | undefined>(undefined);
-
+function MissingPartRow({ missing, onHover }: MissingPartRowProps): ReactNode {
     const { part, count, within } = missing;
-    const hasChange = material !== undefined || pounds !== undefined;
-
-    const submit = (): void => {
-        save.mutate({
-            assembly,
-            part: part.source,
-            material,
-            mass:
-                pounds === undefined ? undefined : pounds / POUNDS_PER_KILOGRAM
-        });
-    };
-
     return (
-        <Card>
-            <Stack gap="xs">
-                <Group justify="space-between" wrap="nowrap">
-                    <Text fw={500} truncate>
-                        {part.name}
-                    </Text>
-                    <Text c="dimmed">{m.massAnalysisQuantity({ count })}</Text>
-                </Group>
+        <Group
+            className={styles.row}
+            justify="space-between"
+            wrap="nowrap"
+            px="xs"
+            py={6}
+            onMouseEnter={onHover}
+        >
+            <Stack gap={0} miw={0}>
+                <Text truncate>{part.name}</Text>
                 {within && (
-                    <Text size="sm" c="dimmed">
+                    <Text size="xs" c={StatusColor.DIMMED} truncate>
                         {m.massAnalysisWithin({ assembly: within })}
                     </Text>
                 )}
-                {part.canSetMass ? (
-                    <>
-                        <Select
-                            label={m.massAnalysisMaterial()}
-                            data={MATERIAL_NAMES}
-                            value={material ?? null}
-                            onChange={(value) =>
-                                setMaterial(value ?? undefined)
-                            }
-                            disabled={!part.canSetMaterial}
-                            description={
-                                part.canSetMaterial
-                                    ? undefined
-                                    : m.massAnalysisMaterialOtherDocument()
-                            }
-                            clearable
-                        />
-                        <Group align="end" gap="xs" wrap="nowrap">
-                            <NumberInput
-                                label={m.massAnalysisMassOverride()}
-                                flex={1}
-                                min={0}
-                                decimalScale={3}
-                                value={pounds ?? ""}
-                                onChange={(value) =>
-                                    setPounds(
-                                        typeof value === "number" && value > 0
-                                            ? value
-                                            : undefined
-                                    )
-                                }
-                            />
-                            <Button
-                                disabled={!hasChange}
-                                loading={save.isPending}
-                                onClick={submit}
-                            >
-                                {m.massAnalysisSave()}
-                            </Button>
-                        </Group>
-                    </>
-                ) : (
-                    <Text size="sm" c="dimmed">
-                        {m.massAnalysisLibraryPart()}
-                    </Text>
-                )}
             </Stack>
-        </Card>
+            <Text c={StatusColor.DIMMED}>
+                {m.massAnalysisQuantity({ count })}
+            </Text>
+        </Group>
     );
 }
