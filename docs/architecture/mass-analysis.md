@@ -209,11 +209,13 @@ read again on a refresh.
 1. The level opened starts at the assembly's own items.
 2. The chart's caption is the level's total, in pounds. Tiles are the level's
    items with any mass, heaviest first and darkest.
+   A tile's tooltip gives its mass and its share of the level.
 3. Clicking a subassembly's tile opens it, unless it is a library's. Clicking
    a part does nothing.
 4. The breadcrumb lists each level above, back to the assembly.
 5. The list below holds each part with no mass under the level, once, with the
-   count the level holds. Rows for the same part are merged by its key. Parts
+   count the level holds, and under its name the subassembly it's first found
+   in. Rows for the same part are merged by its key. Parts
    inside a library's assembly aren't listed.
 6. Hovering a row lights up every instance of the part in Onshape, as whole
    instances. Leaving the list shows the window as it was.

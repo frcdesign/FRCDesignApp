@@ -19,6 +19,7 @@ const CHART_HEIGHT = 360;
 /** The level's items by mass; a subassembly that isn't a library's opens into its own. */
 export function MassTreemap({ level, onOpen }: MassTreemapProps): ReactNode {
     const tiles = toTiles(level.children, AppColor.MASS_ANALYSIS);
+    const total = tiles.reduce((sum, tile) => sum + tile.value, 0);
     const openedIds = level.trail.map((assembly) => assembly.id);
 
     const select = (tile: MassTile): void => {
@@ -56,7 +57,10 @@ export function MassTreemap({ level, onOpen }: MassTreemapProps): ReactNode {
                     nodes={tiles}
                     h={CHART_HEIGHT}
                     valueFormatter={(pounds) =>
-                        m.massAnalysisPounds({ mass: pounds })
+                        m.massAnalysisShare({
+                            mass: pounds,
+                            share: pounds / total
+                        })
                     }
                     onSelect={select}
                 />

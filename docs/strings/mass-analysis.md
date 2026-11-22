@@ -23,18 +23,18 @@ page's strings are messages in `src/frontend/messages/en.json`, keyed
 
 ## The chart
 
-| String                 | Kind                   | Where                 | When                            | Review                     |
-| ---------------------- | ---------------------- | --------------------- | ------------------------------- | -------------------------- |
-| "Mass" / "{mass} lb"   | Section title, caption | Top of the page       | Always; the level's total       | **⚑** New                  |
-| "{mass} lb"            | Tooltip value          | Over a tile           | Hovering a tile                 | **⚑** New                  |
-| "Assembly"             | Breadcrumb             | Above the chart       | A subassembly is open           | **⚑** New: the root's name |
-| "No parts with a mass" | Notice title           | In place of the chart | Nothing at the level has a mass | **⚑** New                  |
+| String                 | Kind                   | Where                 | When                                    | Review                     |
+| ---------------------- | ---------------------- | --------------------- | --------------------------------------- | -------------------------- |
+| "Mass" / "{mass} lb"   | Section title, caption | Top of the page       | Always; the level's total               | **⚑** New                  |
+| "{mass} lb · {share}%" | Tooltip value          | Over a tile           | Hovering a tile: its share of the level | **⚑** New                  |
+| "Assembly"             | Breadcrumb             | Above the chart       | A subassembly is open                   | **⚑** New: the root's name |
+| "No parts with a mass" | Notice title           | In place of the chart | Nothing at the level has a mass         | **⚑** New                  |
 
 ## Parts without a mass
 
-| String                               | Kind                   | Where                | When                                      | Review    |
-| ------------------------------------ | ---------------------- | -------------------- | ----------------------------------------- | --------- |
-| "Parts without a mass" / "{n} parts" | Section title, caption | Under the chart      | Always; the caption with any listed       | **⚑** New |
-| "Every part has a mass"              | Notice title           | In place of the list | Nothing listed                            | **⚑** New |
-| "×{count}"                           | Row text               | End of a part's row  | Always: how many the level holds          | **⚑** New |
-| "In {assembly}"                      | Row text               | Under a part's name  | The part is in a subassembly of the level | **⚑** New |
+| String                               | Kind                   | Where                | When                                                              | Review    |
+| ------------------------------------ | ---------------------- | -------------------- | ----------------------------------------------------------------- | --------- |
+| "Parts without a mass" / "{n} parts" | Section title, caption | Under the chart      | Always; the caption with any listed                               | **⚑** New |
+| "Every part has a mass"              | Notice title           | In place of the list | Nothing listed                                                    | **⚑** New |
+| "×{count}"                           | Row text               | End of a part's row  | Always: how many the level holds                                  | **⚑** New |
+| "{assembly}"                         | Row text               | Under a part's name  | The part is in a subassembly of the level: its name, from Onshape | **⚑** New |

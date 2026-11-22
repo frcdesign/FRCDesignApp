@@ -101,7 +101,7 @@ describe("MassAnalysisPanel", () => {
 
         const bracket = await row("Bracket");
         expect(within(bracket).getByText("×5")).toBeTruthy();
-        expect(within(bracket).getByText("In Drivetrain")).toBeTruthy();
+        expect(within(bracket).getByText("Drivetrain")).toBeTruthy();
         expect(screen.getAllByText("Bracket")).toHaveLength(1);
         expect(screen.queryByText("Rail")).toBeNull();
         expect(screen.getByText("2 parts")).toBeTruthy();

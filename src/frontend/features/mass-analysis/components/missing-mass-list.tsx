@@ -80,7 +80,7 @@ function MissingPartRow({ missing, onHover }: MissingPartRowProps): ReactNode {
                 <Text truncate>{part.name}</Text>
                 {within && (
                     <Text size="xs" c={StatusColor.DIMMED} truncate>
-                        {m.massAnalysisWithin({ assembly: within })}
+                        {within}
                     </Text>
                 )}
             </Stack>
