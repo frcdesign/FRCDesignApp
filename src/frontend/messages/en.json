@@ -986,7 +986,7 @@
     "massAnalysisChartEmpty": "No parts with a mass",
     "massAnalysisTopLevel": "Assembly",
     "massAnalysisPounds": "{mass: number maximumFractionDigits=2} lb",
-    "massAnalysisShare": "{mass: number maximumFractionDigits=2} lb · {share: number style=percent maximumFractionDigits=1}",
+    "massAnalysisShare": "{mass: number maximumFractionDigits=2} lb ({share: number style=percent maximumFractionDigits=1})",
     "massAnalysisMissingTitle": "Parts without a mass",
     "massAnalysisMissingCaption": [
         {
