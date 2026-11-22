@@ -1227,7 +1227,8 @@ page; a library's sections only for the same library. The library, part and
 unused dashboards keep the range picker in the navbar, which the overview
 hides.
 
-**Feature usage** is one small chart per `AppFeature`, a point a day over a
+**Feature usage** is one small chart per `AppFeature`, each saying under its
+title what counts as a use (`featureDescription`), a point a day over a
 range of 90 days or less after clamping (`REACH_DAILY_DAYS`, `reachInterval`),
 a point a week past it. For each point, the share of its active users who used
 the feature then, on a shared 0–100% axis, or for search, STEP downloads and
@@ -1238,8 +1239,11 @@ first may begin before the range, and only its days inside it count. A
 feature's line starts at its first recorded use, all time, and a point with
 nobody about is left blank. A dashed line marks the day or week each of the
 feature's nudges (`NUDGES`) shipped or was withdrawn; features with a nudge
-come first. A nudge still on cert has no day and no marker until it reaches
-`main`. The tooltip gives a share's users and active users beside it.
+come first. A nudge is something pointing people at the feature: a blue dot, a
+tip, or a suggestion on its page. A tip making one part of a feature faster
+isn't one. A marker reads its nudge's name where it has one ("Suggested
+links"), else its kind. A nudge still on cert has no day and no marker until
+it reaches `main`. The tooltip gives a share's users and active users beside it.
 
 Each chart draws two lines, existing and new users. A person is new at a point
 when their first day (`users.created_at`) falls in the `NEW_USER_WEEKS` weeks

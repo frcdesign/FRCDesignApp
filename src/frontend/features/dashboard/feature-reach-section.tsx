@@ -18,6 +18,7 @@ import { DashboardEmpty, DashboardState } from "./dashboard-state";
 import { ChartRangeControl } from "./range-control";
 import {
     evenTicks,
+    featureDescription,
     featureLabel,
     featureMeasure,
     featureOrder,
@@ -166,7 +167,7 @@ function FeatureReachPanel({
     const middle = points[Math.floor(points.length / 2)]?.bucket ?? "";
     return (
         <Card>
-            <Group justify="space-between" mb="xs">
+            <Group justify="space-between" align="flex-start">
                 <Text fw={700}>{featureLabel(feature)}</Text>
                 {latest?.value != null && (
                     <Text c="dimmed">
@@ -177,6 +178,9 @@ function FeatureReachPanel({
                     </Text>
                 )}
             </Group>
+            <Text size="sm" c="dimmed" mb="xs">
+                {featureDescription(feature)}
+            </Text>
             {latest ? (
                 <LineChart
                     h={PANEL_HEIGHT}

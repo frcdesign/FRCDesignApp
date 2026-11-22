@@ -12,8 +12,7 @@ export enum NudgeKind {
 
 /** Which one, where its kind alone doesn't say: a marker is labelled by it in place of its kind. */
 export enum NudgeName {
-    SUGGESTED_LINKS = "suggested-links",
-    QUICK_RECURSIVE_TIP = "quick-recursive-tip"
+    SUGGESTED_LINKS = "suggested-links"
 }
 
 export enum NudgeChange {
@@ -31,7 +30,11 @@ export interface Nudge {
     day?: string;
 }
 
-/** Every nudge shipped or withdrawn; add one in the change that ships it. */
+/**
+ * Every nudge toward a feature shipped or withdrawn; add one in the change that
+ * ships it. A tip making one part of a feature faster doesn't send anybody to
+ * the feature, so it isn't one.
+ */
 export const NUDGES: readonly Nudge[] = [
     {
         feature: AppFeature.VERSION_MANAGER,
@@ -64,14 +67,6 @@ export const NUDGES: readonly Nudge[] = [
         name: NudgeName.SUGGESTED_LINKS,
         change: NudgeChange.ADDED,
         day: "2026-11-07"
-    },
-    // Quick recursive push and pull, after a recursive run from the form.
-    {
-        feature: AppFeature.VERSION_MANAGER,
-        kind: NudgeKind.TIP,
-        name: NudgeName.QUICK_RECURSIVE_TIP,
-        change: NudgeChange.ADDED,
-        day: "2026-11-14"
     },
     // Shown since before tracking began, so only its removal is marked.
     {
@@ -125,7 +120,5 @@ function nameLabel(name: NudgeName): string {
     switch (name) {
         case NudgeName.SUGGESTED_LINKS:
             return m.dashboardNudgeSuggestedLinks();
-        case NudgeName.QUICK_RECURSIVE_TIP:
-            return m.dashboardNudgeQuickRecursiveTip();
     }
 }

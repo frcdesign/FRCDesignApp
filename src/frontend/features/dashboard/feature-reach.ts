@@ -206,3 +206,35 @@ export function featureLabel(feature: AppFeature): string {
             return m.dashboardFeatureReport();
     }
 }
+
+/** What counts as a use of the feature, as `featuresOf` records it. */
+export function featureDescription(feature: AppFeature): string {
+    switch (feature) {
+        case AppFeature.SEARCH:
+            return m.dashboardFeatureSearchDescription();
+        case AppFeature.FAVORITES:
+            return m.dashboardFeatureFavoritesDescription();
+        case AppFeature.RECENTS:
+            return m.dashboardFeatureRecentsDescription();
+        case AppFeature.QUICK_INSERT:
+            return m.dashboardFeatureQuickInsertDescription();
+        case AppFeature.FASTEN:
+            return m.dashboardFeatureFastenDescription();
+        case AppFeature.PRESELECTION:
+            return m.dashboardFeaturePreselectionDescription();
+        case AppFeature.AUTO_ASSEMBLY:
+            return m.dashboardFeatureAutoAssemblyDescription();
+        case AppFeature.INSERT_LOCATION:
+            return m.dashboardFeatureInsertLocationDescription();
+        case AppFeature.DOWNLOAD:
+            return m.dashboardFeatureDownloadDescription();
+        case AppFeature.DEFAULT_CONFIGURATION:
+            return m.dashboardFeatureDefaultConfigurationDescription();
+        case AppFeature.VERSION_MANAGER:
+            return m.dashboardFeatureVersionManagerDescription();
+        case AppFeature.FEATURESCRIPTS:
+            return m.dashboardFeatureFeatureScriptsDescription();
+        case AppFeature.REPORT:
+            return m.dashboardFeatureReportDescription();
+    }
+}
