@@ -3,6 +3,7 @@ import { LibraryId } from "@backend/features/library/library-id";
 import { getLibraryName } from "../../lib/library";
 import { getLibraryColor } from "../../theme";
 import { colorVar, FILLED_SHADE } from "../../lib/style-constants";
+import { type TreemapTile } from "../../components/app-treemap";
 
 /** A part tagged with the library it came from, so one list spans them all. */
 /** Parts are leaves: clicking one leaves the chart. */
@@ -18,17 +19,11 @@ export enum TreemapKind {
     PART = "part"
 }
 
-/** What every tile carries; its area is its fraction of the parent's uses. */
-interface TileBase {
-    name: string;
-    value: number;
-    color: string;
-}
-
+/** A tile's area is its fraction of the parent's uses. */
 export type TreemapNode =
-    | (TileBase & { kind: TreemapKind.LIBRARY; libraryId: LibraryId })
-    | (TileBase & { kind: TreemapKind.GROUP; groupName: string })
-    | (TileBase & {
+    | (TreemapTile & { kind: TreemapKind.LIBRARY; libraryId: LibraryId })
+    | (TreemapTile & { kind: TreemapKind.GROUP; groupName: string })
+    | (TreemapTile & {
           kind: TreemapKind.PART;
           libraryId: LibraryId;
           elementId: string;

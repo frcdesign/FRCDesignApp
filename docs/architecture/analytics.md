@@ -37,7 +37,13 @@ enum EventType {
     /** One FeatureScript added to a Part Studio; see `features/featurescripts`. Not a use. */
     FEATURE_ADD = "feature_add",
     /** A favorite's default configuration saved; see `features/favorites`. Not a use. */
-    DEFAULT_SELECTION = "default_selection"
+    DEFAULT_SELECTION = "default_selection",
+    /** An assembly's masses read; see `features/mass-analysis`. Not a use. */
+    MASS_REPORT = "mass_report",
+    /** A part's material set from Mass Analysis. Not a use. */
+    MATERIAL_SET = "material_set",
+    /** A part's mass override set from Mass Analysis. Not a use. */
+    MASS_OVERRIDE_SET = "mass_override_set"
 }
 
 /** A use is an insert or a download: each counts toward a part's usage. */
@@ -88,6 +94,7 @@ enum AppFeature {
     DEFAULT_CONFIGURATION = "default_configuration",
     VERSION_MANAGER = "version_manager",
     FEATURESCRIPTS = "featurescripts",
+    MASS_ANALYSIS = "mass_analysis",
     REPORT = "report"
 }
 ```
@@ -110,6 +117,9 @@ function trackDefaultSelection(
     c: AppContext,
     event: DefaultSelectionEvent
 ): Promise<void>;
+function trackMassReport(c: AppContext, assembly: ElementPath): Promise<void>;
+// An event for each property the save set.
+function trackMassEdit(c: AppContext, event: MassEditEvent): Promise<void>;
 // Awaited inside the workflow's `record-run` step, which swallows its failure.
 async function trackVersionRun(
     env: AppBindings,
@@ -161,6 +171,13 @@ interface DefaultSelectionEvent {
     libraryId: LibraryId;
     path: ElementPath;
     insertableId: string;
+}
+
+/** What one save from Mass Analysis set; `path` is the part's Part Studio. */
+interface MassEditEvent {
+    path: ElementPath;
+    material: boolean;
+    mass: boolean;
 }
 
 /** A finished push or pull; see `features/version-manager`. */
@@ -1109,8 +1126,12 @@ no foreign key crosses between them):
    Onshape accepted the feature (see [featurescripts.md](./featurescripts.md));
    `POST /api/default-selection/favorite/:favoriteId` calls
    `trackDefaultSelection` once the default is saved (see
-   [favorites.md](./favorites.md)).
-2. A use, an open, a FeatureScript add, a report and a default configuration are recorded in the background (`runInBackground`),
+   [favorites.md](./favorites.md)); `GET /api/mass-analysis` calls
+   `trackMassReport` once the BOM is read, and `POST /api/mass-analysis/part`
+   calls `trackMassEdit` once Onshape took the change (see
+   [mass-analysis.md](./mass-analysis.md)).
+2. A use, an open, a FeatureScript add, a report, a default configuration and a
+   mass report or edit are recorded in the background (`runInBackground`),
    after the response; a workflow's step swallows a failure to record. So
    tracking never slows or fails what the user asked for.
 3. The selection is stored canonically (`canonicalValues`), so `5 in` and

@@ -121,6 +121,7 @@ owns, `lib/` for cross-cutting plumbing, and a small set of files at the root.
     - `admin-team/` — each library's admin team, set by the owner and synced from Onshape
     - `version-manager/` — links between Onshape workspaces and the pushes and pulls along them; see [architecture/version-manager.md](./architecture/version-manager.md)
     - `auto-assembly/` — sizing and inserting fasteners in an assembly's holes, from the fasteners FRCDesignLib loaded; see [architecture/auto-assembly.md](./architecture/auto-assembly.md)
+    - `mass-analysis/` — an assembly's mass by part from its BOM, and setting a part's material or mass override; see [architecture/mass-analysis.md](./architecture/mass-analysis.md)
     - `generated-parts/` — library parts FeatureScript generates, whose records robot-code writes and loads index; see [architecture/generated-parts.md](./architecture/generated-parts.md)
     - `feedback/` — reports posted to the FRCDesign Discord; see [architecture/feedback.md](./architecture/feedback.md)
     - `download/` — STEP downloads for the standalone app, exported by Onshape as the signed-in caller; see [architecture/download.md](./architecture/download.md)

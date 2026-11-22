@@ -57,6 +57,7 @@ export function featureMeasure(feature: AppFeature): ReachMeasure {
         case AppFeature.DEFAULT_CONFIGURATION:
         case AppFeature.VERSION_MANAGER:
         case AppFeature.FEATURESCRIPTS:
+        case AppFeature.MASS_ANALYSIS:
             return ReachMeasure.SHARE;
     }
 }
@@ -182,6 +183,8 @@ export function featureLabel(feature: AppFeature): string {
             return m.dashboardFeatureVersionManager();
         case AppFeature.FEATURESCRIPTS:
             return m.dashboardFeatureFeatureScripts();
+        case AppFeature.MASS_ANALYSIS:
+            return m.dashboardFeatureMassAnalysis();
         case AppFeature.REPORT:
             return m.dashboardFeatureReport();
     }

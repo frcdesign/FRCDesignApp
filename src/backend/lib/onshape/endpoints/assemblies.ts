@@ -7,6 +7,7 @@ import { IDENTITY_TRANSFORM } from "../objects/transform";
 import {
     OnshapeAssemblyDefinition,
     OnshapeAssemblyFeatureList,
+    OnshapeBom,
     OnshapeBoundingBox,
     OnshapeCreatedFeature,
     OnshapeInsertInstancesResponse
@@ -32,6 +33,27 @@ export function getAssembly(
                 options.includeMateConnectors ?? false
             )
         })
+    });
+}
+
+/**
+ * Every row of every level, subassemblies expanded, including what the BOM
+ * excludes and ignoring each subassembly's BOM behavior, so nothing's mass is
+ * left out.
+ */
+export function getAssemblyBom(
+    client: OnshapeApi,
+    assemblyPath: ElementPath
+): Promise<OnshapeBom> {
+    return client.get(`/assemblies${toElementApiPath(assemblyPath)}/bom`, {
+        query: {
+            indented: "true",
+            multiLevel: "true",
+            generateIfAbsent: "true",
+            includeExcluded: "true",
+            ignoreSubassemblyBomBehavior: "true",
+            thumbnail: "false"
+        }
     });
 }
 

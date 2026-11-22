@@ -973,5 +973,42 @@
     "versionManagerFormRecursivePushInfo": "Recursively push changes across multiple links.",
     "versionManagerFormRecursivePullInfo": "Also pulls into the parent from the documents linked above it first, saving a new version of each one along the way so the next can use it. Each is numbered from its own versions unless you name them above.",
     "versionManagerQuickRecursivePushTip": "Tip: Quick recursive push in a link's ⋯ menu does this in one click, without opening the form.",
-    "versionManagerQuickRecursivePullTip": "Tip: Quick recursive pull in a link's ⋯ menu does this in one click, without opening the form."
+    "versionManagerQuickRecursivePullTip": "Tip: Quick recursive pull in a link's ⋯ menu does this in one click, without opening the form.",
+    "massAnalysisTabName": "Mass Analysis",
+    "massAnalysisOpenAssemblyTitle": "Open an assembly to weigh it",
+    "massAnalysisOpenAssemblyDescription": "Mass Analysis shows where an assembly's mass is. Open it from an assembly's panel.",
+    "massAnalysisSignInTitle": "Sign in to weigh your assembly",
+    "massAnalysisSignInDescription": "Mass Analysis reads your assembly's parts and their masses.",
+    "massAnalysisSignIn": "Sign in",
+    "massAnalysisLoading": "Loading masses...",
+    "massAnalysisLoadFailed": "Failed to read the assembly's masses",
+    "massAnalysisChartTitle": "Mass",
+    "massAnalysisChartEmpty": "No parts with a mass",
+    "massAnalysisTopLevel": "Assembly",
+    "massAnalysisPounds": "{mass: number maximumFractionDigits=2} lb",
+    "massAnalysisMissingTitle": "Parts without a mass",
+    "massAnalysisMissingCaption": [
+        {
+            "declarations": [
+                "input count",
+                "local countPlural = count: plural",
+                "local formatted = count: number"
+            ],
+            "selectors": ["countPlural"],
+            "match": {
+                "countPlural=one": "{formatted} part",
+                "countPlural=other": "{formatted} parts"
+            }
+        }
+    ],
+    "massAnalysisMissingNone": "Every part has a mass",
+    "massAnalysisQuantity": "×{count: number}",
+    "massAnalysisWithin": "In {assembly}",
+    "massAnalysisMaterial": "Material",
+    "massAnalysisMaterialOtherDocument": "Set in the part's own document",
+    "massAnalysisMassOverride": "Mass (lb)",
+    "massAnalysisSave": "Save",
+    "massAnalysisSaveFailed": "Failed to save the part",
+    "massAnalysisLibraryPart": "Library part",
+    "dashboardFeatureMassAnalysis": "Mass Analysis"
 }
