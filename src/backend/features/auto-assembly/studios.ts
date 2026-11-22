@@ -22,7 +22,11 @@ import {
     toSelection
 } from "../configurations/selection";
 import { type StudioLocation } from "../generated-parts/studios";
+import { LibraryId } from "../library/library-id";
 import { type Catalog } from "./catalog";
+
+/** The library Auto Assembly's FRC fasteners are loaded into. */
+export const FASTENER_LIBRARY = LibraryId.FRC_DESIGN_LIB;
 
 export enum FastenerKind {
     SCREW = "screw",

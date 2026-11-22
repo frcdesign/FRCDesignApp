@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
     type ConfigurationParameter,
-    ParameterType
+    OptionVisibilityType,
+    ParameterType,
+    VisibilityType
 } from "../../configurations/contract";
 import { toSelection } from "../../configurations/selection";
 import { partName, type StoredParts } from "./part-name";
@@ -51,6 +53,59 @@ describe("partName", () => {
         expect(partName(STORED, undefined)).toBe(
             "#10-32 x 1 in Button Head Screw"
         );
+    });
+
+    it("names a configuration by a generated record, which leaves out a list hidden for having one option", () => {
+        // Shown only at 3 in, the one length made in both finishes
+        const finish: ConfigurationParameter = {
+            type: ParameterType.ENUM,
+            id: "finish",
+            name: "Finish",
+            default: "STAINLESS",
+            options: [
+                { id: "BLACK", name: "Black" },
+                { id: "STAINLESS", name: "Stainless" }
+            ],
+            optionConditions: [
+                {
+                    type: OptionVisibilityType.LIST,
+                    controlledOptions: ["BLACK", "STAINLESS"],
+                    condition: {
+                        type: VisibilityType.EQUAL,
+                        id: "length",
+                        value: "IN_3"
+                    }
+                }
+            ]
+        };
+        // Made only in black at 2 in, so the finish is hidden there and its record doesn't name it
+        const stored: StoredParts = {
+            ...STORED,
+            parameters: [LENGTH, finish],
+            records: [
+                {
+                    ...PART,
+                    values: { length: "IN_2" },
+                    name: "2 in, black"
+                },
+                {
+                    ...PART,
+                    values: { length: "IN_3", finish: "BLACK" },
+                    name: "3 in, black"
+                },
+                {
+                    ...PART,
+                    values: { length: "IN_3", finish: "STAINLESS" },
+                    name: "3 in, stainless"
+                }
+            ]
+        };
+        const choose = (values: Record<string, string>) =>
+            partName(stored, toSelection(values, stored.parameters));
+
+        expect(choose({ length: "IN_2", finish: "BLACK" })).toBe("2 in, black");
+        expect(choose({ length: "IN_3", finish: "BLACK" })).toBe("3 in, black");
+        expect(choose({ length: "IN_3" })).toBe("3 in, stainless");
     });
 
     it("falls back to the tab's name for a configuration nothing indexed", () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { BuildIssueType } from "@backend/features/build-checker/issues";
-import { getIssueTitle } from "./issue-text";
+import { getIssueDescription, getIssueTitle } from "./issue-text";
 
 describe("getIssueTitle", () => {
     // The count is the difference between "go fix this one" and "go fix forty".
@@ -16,5 +16,19 @@ describe("getIssueTitle", () => {
                 configurationCount: count
             })
         ).toBe(expected);
+    });
+});
+
+describe("getIssueDescription", () => {
+    it("gives a failed load's error", () => {
+        expect(
+            getIssueDescription({
+                type: BuildIssueType.LOAD_FAILED,
+                reason: "no such column: fasten_disabled"
+            })
+        ).toBe("no such column: fasten_disabled");
+        expect(
+            getIssueDescription({ type: BuildIssueType.LOAD_FAILED })
+        ).toBeUndefined();
     });
 });

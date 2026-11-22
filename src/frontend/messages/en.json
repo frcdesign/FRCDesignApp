@@ -640,8 +640,7 @@
     "autoAssemblySignIn": "Sign in",
     "autoAssemblyFastenersLoading": "Loading fasteners...",
     "autoAssemblyFastenersFailed": "Couldn't load the fasteners.",
-    "autoAssemblyNoFastenersTitle": "No fasteners are loaded yet.",
-    "autoAssemblyNoFastenersDescription": "Auto Assembly uses the fasteners in FRCDesignLib's Fasteners group, once they're loaded.",
+    "autoAssemblyNoFastenersTitle": "No fasteners are loaded yet",
     "autoAssemblySelections": "Selections",
     "autoAssemblySelectBy": "Select by",
     "autoAssemblyFaces": "Faces",
@@ -687,8 +686,11 @@
     "autoAssemblyTaskDeleteRunning": "Deleting screws...",
     "autoAssemblyTaskInsertRunning": "Inserting parts...",
     "autoAssemblyTaskFastenRunning": "Fastening parts...",
-    "autoAssemblyInserting": "Inserting fasteners...",
-    "autoAssemblyRunningCallout": "{step} You can leave this page.",
+    "autoAssemblyInserting": "Inserting parts...",
+    "autoAssemblyIndexingCallout": "Indexing holes. You can keep working.",
+    "autoAssemblyDeletingCallout": "Deleting screws. You can keep working.",
+    "autoAssemblyInsertingCallout": "Inserting parts. You can keep working.",
+    "autoAssemblyFasteningCallout": "Fastening parts. You can keep working.",
     "autoAssemblyInserted": [
         {
             "declarations": [
@@ -745,12 +747,12 @@
             }
         }
     ],
-    "autoAssemblyFailed": "Couldn't insert fasteners",
+    "autoAssemblyFailed": "Couldn't insert parts",
     "autoAssemblyFinishedCallout": "{headline} {timeAgo}.",
     "autoAssemblyFinishedToast": "{headline}.",
     "autoAssemblyDetails": "Details",
     "autoAssemblyNoRecentRun": "No recent run",
-    "autoAssemblyStoppedEarly": "Stopped early.",
+    "autoAssemblyTryAgain": "Try again. If the problem persists, send a report.",
     "fastenCircularEdges": "Circular edges",
     "fastenFaces": "Faces",
     "fastenEdgesToExclude": "Edges to exclude",

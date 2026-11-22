@@ -84,9 +84,15 @@ enum BuildIssueType {
 
 type BuildIssue =
     | BuildIssueOf<BuildIssueType.THUMBNAIL_FAILED>
-    // ...one BuildIssueOf per type, except these two:
+    // ...one BuildIssueOf per type, except these three:
     | ConfigurationBuildIssueOf<BuildIssueType.CONFIGURATION_MULTIPLE_PARTS>
-    | ConfigurationBuildIssueOf<BuildIssueType.UNSTABLE_COMPOSITE>;
+    | ConfigurationBuildIssueOf<BuildIssueType.UNSTABLE_COMPOSITE>
+    | LoadFailedIssue;
+
+/** On an insertable, the error its load threw. */
+interface LoadFailedIssue extends BuildIssueOf<BuildIssueType.LOAD_FAILED> {
+    reason?: string;
+}
 
 interface BuildIssueOf<T extends BuildIssueType> {
     type: T;
@@ -338,7 +344,9 @@ Admin settings start open; Configuration starts closed.
 1. A load runs `checkInsertable` and its probe's checks on each element it
    saves, then `checkGroup` on the group, and stores both
    ([loading.md](./loading.md)). A group whose load throws keeps its issues and
-   gains `LOAD_FAILED`.
+   gains `LOAD_FAILED`. An element whose load throws does too, carrying the
+   error's message (`reason`), which the card shows under its title. An element
+   that failed its first load is a hidden row holding only that issue.
 2. An editor's write re-runs only the checks it can change, through
    `replaceBuildIssues` with the types it owns: showing or hiding elements runs
    `recheckVisibility`; toggling fasten replaces `FASTEN_ISSUE_TYPES`; saving

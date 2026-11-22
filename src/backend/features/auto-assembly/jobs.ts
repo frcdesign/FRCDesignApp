@@ -59,12 +59,21 @@ export async function getJobStatus(
     if (isWorkflowActive(status.status)) {
         return stored;
     }
+    // Finished, so it reported: KV, read here, can lag what the run wrote elsewhere.
+    if (status.status === "complete") {
+        return isJobStatus(status.output) ? status.output : stored;
+    }
     return {
         ...stored,
         state: AssemblyJobState.FAILED,
         error: stored.error ?? "The run stopped unexpectedly.",
         tasks: stored.tasks?.map(settleTask)
     };
+}
+
+/** What a run returns once it has reported how it ended. */
+function isJobStatus(output: unknown): output is AssemblyJobStatus {
+    return typeof output === "object" && output !== null && "state" in output;
 }
 
 /** A step of a run that ended without reporting: the one going failed, the rest never ran. */

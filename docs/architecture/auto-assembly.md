@@ -922,6 +922,8 @@ function runFailure(message: string): Error;
 
 ```ts
 function runningHeadline(status: AssemblyJobStatus): string;
+// "Indexing holes. You can keep working.", or whichever step is going.
+function runningCallout(status: AssemblyJobStatus): string;
 function jobHeadline(
     status: AssemblyJobStatus,
     outcome: AssemblyJobOutcome
@@ -1029,11 +1031,13 @@ closes the menu and switches to the page.
    `stopRequest`. Every stop names the request it ends by its `messageId`,
    which Onshape answers as `stoppedRequestId`.
 
-    While a request is live (`filtering`), Mantine's `ActionBar` floats over
-    the bottom of the panel naming the list limiting picks
-    (`SelectingActionBar`, `listLabel`). Its **Stop selecting** button, and
-    its close button, unfocus the list (`finishSelecting`), which stops the
-    request.
+    While a request is live (`filtering`), a bar in Mantine's `ActionBar`
+    look names the list limiting picks (`SelectingBar`, `listLabel`). Its
+    **Stop selecting** button unfocuses the list (`finishSelecting`), which
+    stops the request. It sits in the page's flow, so the page scrolls clear
+    of it and nothing beside it is covered:
+    - On a page with a `PanelFooter`, it's in the footer, above its button.
+    - Elsewhere it's stuck to the bottom of the panel (`SelectingActionBar`).
 
 4. Hovering a row, in any list, lights its entity up alone
    (`requestSelectionHighlight`, which makes it what the Onshape window shows
@@ -1061,17 +1065,19 @@ closes the menu and switches to the page.
 
 The panel first reads the fasteners the library loaded (`useFastenerSetQuery`,
 `GET /api/auto-assembly/parts`). Until FRCDesignLib's Fasteners group has
-loaded them it says so, and offers nothing to insert.
+loaded them it says so, centered on the page, and offers nothing to insert.
+An answer of none is asked again each time the panel opens. A `LIBRARY` push
+for `FASTENER_LIBRARY` refetches either answer.
 
 The panel is a `ParameterGrid` of the configuration dialog's own inputs
 (`ParameterInput`), in groups (`ParameterGroup`), as an Onshape feature
 dialog's are. A group is an unstyled accordion, like `AppSection`'s:
 
-- Its title and chevron are one control, which highlights on hover and folds
-  the group. They line up with the rows' edges.
+- Its title and chevron are one control across the group's width, which
+  highlights on hover and folds the group. They line up with the rows' edges.
 - A group driven by a checkbox has its title as the checkbox's label, so the
-  title ticks it. Its chevron is a control of its own at the far side, shown
-  while ticked.
+  title ticks it. Its chevron, at the far side, is a control of its own that
+  fills the row from the checkbox. It shows while ticked.
 - There's no line under a header.
 
 The groups:
@@ -1137,10 +1143,9 @@ starting, clears them, and an edge picked again starts unflipped.
 
 A run takes one kind: only the lists Select by shows are sent, and changing
 Select by clears every pick. The button sits in a footer stuck to the bottom of
-the panel (`PanelFooter`), so it's always in view. The selecting action bar
-floats above the footer, reading its height from the document
-(`PANEL_FOOTER_HEIGHT`). The button reads Replace for existing screws and
-Insert otherwise. It needs a pick, and, under the Face stop
+the panel (`PanelFooter`), so it's always in view, with the selecting bar
+above it while a list limits picks. The button reads Replace for existing
+screws and Insert otherwise. Clicking it stops selecting. It needs a pick, and, under the Face stop
 condition, a face to stop at; manual sizing sends **All holes**, whatever the
 hidden stop condition says.
 
@@ -1326,17 +1331,20 @@ recorded with why, and the steps after it are skipped.
 `reportJob` stores the status and pushes `ASSEMBLY_JOB` with the assembly's
 key, tagged with its workspace. A page on that assembly refetches
 `GET /api/auto-assembly/job`, and does on reconnecting too. A stored `RUNNING`
-is checked against its workflow run: once that has ended without reporting, the
-running step reads failed and the rest skipped.
+is checked against its workflow run. KV, read at the edge, can lag what the run
+wrote, so a run that finished answers with the status it returns
+(`finish-job`'s). One that errored or was terminated without reporting reads
+failed, at the running step, and the rest skipped.
 
 The page shows the run in a callout above the options — its step while it
-goes, saying the page can be left, then how it went — with a Details modal
+goes, saying the person can keep working, then how it went — with a Details modal
 (`JobDetails`). It lists **Index holes**, with its warning in yellow under it,
 then each screw ("Screw {n}") with its own steps: **Delete screw** for a screw
 it updates, then **Insert screw**, **Add screw washer**, **Add nut** and **Add
 nut washer**, as the screw has them. A part's step follows the run's insert and
 fasten steps, and finishes with a warning when the part sits unmated. A step
-that failed puts its reason in a notice at the top. Then come the run's picks
+that failed, or the run stopping, puts its reason in a notice at the top, with
+"Try again" and a button to send a report. Then come the run's picks
 under the lists they were made in, each named as its list names it, with a
 check, warning or error and its problem under it. Hovering a pick, or a step
 whose part is in the assembly, lights it up in Onshape (a part as its whole
@@ -1344,7 +1352,7 @@ occurrence), and leaving them puts back the focused list's picks. The headline
 counts parts inserted, or, for a run that updated screws, the screws ("Updated
 3 screws"). A run with a hole's warning reads as partly done
 (`assemblyJobOutcome`). `useAssemblyJobToasts`, in the app shell, shows a toast as
-a run starts ("Inserting fasteners..."), which becomes how it finished, from
+a run starts ("Inserting parts..."), which becomes how it finished, from
 any tab of the app. A step's failure shows in our words; Onshape's own message
 is logged to the console.
 
@@ -1399,7 +1407,7 @@ In [strings/auto-assembly.md](../strings/auto-assembly.md).
 | A mate fails partway                 | The parts so far stay, some unmated                                   | Mate the rest by hand, or undo and run again           |
 | Removing replaced parts fails        | Nothing is inserted; any parts and mates already deleted stay deleted | Undo in Onshape, or run again picking the holes' edges |
 | Onshape rate-limits                  | The step retries, then fails as above                                 | Run it again                                           |
-| The run dies without reporting       | The job reads failed once the run has ended                           | Run it again                                           |
+| The run dies without reporting       | The job reads failed once the run has errored or been terminated      | Run it again                                           |
 
 ## Decisions
 

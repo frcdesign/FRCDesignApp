@@ -5,10 +5,10 @@ import { chunkForInArray } from "../../db/chunk";
 import { ElementType } from "../../lib/onshape/element-type";
 import type { ThumbnailUrls } from "../thumbnails/contract";
 import {
-    addBuildIssue,
     type BuildIssue,
     BuildIssueType,
-    hasBuildIssue
+    hasBuildIssue,
+    replaceBuildIssues
 } from "../build-checker/issues";
 import { groups, insertables } from "../../db/schema";
 import { uploadThumbnails } from "../thumbnails/store";
@@ -111,10 +111,7 @@ export async function loadGroup(
         storedInsertables
     );
 
-    const { failedInsertableIds } = await loadInsertables(
-        ctx,
-        insertablesToLoad
-    );
+    const failed = await loadInsertables(ctx, insertablesToLoad);
 
     const thumbnailUrls = await loadDocumentThumbnail(ctx, target, contents);
 
@@ -123,7 +120,7 @@ export async function loadGroup(
             thumbnailUrls,
             removedInsertableIds,
             movedInsertables,
-            failedInsertableIds
+            failed
         })
     );
 
@@ -147,40 +144,51 @@ export async function loadGroup(
         });
 
     return {
-        loadedElements: insertablesToLoad.length - failedInsertableIds.length,
+        loadedElements: insertablesToLoad.length - failed.length,
         deletedElements: removedInsertableIds.length,
-        failedElements: failedInsertableIds.length
+        failedElements: failed.length
     };
 }
 
-interface LoadedInsertables {
-    failedInsertableIds: string[];
+/** A tab whose load threw, and the error's message. */
+export interface FailedInsertable {
+    target: InsertableTarget;
+    reason: string;
 }
 
+/** Longer than any error worth reading in the build card. */
+const MAX_REASON_LENGTH = 500;
+
 /**
- * Returns the ids that failed. `loadInsertable` takes a limiter slot for its
+ * Returns the tabs that failed. `loadInsertable` takes a limiter slot for its
  * Onshape calls, which bounds the parallelism.
  */
 async function loadInsertables(
     ctx: LoadContext,
     targets: InsertableTarget[]
-): Promise<LoadedInsertables> {
-    const failedInsertableIds: string[] = [];
+): Promise<FailedInsertable[]> {
+    const failed: FailedInsertable[] = [];
     await Promise.all(
         targets.map(async (target) => {
             try {
                 await loadInsertable(ctx, target);
             } catch (error) {
-                // The row records only that it failed, so this is the only record of why.
                 console.error(
                     `Failed to load insertable ${target.insertableId} (${target.name})`,
                     error
                 );
-                failedInsertableIds.push(target.insertableId);
+                failed.push({ target, reason: failureReason(error) });
             }
         })
     );
-    return { failedInsertableIds };
+    return failed;
+}
+
+export function failureReason(error: unknown): string {
+    const message = error instanceof Error ? error.message : String(error);
+    return message.length > MAX_REASON_LENGTH
+        ? `${message.slice(0, MAX_REASON_LENGTH)}…`
+        : message;
 }
 
 async function loadDocumentThumbnail(
@@ -220,8 +228,7 @@ interface SaveGroupInput {
     removedInsertableIds: string[];
     /** Stored insertables the document's tab order moved, and where to. */
     movedInsertables: InsertableOrder[];
-    /** Insertables that threw while loading. */
-    failedInsertableIds: string[];
+    failed: FailedInsertable[];
 }
 
 async function saveGroup(
@@ -230,7 +237,7 @@ async function saveGroup(
     input: SaveGroupInput
 ): Promise<void> {
     const { thumbnailUrls, removedInsertableIds } = input;
-    const hasFailedInsertables = input.failedInsertableIds.length > 0;
+    const hasFailedInsertables = input.failed.length > 0;
 
     // Removed rows stay until the batch below deletes them.
     const visibleRows = await db
@@ -292,44 +299,68 @@ async function saveGroup(
     for (const ids of chunkForInArray(removedInsertableIds)) {
         writes.push(db.delete(insertables).where(inArray(insertables.id, ids)));
     }
-    writes.push(
-        ...(await flagFailedInsertables(db, input.failedInsertableIds))
-    );
+    writes.push(...(await flagFailedInsertables(db, input.failed)));
 
     await db.batch(writes as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
 }
 
 /**
- * Keeps the issues the last good load recorded. A new insertable has no row,
- * so the group's `INSERTABLES_FAILED` covers it.
+ * Keeps the issues the last good load recorded, with why this one failed. A new
+ * tab gets a hidden row holding only that, so the build card can say why.
  */
 async function flagFailedInsertables(
     db: Db,
-    failedInsertableIds: string[]
+    failed: FailedInsertable[]
 ): Promise<BatchItem<"sqlite">[]> {
     // Chunked: a rate-limited load can fail more ids than one statement binds.
     const reads = await Promise.all(
-        chunkForInArray(failedInsertableIds).map((ids) =>
-            db
-                .select({
-                    id: insertables.id,
-                    buildIssues: insertables.buildIssues
-                })
-                .from(insertables)
-                .where(inArray(insertables.id, ids))
+        chunkForInArray(failed.map(({ target }) => target.insertableId)).map(
+            (ids) =>
+                db
+                    .select({
+                        id: insertables.id,
+                        buildIssues: insertables.buildIssues
+                    })
+                    .from(insertables)
+                    .where(inArray(insertables.id, ids))
         )
     );
-
-    return reads.flat().map((row) =>
-        db
-            .update(insertables)
-            .set({
-                buildIssues: addBuildIssue(row.buildIssues, {
-                    type: BuildIssueType.LOAD_FAILED
-                })
-            })
-            .where(eq(insertables.id, row.id))
+    const stored = new Map(
+        reads.flat().map((row) => [row.id, row.buildIssues])
     );
+
+    return failed.map(({ target, reason }) => {
+        const issue = { type: BuildIssueType.LOAD_FAILED, reason } as const;
+        const buildIssues = stored.get(target.insertableId);
+        if (buildIssues) {
+            return db
+                .update(insertables)
+                .set({
+                    buildIssues: replaceBuildIssues(
+                        buildIssues,
+                        [BuildIssueType.LOAD_FAILED],
+                        [issue]
+                    )
+                })
+                .where(eq(insertables.id, target.insertableId));
+        }
+        return db.insert(insertables).values({
+            id: target.insertableId,
+            libraryId: target.libraryId,
+            groupId: target.groupId,
+            documentId: target.elementPath.documentId,
+            elementId: target.elementPath.elementId,
+            name: target.name,
+            elementType: target.elementType,
+            // Matches no tab, though LOAD_FAILED retries it regardless.
+            microversionId: "",
+            versionId: target.elementPath.instanceId,
+            versionCreatedAt: target.versionCreatedAt,
+            sortOrder: target.sortOrder,
+            isVisible: false,
+            buildIssues: [issue]
+        });
+    });
 }
 
 export interface StoredInsertable {
