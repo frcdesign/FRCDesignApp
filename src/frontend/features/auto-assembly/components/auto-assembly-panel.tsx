@@ -48,7 +48,8 @@ import {
     useAssemblyJobQuery,
     useFastenerSetQuery,
     useInsertMutation,
-    usePickProblems
+    usePickProblems,
+    usePrepareHoles
 } from "../queries";
 import { useAutoAssemblyStore } from "../store";
 import { FastenerOptionsForm, FormInputRow } from "./fastener-options-form";
@@ -67,6 +68,7 @@ interface AutoAssemblyPanelProps {
 export function AutoAssemblyPanel(props: AutoAssemblyPanelProps): ReactNode {
     const { assembly } = props;
     const { data: set, isPending, isError, error } = useFastenerSetQuery();
+    usePrepareHoles(assembly);
 
     if (isPending) {
         return <PageLoading title={m.autoAssemblyFastenersLoading()} />;

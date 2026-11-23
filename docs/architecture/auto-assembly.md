@@ -226,6 +226,8 @@ interface ParameterGroupProps {
 // The fasteners the library loaded; null before it loads them.
 function useFastenerSetQuery();
 function useInsertMutation(assembly: ElementPath);
+// Scans the assembly's Part Studios as the panel opens; nothing waits on it.
+function usePrepareHoles(assembly: ElementPath): void;
 function useAssemblyJobQuery(assembly: ElementPath | undefined);
 ```
 
@@ -233,6 +235,7 @@ function useAssemblyJobQuery(assembly: ElementPath | undefined);
 
 ```text
 GET  /api/auto-assembly/parts     the fasteners the library loaded, or null
+POST /api/auto-assembly/prepare   scans the assembly's Part Studios, nothing picked, into the cache
 POST /api/auto-assembly/insert    starts a run fastening the picked holes
 GET  /api/auto-assembly/job?documentId=&instanceId=&elementId=    the run this assembly last started
 ```
@@ -1176,6 +1179,16 @@ to stop at without the Face stop condition or the other way round
 (`hasStopFace`), an edge to flip that isn't picked (`isFlipPicked`), and a
 part its studio doesn't make (`isMade`) or not in the screw's size.
 
+### Preparing — `POST /api/auto-assembly/prepare`
+
+As the panel opens, it has the server index the assembly with nothing picked
+(`usePrepareHoles`): the assembly read, and every Part Studio in it scanned.
+A scan with nothing picked is cached by what pins its geometry, so the
+checks that follow read those from KV. Only a Part Studio holding a pick is
+scanned again, for what's picked in it. Nothing waits on the answer, and it
+isn't sent again for a minute (`PREPARE_STALE_MS`). It runs to the end even
+if the panel closes (`finishEvenIfDisconnected`).
+
 ### Checking picks — `POST /api/auto-assembly/check`
 
 Each list's rows are checked in the background (`usePickProblems`), 600 ms
@@ -1556,6 +1569,10 @@ In [strings/auto-assembly.md](../strings/auto-assembly.md).
   hole starts: a plate past a gap starts below the edge too. Countersinks are
   almost always made with the Hole feature, so one made by hand is no
   countersink here.
+- **Holes are scanned as the panel opens.** The first check otherwise waits on
+  every Part Studio's scan. Scanning them up front costs one Onshape call per
+  Part Studio not yet cached, which the first check would have spent anyway,
+  and a reading of the assembly.
 - **A later pick warns rather than steers.** A second hole of another size, or
   countersunk differently, picked by accident must not change the screw under
   the first. Picked on purpose, it must still be fastened. So only the first

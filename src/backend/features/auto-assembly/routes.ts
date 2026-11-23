@@ -1,6 +1,7 @@
 import { HttpStatus } from "http-status-ts";
 import { z } from "zod";
 import { handledError } from "../../lib/api-error";
+import { finishEvenIfDisconnected } from "../../lib/background";
 import { cacheMiddleware } from "../../lib/cache";
 import { getApp } from "../../lib/context";
 import { validate } from "../../lib/validate";
@@ -179,6 +180,33 @@ const checkBody = z
     .refine(isConsistentPick, INCONSISTENT_PICK_MESSAGE)
     .refine(isFlipPicked, FLIP_MESSAGE)
     .refine(hasStopFace, STOP_FACE_MESSAGE);
+
+/**
+ * POST /api/auto-assembly/prepare — reads the assembly and scans every Part
+ * Studio in it, nothing picked, so the checks that follow read their scans
+ * from the cache. Sent as the panel opens.
+ */
+autoAssemblyRoutes.post(
+    "/auto-assembly/prepare",
+    requireSignInMiddleware,
+    validate("json", z.object({ assembly: assemblySchema })),
+    async (c) => {
+        const { assembly } = c.req.valid("json");
+        const set = await getFastenerSet(getDb(c.env.DB));
+        const indexed = await finishEvenIfDisconnected(
+            c,
+            indexHoles(
+                await c.var.getOnshapeApi(),
+                c.env.KV,
+                assembly,
+                [],
+                [],
+                set
+            )
+        );
+        return c.json({ holes: indexed.holes.length });
+    }
+);
 
 /**
  * POST /api/auto-assembly/check — what's wrong with each pick, found as a run

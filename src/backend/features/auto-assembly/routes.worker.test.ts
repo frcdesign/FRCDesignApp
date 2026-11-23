@@ -281,6 +281,40 @@ describe("GET /api/auto-assembly/job", () => {
     });
 });
 
+describe("POST /api/auto-assembly/prepare", () => {
+    it("indexes the assembly with nothing picked, filling the scan cache", async () => {
+        const index = vi.spyOn(IndexHoles, "indexHoles").mockResolvedValue({
+            circularEdges: [],
+            holes: [],
+            placed: [],
+            replacements: [],
+            pickEdges: {},
+            unfound: []
+        });
+
+        const res = await post("/auto-assembly/prepare", {
+            assembly: ASSEMBLY
+        });
+
+        expect(res.status).toBe(200);
+        expect(index).toHaveBeenCalledWith(
+            expect.anything(),
+            env.KV,
+            ASSEMBLY,
+            [],
+            [],
+            undefined
+        );
+    });
+
+    it("refuses an assembly that isn't a workspace's", async () => {
+        const res = await post("/auto-assembly/prepare", {
+            assembly: { ...ASSEMBLY, instanceType: "v" }
+        });
+        expect(res.status).toBe(400);
+    });
+});
+
 describe("POST /api/auto-assembly/check", () => {
     const check = {
         assembly: ASSEMBLY,
