@@ -2,7 +2,7 @@ import { HttpStatus } from "http-status-ts";
 import { z } from "zod";
 import { handledError } from "../../lib/api-error";
 import { finishEvenIfDisconnected } from "../../lib/background";
-import { cacheMiddleware } from "../../lib/cache";
+import { CachePolicy, cacheMiddleware } from "../../lib/cache";
 import { getApp } from "../../lib/context";
 import { validate } from "../../lib/validate";
 import { requireSignInMiddleware } from "../auth/guards";
@@ -323,9 +323,11 @@ async function requireFastenerSet(db: Db): Promise<FastenerSet> {
     return set;
 }
 
-/** GET /api/auto-assembly/parts — the fasteners the library loaded, their catalog and studios; null before it loads them. */
-autoAssemblyRoutes.get("/auto-assembly/parts", async (c) =>
-    c.json((await getFastenerSet(getDb(c.env.DB))) ?? null)
+/** GET /api/auto-assembly/parts?v=:cacheVersion — the fasteners FRCDesignLib loaded, by its cache version; null before it loads them. */
+autoAssemblyRoutes.get(
+    "/auto-assembly/parts",
+    cacheMiddleware(CachePolicy.PUBLIC_CACHE),
+    async (c) => c.json((await getFastenerSet(getDb(c.env.DB))) ?? null)
 );
 
 /** GET /api/auto-assembly/job?documentId=&instanceId=&elementId= — the run this assembly last started. */

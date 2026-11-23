@@ -3,7 +3,6 @@ import { useEffect, useRef } from "react";
 import { type PushMessage, PushType } from "@backend/features/push/contract";
 import { workspaceKey } from "@backend/features/version-manager/contract";
 import { assemblyKey } from "@backend/features/auto-assembly/contract";
-import { FASTENER_LIBRARY } from "@backend/features/auto-assembly/studios";
 import { hasEditorAccess } from "@backend/features/auth/access-level";
 import { useAccessData } from "../features/auth/access-level";
 import { isRenderOf } from "../features/thumbnails/render-wait";
@@ -16,7 +15,6 @@ import {
 import { useTargetAssembly, useTargetWorkspace } from "./onshape-params";
 import { queryClient } from "./query-client";
 import {
-    FASTENER_SET_QUERY_KEY,
     assemblyJobQueryKey,
     featureScriptsLoadStatusQueryKey,
     featureScriptsVersionQueryKey,
@@ -57,11 +55,6 @@ export function usePushSync(): void {
                 case PushType.LIBRARY:
                     if (message.libraryId === libraryId) {
                         void refreshLibrary();
-                    }
-                    if (message.libraryId === FASTENER_LIBRARY) {
-                        void queryClient.invalidateQueries({
-                            queryKey: FASTENER_SET_QUERY_KEY
-                        });
                     }
                     break;
                 case PushType.VERSION_JOB:

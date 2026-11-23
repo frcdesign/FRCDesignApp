@@ -19,11 +19,13 @@ import {
 } from "../../../../__test_utils__/render";
 import { apiGet, apiPost } from "../../../lib/api-client";
 import {
-    FASTENER_SET_QUERY_KEY,
     assemblyJobQueryKey,
+    fastenerSetQueryKey,
+    libraryVersionQueryKey,
     pickCheckQueryKey
 } from "../../../lib/query-keys";
 import { FASTENER_SET } from "../../../../__test_utils__/fastener-set";
+import { type QueryClient } from "@tanstack/react-query";
 import {
     toSelectedEntities,
     useOnshapeSelection,
@@ -42,7 +44,11 @@ import { AutoAssemblyPanel } from "./auto-assembly-panel";
 import { JobDetails, JobDetailsTitle } from "./job-details";
 import { AutoAssemblyCallout } from "./auto-assembly-callout";
 import { UtilityTab } from "../../../lib/app-tab";
-import { FastenerKind } from "@backend/features/auto-assembly/studios";
+import {
+    FASTENER_LIBRARY,
+    FastenerKind,
+    type FastenerSet
+} from "@backend/features/auto-assembly/studios";
 
 vi.mock("../../../lib/api-client", () => ({
     apiGet: vi.fn(),
@@ -79,9 +85,22 @@ async function choose(label: string, option: string) {
     await userEvent.click(await screen.findByRole("option", { name: option }));
 }
 
+/** FRCDesignLib at a cache version, and the fasteners it had loaded by then. */
+function seedFasteners(
+    queryClient: QueryClient,
+    set: FastenerSet | null,
+    cacheVersion = 1
+) {
+    queryClient.setQueryData(
+        libraryVersionQueryKey(FASTENER_LIBRARY),
+        cacheVersion
+    );
+    queryClient.setQueryData(fastenerSetQueryKey(cacheVersion), set);
+}
+
 /** As the app renders it, the library having loaded the fasteners. */
 function renderPanel(queryClient = createTestQueryClient()) {
-    queryClient.setQueryData(FASTENER_SET_QUERY_KEY, FASTENER_SET);
+    seedFasteners(queryClient, FASTENER_SET);
     return renderWithProviders(
         <AutoAssemblyPanel assembly={ASSEMBLY} />,
         queryClient
@@ -111,29 +130,35 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe("AutoAssemblyPanel", () => {
-    it("says so until the library has loaded the fasteners, asking again each time it opens", async () => {
+    it("says so until the library has loaded the fasteners, and shows them at the version its load bumps to", async () => {
         const queryClient = createTestQueryClient();
-        queryClient.setQueryData(FASTENER_SET_QUERY_KEY, null);
-        vi.mocked(apiGet).mockResolvedValueOnce(null);
+        seedFasteners(queryClient, null);
         const { unmount } = renderWithProviders(
             <AutoAssemblyPanel assembly={ASSEMBLY} />,
             queryClient
         );
         expect(screen.getByText("No fasteners are loaded yet")).toBeTruthy();
         expect(screen.queryByRole("button", { name: "Insert" })).toBeNull();
-        await waitFor(() => expect(queryClient.isFetching()).toBe(0));
         unmount();
 
-        // Loaded since: the panel opening again shows the form
+        // The load bumps FRCDesignLib's version, which keys a new request
         vi.mocked(apiGet).mockResolvedValueOnce(FASTENER_SET);
         renderWithProviders(
             <AutoAssemblyPanel assembly={ASSEMBLY} />,
             queryClient
         );
+        act(() => {
+            queryClient.setQueryData(
+                libraryVersionQueryKey(FASTENER_LIBRARY),
+                2
+            );
+        });
         expect(
             await screen.findByRole("button", { name: "Insert" })
         ).toBeTruthy();
-        expect(apiGet).toHaveBeenCalledWith("/auto-assembly/parts");
+        expect(apiGet).toHaveBeenCalledWith("/auto-assembly/parts", {
+            cacheId: 2
+        });
     });
 
     it("picks circular edges by default, or faces with edges to exclude", async () => {
@@ -583,7 +608,7 @@ describe("AutoAssemblyPanel", () => {
 describe("AutoAssemblyCallout", () => {
     const renderCallout = (insertableId: string, onOpen = vi.fn()) => {
         const queryClient = createTestQueryClient();
-        queryClient.setQueryData(FASTENER_SET_QUERY_KEY, FASTENER_SET);
+        seedFasteners(queryClient, FASTENER_SET);
         renderWithProviders(
             <AutoAssemblyCallout insertableId={insertableId} onOpen={onOpen} />,
             queryClient

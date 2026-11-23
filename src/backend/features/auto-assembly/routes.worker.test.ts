@@ -366,9 +366,21 @@ describe("POST /api/auto-assembly/check", () => {
 describe("GET /api/auto-assembly/parts", () => {
     it("serves the fasteners the library loaded, and null before it loads them", async () => {
         const read = async () =>
-            (await app.request("/api/auto-assembly/parts", {}, env)).json();
+            (await app.request("/api/auto-assembly/parts?v=1", {}, env)).json();
         expect(await read()).toBeNull();
         publish();
         expect(await read()).toEqual(FASTENER_SET);
+    });
+
+    it("is immutable under a cache version, and refused without one", async () => {
+        publish();
+        const pinned = await app.request(
+            "/api/auto-assembly/parts?v=1",
+            {},
+            env
+        );
+        expect(pinned.headers.get("Cache-Control")).toContain("immutable");
+        const unpinned = await app.request("/api/auto-assembly/parts", {}, env);
+        expect(unpinned.status).toBe(400);
     });
 });

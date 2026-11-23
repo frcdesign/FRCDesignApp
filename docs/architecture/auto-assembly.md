@@ -223,7 +223,7 @@ interface ParameterGroupProps {
 `src/frontend/features/auto-assembly/queries.ts`
 
 ```ts
-// The fasteners the library loaded; null before it loads them.
+// The fasteners FRCDesignLib loaded, at its cache version; null before it loads them.
 function useFastenerSetQuery();
 function useInsertMutation(assembly: ElementPath);
 // Scans the assembly's Part Studios as the panel opens; nothing waits on it.
@@ -234,7 +234,7 @@ function useAssemblyJobQuery(assembly: ElementPath | undefined);
 `src/backend/features/auto-assembly/routes.ts`, `jobs.ts` and `contract.ts`
 
 ```text
-GET  /api/auto-assembly/parts     the fasteners the library loaded, or null
+GET  /api/auto-assembly/parts?v=  the fasteners the library loaded, or null, immutable under FRCDesignLib's cache version
 POST /api/auto-assembly/prepare   scans the assembly's Part Studios, nothing picked, into the cache
 POST /api/auto-assembly/insert    starts a run fastening the picked holes
 GET  /api/auto-assembly/job?documentId=&instanceId=&elementId=    the run this assembly last started
@@ -961,6 +961,8 @@ vectors, Onshape's 4×4 transforms and `LINEAR_TOLERANCE`.
 
 ## Storage
 
+- **HTTP cache** `GET /api/auto-assembly/parts?v=` — public and immutable for a
+  year, by FRCDesignLib's cache version and the build.
 - **D1** `generated_sets` (`fasteners` in FRCDesignLib) and the Fasteners
   group's insertables — the catalog and each kind's studio (its parameters and
   where it's released), as the group's last load stored them; read, never
@@ -1080,8 +1082,16 @@ closes the menu and switches to the page.
 The panel first reads the fasteners the library loaded (`useFastenerSetQuery`,
 `GET /api/auto-assembly/parts`). Until FRCDesignLib's Fasteners group has
 loaded them it says so, centered on the page, and offers nothing to insert.
-An answer of none is asked again each time the panel opens. A `LIBRARY` push
-for `FASTENER_LIBRARY` refetches either answer.
+
+The request is pinned to FRCDesignLib's cache version (`?v=`, as
+`/library-data` is), and its answer is immutable:
+
+- A load that changes the library bumps the version, after it stores the set.
+- A new version is a new url and query key (`fastenerSetQueryKey`), so it
+  fetches. The last version's answer stays up meanwhile.
+- The version comes from `getLibraryVersionQuery(FASTENER_LIBRARY)`. A `LIBRARY`
+  push or a reconnect refreshes it in FRCDesignLib's pages. Elsewhere, it's
+  asked again as the panel or callout opens, at most once a minute.
 
 The panel is a `ParameterGrid` of the configuration dialog's own inputs
 (`ParameterInput`), in groups (`ParameterGroup`), as an Onshape feature
@@ -1454,6 +1464,11 @@ In [strings/auto-assembly.md](../strings/auto-assembly.md).
 | The run dies without reporting       | The job reads failed once the run has errored or been terminated      | Run it again                                           |
 
 ## Decisions
+
+- **The fastener set is cached by FRCDesignLib's cache version.** It changes
+  only when a load changes the library, which bumps that version. So an
+  answer is cached forever, and a load reaches the panel as the library's own
+  data does, with nothing to invalidate.
 
 - **Stack depth is limited by one stop condition.** All holes, Max length and
   Face each say how far a screw may reach; a gap between parts never stops

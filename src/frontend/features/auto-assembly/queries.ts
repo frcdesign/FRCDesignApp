@@ -14,29 +14,47 @@ import {
     type PickProblem,
     ProblemSeverity
 } from "@backend/features/auto-assembly/contract";
-import { type FastenerSet } from "@backend/features/auto-assembly/studios";
+import {
+    FASTENER_LIBRARY,
+    type FastenerSet
+} from "@backend/features/auto-assembly/studios";
 import { type ElementPath } from "@backend/lib/onshape/path";
 import { apiGet, apiPost } from "../../lib/api-client";
 import { getAppErrorHandler } from "../../lib/errors";
 import { queryClient } from "../../lib/query-client";
 import {
-    FASTENER_SET_QUERY_KEY,
     assemblyJobQueryKey,
+    fastenerSetQueryKey,
     pickCheckQueryKey,
     prepareHolesQueryKey
 } from "../../lib/query-keys";
 import { useIsSignedIn } from "../auth/access-level";
+import { getLibraryVersionQuery } from "../library/queries";
 import { type RowProblem } from "../../components/query-list";
 import { Status } from "../../lib/status";
 import { m } from "../../paraglide/messages";
 
-/** The fasteners the library loaded, which change only when it reloads them; null before it loads them. */
+const FASTENER_VERSION_STALE_MS = 60 * 1000;
+
+/** The fasteners FRCDesignLib loaded, at its cache version, which each load bumps; null before it loads them. */
 export function useFastenerSetQuery() {
+    const versionQuery = useQuery({
+        ...getLibraryVersionQuery(FASTENER_LIBRARY),
+        // Pushes reach only the shown library's viewers, so others ask again as they open.
+        staleTime: FASTENER_VERSION_STALE_MS
+    });
+    const cacheVersion = versionQuery.data;
     return useQuery<FastenerSet | null>({
-        queryKey: FASTENER_SET_QUERY_KEY,
-        queryFn: () => apiGet("/auto-assembly/parts"),
-        // None yet is asked again each time the panel opens, as a load may have finished since
-        staleTime: (query) => (query.state.data ? 10 * 60 * 1000 : 0)
+        queryKey: fastenerSetQueryKey(cacheVersion),
+        queryFn:
+            cacheVersion === undefined
+                ? skipToken
+                : () =>
+                      apiGet("/auto-assembly/parts", { cacheId: cacheVersion }),
+        // Keeps the last version's fasteners up while the next one's load.
+        placeholderData: keepPreviousData,
+        staleTime: Infinity,
+        gcTime: Infinity
     });
 }
 
