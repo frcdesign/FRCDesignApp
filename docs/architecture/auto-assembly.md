@@ -133,20 +133,20 @@ function fastenerOptions(settled: SettledChoices): FastenerOptions;
 interface AutoAssemblyState extends Choices {
     targets: OnshapeSelection[];
     excluded: OnshapeSelection[];
-    /** The screw's inputs chosen by hand since the last run; the rest follow what's picked. */
-    chosenScrewInputs: string[];
-    /** Keys (`selectionKey`) of the circular edges fastened from the far end of their holes. */
-    flipped: string[];
-    /** Every screw to update goes in from the other end of its holes. */
-    flipScrews: boolean;
+    /**
+     * The inputs set by hand since the panel opened or a run started
+     * (`specifiedKey`), as Onshape's editing logic calls them specified: what's
+     * picked, and the screw's vendor, set only the rest.
+     */
+    specified: string[];
+    /** The panel opened: nothing is specified yet. */
+    open: () => void;
     setForm: (id: FormInput, value: string) => void;
     setMode: (mode: FastenerMode) => void;
     setScrew: (id: string, value: string) => void;
-    /** The screw's inputs as the picks say, but those chosen by hand. */
+    /** The screw's inputs as the picks say, but those specified. */
     followScrew: (screw: Record<string, string>) => void;
-    toggleFlipped: (entity: OnshapeSelection) => void;
-    setFlipScrews: (flipScrews: boolean) => void;
-    /** Picks and flips cleared, and the screw free to follow them again, after a run starts. */
+    /** Picks cleared, and nothing specified, after a run starts. */
     finishRun: () => void;
     setPart: (part: Part, id: string, value: string) => void;
     setAdded: (part: Part, added: boolean) => void;
@@ -226,6 +226,8 @@ interface ParameterGroupProps {
 // The fasteners the library loaded; null before it loads them.
 function useFastenerSetQuery();
 function useInsertMutation(assembly: ElementPath);
+// Scans the assembly's Part Studios as the panel opens; nothing waits on it.
+function usePrepareHoles(assembly: ElementPath): void;
 function useAssemblyJobQuery(assembly: ElementPath | undefined);
 ```
 
@@ -233,6 +235,7 @@ function useAssemblyJobQuery(assembly: ElementPath | undefined);
 
 ```text
 GET  /api/auto-assembly/parts     the fasteners the library loaded, or null
+POST /api/auto-assembly/prepare   scans the assembly's Part Studios, nothing picked, into the cache
 POST /api/auto-assembly/insert    starts a run fastening the picked holes
 GET  /api/auto-assembly/job?documentId=&instanceId=&elementId=    the run this assembly last started
 ```
@@ -1055,11 +1058,10 @@ closes the menu and switches to the page.
    (`requestSelectionHighlight`, which makes it what the Onshape window shows
    selected, each with its own message id). Moving between rows lights each
    alone. A highlight cancels a pending selection request in Onshape, so a
-   hover pauses selecting without ending it: the action bar stays, and
-   leaving the rows sends the focused list's request again
-   (`showFocused`, `resumeSelecting`). A focused list that isn't selecting has
-   its picks lit up instead, and nothing lights up with no list focused.
-   Removing a row lights the rest up.
+   hover pauses selecting without ending it: the action bar stays, and the
+   list still takes picks. Leaving the rows lights the focused list's picks up
+   (`showFocused`), and clicking the list limits picks again. Nothing lights up
+   with no list focused. Removing a row lights the rest up.
 5. While the window shows the app's highlight (`isHighlighted`), its
    selection messages never remove picks, and what the app highlighted since
    its last request (`highlightedKeys`) is never taken as a pick. Onshape can
@@ -1108,15 +1110,20 @@ The groups:
    red while empty.
 4. **Add screw washer**, **Add nut** and **Add nut washer**, each a group its
    checkbox drives, whose rows are there only while ticked: the washer or nut studio's parameters but its Size, which is
-   the screw's. A washer's Vendor offers those making it in that size, and is
-   left out under a Generic screw, whose washers are Generic; a nut has none,
-   since one vendor makes them all. Like every studio input, a washer's Type and
+   the screw's. A washer's Vendor offers those making it in that size; a nut
+   has none, since one vendor makes them all. Like every studio input, a washer's Type and
    Finish show only where there's a choice, so a Generic washer, one in each
    size, shows its checkbox alone. The screw washer is gone under a countersunk
    head, and the nut washer without a nut.
 
-The screw follows what's picked, as an Onshape feature's editing logic sets one
-input from another (`followScrew`):
+Inputs follow one another, as an Onshape feature's editing logic sets one
+input from another. An input set by hand is **specified** (`specified`), and
+nothing sets it but the person. Opening the panel, coming back to it, and
+clicking Insert each leave nothing specified (`open`, `finishRun`).
+
+- The screw's vendor, set by hand or followed, sets each washer's and the
+  nut's vendor that isn't specified, where it makes them (`withVendor`).
+- Every part is in the screw's size, whatever is specified.
 
 - The first hole picked made for a size sets the screw (`holeSize`,
   `isHoleCountersunk`). Size follows its size. Head follows its countersink
@@ -1127,8 +1134,11 @@ input from another (`followScrew`):
   one chosen gets a warning on its row and is fastened as asked (see the
   planner's last step, under `planHoles`).
 - Every screw input follows the first existing screw picked (`existingScrew`).
-- An input chosen by hand stops following (`chosenScrewInputs`). A run
-  starting frees them all again (`finishRun`).
+- What's picked sets only the screw inputs that aren't specified
+  (`followScrew`).
+- Where that changes the screw's settled head or size, a toast says so
+  ("Screw type updated", "Screw size updated", or both in one), each replacing
+  the last (`followAndAnnounce`).
 
 The studios' parameters are their configurations as Onshape answers them,
 parsed by `parseOnshapeConfiguration`, so their options show as the Part
@@ -1139,8 +1149,7 @@ selection through `normalizeSelection`, then each hidden or left-out input set
 to the one value made there, from the catalog, as the feature resolves it
 (`settle` in `studios.ts`); and each part into the screw's size from a vendor
 making it (`settlePart`: the one chosen, else the screw's, else Generic, else
-the first making it). Changing the screw's vendor moves every part to it, where
-it makes them.
+the first making it).
 
 ### Picking what to fasten
 
@@ -1154,11 +1163,9 @@ _Select by_ decides what the picks are:
   assembly, as whole solid parts (`SOLID_BODIES`), each row named "Screw {n}";
   the run decides which picks are screws.
 
-A circular edge's row has a flip toggle. A flipped edge is fastened from the
-far end of its holes, so the head goes there and the nut at the edge picked.
-Under existing screws, **Flip screws** does the same for every screw to update.
-Both go in the request (`flipped`, `flipScrews`). Changing Select by, or a run
-starting, clears them, and an edge picked again starts unflipped.
+The form offers no flipping for now. The insert route and the planner still
+take flipped holes (`flipped`, `flipScrews`), fastened from the far end of
+their holes, but the panel sends none.
 
 A run takes one kind: only the lists Select by shows are sent, and changing
 Select by clears every pick. The button sits in a footer stuck to the bottom of
@@ -1174,6 +1181,16 @@ screws alone), one with neither holes nor screws to update, one with a face
 to stop at without the Face stop condition or the other way round
 (`hasStopFace`), an edge to flip that isn't picked (`isFlipPicked`), and a
 part its studio doesn't make (`isMade`) or not in the screw's size.
+
+### Preparing — `POST /api/auto-assembly/prepare`
+
+As the panel opens, it has the server index the assembly with nothing picked
+(`usePrepareHoles`): the assembly read, and every Part Studio in it scanned.
+A scan with nothing picked is cached by what pins its geometry, so the
+checks that follow read those from KV. Only a Part Studio holding a pick is
+scanned again, for what's picked in it. Nothing waits on the answer, and it
+isn't sent again for a minute (`PREPARE_STALE_MS`). It runs to the end even
+if the panel closes (`finishEvenIfDisconnected`).
 
 ### Checking picks — `POST /api/auto-assembly/check`
 
@@ -1522,8 +1539,8 @@ In [strings/auto-assembly.md](../strings/auto-assembly.md).
   parameters are `ConfigurationParameter`s too, but without conditions: the
   form decides what shows, so a hidden choice keeps its value.
 - **Each part has its own vendor.** Not every vendor sells washers or nuts, and
-  someone using one vendor's screws may buy another's washers. Under a Generic
-  screw the washers are Generic, and their Vendor isn't asked.
+  someone using one vendor's screws may buy another's washers. A part's Vendor
+  is asked under any screw, a Generic one included.
 - **A hidden input is resolved from the catalog.** Onshape keeps a hidden input
   at whatever it last held, and `normalizeSelection` sets it to its default,
   which the vendor may not make; the feature takes the one value made there, and
@@ -1544,13 +1561,21 @@ In [strings/auto-assembly.md](../strings/auto-assembly.md).
 - **One size per run, set from the first hole.** A clearance hole fits more
   than one size, and a hole at 0.201" is both #10's clearance and 1/4-20's tap
   drill, so a per-hole size can guess wrong. Size and head follow the first
-  hole picked until chosen by hand, the way Onshape's editing logic fills one
+  hole picked unless specified, the way Onshape's editing logic fills one
   input from another. The person sees the guess and can change it.
+- **Specified inputs, as Onshape's.** An input set by hand isn't overwritten
+  by another's editing logic, as in an Onshape feature dialog. Clicking Insert
+  or reopening the panel starts afresh, so a size chosen for one run doesn't
+  stop the next first hole from setting it.
 - **A countersink is the Hole feature's.** A hole's countersink is read from
   the attribute its Hole feature puts on the hole's faces, not from where the
   hole starts: a plate past a gap starts below the edge too. Countersinks are
   almost always made with the Hole feature, so one made by hand is no
   countersink here.
+- **Holes are scanned as the panel opens.** The first check otherwise waits on
+  every Part Studio's scan. Scanning them up front costs one Onshape call per
+  Part Studio not yet cached, which the first check would have spent anyway,
+  and a reading of the assembly.
 - **A later pick warns rather than steers.** A second hole of another size, or
   countersunk differently, picked by accident must not change the screw under
   the first. Picked on purpose, it must still be fastened. So only the first

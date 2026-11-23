@@ -273,8 +273,8 @@ export function partVendors(
 
 /**
  * A washer or nut for a screw, as its studio allows it: in the screw's size,
- * and from a vendor making it there. Under a Generic screw it's Generic; else
- * the vendor chosen, else the screw's, else Generic; else the first making it.
+ * and from a vendor making it there: the vendor chosen, else the screw's, else
+ * Generic, else the first making it.
  * Undefined when nobody makes it in the size.
  */
 export function settlePart(
@@ -284,10 +284,7 @@ export function settlePart(
     screw: Pick<ScrewChoice, "vendor" | "size">
 ): PartChoice | undefined {
     const vendors = partVendors(set, kind, screw.size);
-    const vendor =
-        screw.vendor === GENERIC
-            ? [GENERIC]
-            : [choice[StudioInput.VENDOR], screw.vendor, GENERIC];
+    const vendor = [choice[StudioInput.VENDOR], screw.vendor, GENERIC];
     const picked =
         vendor.find((each) => each !== undefined && vendors.includes(each)) ??
         vendors[0];

@@ -22,7 +22,8 @@ import { queryClient } from "../../lib/query-client";
 import {
     FASTENER_SET_QUERY_KEY,
     assemblyJobQueryKey,
-    pickCheckQueryKey
+    pickCheckQueryKey,
+    prepareHolesQueryKey
 } from "../../lib/query-keys";
 import { useIsSignedIn } from "../auth/access-level";
 import { type RowProblem } from "../../components/query-list";
@@ -56,6 +57,28 @@ export function useAssemblyJobQuery(assembly: ElementPath | undefined) {
                       })
                 : skipToken,
         staleTime: Infinity
+    });
+}
+
+/** Long enough that switching tabs and back doesn't scan again. */
+const PREPARE_STALE_MS = 60 * 1000;
+
+/**
+ * Has the server scan the assembly's Part Studios as the panel opens, so the
+ * first check reads them from the cache; nothing waits on it.
+ */
+export function usePrepareHoles(assembly: ElementPath): void {
+    const isSignedIn = useIsSignedIn();
+    useQuery({
+        queryKey: prepareHolesQueryKey(assembly),
+        queryFn: isSignedIn
+            ? () =>
+                  apiPost<{ holes: number }>("/auto-assembly/prepare", {
+                      body: { assembly }
+                  })
+            : skipToken,
+        staleTime: PREPARE_STALE_MS,
+        retry: false
     });
 }
 

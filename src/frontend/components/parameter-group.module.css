@@ -21,6 +21,11 @@
     margin-inline-start: calc(var(--mantine-spacing-xs) * -1);
 }
 
+/* As tall as a control, so showing its chevron when ticked doesn't move it */
+.header {
+    min-height: rem(30px);
+}
+
 .chevronOnly {
     flex: 1;
     align-self: stretch;

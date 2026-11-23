@@ -89,20 +89,18 @@ describe("settleScrew", () => {
 });
 
 describe("settlePart", () => {
-    it("is Generic under a Generic screw, whatever was chosen", () => {
+    it("takes the vendor chosen under a Generic screw, and Generic with none chosen", () => {
         expect(
             settlePart(
                 FASTENER_SET,
                 FastenerKind.WASHER,
                 { vendor: "MCMASTER", type: "OD_7_16_X_0_03" },
                 SCREW
-            )
-        ).toEqual({
-            vendor: GENERIC,
-            size: "NO_10_32",
-            type: "OD_1_2_X_0_049",
-            finish: "BLACK"
-        });
+            )?.vendor
+        ).toBe("MCMASTER");
+        expect(
+            settlePart(FASTENER_SET, FastenerKind.WASHER, {}, SCREW)?.vendor
+        ).toBe(GENERIC);
     });
 
     it("keeps the vendor chosen under another vendor's screw, where it makes the part", () => {

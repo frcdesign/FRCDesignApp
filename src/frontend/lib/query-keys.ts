@@ -144,6 +144,15 @@ export function nextVersionNameQueryKey(workspace: InstancePath | undefined) {
 }
 
 /** By the assembly's key, so a launch's extra fields don't make a second entry. */
+export function prepareHolesQueryKey(assembly: ElementPath) {
+    return [
+        "auto-assembly-prepare",
+        assembly.documentId,
+        assembly.instanceId,
+        assembly.elementId
+    ];
+}
+
 export const FASTENER_SET_QUERY_KEY = ["fastener-set"];
 
 /** The whole body, so a pick or an option changed is a new check. */
