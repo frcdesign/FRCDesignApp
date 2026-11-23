@@ -6,6 +6,8 @@ import {
     DEFAULT_LIBRARY,
     LibraryId
 } from "@backend/features/library/library-id";
+import { isLibraryTab } from "./app-tab";
+import { getUiState } from "./ui-state";
 
 /** Points what reads the library at another than the one shown, as the admin settings do. */
 export const LibraryIdOverride = createContext<LibraryId | undefined>(
@@ -30,6 +32,12 @@ export function useShownLibraryId(): LibraryId | undefined {
         shouldThrow: false
     });
     return params?.libraryId ?? dashboardParams?.libraryId;
+}
+
+/** The library to show where the url names none: the last one picked. */
+export function getUiLibraryId(): LibraryId {
+    const { tabId } = getUiState();
+    return tabId && isLibraryTab(tabId) ? tabId : DEFAULT_LIBRARY;
 }
 
 const LibraryIdType = z.enum(LibraryId);

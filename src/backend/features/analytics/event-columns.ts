@@ -14,6 +14,10 @@ import {
     FeedbackSource,
     FeedbackTopic
 } from "../feedback/contract";
+import {
+    type DesignIssueCounts,
+    type DesignIssueType
+} from "../design-check/contract";
 import { EventType, UseSource } from "./usage";
 
 /**
@@ -73,7 +77,14 @@ export const eventColumns = sqliteTable("events", {
     reportSource: text("report_source").$type<FeedbackSource>(),
     reportTeamNumber: integer("report_team_number"),
     // The FeatureScript an add or a report names: its constant, which never changes once released.
-    featureType: text("feature_type")
+    featureType: text("feature_type"),
+    // A design check's own columns: the kind of tab it read, and what it found there.
+    checkedElementType: text("checked_element_type").$type<ElementType>(),
+    designIssueCounts: text("design_issue_counts", {
+        mode: "json"
+    }).$type<DesignIssueCounts | null>(),
+    // What a design fix or dismissal was about.
+    designIssueType: text("design_issue_type").$type<DesignIssueType>()
 });
 
 /** One row of the log: everything the rollups are derived from. */

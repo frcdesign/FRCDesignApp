@@ -2,17 +2,20 @@ import { ActionIcon, Tooltip } from "@mantine/core";
 import { ArrowClockwiseIcon } from "@phosphor-icons/react";
 import { type ReactNode } from "react";
 import { IconSize, PrimaryColor } from "../lib/style-constants";
+import { m } from "../paraglide/messages";
 
 interface RefreshButtonProps {
     loading: boolean;
     onClick: () => void;
+    /** @default "Refresh" */
+    label?: string;
 }
 
 /** A navbar's refresh, spinning in the page's color while it works. */
 export function RefreshButton(props: RefreshButtonProps): ReactNode {
-    const { loading, onClick } = props;
+    const { loading, onClick, label = m.navbarRefresh() } = props;
     return (
-        <Tooltip label="Refresh">
+        <Tooltip label={label}>
             <ActionIcon
                 my="auto"
                 loading={loading}

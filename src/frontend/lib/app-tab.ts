@@ -5,7 +5,8 @@ import { LibraryId } from "@backend/features/library/library-id";
 export enum UtilityTab {
     VERSION_MANAGER = "version-manager",
     AUTO_ASSEMBLY = "auto-assembly",
-    FEATURESCRIPTS = "featurescripts"
+    FEATURESCRIPTS = "featurescripts",
+    DESIGN_CHECK = "design-check"
 }
 
 export type AppTab = LibraryId | UtilityTab;

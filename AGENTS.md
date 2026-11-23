@@ -84,8 +84,9 @@ pure types and functions, no Worker-only imports — or it lands in the client
 bundle.
 
 D1 tables live in `db/schema.ts`, except a feature's own: tracking's are in
-`features/analytics/schema.ts` and workspace links in
-`features/version-manager/schema.ts`, since nothing outside those features reads
+`features/analytics/schema.ts`, workspace links in
+`features/version-manager/schema.ts` and Design Check dismissals in
+`features/design-check/schema.ts`, since nothing outside those features reads
 them and they hold no foreign key into the rest. `drizzle.config.ts` lists every schema
 file, so a new one has to be added there or its tables generate no migration.
 
@@ -203,7 +204,7 @@ and in code; "inserts" means only the ones that went into Onshape.
 `README.md`: thumbnails, configurations, loading, favorites, recents, insert and
 fasten, auth (with access levels and environment variables), search,
 analytics, build issues and the admin card, the Version Manager, Auto Assembly,
-and generated parts. Each states the area's flows, storage,
+generated parts, and the design check. Each states the area's flows, storage,
 **invariants**, failure modes and decisions. Read the area's document before
 changing it, and check the change against its invariants.
 

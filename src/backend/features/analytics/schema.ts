@@ -14,6 +14,8 @@ import {
     FeedbackSource,
     FeedbackTopic
 } from "../feedback/contract";
+import { DesignIssueType } from "../design-check/contract";
+import { ElementType } from "../../lib/onshape/element-type";
 import { AppFeature, EventType, UseSource, UseTarget } from "./usage";
 
 // Not a D1 table: an event's columns are declared beside the event log.
@@ -283,4 +285,37 @@ export const dailyFeatureUsers = sqliteTable(
     },
     // Feature first, so a feature's first recorded day is an index seek.
     (t) => [primaryKey({ columns: [t.feature, t.day, t.userId] })]
+);
+
+/**
+ * A day's design checks, by the kind of tab checked. Keyed by day alone, like a
+ * version run: a check reads someone's own document, not a library.
+ */
+export const dailyDesignCheckMetrics = sqliteTable(
+    "daily_design_check_metrics",
+    {
+        day: text("day").notNull(),
+        elementType: text("element_type").notNull().$type<ElementType>(),
+        checks: integer("checks").notNull().default(0),
+        /** Checks that found nothing. */
+        cleanChecks: integer("clean_checks").notNull().default(0)
+    },
+    (t) => [primaryKey({ columns: [t.day, t.elementType] })]
+);
+
+/** A day's design issues, by type. */
+export const dailyDesignIssueMetrics = sqliteTable(
+    "daily_design_issue_metrics",
+    {
+        day: text("day").notNull(),
+        issueType: text("issue_type").notNull().$type<DesignIssueType>(),
+        /** Checks that found at least one. */
+        checks: integer("checks").notNull().default(0),
+        /** How many were found, across those checks. */
+        issues: integer("issues").notNull().default(0),
+        /** Fixed from the Design Check page. */
+        fixed: integer("fixed").notNull().default(0),
+        dismissed: integer("dismissed").notNull().default(0)
+    },
+    (t) => [primaryKey({ columns: [t.day, t.issueType] })]
 );
