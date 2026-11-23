@@ -12,7 +12,6 @@ import {
 } from "@backend/features/auto-assembly/contract";
 import {
     FastenerKind,
-    GENERIC,
     isCountersunk,
     partVendors,
     StudioInput
@@ -192,8 +191,7 @@ interface PartGroupProps {
 
 /**
  * A washer or the nut, ticked to add it: its studio's parameters but its
- * Size, which is the screw's. Its Vendor offers those making it in that size,
- * and is left out under a Generic screw, whose parts are Generic too.
+ * Size, which is the screw's. Its Vendor offers those making it in that size.
  */
 function PartGroup(props: PartGroupProps): ReactNode {
     const { part, title, settled } = props;
@@ -215,10 +213,7 @@ function PartGroup(props: PartGroupProps): ReactNode {
         if (parameter.id !== StudioInput.VENDOR) {
             return [parameter];
         }
-        if (
-            settled.screw.vendor === GENERIC ||
-            parameter.type !== ParameterType.ENUM
-        ) {
+        if (parameter.type !== ParameterType.ENUM) {
             return [];
         }
         const vendors = partVendors(settled.set, kind, settled.screw.size);

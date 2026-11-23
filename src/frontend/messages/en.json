@@ -669,8 +669,6 @@
     "autoAssemblyScrewRow": "Screw {index}",
     "autoAssemblyInsert": "Insert",
     "autoAssemblyReplace": "Replace",
-    "autoAssemblyFlip": "Flip",
-    "autoAssemblyFlipScrews": "Flip screws",
     "autoAssemblyStartFailed": "Unexpectedly failed to start inserting.",
     "autoAssemblyFastener": "Fastener",
     "autoAssemblyLength": "Length",

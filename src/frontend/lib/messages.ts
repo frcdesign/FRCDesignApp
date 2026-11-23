@@ -8,7 +8,6 @@ import {
     expectSelection,
     focusedPicks,
     parseSelections,
-    resumeSelecting,
     useOnshapeSelection
 } from "./selection";
 
@@ -145,14 +144,11 @@ export function sendHighlightMessage(
 }
 
 /**
- * Back to the focused list in the Onshape window: its selection request, if
- * the person is selecting with it, else its picks lit up.
+ * Back to the focused list in the Onshape window: its picks lit up. A request
+ * would clear what the window shows, so selecting stays paused until the list
+ * is clicked.
  */
 export function showFocused(elementPath: ElementPath): void {
-    if (useOnshapeSelection.getState().filtering !== undefined) {
-        resumeSelecting();
-        return;
-    }
     sendHighlightMessage(elementPath, focusedPicks());
 }
 

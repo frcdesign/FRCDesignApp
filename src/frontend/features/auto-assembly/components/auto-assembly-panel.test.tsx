@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, screen, waitFor, within } from "@testing-library/react";
+import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
     AssemblyJobState,
@@ -29,7 +29,12 @@ import {
     useOnshapeSelection,
     type OnshapeSelection
 } from "../../../lib/selection";
-import { defaultChoices, fastenerOptions, settleChoices } from "../options";
+import {
+    defaultChoices,
+    fastenerOptions,
+    Part,
+    settleChoices
+} from "../options";
 import { useAutoAssemblyStore } from "../store";
 import { useOnshapeLaunch } from "../../../lib/onshape-params";
 import { AutoAssemblyPanel } from "./auto-assembly-panel";
@@ -98,9 +103,7 @@ beforeEach(() => {
         excluded: [],
         replaced: [],
         stopFace: [],
-        chosenScrewInputs: [],
-        flipped: [],
-        flipScrews: false
+        specified: []
     });
 });
 
@@ -254,16 +257,23 @@ describe("AutoAssemblyPanel", () => {
         ).toBeNull();
     });
 
-    it("asks for a washer's vendor only under a vendor's screw, and never a nut's", async () => {
+    it("asks for a washer's vendor under any screw, and never a nut's", async () => {
         renderPanel();
         await userEvent.click(
             screen.getByRole("checkbox", { name: "Add screw washer" })
         );
-        // The screw's: the default screw is Generic, and McMaster-Carr makes every nut
-        expect(screen.getAllByLabelText("Vendor")).toHaveLength(1);
+        // The screw's and the washer's; McMaster-Carr makes every nut, so a nut's isn't asked
+        const [, washerVendor] = screen.getAllByLabelText("Vendor");
+        expect(washerVendor).toBeTruthy();
 
-        await choose("Vendor", "McMaster-Carr");
-        expect(screen.getAllByLabelText("Vendor")).toHaveLength(2);
+        // The washer's own, under the Generic screw
+        await userEvent.click(washerVendor);
+        await userEvent.click(
+            await screen.findByRole("option", { name: "McMaster-Carr" })
+        );
+        expect(
+            useAutoAssemblyStore.getState().parts[Part.SCREW_WASHER].vendor
+        ).toBe("MCMASTER");
     });
 
     it("sizes a screw automatically until switched to manual, then asks its length", async () => {
@@ -318,8 +328,6 @@ describe("AutoAssemblyPanel", () => {
                 ),
                 excluded: [],
                 replaced: [],
-                flipped: [],
-                flipScrews: false,
                 options: fastenerOptions(settled)
             }),
             { problems: [], holeSize: "QUARTER_20" }
@@ -360,8 +368,6 @@ describe("AutoAssemblyPanel", () => {
                     targets: toSelectedEntities(state.targets),
                     excluded: [],
                     replaced: [],
-                    flipped: [],
-                    flipScrews: false,
                     options: fastenerOptions(settleChoices(FASTENER_SET, state))
                 }),
                 { problems: [], holeSize: "NO_10_32", isHoleCountersunk }
@@ -385,6 +391,49 @@ describe("AutoAssemblyPanel", () => {
         expect(useAutoAssemblyStore.getState().screw.head).toBe("SOCKET");
     });
 
+    it("sets each part's vendor from the screw's, but a vendor set by hand", async () => {
+        renderPanel();
+        await userEvent.click(
+            screen.getByRole("checkbox", { name: "Add screw washer" })
+        );
+        const vendorOf = (part: Part) =>
+            settleChoices(FASTENER_SET, useAutoAssemblyStore.getState()).parts[
+                part
+            ]?.vendor;
+
+        // The washer's, by hand, then the screw's
+        const [screwVendor, washerVendor] = screen.getAllByLabelText("Vendor");
+        await userEvent.click(washerVendor);
+        await userEvent.click(
+            await screen.findByRole("option", { name: "WCP" })
+        );
+        await userEvent.click(screwVendor);
+        await userEvent.click(
+            await screen.findByRole("option", { name: "McMaster-Carr" })
+        );
+
+        expect(vendorOf(Part.SCREW_WASHER)).toBe("WCP");
+        expect(vendorOf(Part.NUT)).toBe("MCMASTER");
+    });
+
+    it("forgets what was set by hand once Insert is clicked, or the panel opens again", () => {
+        const { unmount } = renderPanel();
+        const store = useAutoAssemblyStore.getState;
+        act(() => store().setScrew("size", "NO_8_32"));
+        act(() => store().followScrew({ size: "QUARTER_20" }));
+        expect(store().screw.size).toBe("NO_8_32");
+
+        act(() => store().finishRun());
+        act(() => store().followScrew({ size: "QUARTER_20" }));
+        expect(store().screw.size).toBe("QUARTER_20");
+
+        act(() => store().setScrew("size", "NO_8_32"));
+        unmount();
+        renderPanel();
+        act(() => store().followScrew({ size: "QUARTER_20" }));
+        expect(store().screw.size).toBe("QUARTER_20");
+    });
+
     it("takes the first existing screw picked as the screw, but what's chosen by hand", async () => {
         const queryClient = createTestQueryClient();
         renderPanel(queryClient);
@@ -404,8 +453,6 @@ describe("AutoAssemblyPanel", () => {
                 replaced: toSelectedEntities(
                     useAutoAssemblyStore.getState().replaced
                 ),
-                flipped: [],
-                flipScrews: false,
                 options: fastenerOptions(settled)
             }),
             {
@@ -417,44 +464,6 @@ describe("AutoAssemblyPanel", () => {
             expect(useAutoAssemblyStore.getState().screw.size).toBe("NO_8_32")
         );
         expect(useAutoAssemblyStore.getState().screw.head).toBe("SOCKET");
-    });
-
-    it("flips a circular edge from its row, and every screw to update with Flip screws", async () => {
-        renderPanel();
-        await userEvent.click(
-            screen.getByText("Circular edges", { selector: "p" })
-        );
-        select(
-            { ...face("E"), entityType: "EDGE" },
-            { ...face("F"), entityType: "EDGE" }
-        );
-        const [flip] = within(
-            screen.getByText("Edge 1").parentElement!
-        ).getAllByRole("button");
-        await userEvent.click(flip);
-        await userEvent.click(insertButton());
-        expect(apiPost).toHaveBeenLastCalledWith("/auto-assembly/insert", {
-            body: expect.objectContaining({
-                flipped: [
-                    {
-                        occurrencePath: ["plate"],
-                        entityId: "E",
-                        entityType: "EDGE"
-                    }
-                ],
-                flipScrews: false
-            })
-        });
-
-        await choose("Select by", "Existing screws");
-        select({ ...face("S"), entityType: "BODY" });
-        await userEvent.click(
-            screen.getByRole("checkbox", { name: "Flip screws" })
-        );
-        await userEvent.click(screen.getByRole("button", { name: "Replace" }));
-        expect(apiPost).toHaveBeenLastCalledWith("/auto-assembly/insert", {
-            body: expect.objectContaining({ flipped: [], flipScrews: true })
-        });
     });
 
     it("asks what to fasten before what to fasten with, each group folding from its header", async () => {
