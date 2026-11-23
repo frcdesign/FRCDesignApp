@@ -9,6 +9,7 @@ import {
     vi
 } from "vitest";
 import {
+    loggedEvents,
     createTestApp,
     jsonRequest,
     resetDb,
@@ -19,7 +20,7 @@ import {
     TEST_USER_ID
 } from "../../../__test_utils__";
 import { getDb } from "../../db/client";
-import { dailyMetrics, dailyReportMetrics, events } from "../analytics/schema";
+import { dailyMetrics, dailyReportMetrics } from "../analytics/schema";
 import { EventType } from "../analytics/usage";
 import { SIGNED_OUT_USER_ID } from "../analytics/logged-event";
 import { LibraryId } from "../library/library-id";
@@ -125,7 +126,7 @@ describe("POST /api/feedback", () => {
         );
         const { reportId } = await res.json<FeedbackOut>();
 
-        expect(await db.select().from(events).get()).toMatchObject({
+        expect(loggedEvents()[0]).toMatchObject({
             id: reportId,
             type: EventType.REPORT,
             libraryId: LibraryId.MKCAD,
@@ -355,7 +356,7 @@ describe("POST /api/feedback", () => {
         const res = await send(body(), { signedIn: false });
 
         expect(res.status).toBe(200);
-        expect(await db.select().from(events).get()).toMatchObject({
+        expect(loggedEvents()[0]).toMatchObject({
             userId: SIGNED_OUT_USER_ID
         });
     });
@@ -385,7 +386,7 @@ describe("POST /api/feedback", () => {
         const res = await send(body(), { userId: TEST_USER_ID });
 
         expect(res.status).toBe(500);
-        expect(await db.select().from(events).all()).toEqual([]);
+        expect(loggedEvents()).toEqual([]);
     });
 });
 
@@ -441,7 +442,7 @@ describe("POST /api/feedback about a FeatureScript", () => {
                 value: expect.stringContaining("Robot frame v1.3.0")
             })
         );
-        expect(await db.select().from(events).get()).toMatchObject({
+        expect(loggedEvents()[0]).toMatchObject({
             type: EventType.REPORT,
             libraryId: null,
             reportTopic: FeedbackTopic.FEATURESCRIPTS,

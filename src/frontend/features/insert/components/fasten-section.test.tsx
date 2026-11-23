@@ -129,6 +129,8 @@ describe("fasten picks", () => {
             fastenSelectionMode: SelectionMode.LOCATIONS,
             openInsertableId: undefined
         });
+        // The last test's components unmount after its afterEach, which can leave a query of theirs behind
+        queryClient.clear();
     });
 
     afterEach(() => {
@@ -328,7 +330,13 @@ describe("fasten picks", () => {
         seedInsertLocation("marker");
         renderBar();
         // Whatever mounting asked has answered, with the marker still there
-        await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+        await waitFor(() =>
+            expect(
+                queryClient.isFetching({
+                    queryKey: insertLocationQueryKey(ASSEMBLY)
+                })
+            ).toBe(0)
+        );
         expect(
             screen.queryByRole("button", { name: "Add insert location" })
         ).toBeNull();

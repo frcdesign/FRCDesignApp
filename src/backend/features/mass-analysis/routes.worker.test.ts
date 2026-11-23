@@ -1,12 +1,12 @@
 import { env } from "cloudflare:workers";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { loggedEvents } from "../../../__test_utils__/event-log";
 import {
     createTestApp,
     MockOnshapeApi,
     seedGroup
 } from "../../../__test_utils__";
 import { getDb } from "../../db/client";
-import { events } from "../analytics/schema";
 import { EventType } from "../analytics/usage";
 import type { OnshapeBom } from "../../lib/onshape/types";
 import {
@@ -73,12 +73,8 @@ const BOM: OnshapeBom = {
     ]
 };
 
-function loggedTypes(): Promise<EventType[]> {
-    return db
-        .select({ type: events.type })
-        .from(events)
-        .all()
-        .then((rows) => rows.map((row) => row.type));
+function loggedTypes(): EventType[] {
+    return loggedEvents().map((event) => event.type);
 }
 
 afterEach(() => {
@@ -109,6 +105,6 @@ describe("GET /api/mass-analysis", () => {
         expect(gearbox.children[0]).toMatchObject({ name: "Gear" });
         expect(report.children[1]).toMatchObject({ name: "Plate" });
         expect(report.children[1]).not.toHaveProperty("mass");
-        expect(await loggedTypes()).toEqual([EventType.MASS_REPORT]);
+        expect(loggedTypes()).toEqual([EventType.MASS_REPORT]);
     });
 });

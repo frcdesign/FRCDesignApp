@@ -1,6 +1,7 @@
 import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+    loggedEvents,
     TEST_LIBRARY_ID,
     TEST_PART_STUDIO_ID,
     TEST_PART_STUDIO_PATH,
@@ -35,7 +36,6 @@ import {
     dailyTargetMetrics,
     dailyUserActivity,
     dailyVersionMetrics,
-    events,
     insertableStats,
     userStats
 } from "./schema";
@@ -166,7 +166,7 @@ describe("rollupWrites", () => {
         for (const table of ROLLUPS) {
             await db.delete(table);
         }
-        const log = await db.select().from(events).all();
+        const log = loggedEvents();
         const writes = log
             .reverse()
             .flatMap((row) => rollupWrites(db, row, SIZE_PARAMETERS));

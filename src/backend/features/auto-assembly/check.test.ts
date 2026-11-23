@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { pickedHoleSize, pickProblems } from "./check";
+import { pickedHole, pickProblems } from "./check";
 import {
     HoleStatus,
     type PlannedHole,
@@ -232,8 +232,8 @@ describe("pickProblems", () => {
     });
 });
 
-describe("pickedHoleSize", () => {
-    it("is the first hole picked's size, in pick order, passing holes made for none", () => {
+describe("pickedHole", () => {
+    it("is the first hole picked's size and countersink, in pick order, passing holes made for none", () => {
         const holes = indexed({
             pickEdges: {
                 "plate|F": ["plate|F1", "plate|F2"],
@@ -242,11 +242,11 @@ describe("pickedHoleSize", () => {
         });
         const planned = [
             ready("plate|F1"),
-            { ...ready("plate|F2"), madeFor: "NO_8_32" },
+            { ...ready("plate|F2"), madeFor: "NO_8_32", isCountersunk: true },
             { ...ready("plate|S"), madeFor: "QUARTER_20" }
         ];
         expect(
-            pickedHoleSize(
+            pickedHole(
                 {
                     targets: [pick("F", SelectedEntityType.FACE)],
                     replaced: [pick("S", SelectedEntityType.BODY)]
@@ -254,9 +254,9 @@ describe("pickedHoleSize", () => {
                 holes,
                 planned
             )
-        ).toBe("NO_8_32");
+        ).toEqual({ holeSize: "NO_8_32", isHoleCountersunk: true });
         expect(
-            pickedHoleSize(
+            pickedHole(
                 {
                     targets: [],
                     replaced: [pick("S", SelectedEntityType.BODY)]
@@ -264,9 +264,9 @@ describe("pickedHoleSize", () => {
                 holes,
                 planned
             )
-        ).toBe("QUARTER_20");
+        ).toEqual({ holeSize: "QUARTER_20", isHoleCountersunk: false });
         expect(
-            pickedHoleSize({ targets: [], replaced: [] }, holes, planned)
-        ).toBeUndefined();
+            pickedHole({ targets: [], replaced: [] }, holes, planned)
+        ).toEqual({});
     });
 });

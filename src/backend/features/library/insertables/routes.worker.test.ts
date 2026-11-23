@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { env } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { configurations, insertables } from "../../../db/schema";
-import { dailyConfigurationMetrics, events } from "../../analytics/schema";
+import { dailyConfigurationMetrics } from "../../analytics/schema";
 import { UseSource } from "../../analytics/usage";
 import { ElementType } from "../../../lib/onshape/element-type";
 import { Vendor } from "../vendors";
@@ -15,6 +15,7 @@ import {
 } from "../../../../__test_utils__/feature-fixtures";
 import { BuildIssueType } from "../../build-checker/issues";
 import {
+    loggedEvents,
     MOCK_ONSHAPE_API,
     TEST_ASSEMBLY_ID,
     TEST_ASSEMBLY_PATH,
@@ -293,7 +294,7 @@ describe("insertable routes", () => {
         );
         expect(res.status).toBe(200);
 
-        const event = await db.select().from(events).get();
+        const event = loggedEvents()[0];
         expect(event?.source).toBe(UseSource.GROUP_SEARCH);
     });
 
@@ -480,7 +481,7 @@ describe("insertable routes", () => {
                 ]
             })
         );
-        expect(await db.select().from(events).get()).toMatchObject({
+        expect(loggedEvents()[0]).toMatchObject({
             atInsertLocation: true
         });
     });
@@ -515,7 +516,7 @@ describe("insertable routes", () => {
             ElementType.ASSEMBLY,
             expect.objectContaining({ transform: undefined })
         );
-        expect(await db.select().from(events).get()).toMatchObject({
+        expect(loggedEvents()[0]).toMatchObject({
             atInsertLocation: false
         });
     });
@@ -625,14 +626,14 @@ describe("insertable routes", () => {
 
     /** What the usage log recorded for the one insert these tests make. */
     function loggedInsert() {
-        return db.select().from(events).get();
+        return loggedEvents()[0];
     }
 
     it("records an insert nobody asked to fasten as unfastened", async () => {
         await seedFastenable();
 
         expect((await insertIntoAssembly(false)).status).toBe(200);
-        expect(await loggedInsert()).toMatchObject({ fasten: false });
+        expect(loggedInsert()).toMatchObject({ fasten: false });
     });
 
     it("records the fasten only once it has been built", async () => {
@@ -642,7 +643,7 @@ describe("insertable routes", () => {
         });
 
         expect((await insertIntoAssembly(true)).status).toBe(200);
-        expect(await loggedInsert()).toMatchObject({ fasten: true });
+        expect(loggedInsert()).toMatchObject({ fasten: true });
     });
 
     // The part is in the assembly either way.
@@ -653,7 +654,7 @@ describe("insertable routes", () => {
         );
 
         expect((await insertIntoAssembly(true)).status).toBe(500);
-        expect(await loggedInsert()).toMatchObject({ fasten: false });
+        expect(loggedInsert()).toMatchObject({ fasten: false });
     });
 
     it("keeps the insert when the part cannot fasten at all", async () => {
@@ -663,7 +664,7 @@ describe("insertable routes", () => {
         });
 
         expect((await insertIntoAssembly(true)).status).toBe(400);
-        expect(await loggedInsert()).toMatchObject({ fasten: false });
+        expect(loggedInsert()).toMatchObject({ fasten: false });
     });
 
     function fastenToPicks(body: Record<string, unknown>) {
@@ -731,7 +732,7 @@ describe("insertable routes", () => {
         expect(mate).toContain('"inferenceType":"CENTER"');
         expect(mate).toContain('qTransient(\\"JH2\\")');
         expect(mate).toContain('"path":["base"]');
-        expect(await loggedInsert()).toMatchObject({ fasten: true });
+        expect(loggedInsert()).toMatchObject({ fasten: true });
     });
 
     it("passes faces and the edges to skip through to the scan", async () => {
@@ -795,7 +796,7 @@ describe("insertable routes", () => {
             expect(features[index]).toContain(edge)
         );
         // Each instance is an insert, fastened to what was preselected
-        const logged = await db.select().from(events).all();
+        const logged = loggedEvents();
         expect(logged).toHaveLength(3);
         expect(logged[0]).toMatchObject({
             fasten: true,
@@ -814,7 +815,7 @@ describe("insertable routes", () => {
 
         expect((await insertIntoAssembly(false)).status).toBe(200);
         expect(insert).toHaveBeenCalledTimes(2);
-        expect(await loggedInsert()).toBeDefined();
+        expect(loggedInsert()).toBeDefined();
     });
 
     it("words a timed-out insert, without inserting again", async () => {

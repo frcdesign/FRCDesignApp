@@ -33,6 +33,14 @@ export interface DayRange {
     to: string;
 }
 
+/** How many days a range covers, both ends counted. */
+export function countDays(range: DayRange): number {
+    const span =
+        Date.parse(`${range.to}T00:00:00Z`) -
+        Date.parse(`${range.from}T00:00:00Z`);
+    return Math.round(span / (24 * 3600 * 1000)) + 1;
+}
+
 /** The Monday on or before `day`, which names the week it falls in. */
 export function toWeekStart(day: string): string {
     const weekday = new Date(`${day}T00:00:00Z`).getUTCDay();

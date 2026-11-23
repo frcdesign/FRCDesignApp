@@ -30,11 +30,12 @@ export const DEFAULT_RANGE_PRESET = RangePreset.ALL;
 /** The overview's totals and breakdowns: one fixed window, named beside each title. */
 export const OVERVIEW_TOTALS_PRESET = RangePreset.DAYS_30;
 
-/** What the overview's charts offer, widest first: a week per point needs a quarter at least. */
+/** What the overview's charts offer, widest first: a point a day up to 90 days, a week past it. */
 export const CHART_RANGE_PRESETS = [
     RangePreset.ALL,
     RangePreset.YEAR,
-    RangePreset.DAYS_90
+    RangePreset.DAYS_90,
+    RangePreset.DAYS_30
 ] as const;
 
 export const DEFAULT_CHART_PRESET = RangePreset.DAYS_90;

@@ -100,7 +100,8 @@ migration another branch added, or one already applied to cert or production.
 KV is for what may expire or be lost: sessions, and caches that save Onshape
 calls. Every key belongs to a `kvStore` (`lib/kv-store.ts`) declared beside the
 code that owns it, with its prefix, value type and lifetime; don't read or
-write `KV` directly. Anything that must last goes in D1.
+write `KV` directly. Anything that must last goes in D1, but for the analytics
+event log, which goes to R2 through Pipelines (`event-log.ts`).
 
 ## Configurations
 

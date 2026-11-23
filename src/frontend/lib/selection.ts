@@ -124,8 +124,8 @@ interface SelectionState {
     layout: number;
     /**
      * The selection request the person is selecting with, by its message id.
-     * A hover's highlight pauses it in Onshape, and leaving the rows sends it
-     * again (`resumeSelecting`), so it lasts until stopped.
+     * A hover's highlight pauses it in Onshape until the list is clicked again;
+     * selecting lasts until stopped.
      */
     filtering?: string;
     /** The list a person clicked, which limits picks even when it's passive. */
@@ -222,24 +222,6 @@ export function listLabel(listId: string | undefined): string | undefined {
 /** A list's picks, as it last held them. */
 export function heldPicks(listId: string): OnshapeSelection[] {
     return picksByList.get(listId) ?? [];
-}
-
-/** Each mounted query list's way to send its selection request again, by its id. */
-const resumers = new Map<string, () => void>();
-
-export function onResume(listId: string, resume: () => void): () => void {
-    resumers.set(listId, resume);
-    return () => {
-        resumers.delete(listId);
-    };
-}
-
-/** The focused list sends its selection request again, which a highlight paused. */
-export function resumeSelecting(): void {
-    const { focused } = useOnshapeSelection.getState();
-    if (focused !== undefined) {
-        resumers.get(focused)?.();
-    }
 }
 
 /** The focused list's picks; none with no list focused. */

@@ -101,8 +101,8 @@
             ],
             "selectors": ["countPlural"],
             "match": {
-                "countPlural=one": "Showing element...",
-                "countPlural=other": "Showing elements..."
+                "countPlural=one": "Showing part...",
+                "countPlural=other": "Showing parts..."
             }
         }
     ],
@@ -114,8 +114,8 @@
             ],
             "selectors": ["countPlural"],
             "match": {
-                "countPlural=one": "Hiding element...",
-                "countPlural=other": "Hiding elements..."
+                "countPlural=one": "Hiding part...",
+                "countPlural=other": "Hiding parts..."
             }
         }
     ],
@@ -127,8 +127,8 @@
             ],
             "selectors": ["countPlural"],
             "match": {
-                "countPlural=one": "Element shown.",
-                "countPlural=other": "Elements shown."
+                "countPlural=one": "Part shown.",
+                "countPlural=other": "Parts shown."
             }
         }
     ],
@@ -140,8 +140,8 @@
             ],
             "selectors": ["countPlural"],
             "match": {
-                "countPlural=one": "Element hidden.",
-                "countPlural=other": "Elements hidden."
+                "countPlural=one": "Part hidden.",
+                "countPlural=other": "Parts hidden."
             }
         }
     ],
@@ -408,6 +408,7 @@
     "dashboardFeatureReach": "Feature usage",
     "dashboardFeatureReachNoData": "No recorded use yet.",
     "dashboardFeatureReachLatest": "Latest week: {value}",
+    "dashboardFeatureReachLatestDay": "Latest day: {value}",
     "dashboardFeatureReachWeekOf": "Week of {week}",
     "dashboardFeatureReachUsers": [
         {
@@ -425,8 +426,6 @@
             }
         }
     ],
-    "dashboardFeatureReachViewAll": "All users",
-    "dashboardFeatureReachViewSplit": "New vs existing",
     "dashboardFeatureReachExisting": "Existing users",
     "dashboardFeatureReachNew": "New users",
     "dashboardFeatureReachUserCount": [
@@ -458,10 +457,28 @@
     "dashboardFeatureVersionManager": "Version Manager",
     "dashboardFeatureFeatureScripts": "FeatureScripts",
     "dashboardFeatureReport": "Report an issue",
+    "dashboardFeatureSearchDescription": "Used a part found by searching.",
+    "dashboardFeatureFavoritesDescription": "Used a part from the favorites list.",
+    "dashboardFeatureRecentsDescription": "Used a part from the recently used list.",
+    "dashboardFeatureQuickInsertDescription": "Inserted with a row's own Insert or Derive button.",
+    "dashboardFeatureFastenDescription": "Inserted a part with insert and fasten.",
+    "dashboardFeaturePreselectionDescription": "Fastened a part to edges picked beforehand.",
+    "dashboardFeatureAutoAssemblyDescription": "Placed parts with an Auto Assembly run.",
+    "dashboardFeatureInsertLocationDescription": "Inserted a part at the assembly's insert location.",
+    "dashboardFeatureDownloadDescription": "Downloaded a part as a STEP file.",
+    "dashboardFeatureDefaultConfigurationDescription": "Saved a favorite's default configuration.",
+    "dashboardFeatureVersionManagerDescription": "Finished a push or pull.",
+    "dashboardFeatureFeatureScriptsDescription": "Added a FeatureScript to a Part Studio.",
+    "dashboardFeatureMassAnalysisDescription": "Opened an assembly's masses.",
+    "dashboardFeatureReportDescription": "Sent a report while signed in.",
     "dashboardNudgeDotAdded": "Blue dot",
     "dashboardNudgeDotRemoved": "Blue dot removed",
     "dashboardNudgeTipAdded": "Tip",
     "dashboardNudgeTipRemoved": "Tip removed",
+    "dashboardNudgeSuggestionAdded": "Suggestions",
+    "dashboardNudgeSuggestionRemoved": "Suggestions removed",
+    "dashboardNudgeSuggestedLinks": "Suggested links",
+    "dashboardNudgeRemoved": "{name} removed",
     "dashboardLoadingLibrary": "Loading library usage...",
     "dashboardLoadingHealth": "Loading library health...",
     "dashboardLoadingPart": "Loading part usage...",
@@ -653,9 +670,10 @@
     "autoAssemblyScrewRow": "Screw {index}",
     "autoAssemblyInsert": "Insert",
     "autoAssemblyReplace": "Replace",
-    "autoAssemblyFlip": "Flip",
-    "autoAssemblyFlipScrews": "Flip screws",
     "autoAssemblyStartFailed": "Unexpectedly failed to start inserting.",
+    "autoAssemblyScrewTypeUpdated": "Screw type updated",
+    "autoAssemblyScrewSizeUpdated": "Screw size updated",
+    "autoAssemblyScrewTypeAndSizeUpdated": "Screw type and size updated",
     "autoAssemblyFastener": "Fastener",
     "autoAssemblyLength": "Length",
     "autoAssemblyProgram": "Program",

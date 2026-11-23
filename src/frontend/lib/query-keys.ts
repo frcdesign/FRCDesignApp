@@ -1,5 +1,6 @@
 /** Library-scoped keys hang off {@link libraryQueryKey}, so a refresh invalidates one prefix. */
 import { LibraryId } from "@backend/features/library/library-id";
+import { FASTENER_LIBRARY } from "@backend/features/auto-assembly/studios";
 import {
     assemblyKey,
     type PickCheckIn
@@ -43,6 +44,7 @@ export function libraryQueryKey(libraryId: LibraryId) {
 const LIBRARY_DATA = "library-data";
 const SEARCH_DB = "search-db";
 const BUILD_STATUS = "build-status";
+const FASTENER_SET = "fastener-set";
 
 export function libraryDataQueryKey(
     libraryId: LibraryId,
@@ -77,7 +79,7 @@ export function buildStatusQueryKey(
 /** Whether `queryKey` is one of the version-keyed library queries. */
 export function isVersionedLibraryQuery(queryKey: readonly unknown[]): boolean {
     // The name sits where every library key puts it, after the library's id.
-    return [LIBRARY_DATA, SEARCH_DB, BUILD_STATUS].includes(
+    return [LIBRARY_DATA, SEARCH_DB, BUILD_STATUS, FASTENER_SET].includes(
         queryKey[2] as string
     );
 }
@@ -144,7 +146,19 @@ export function nextVersionNameQueryKey(workspace: InstancePath | undefined) {
 }
 
 /** By the assembly's key, so a launch's extra fields don't make a second entry. */
-export const FASTENER_SET_QUERY_KEY = ["fastener-set"];
+export function prepareHolesQueryKey(assembly: ElementPath) {
+    return [
+        "auto-assembly-prepare",
+        assembly.documentId,
+        assembly.instanceId,
+        assembly.elementId
+    ];
+}
+
+/** FRCDesignLib's fasteners at one of its cache versions; undefined until the version is known. */
+export function fastenerSetQueryKey(cacheVersion: number | undefined) {
+    return [...libraryQueryKey(FASTENER_LIBRARY), FASTENER_SET, cacheVersion];
+}
 
 /** The whole body, so a pick or an option changed is a new check. */
 export function pickCheckQueryKey(body: PickCheckIn | undefined) {

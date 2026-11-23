@@ -1,11 +1,14 @@
-import type { FeatureReachOut } from "@backend/features/analytics/contract";
+import {
+    ReachInterval,
+    type FeatureReachOut
+} from "@backend/features/analytics/contract";
 import { AppFeature } from "@backend/features/analytics/usage";
 import { toWeekStart } from "@backend/features/analytics/day";
 import { formatBucket, Granularity, type BucketPoint } from "./series";
 import { NUDGES, nudgeLabel, type Nudge } from "./nudges";
 import { m } from "../../paraglide/messages";
 
-/** One group's part of a week: how many used the feature, of how many about. */
+/** One group's part of a day or week: how many used the feature, of how many about. */
 export interface ReachCount {
     users: number;
     activeUsers: number;
@@ -13,7 +16,7 @@ export interface ReachCount {
 
 export interface ReachPoint extends BucketPoint, ReachCount {
     /**
-     * In the feature's {@link ReachMeasure}; null for a week before its record
+     * In the feature's {@link ReachMeasure}; null for a time before its record
      * starts, a share of nobody, or where new users can't be told apart.
      */
     value: number | null;
@@ -24,16 +27,10 @@ export interface ReachPoint extends BucketPoint, ReachCount {
     existingCount?: ReachCount;
 }
 
-/** Which lines each feature's chart draws; kept in the url. */
-export enum ReachView {
-    ALL = "all",
-    NEW_VS_EXISTING = "new-vs-existing"
-}
-
 export enum ReachMeasure {
-    /** The percentage of the week's active users who used it. */
+    /** The percentage of the day's or week's active users who used it. */
     SHARE = "share",
-    /** How many people used it that week. */
+    /** How many people used it that day or week. */
     USERS = "users"
 }
 
@@ -62,26 +59,48 @@ export function featureMeasure(feature: AppFeature): ReachMeasure {
     }
 }
 
-/** One feature's weekly use in its measure, all and split by new and existing. */
+/** The day, or the Monday of the week, a day falls in. */
+export function bucketOf(day: string, interval: ReachInterval): string {
+    switch (interval) {
+        case ReachInterval.DAY:
+            return day;
+        case ReachInterval.WEEK:
+            return toWeekStart(day);
+    }
+}
+
+function granularityOf(interval: ReachInterval): Granularity {
+    switch (interval) {
+        case ReachInterval.DAY:
+            return Granularity.DAY;
+        case ReachInterval.WEEK:
+            return Granularity.WEEK;
+    }
+}
+
+/** One feature's use a day or a week in its measure, all and split by new and existing. */
 export function toReachSeries(
     out: FeatureReachOut,
     feature: AppFeature,
     measure: ReachMeasure = featureMeasure(feature)
 ): ReachPoint[] {
     const firstUsed = out.firstUsed[feature];
-    const firstWeek = firstUsed ? toWeekStart(firstUsed) : undefined;
-    return out.weeks.map((week) => {
-        const recorded = firstWeek !== undefined && week.week >= firstWeek;
+    const firstBucket = firstUsed
+        ? bucketOf(firstUsed, out.interval)
+        : undefined;
+    return out.buckets.map((bucket) => {
+        const recorded =
+            firstBucket !== undefined && bucket.start >= firstBucket;
         const all: ReachCount = {
-            users: week.users[feature] ?? 0,
-            activeUsers: week.activeUsers
+            users: bucket.users[feature] ?? 0,
+            activeUsers: bucket.activeUsers
         };
         const newCount: ReachCount | undefined =
-            week.newActiveUsers === undefined
+            bucket.newActiveUsers === undefined
                 ? undefined
                 : {
-                      users: week.newUsers?.[feature] ?? 0,
-                      activeUsers: week.newActiveUsers
+                      users: bucket.newUsers?.[feature] ?? 0,
+                      activeUsers: bucket.newActiveUsers
                   };
         const existingCount: ReachCount | undefined = newCount && {
             users: all.users - newCount.users,
@@ -90,8 +109,8 @@ export function toReachSeries(
         const valueOf = (count: ReachCount | undefined) =>
             recorded && count ? measured(count, measure) : null;
         return {
-            bucket: week.week,
-            label: formatBucket(week.week, Granularity.WEEK),
+            bucket: bucket.start,
+            label: formatBucket(bucket.start, granularityOf(out.interval)),
             ...all,
             value: valueOf(all),
             newValue: valueOf(newCount),
@@ -113,14 +132,14 @@ function measured(count: ReachCount, measure: ReachMeasure): number | null {
     }
 }
 
-/** The newest week with a value to state. */
+/** The newest point with a value to state. */
 export function latestPoint(points: ReachPoint[]): ReachPoint | undefined {
     return points.findLast((point) => point.value !== null);
 }
 
 /**
  * At most `max` buckets to label, evenly spaced and counted back from the
- * newest, so the latest week always has one.
+ * newest, so the latest point always has one.
  */
 export function evenTicks(buckets: string[], max: number): string[] {
     if (buckets.length <= max) return buckets;
@@ -137,19 +156,20 @@ export function featureOrder(): AppFeature[] {
     return [...nudged, ...rest];
 }
 
-/** A marker per week the feature's nudges changed in, on the week the chart has. */
+/** A marker per day or week the feature's nudges changed in, where the chart has it. */
 export function nudgeMarks(
     feature: AppFeature,
     points: ReachPoint[],
+    interval: ReachInterval,
     nudges: readonly Nudge[] = NUDGES
 ): { bucket: string; label: string }[] {
     const buckets = new Set(points.map((point) => point.bucket));
     const labels = new Map<string, string[]>();
     for (const nudge of nudges) {
         if (nudge.feature !== feature || nudge.day === undefined) continue;
-        const week = toWeekStart(nudge.day);
-        if (!buckets.has(week)) continue;
-        labels.set(week, [...(labels.get(week) ?? []), nudgeLabel(nudge)]);
+        const bucket = bucketOf(nudge.day, interval);
+        if (!buckets.has(bucket)) continue;
+        labels.set(bucket, [...(labels.get(bucket) ?? []), nudgeLabel(nudge)]);
     }
     return [...labels.entries()].map(([bucket, names]) => ({
         bucket,
@@ -187,5 +207,39 @@ export function featureLabel(feature: AppFeature): string {
             return m.dashboardFeatureMassAnalysis();
         case AppFeature.REPORT:
             return m.dashboardFeatureReport();
+    }
+}
+
+/** What counts as a use of the feature, as `featuresOf` records it. */
+export function featureDescription(feature: AppFeature): string {
+    switch (feature) {
+        case AppFeature.SEARCH:
+            return m.dashboardFeatureSearchDescription();
+        case AppFeature.FAVORITES:
+            return m.dashboardFeatureFavoritesDescription();
+        case AppFeature.RECENTS:
+            return m.dashboardFeatureRecentsDescription();
+        case AppFeature.QUICK_INSERT:
+            return m.dashboardFeatureQuickInsertDescription();
+        case AppFeature.FASTEN:
+            return m.dashboardFeatureFastenDescription();
+        case AppFeature.PRESELECTION:
+            return m.dashboardFeaturePreselectionDescription();
+        case AppFeature.AUTO_ASSEMBLY:
+            return m.dashboardFeatureAutoAssemblyDescription();
+        case AppFeature.INSERT_LOCATION:
+            return m.dashboardFeatureInsertLocationDescription();
+        case AppFeature.DOWNLOAD:
+            return m.dashboardFeatureDownloadDescription();
+        case AppFeature.DEFAULT_CONFIGURATION:
+            return m.dashboardFeatureDefaultConfigurationDescription();
+        case AppFeature.VERSION_MANAGER:
+            return m.dashboardFeatureVersionManagerDescription();
+        case AppFeature.FEATURESCRIPTS:
+            return m.dashboardFeatureFeatureScriptsDescription();
+        case AppFeature.MASS_ANALYSIS:
+            return m.dashboardFeatureMassAnalysisDescription();
+        case AppFeature.REPORT:
+            return m.dashboardFeatureReportDescription();
     }
 }

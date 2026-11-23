@@ -27,6 +27,7 @@ const holeSchema = z.object({
     closedAtEnd: z.boolean(),
     threaded: z.boolean(),
     majorDiameter: z.number().optional(),
+    countersunk: z.boolean().optional(),
     edges: z.array(z.object({ id: z.string(), at: z.number() }))
 });
 
@@ -90,6 +91,14 @@ const SCAN_TTL_SECONDS = 30 * 24 * 60 * 60;
 export const holeScans = kvStore<ScannedParts>("auto-assembly-scan", {
     ttlSeconds: SCAN_TTL_SECONDS
 });
+
+/** Bumped when what a scan answers changes, so no cached scan is read in an older shape. */
+const SCAN_VERSION = 2;
+
+/** A scan's cache id: the scan's version and what pins the studio. */
+function scanId(source: StudioSource): string {
+    return `v${SCAN_VERSION}|${source.key}`;
+}
 
 /** Deterministic ids are letters, digits and a few marks; anything else can't reach the script. */
 export const DETERMINISTIC_ID = /^[A-Za-z0-9_.+/-]+$/;
@@ -192,7 +201,7 @@ export async function scanStudio(
     selection: StudioSelection
 ): Promise<StudioScan> {
     if (isSelectionEmpty(selection)) {
-        const parts = await holeScans.get(kv, source.key);
+        const parts = await holeScans.get(kv, scanId(source));
         if (parts) {
             return { parts, circles: [], planes: [] };
         }
@@ -217,6 +226,6 @@ export async function scanStudio(
         );
     }
     const scan = parseStudioScan(decodeFeatureScriptValue(response.result));
-    await holeScans.put(kv, source.key, scan.parts);
+    await holeScans.put(kv, scanId(source), scan.parts);
     return scan;
 }

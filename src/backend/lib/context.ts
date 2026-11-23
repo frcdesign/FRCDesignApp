@@ -8,6 +8,7 @@ import type { LoadFeatureScriptsParams } from "../features/featurescripts/load-c
 import { type AccessLevel } from "../features/auth/access-level";
 import type { LibraryId } from "../features/library/library-id";
 import { type OAuthApi } from "./onshape/client";
+import type { EventLog } from "../features/analytics/event-log";
 
 export interface AppBindings {
     DB: D1Database;
@@ -24,6 +25,8 @@ export interface AppBindings {
     /** Auto Assembly's inserts, which are chains of Onshape writes; see the workflow. */
     AUTO_ASSEMBLY_WORKFLOW: Workflow<AssemblyJobParams>;
     LOAD_FEATURESCRIPTS_WORKFLOW: Workflow<LoadFeatureScriptsParams>;
+    /** The event log's Pipelines stream; unbound in local dev and tests. See `event-log.ts`. */
+    EVENT_LOG?: EventLog;
     /** The frontend document the FeatureScripts tab loads; unset loads nothing. */
     FEATURESCRIPTS_DOCUMENT_ID?: string;
     /** Relays pushes to open clients; see `features/push`. */

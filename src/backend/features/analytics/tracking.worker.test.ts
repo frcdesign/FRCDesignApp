@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { env } from "cloudflare:workers";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { configurations } from "../../db/schema";
 import {
     dailyAppOpens,
@@ -12,11 +12,11 @@ import {
     dailySourceMetrics,
     dailyTargetMetrics,
     dailyUserActivity,
-    events,
     insertableStats,
     userStats
 } from "./schema";
 import {
+    loggedEvents,
     TEST_LIBRARY_ID,
     TEST_PART_STUDIO_ID,
     TEST_PART_STUDIO_PATH,
@@ -36,6 +36,8 @@ import {
     type UseEvent
 } from "./tracking";
 import { toDayKey } from "./day";
+import * as eventLog from "./event-log";
+import { toLogRecord } from "./event-log";
 import { EVENT_SCHEMA_VERSION, EventType, UseSource, UseTarget } from "./usage";
 import {
     boolParam,
@@ -125,6 +127,8 @@ async function seedSizeConfiguration() {
     await db.update(configurations).set({ parameters: SIZE_PARAMETERS });
 }
 
+afterEach(() => vi.restoreAllMocks());
+
 describe("tracking", () => {
     beforeEach(async () => {
         await resetDb(db);
@@ -139,7 +143,7 @@ describe("tracking", () => {
                 configuredEvent({ size: "large" })
             );
 
-            const event = await db.select().from(events).get();
+            const event = loggedEvents()[0];
             expect(event).toMatchObject({
                 type: "insert",
                 libraryId: TEST_LIBRARY_ID,
@@ -187,7 +191,7 @@ describe("tracking", () => {
             expect(users).toHaveLength(1);
             expect(users[0].useCount).toBe(3);
 
-            expect(await db.select().from(events).all()).toHaveLength(3);
+            expect(loggedEvents()).toHaveLength(3);
         });
 
         it("rolls the part's own day up, split by the tab it landed in", async () => {
@@ -405,7 +409,7 @@ describe("tracking", () => {
                 3
             );
 
-            expect(await db.select().from(events).all()).toHaveLength(3);
+            expect(loggedEvents()).toHaveLength(3);
             expect(await db.select().from(dailyMetrics).get()).toMatchObject({
                 count: 3,
                 preselectedCount: 3
@@ -514,7 +518,7 @@ describe("tracking", () => {
                 })
             );
 
-            const event = await db.select().from(events).get();
+            const event = loggedEvents()[0];
             expect(event).toMatchObject({
                 isFavorite: true,
                 source: UseSource.SEARCH
@@ -531,7 +535,7 @@ describe("tracking", () => {
             expect(
                 await db.select().from(dailyConfigurationMetrics).all()
             ).toEqual([]);
-            const event = await db.select().from(events).get();
+            const event = loggedEvents()[0];
             expect(event?.selection).toBeNull();
         });
     });
@@ -554,7 +558,7 @@ describe("tracking", () => {
         it("logs a download with no target tab", async () => {
             await trackDownload(fakeContext(), downloadEvent());
 
-            expect(await db.select().from(events).get()).toMatchObject({
+            expect(loggedEvents()[0]).toMatchObject({
                 type: EventType.DOWNLOAD,
                 targetElementType: null,
                 isQuickInsert: null,
@@ -651,7 +655,7 @@ describe("tracking", () => {
         it("counts an open under no library", async () => {
             await trackAppOpen(fakeContext());
 
-            const event = await db.select().from(events).get();
+            const event = loggedEvents()[0];
             expect(event).toMatchObject({
                 type: EventType.APP_OPEN,
                 userId: TEST_USER_ID,
@@ -733,12 +737,78 @@ describe("tracking", () => {
         it("records the run under no library, and as no one's activity", async () => {
             await pushed({ state: VersionJobState.COMPLETE });
 
-            expect(await db.select().from(events).get()).toMatchObject({
+            expect(loggedEvents()[0]).toMatchObject({
                 type: EventType.VERSION_RUN,
                 libraryId: null,
                 failedSteps: 0
             });
             expect(await db.select().from(dailyUserActivity).all()).toEqual([]);
+        });
+    });
+
+    describe("the event log", () => {
+        it("keeps every event's own columns and the rest as JSON", async () => {
+            await trackInsert(
+                fakeContext(),
+                insertEvent({ isQuickInsert: true, fasten: true })
+            );
+            const [event] = loggedEvents();
+
+            const record = toLogRecord(event);
+            expect(record).toMatchObject({
+                id: event.id,
+                type: EventType.INSERT,
+                created_at: event.createdAt.getTime(),
+                day: event.day,
+                user_id: TEST_USER_ID,
+                library_id: TEST_LIBRARY_ID,
+                schema_version: EVENT_SCHEMA_VERSION
+            });
+            // Under the D1 column names, so a query reads the same either way.
+            expect(JSON.parse(record.data)).toMatchObject({
+                element_id: TEST_PART_STUDIO_PATH.elementId,
+                is_quick_insert: true,
+                fasten: true,
+                at_insert_location: false,
+                source: UseSource.BROWSE
+            });
+            expect(JSON.parse(record.data)).not.toHaveProperty("user_id");
+        });
+
+        it("sends to the stream bound, and nothing without one", async () => {
+            vi.restoreAllMocks();
+            const send = vi.fn(() => Promise.resolve());
+            await trackAppOpen(fakeContext());
+            const opened = loggedEvents();
+            expect(opened).toHaveLength(0);
+
+            await trackAppOpen({
+                env: { ...env, EVENT_LOG: { send } },
+                var: { getUserId: () => Promise.resolve(TEST_USER_ID) }
+            } as unknown as AppContext);
+
+            expect(send).toHaveBeenCalledWith([
+                expect.objectContaining({
+                    type: EventType.APP_OPEN,
+                    user_id: TEST_USER_ID
+                })
+            ]);
+        });
+
+        it("still counts a use when the log can't be reached", async () => {
+            const consoleError = vi
+                .spyOn(console, "error")
+                .mockImplementation(noop);
+            vi.spyOn(eventLog, "logEvents").mockRejectedValue(
+                new Error("stream down")
+            );
+
+            await trackInsert(fakeContext(), insertEvent());
+
+            expect(await db.select().from(insertableStats).all()).toEqual([
+                expect.objectContaining({ useCount: 1 })
+            ]);
+            expect(consoleError).toHaveBeenCalled();
         });
     });
 

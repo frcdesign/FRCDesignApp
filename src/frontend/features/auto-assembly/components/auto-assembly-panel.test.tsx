@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, screen, waitFor, within } from "@testing-library/react";
+import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
     AssemblyJobState,
@@ -19,24 +19,36 @@ import {
 } from "../../../../__test_utils__/render";
 import { apiGet, apiPost } from "../../../lib/api-client";
 import {
-    FASTENER_SET_QUERY_KEY,
     assemblyJobQueryKey,
+    fastenerSetQueryKey,
+    libraryVersionQueryKey,
     pickCheckQueryKey
 } from "../../../lib/query-keys";
 import { FASTENER_SET } from "../../../../__test_utils__/fastener-set";
+import { type QueryClient } from "@tanstack/react-query";
 import {
     toSelectedEntities,
     useOnshapeSelection,
     type OnshapeSelection
 } from "../../../lib/selection";
-import { defaultChoices, fastenerOptions, settleChoices } from "../options";
+import {
+    defaultChoices,
+    fastenerOptions,
+    Part,
+    settleChoices
+} from "../options";
 import { useAutoAssemblyStore } from "../store";
+import * as Notifications from "../../../lib/notifications";
 import { useOnshapeLaunch } from "../../../lib/onshape-params";
 import { AutoAssemblyPanel } from "./auto-assembly-panel";
 import { JobDetails, JobDetailsTitle } from "./job-details";
 import { AutoAssemblyCallout } from "./auto-assembly-callout";
 import { UtilityTab } from "../../../lib/app-tab";
-import { FastenerKind } from "@backend/features/auto-assembly/studios";
+import {
+    FASTENER_LIBRARY,
+    FastenerKind,
+    type FastenerSet
+} from "@backend/features/auto-assembly/studios";
 
 vi.mock("../../../lib/api-client", () => ({
     apiGet: vi.fn(),
@@ -73,9 +85,22 @@ async function choose(label: string, option: string) {
     await userEvent.click(await screen.findByRole("option", { name: option }));
 }
 
+/** FRCDesignLib at a cache version, and the fasteners it had loaded by then. */
+function seedFasteners(
+    queryClient: QueryClient,
+    set: FastenerSet | null,
+    cacheVersion = 1
+) {
+    queryClient.setQueryData(
+        libraryVersionQueryKey(FASTENER_LIBRARY),
+        cacheVersion
+    );
+    queryClient.setQueryData(fastenerSetQueryKey(cacheVersion), set);
+}
+
 /** As the app renders it, the library having loaded the fasteners. */
 function renderPanel(queryClient = createTestQueryClient()) {
-    queryClient.setQueryData(FASTENER_SET_QUERY_KEY, FASTENER_SET);
+    seedFasteners(queryClient, FASTENER_SET);
     return renderWithProviders(
         <AutoAssemblyPanel assembly={ASSEMBLY} />,
         queryClient
@@ -98,38 +123,42 @@ beforeEach(() => {
         excluded: [],
         replaced: [],
         stopFace: [],
-        chosenScrewInputs: [],
-        flipped: [],
-        flipScrews: false
+        specified: []
     });
 });
 
 afterEach(() => vi.restoreAllMocks());
 
 describe("AutoAssemblyPanel", () => {
-    it("says so until the library has loaded the fasteners, asking again each time it opens", async () => {
+    it("says so until the library has loaded the fasteners, and shows them at the version its load bumps to", async () => {
         const queryClient = createTestQueryClient();
-        queryClient.setQueryData(FASTENER_SET_QUERY_KEY, null);
-        vi.mocked(apiGet).mockResolvedValueOnce(null);
+        seedFasteners(queryClient, null);
         const { unmount } = renderWithProviders(
             <AutoAssemblyPanel assembly={ASSEMBLY} />,
             queryClient
         );
         expect(screen.getByText("No fasteners are loaded yet")).toBeTruthy();
         expect(screen.queryByRole("button", { name: "Insert" })).toBeNull();
-        await waitFor(() => expect(queryClient.isFetching()).toBe(0));
         unmount();
 
-        // Loaded since: the panel opening again shows the form
+        // The load bumps FRCDesignLib's version, which keys a new request
         vi.mocked(apiGet).mockResolvedValueOnce(FASTENER_SET);
         renderWithProviders(
             <AutoAssemblyPanel assembly={ASSEMBLY} />,
             queryClient
         );
+        act(() => {
+            queryClient.setQueryData(
+                libraryVersionQueryKey(FASTENER_LIBRARY),
+                2
+            );
+        });
         expect(
             await screen.findByRole("button", { name: "Insert" })
         ).toBeTruthy();
-        expect(apiGet).toHaveBeenCalledWith("/auto-assembly/parts");
+        expect(apiGet).toHaveBeenCalledWith("/auto-assembly/parts", {
+            cacheId: 2
+        });
     });
 
     it("picks circular edges by default, or faces with edges to exclude", async () => {
@@ -254,16 +283,23 @@ describe("AutoAssemblyPanel", () => {
         ).toBeNull();
     });
 
-    it("asks for a washer's vendor only under a vendor's screw, and never a nut's", async () => {
+    it("asks for a washer's vendor under any screw, and never a nut's", async () => {
         renderPanel();
         await userEvent.click(
             screen.getByRole("checkbox", { name: "Add screw washer" })
         );
-        // The screw's: the default screw is Generic, and McMaster-Carr makes every nut
-        expect(screen.getAllByLabelText("Vendor")).toHaveLength(1);
+        // The screw's and the washer's; McMaster-Carr makes every nut, so a nut's isn't asked
+        const [, washerVendor] = screen.getAllByLabelText("Vendor");
+        expect(washerVendor).toBeTruthy();
 
-        await choose("Vendor", "McMaster-Carr");
-        expect(screen.getAllByLabelText("Vendor")).toHaveLength(2);
+        // The washer's own, under the Generic screw
+        await userEvent.click(washerVendor);
+        await userEvent.click(
+            await screen.findByRole("option", { name: "McMaster-Carr" })
+        );
+        expect(
+            useAutoAssemblyStore.getState().parts[Part.SCREW_WASHER].vendor
+        ).toBe("MCMASTER");
     });
 
     it("sizes a screw automatically until switched to manual, then asks its length", async () => {
@@ -298,6 +334,7 @@ describe("AutoAssemblyPanel", () => {
     });
 
     it("sizes the screw by the first hole picked, until Size is chosen by hand", async () => {
+        const toast = vi.spyOn(Notifications, "showInfoToast");
         const queryClient = createTestQueryClient();
         renderPanel(queryClient);
         await userEvent.click(
@@ -318,8 +355,6 @@ describe("AutoAssemblyPanel", () => {
                 ),
                 excluded: [],
                 replaced: [],
-                flipped: [],
-                flipScrews: false,
                 options: fastenerOptions(settled)
             }),
             { problems: [], holeSize: "QUARTER_20" }
@@ -329,6 +364,9 @@ describe("AutoAssemblyPanel", () => {
                 "QUARTER_20"
             )
         );
+        expect(toast).toHaveBeenCalledWith("Screw size updated", {
+            id: expect.any(String)
+        });
 
         await choose("Size", "#8-32");
         useAutoAssemblyStore.getState().followScrew({ size: "QUARTER_20" });
@@ -338,6 +376,97 @@ describe("AutoAssemblyPanel", () => {
         useAutoAssemblyStore.getState().finishRun();
         useAutoAssemblyStore.getState().followScrew({ size: "QUARTER_20" });
         expect(useAutoAssemblyStore.getState().screw.size).toBe("QUARTER_20");
+    });
+
+    it("takes a flat head for a countersunk first hole, and the default head back for a plain one", async () => {
+        const toast = vi.spyOn(Notifications, "showInfoToast");
+        const queryClient = createTestQueryClient();
+        renderPanel(queryClient);
+        await userEvent.click(
+            screen.getByText("Circular edges", { selector: "p" })
+        );
+        select({ ...face("E"), entityType: "EDGE" });
+        const studioDefault = FASTENER_SET.studios[
+            FastenerKind.SCREW
+        ].parameters.find((parameter) => parameter.id === "head")?.default;
+        // Answers the check the panel sends now with the first hole as described
+        const answer = (isHoleCountersunk: boolean) => {
+            const state = useAutoAssemblyStore.getState();
+            queryClient.setQueryData(
+                pickCheckQueryKey({
+                    assembly: ASSEMBLY,
+                    selectionMode: SelectionMode.LOCATIONS,
+                    targets: toSelectedEntities(state.targets),
+                    excluded: [],
+                    replaced: [],
+                    options: fastenerOptions(settleChoices(FASTENER_SET, state))
+                }),
+                { problems: [], holeSize: "NO_10_32", isHoleCountersunk }
+            );
+        };
+
+        answer(true);
+        await waitFor(() =>
+            expect(useAutoAssemblyStore.getState().screw.head).toBe("FLAT")
+        );
+        // The size is the screw's already, so only its type changed
+        expect(toast).toHaveBeenLastCalledWith("Screw type updated", {
+            id: expect.any(String)
+        });
+        answer(false);
+        await waitFor(() =>
+            expect(useAutoAssemblyStore.getState().screw.head).toBe(
+                studioDefault
+            )
+        );
+
+        // Chosen by hand, the head stays whatever the hole
+        await choose("Head", "Socket head");
+        useAutoAssemblyStore.getState().followScrew({ head: "FLAT" });
+        expect(useAutoAssemblyStore.getState().screw.head).toBe("SOCKET");
+    });
+
+    it("sets each part's vendor from the screw's, but a vendor set by hand", async () => {
+        renderPanel();
+        await userEvent.click(
+            screen.getByRole("checkbox", { name: "Add screw washer" })
+        );
+        const vendorOf = (part: Part) =>
+            settleChoices(FASTENER_SET, useAutoAssemblyStore.getState()).parts[
+                part
+            ]?.vendor;
+
+        // The washer's, by hand, then the screw's
+        const [screwVendor, washerVendor] = screen.getAllByLabelText("Vendor");
+        await userEvent.click(washerVendor);
+        await userEvent.click(
+            await screen.findByRole("option", { name: "WCP" })
+        );
+        await userEvent.click(screwVendor);
+        await userEvent.click(
+            await screen.findByRole("option", { name: "McMaster-Carr" })
+        );
+
+        expect(vendorOf(Part.SCREW_WASHER)).toBe("WCP");
+        expect(vendorOf(Part.NUT)).toBe("MCMASTER");
+    });
+
+    it("forgets what was set by hand once Insert is clicked, or the panel opens again", () => {
+        const { unmount } = renderPanel();
+        const store = useAutoAssemblyStore.getState;
+        act(() => store().setScrew("size", "NO_8_32"));
+        act(() => store().followScrew({ size: "QUARTER_20" }));
+        expect(store().screw.size).toBe("NO_8_32");
+
+        act(() => store().finishRun());
+        act(() => store().followScrew({ size: "QUARTER_20" }));
+        expect(store().screw.size).toBe("QUARTER_20");
+
+        act(() => store().setScrew("size", "NO_8_32"));
+        unmount();
+        renderPanel();
+        act(() => store().followScrew({ size: "QUARTER_20" }));
+        expect(store().screw.size).toBe("QUARTER_20");
     });
 
     it("takes the first existing screw picked as the screw, but what's chosen by hand", async () => {
@@ -359,8 +488,6 @@ describe("AutoAssemblyPanel", () => {
                 replaced: toSelectedEntities(
                     useAutoAssemblyStore.getState().replaced
                 ),
-                flipped: [],
-                flipScrews: false,
                 options: fastenerOptions(settled)
             }),
             {
@@ -372,44 +499,6 @@ describe("AutoAssemblyPanel", () => {
             expect(useAutoAssemblyStore.getState().screw.size).toBe("NO_8_32")
         );
         expect(useAutoAssemblyStore.getState().screw.head).toBe("SOCKET");
-    });
-
-    it("flips a circular edge from its row, and every screw to update with Flip screws", async () => {
-        renderPanel();
-        await userEvent.click(
-            screen.getByText("Circular edges", { selector: "p" })
-        );
-        select(
-            { ...face("E"), entityType: "EDGE" },
-            { ...face("F"), entityType: "EDGE" }
-        );
-        const [flip] = within(
-            screen.getByText("Edge 1").parentElement!
-        ).getAllByRole("button");
-        await userEvent.click(flip);
-        await userEvent.click(insertButton());
-        expect(apiPost).toHaveBeenLastCalledWith("/auto-assembly/insert", {
-            body: expect.objectContaining({
-                flipped: [
-                    {
-                        occurrencePath: ["plate"],
-                        entityId: "E",
-                        entityType: "EDGE"
-                    }
-                ],
-                flipScrews: false
-            })
-        });
-
-        await choose("Select by", "Existing screws");
-        select({ ...face("S"), entityType: "BODY" });
-        await userEvent.click(
-            screen.getByRole("checkbox", { name: "Flip screws" })
-        );
-        await userEvent.click(screen.getByRole("button", { name: "Replace" }));
-        expect(apiPost).toHaveBeenLastCalledWith("/auto-assembly/insert", {
-            body: expect.objectContaining({ flipped: [], flipScrews: true })
-        });
     });
 
     it("asks what to fasten before what to fasten with, each group folding from its header", async () => {
@@ -519,7 +608,7 @@ describe("AutoAssemblyPanel", () => {
 describe("AutoAssemblyCallout", () => {
     const renderCallout = (insertableId: string, onOpen = vi.fn()) => {
         const queryClient = createTestQueryClient();
-        queryClient.setQueryData(FASTENER_SET_QUERY_KEY, FASTENER_SET);
+        seedFasteners(queryClient, FASTENER_SET);
         renderWithProviders(
             <AutoAssemblyCallout insertableId={insertableId} onOpen={onOpen} />,
             queryClient

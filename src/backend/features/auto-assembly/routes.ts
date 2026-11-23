@@ -1,7 +1,8 @@
 import { HttpStatus } from "http-status-ts";
 import { z } from "zod";
 import { handledError } from "../../lib/api-error";
-import { cacheMiddleware } from "../../lib/cache";
+import { finishEvenIfDisconnected } from "../../lib/background";
+import { CachePolicy, cacheMiddleware } from "../../lib/cache";
 import { getApp } from "../../lib/context";
 import { validate } from "../../lib/validate";
 import { requireSignInMiddleware } from "../auth/guards";
@@ -22,7 +23,7 @@ import { getFastenerSet } from "./fastener-set";
 import { getJobStatus, reportJob } from "./jobs";
 import { indexHoles } from "./index-holes";
 import { planHoles } from "./planner";
-import { pickedHoleSize, pickProblems } from "./check";
+import { pickedHole, pickProblems } from "./check";
 import {
     entitySchema,
     INCONSISTENT_PICK_MESSAGE,
@@ -181,6 +182,33 @@ const checkBody = z
     .refine(hasStopFace, STOP_FACE_MESSAGE);
 
 /**
+ * POST /api/auto-assembly/prepare — reads the assembly and scans every Part
+ * Studio in it, nothing picked, so the checks that follow read their scans
+ * from the cache. Sent as the panel opens.
+ */
+autoAssemblyRoutes.post(
+    "/auto-assembly/prepare",
+    requireSignInMiddleware,
+    validate("json", z.object({ assembly: assemblySchema })),
+    async (c) => {
+        const { assembly } = c.req.valid("json");
+        const set = await getFastenerSet(getDb(c.env.DB));
+        const indexed = await finishEvenIfDisconnected(
+            c,
+            indexHoles(
+                await c.var.getOnshapeApi(),
+                c.env.KV,
+                assembly,
+                [],
+                [],
+                set
+            )
+        );
+        return c.json({ holes: indexed.holes.length });
+    }
+);
+
+/**
  * POST /api/auto-assembly/check — what's wrong with each pick, found as a run
  * would: the assembly read, and its Part Studios scanned, under the caller's
  * session. Planned too when the body has options.
@@ -223,10 +251,9 @@ autoAssemblyRoutes.post(
                   { stopPlane: indexed.stopPlane }
               ).map((plan) => plan.planned)
             : undefined;
-        const holeSize = planned && pickedHoleSize(request, indexed, planned);
         return c.json({
             problems: pickProblems(request, indexed, planned),
-            ...(holeSize ? { holeSize } : {}),
+            ...(planned ? pickedHole(request, indexed, planned) : {}),
             ...(indexed.firstScrew ? { existingScrew: indexed.firstScrew } : {})
         } satisfies PickCheckOut);
     }
@@ -296,9 +323,11 @@ async function requireFastenerSet(db: Db): Promise<FastenerSet> {
     return set;
 }
 
-/** GET /api/auto-assembly/parts — the fasteners the library loaded, their catalog and studios; null before it loads them. */
-autoAssemblyRoutes.get("/auto-assembly/parts", async (c) =>
-    c.json((await getFastenerSet(getDb(c.env.DB))) ?? null)
+/** GET /api/auto-assembly/parts?v=:cacheVersion — the fasteners FRCDesignLib loaded, by its cache version; null before it loads them. */
+autoAssemblyRoutes.get(
+    "/auto-assembly/parts",
+    cacheMiddleware(CachePolicy.PUBLIC_CACHE),
+    async (c) => c.json((await getFastenerSet(getDb(c.env.DB))) ?? null)
 );
 
 /** GET /api/auto-assembly/job?documentId=&instanceId=&elementId= — the run this assembly last started. */

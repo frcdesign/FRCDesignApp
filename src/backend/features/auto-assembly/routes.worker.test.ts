@@ -281,6 +281,40 @@ describe("GET /api/auto-assembly/job", () => {
     });
 });
 
+describe("POST /api/auto-assembly/prepare", () => {
+    it("indexes the assembly with nothing picked, filling the scan cache", async () => {
+        const index = vi.spyOn(IndexHoles, "indexHoles").mockResolvedValue({
+            circularEdges: [],
+            holes: [],
+            placed: [],
+            replacements: [],
+            pickEdges: {},
+            unfound: []
+        });
+
+        const res = await post("/auto-assembly/prepare", {
+            assembly: ASSEMBLY
+        });
+
+        expect(res.status).toBe(200);
+        expect(index).toHaveBeenCalledWith(
+            expect.anything(),
+            env.KV,
+            ASSEMBLY,
+            [],
+            [],
+            undefined
+        );
+    });
+
+    it("refuses an assembly that isn't a workspace's", async () => {
+        const res = await post("/auto-assembly/prepare", {
+            assembly: { ...ASSEMBLY, instanceType: "v" }
+        });
+        expect(res.status).toBe(400);
+    });
+});
+
 describe("POST /api/auto-assembly/check", () => {
     const check = {
         assembly: ASSEMBLY,
@@ -332,9 +366,21 @@ describe("POST /api/auto-assembly/check", () => {
 describe("GET /api/auto-assembly/parts", () => {
     it("serves the fasteners the library loaded, and null before it loads them", async () => {
         const read = async () =>
-            (await app.request("/api/auto-assembly/parts", {}, env)).json();
+            (await app.request("/api/auto-assembly/parts?v=1", {}, env)).json();
         expect(await read()).toBeNull();
         publish();
         expect(await read()).toEqual(FASTENER_SET);
+    });
+
+    it("is immutable under a cache version, and refused without one", async () => {
+        publish();
+        const pinned = await app.request(
+            "/api/auto-assembly/parts?v=1",
+            {},
+            env
+        );
+        expect(pinned.headers.get("Cache-Control")).toContain("immutable");
+        const unpinned = await app.request("/api/auto-assembly/parts", {}, env);
+        expect(unpinned.status).toBe(400);
     });
 });

@@ -115,6 +115,8 @@ export interface PickCheckOut {
     problems: PickProblem[];
     /** The size the first picked hole is made for: what Size follows until it's chosen by hand. */
     holeSize?: string;
+    /** Whether that hole is countersunk: what Head follows until it's chosen by hand. */
+    isHoleCountersunk?: boolean;
     /** The first screw to update's studio inputs: what the screw follows until it's chosen by hand. */
     existingScrew?: Selection;
 }
@@ -162,6 +164,8 @@ export interface PlannedHole {
     reason?: string;
     /** The screw size the hole is made for, where it's one the catalog has. */
     madeFor?: string;
+    /** Its circular edge is a countersink's rim: the hole is made for a flat head. */
+    isCountersunk?: boolean;
     /** What's off about how it's fastened, in words: a screw that doesn't fit as it should, or no nut. */
     warning?: string;
     end?: HoleEnd;

@@ -47,12 +47,12 @@ interface VisibilitySwitchProps {
 
 function VisibilitySwitch(props: VisibilitySwitchProps): ReactNode {
     const { insertableId, isVisible } = props;
-    const mutation = useSetVisibilityMutation([insertableId], !isVisible);
+    const mutation = useSetVisibilityMutation([insertableId]);
     return (
         <SwitchRow
             label={m.adminCardVisibleToUsers()}
             checked={isVisible}
-            onToggle={() => mutation.mutate()}
+            onToggle={() => mutation.mutate(!isVisible)}
         />
     );
 }

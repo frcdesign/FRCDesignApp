@@ -85,6 +85,12 @@ them and the urls they become.
   are ignored — _observed_.
 - A part studio's thumbnail is rendered when it is saved, and can still be
   being written out just after — _observed_.
+- **A Hole feature attributes every face it makes** with a `HoleAttribute`:
+  the hole's cylinder and a countersink's cone alike. Its `holeType` is the
+  hole's style (`SIMPLE`, `C_BORE`, `C_SINK`), and a tapped hole's says
+  `isTappedHole` with its `majorDiameter`. Its edges carry none, but in sheet
+  metal. Std's source (`hole.fs`, `holeAttribute.fs`) says so; std's types are
+  internal, so this can change — _documented_.
 
 ## Configurations
 
