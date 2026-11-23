@@ -241,7 +241,7 @@ describe("featureMarks", () => {
         expect(marks([unshipped])).toEqual([]);
     });
 
-    it("says Created alone where a nudge came with the feature", () => {
+    it("names a release alone where a nudge changed with it", () => {
         const created = { feature: AppFeature.VERSION_MANAGER, day: dot.day! };
 
         expect(marks([dot, tip], [created])).toEqual([
@@ -256,7 +256,13 @@ describe("featureMarks", () => {
             day: "2026-10-30"
         };
 
-        expect(marks([dot], [menu])).toEqual([
+        const withdrawn = {
+            ...tip,
+            change: NudgeChange.REMOVED,
+            day: menu.day
+        };
+
+        expect(marks([dot, withdrawn], [menu])).toEqual([
             { bucket: "2026-10-26", label: "Context menu · Blue dot" }
         ]);
     });

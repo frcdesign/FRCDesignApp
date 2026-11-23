@@ -68,7 +68,7 @@ export const NUDGES: readonly Nudge[] = [
         change: NudgeChange.ADDED,
         day: "2026-11-07"
     },
-    // Shown since before tracking began, so only its removal is marked.
+    // Shown since before tracking began; withdrawn with the row's button.
     {
         feature: AppFeature.QUICK_INSERT,
         kind: NudgeKind.TIP,
@@ -87,18 +87,13 @@ export const NUDGES: readonly Nudge[] = [
         kind: NudgeKind.TIP,
         change: NudgeChange.ADDED,
         day: "2026-11-22"
-    },
-    {
-        feature: AppFeature.VERSION_MANAGER,
-        kind: NudgeKind.DOT,
-        change: NudgeChange.REMOVED,
-        day: "2026-11-22"
     }
 ];
 
 /** A new way to reach a feature, which labels its marker; a release without one created the feature. */
 export enum ReleaseName {
-    INLINE_BUTTON = "inline-button",
+    BUTTON = "button",
+    PRESELECTION = "preselection",
     CONTEXT_MENU = "context-menu"
 }
 
@@ -130,19 +125,26 @@ export const RELEASES: readonly Release[] = [
     // Each row's Insert or Derive button, in place of the menus' Quick insert.
     {
         feature: AppFeature.QUICK_INSERT,
-        name: ReleaseName.INLINE_BUTTON,
+        name: ReleaseName.BUTTON,
         day: "2026-11-14"
     },
     { feature: AppFeature.FEATURESCRIPTS, day: "2026-11-14" },
     { feature: AppFeature.AUTO_ASSEMBLY, day: "2026-11-22" },
-    { feature: AppFeature.PRESELECTION, day: "2026-11-22" }
+    { feature: AppFeature.PRESELECTION, day: "2026-11-22" },
+    {
+        feature: AppFeature.FASTEN,
+        name: ReleaseName.PRESELECTION,
+        day: "2026-11-22"
+    }
 ];
 
 export function releaseLabel(release: Release): string {
     if (release.name === undefined) return m.dashboardReleaseCreated();
     switch (release.name) {
-        case ReleaseName.INLINE_BUTTON:
-            return m.dashboardReleaseInlineButton();
+        case ReleaseName.BUTTON:
+            return m.dashboardReleaseButton();
+        case ReleaseName.PRESELECTION:
+            return m.dashboardReleasePreselection();
         case ReleaseName.CONTEXT_MENU:
             return m.dashboardReleaseContextMenu();
     }

@@ -937,7 +937,7 @@ const RELEASES: readonly Release[];
 
 interface Release {
     feature: AppFeature;
-    /** A new way to reach it ("Inline button"); absent where it created the feature. */
+    /** A new way to reach it ("Button"); absent where it created the feature. */
     name?: ReleaseName;
     day: string;
 }
@@ -1287,9 +1287,9 @@ feature's line starts at its first recorded use, all time, and a point with
 nobody about is left blank. A dashed line marks the day or week each of the
 feature's releases (`RELEASES`) and nudges (`NUDGES`) shipped, or a nudge was
 withdrawn; features with a nudge come first. A release reads "Created", or the
-new way to reach the feature it shipped ("Inline button", "Context menu"). A
-nudge added the day its feature was created came with it, so that marker reads
-"Created" alone. A nudge is something pointing people at the feature: a blue dot, a
+new way to reach the feature it shipped ("Button", "Context menu",
+"Preselection"). A nudge added or withdrawn on the day of one of the
+feature's releases came with it, so that marker names the release alone. A nudge is something pointing people at the feature: a blue dot, a
 tip, or a suggestion on its page. A tip making one part of a feature faster
 isn't one. A marker reads its nudge's name where it has one ("Suggested
 links"), else its kind. A nudge still on cert has no day and no marker until
@@ -1343,7 +1343,7 @@ is withheld while its baseline reaches back before tracking began.
 - Everybody a rollup names has a record in `users`, dated no later than the
   first day it names them.
 - Every nudge toward a feature is in `NUDGES`, added in the change that ships
-  or withdraws it. Every release since tracking began is in `RELEASES`, the
+  it, and its withdrawal where the chart should show one. Every release since tracking began is in `RELEASES`, the
   same way.
 - An event's columns are decided in `logged-event.ts`; a new column fails to
   compile until each kind of event says what it holds.

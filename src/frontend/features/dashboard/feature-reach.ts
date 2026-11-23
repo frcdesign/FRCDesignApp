@@ -7,7 +7,6 @@ import { toWeekStart } from "@backend/features/analytics/day";
 import { formatBucket, Granularity, type BucketPoint } from "./series";
 import {
     NUDGES,
-    NudgeChange,
     nudgeLabel,
     RELEASES,
     releaseLabel,
@@ -175,8 +174,8 @@ export function featureOrder(): AppFeature[] {
 
 /**
  * A marker per day or week the feature, or a way to reach it, was released or
- * a nudge toward it changed in, where the chart has it. A nudge added the day
- * its feature was created came with it, so the marker says "Created" alone.
+ * a nudge toward it changed in, where the chart has it. A nudge changed the
+ * day of a release came with it, so the marker names the release alone.
  */
 export function featureMarks(
     feature: AppFeature,
@@ -193,13 +192,11 @@ export function featureMarks(
         labels.set(bucket, [...(labels.get(bucket) ?? []), label]);
     };
     const own = releases.filter((release) => release.feature === feature);
-    const created = own.find((release) => release.name === undefined)?.day;
+    const releaseDays = new Set(own.map((release) => release.day));
     for (const release of own) mark(release.day, releaseLabel(release));
     for (const nudge of nudges) {
         if (nudge.feature !== feature || nudge.day === undefined) continue;
-        if (nudge.change === NudgeChange.ADDED && nudge.day === created) {
-            continue;
-        }
+        if (releaseDays.has(nudge.day)) continue;
         mark(nudge.day, nudgeLabel(nudge));
     }
     return [...labels.entries()].map(([bucket, names]) => ({
