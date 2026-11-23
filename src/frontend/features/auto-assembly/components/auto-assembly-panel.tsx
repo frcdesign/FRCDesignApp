@@ -117,6 +117,7 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
     const flipScrews = useAutoAssemblyStore((state) => state.flipScrews);
     const setFlipScrews = useAutoAssemblyStore((state) => state.setFlipScrews);
     const followScrew = useAutoAssemblyStore((state) => state.followScrew);
+    const followParts = useAutoAssemblyStore((state) => state.followParts);
     const finishRun = useAutoAssemblyStore((state) => state.finishRun);
     const { data: job } = useAssemblyJobQuery(assembly);
     const insertMutation = useInsertMutation(assembly);
@@ -185,9 +186,11 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
     }, [holeSize, followScrew]);
     useEffect(() => {
         if (existingScrew) {
-            followScrew(existingScrew);
+            // The screw first: a new vendor moves every part to it
+            followScrew(existingScrew.screw);
+            followParts(existingScrew);
         }
-    }, [existingScrew, followScrew]);
+    }, [existingScrew, followScrew, followParts]);
 
     const isRunning = job?.state === AssemblyJobState.RUNNING;
     const problem = (entity: OnshapeSelection) =>

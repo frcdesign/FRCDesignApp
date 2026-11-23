@@ -8,18 +8,17 @@ written by the backend (`edit-parts/targets.ts`) and shown as it comes.
 
 Under the context bar, while Edit parts is open.
 
-| String                                                     | Kind                 | Where               | When                                          | Review    |
-| ---------------------------------------------------------- | -------------------- | ------------------- | --------------------------------------------- | --------- |
-| "Edit parts"                                               | Button               | The context bar     | A library page in an assembly, signed in      | **⚑** New |
-| "Parts to edit"                                            | Query list label     | Under the bar       | Always; red while empty                       | **⚑** New |
-| "Part {n}"                                                 | Row name             | The list's rows     | Something picked                              | **⚑** New |
-| "Open this part's library to edit it."                     | Note                 | Under the list      | The picks are a part of another library       | **⚑** New |
-| "Select all with the same configuration"                   | Checkbox             | Under the list      | Always; unticked to start                     | **⚑** New |
-| "1 part in this assembly." / "{n} parts in this assembly." | Checkbox description | Under it            | Once the picks name a part                    | **⚑** New |
-| "Cancel" / "Edit"                                          | Buttons              | Under the list      | Edit is disabled until the picks name a part  | **⚑** New |
-| "A different part"                                         | Row problem          | Under a row         | A pick isn't a copy of the first pick's part  | **⚑** New |
-| "Not found in the assembly"                                | Row problem          | Under a row         | A pick's instance is gone                     | **⚑** New |
-| "Its configuration can't take this change"                 | Row problem          | Counted in the menu | A pick's other values hide what the edit sets | **⚑** New |
+| String                                     | Kind             | Where               | When                                          | Review    |
+| ------------------------------------------ | ---------------- | ------------------- | --------------------------------------------- | --------- |
+| "Edit parts"                               | Button           | The context bar     | A library page in an assembly, signed in      | **⚑** New |
+| "Part to edit"                             | Query list label | Under the bar       | Always; red while empty                       | **⚑** New |
+| "Part"                                     | Row name         | The list's row      | Something picked                              | **⚑** New |
+| "Open this part's library to edit it."     | Note             | Under the list      | The picks are a part of another library       | **⚑** New |
+| "Select all with the same configuration"   | Checkbox         | Under the list      | Unticked to start; hidden for a screw         | **⚑** New |
+| "Cancel" / "Edit"                          | Buttons          | Under the list      | Edit is disabled until the pick names a part  | **⚑** New |
+| "A different part"                         | Row problem      | Under a row         | A pick isn't a copy of the first pick's part  | **⚑** New |
+| "Not found in the assembly"                | Row problem      | Under a row         | A pick's instance is gone                     | **⚑** New |
+| "Its configuration can't take this change" | Row problem      | Counted in the menu | A pick's other values hide what the edit sets | **⚑** New |
 
 ## The menu
 

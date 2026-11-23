@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { EditCheckOut } from "@backend/features/edit-parts/contract";
+import { SelectionMode } from "@backend/features/auto-assembly/contract";
+import { FastenerKind } from "@backend/features/auto-assembly/studios";
 import {
     type ConfigurationParameter,
     ParameterType
@@ -21,6 +23,8 @@ import {
     toSelectedEntities,
     useOnshapeSelection
 } from "../../../lib/selection";
+import { UtilityTab } from "../../../lib/app-tab";
+import { useAutoAssemblyStore } from "../../auto-assembly/store";
 import { setEditParts, useEditPicks } from "../edit-picks";
 import { ContextBar } from "../../../components/context-bar";
 import { openEditMenu } from "../open-edit-menu";
@@ -28,6 +32,8 @@ import { EditMenuContent } from "./edit-menu";
 
 vi.mock("../../auth/access-level", () => ({ useIsSignedIn: () => true }));
 vi.mock("../open-edit-menu", () => ({ openEditMenu: vi.fn() }));
+const { navigateToTab } = vi.hoisted(() => ({ navigateToTab: vi.fn() }));
+vi.mock("../../../lib/tabs", () => ({ useNavigateToTab: () => navigateToTab }));
 vi.mock("../../../lib/api-client", () => ({
     apiGet: vi.fn(() => new Promise(() => undefined)),
     apiPost: vi.fn(() => Promise.resolve({ updated: 3 }))
@@ -108,6 +114,7 @@ describe("edit parts", () => {
         queryClient.clear();
         vi.mocked(apiPost).mockClear();
         vi.mocked(openEditMenu).mockClear();
+        navigateToTab.mockClear();
         setEditParts([]);
         useOnshapeSelection.setState({
             focused: undefined,
@@ -119,7 +126,7 @@ describe("edit parts", () => {
         });
     });
 
-    it("picks whole parts under the bar, and Edit opens the menu on them", async () => {
+    it("picks a whole part under the bar, and Edit opens the menu on it", async () => {
         const picked = {
             assembly: ASSEMBLY,
             parts: toSelectedEntities([body("a")])
@@ -135,11 +142,10 @@ describe("edit parts", () => {
             true
         );
 
+        selectInOnshape(body("b"));
         selectInOnshape(body("a"));
-        expect(screen.getByText("Part 1")).toBeTruthy();
-        expect(
-            await screen.findByText("3 parts in this assembly.")
-        ).toBeTruthy();
+        expect(useEditPicks.getState().parts).toEqual([body("a")]);
+        expect(screen.getByText("Part")).toBeTruthy();
         const applyToAll = screen.getByLabelText(
             "Select all with the same configuration"
         );
@@ -163,7 +169,41 @@ describe("edit parts", () => {
 
         await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
         expect(useEditPicks.getState().parts).toEqual([]);
-        expect(screen.queryByText("Parts to edit")).toBeNull();
+        expect(screen.queryByText("Part to edit")).toBeNull();
+    });
+
+    it("updates a library screw in Auto Assembly", async () => {
+        const picked = {
+            assembly: ASSEMBLY,
+            parts: toSelectedEntities([body("screw")])
+        };
+        queryClient.setQueryData(editCheckQueryKey(picked), {
+            ...CHECK,
+            fastener: FastenerKind.SCREW
+        });
+        renderWithProviders(<ContextBar isLibrary />, queryClient);
+        await userEvent.click(
+            screen.getByRole("button", { name: "Edit parts" })
+        );
+        selectInOnshape(body("screw"));
+        await waitFor(() =>
+            expect(screen.getByRole("button", { name: "Edit" })).toHaveProperty(
+                "disabled",
+                false
+            )
+        );
+        expect(
+            screen.queryByLabelText("Select all with the same configuration")
+        ).toBeNull();
+
+        await userEvent.click(screen.getByRole("button", { name: "Edit" }));
+
+        expect(openEditMenu).not.toHaveBeenCalled();
+        expect(navigateToTab).toHaveBeenCalledWith(UtilityTab.AUTO_ASSEMBLY);
+        const autoAssembly = useAutoAssemblyStore.getState();
+        expect(autoAssembly.form.selectBy).toBe(SelectionMode.SCREWS);
+        expect(autoAssembly.replaced).toEqual([body("screw")]);
+        expect(useEditPicks.getState().parts).toEqual([]);
     });
 
     it("sends only what changed, to the picks alone unless asked for all", async () => {

@@ -1,7 +1,11 @@
 /** What Auto Assembly's page holds: its choices, kept between visits, and what's picked, kept for the tab. */
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
-import { type FastenerMode } from "@backend/features/auto-assembly/contract";
+import {
+    type ExistingScrew,
+    type FastenerMode,
+    SelectionMode
+} from "@backend/features/auto-assembly/contract";
 import { StudioInput } from "@backend/features/auto-assembly/studios";
 import { type OnshapeSelection, selectionKey } from "../../lib/selection";
 import { type Choices, defaultChoices, Part } from "./options";
@@ -16,6 +20,8 @@ interface AutoAssemblyState extends Choices {
     stopFace: OnshapeSelection[];
     /** The screw's inputs chosen by hand since the last run; the rest follow what's picked. */
     chosenScrewInputs: string[];
+    /** The washers and nut changed by hand since the last run; the rest follow the screw picked. */
+    chosenParts: Part[];
     /** Keys (`selectionKey`) of the circular edges fastened from the far end of their holes. */
     flipped: string[];
     /** Every screw to update goes in from the other end of its holes. */
@@ -25,6 +31,10 @@ interface AutoAssemblyState extends Choices {
     setScrew: (id: string, value: string) => void;
     /** The screw's inputs as the picks say, but those chosen by hand. */
     followScrew: (screw: Record<string, string>) => void;
+    /** Each washer and the nut added as the existing screw has it, configured as its own, but those chosen by hand. */
+    followParts: (existing: ExistingScrew) => void;
+    /** Updates this screw alone, with everything following it. */
+    updateScrew: (screw: OnshapeSelection) => void;
     toggleFlipped: (entity: OnshapeSelection) => void;
     setFlipScrews: (flipScrews: boolean) => void;
     /** Picks and flips cleared, and the screw free to follow them again, after a run starts. */
@@ -63,6 +73,24 @@ function withScrew(
     };
 }
 
+function withPart(parts: Part[], part: Part): Part[] {
+    return parts.includes(part) ? parts : [...parts, part];
+}
+
+/** Whether a part is already added, and configured, as the existing screw has it. */
+function isFollowing(
+    state: Choices,
+    part: Part,
+    selection: Record<string, string> | undefined
+): boolean {
+    if (state.added[part] !== (selection !== undefined)) {
+        return false;
+    }
+    return Object.entries(selection ?? {}).every(
+        ([id, value]) => state.parts[part][id] === value
+    );
+}
+
 export const useAutoAssemblyStore = create<AutoAssemblyState>()(
     persist(
         (set) => ({
@@ -72,6 +100,7 @@ export const useAutoAssemblyStore = create<AutoAssemblyState>()(
             replaced: [],
             stopFace: [],
             chosenScrewInputs: [],
+            chosenParts: [],
             flipped: [],
             flipScrews: false,
             setForm: (id, value) =>
@@ -109,6 +138,39 @@ export const useAutoAssemblyStore = create<AutoAssemblyState>()(
                         ? {}
                         : withScrew(state, followed);
                 }),
+            followParts: (existing) =>
+                set((state) => {
+                    const followed = Object.values(Part).filter(
+                        (part) =>
+                            !state.chosenParts.includes(part) &&
+                            !isFollowing(state, part, existing[part])
+                    );
+                    if (followed.length === 0) {
+                        return {};
+                    }
+                    const parts = { ...state.parts };
+                    const added = { ...state.added };
+                    for (const part of followed) {
+                        const selection = existing[part];
+                        added[part] = selection !== undefined;
+                        parts[part] = { ...parts[part], ...selection };
+                    }
+                    return { parts, added };
+                }),
+            updateScrew: (screw) =>
+                set((state) => ({
+                    form: {
+                        ...state.form,
+                        [FormInput.SELECT_BY]: SelectionMode.SCREWS
+                    },
+                    targets: [],
+                    excluded: [],
+                    replaced: [screw],
+                    chosenScrewInputs: [],
+                    chosenParts: [],
+                    flipped: [],
+                    flipScrews: false
+                })),
             toggleFlipped: (entity) =>
                 set((state) => {
                     const key = selectionKey(entity);
@@ -125,6 +187,7 @@ export const useAutoAssemblyStore = create<AutoAssemblyState>()(
                     excluded: [],
                     replaced: [],
                     chosenScrewInputs: [],
+                    chosenParts: [],
                     flipped: [],
                     flipScrews: false
                 }),
@@ -133,10 +196,14 @@ export const useAutoAssemblyStore = create<AutoAssemblyState>()(
                     parts: {
                         ...state.parts,
                         [part]: { ...state.parts[part], [id]: value }
-                    }
+                    },
+                    chosenParts: withPart(state.chosenParts, part)
                 })),
             setAdded: (part, added) =>
-                set((state) => ({ added: { ...state.added, [part]: added } })),
+                set((state) => ({
+                    added: { ...state.added, [part]: added },
+                    chosenParts: withPart(state.chosenParts, part)
+                })),
             setTargets: (targets) =>
                 set((state) => {
                     // An edge picked again starts unflipped

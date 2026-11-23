@@ -115,8 +115,16 @@ export interface PickCheckOut {
     problems: PickProblem[];
     /** The size the first picked hole is made for: what Size follows until it's chosen by hand. */
     holeSize?: string;
-    /** The first screw to update's studio inputs: what the screw follows until it's chosen by hand. */
-    existingScrew?: Selection;
+    /** The first screw to update and what's on it: what the form follows until it's chosen by hand. */
+    existingScrew?: ExistingScrew;
+}
+
+/** A library screw in the assembly and the washers and nut on its axis, each as its studio's inputs; absent where there's none. */
+export interface ExistingScrew {
+    screw: Selection;
+    screwWasher?: Selection;
+    nut?: Selection;
+    nutWasher?: Selection;
 }
 
 /** Which of the form's lists a pick was made in. */

@@ -4,6 +4,7 @@ import {
     type PickProblem,
     type SelectedEntity
 } from "../auto-assembly/contract";
+import { type FastenerKind } from "../auto-assembly/studios";
 import {
     type PartialSelection,
     type Selection
@@ -20,6 +21,8 @@ export interface EditCheckIn {
 export interface EditCheckOut {
     /** The part the first pick is a copy of; absent when it's no library part. */
     insertableId?: string;
+    /** Which library fastener the first pick is, by its studio's element; absent for any other part. */
+    fastener?: FastenerKind;
     /** The first pick's configuration as it is now. */
     selection?: Selection;
     /** Copies the picks name. */

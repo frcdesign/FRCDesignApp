@@ -9,6 +9,7 @@ import { useMemo } from "react";
 import {
     type AssemblyJobStatus,
     type AutoAssemblyIn,
+    type ExistingScrew,
     type PickCheckIn,
     type PickCheckOut,
     type PickProblem,
@@ -78,8 +79,8 @@ export interface PickProblems {
     problems: Map<string, RowProblem>;
     /** The size the first hole picked is made for. */
     holeSize?: string;
-    /** The first screw to update's inputs. */
-    existingScrew?: Record<string, string>;
+    /** The first screw to update, and the washers and nut on it. */
+    existingScrew?: ExistingScrew;
     /** Whether a check is waiting for the picks to settle, or going. */
     isChecking: boolean;
 }

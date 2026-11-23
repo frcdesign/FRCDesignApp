@@ -21,6 +21,8 @@ import { recordInserts } from "../analytics/tracking";
 import { UseSource } from "../analytics/usage";
 import { requireSignInMiddleware } from "../auth/guards";
 import { type SelectedEntity } from "../auto-assembly/contract";
+import { getFastenerSet } from "../auto-assembly/fastener-set";
+import { FastenerKind } from "../auto-assembly/studios";
 import { entitySchema, MAX_SELECTIONS } from "../auto-assembly/picked";
 import {
     onshapeOverrides,
@@ -90,6 +92,24 @@ async function findPart(
     return row && { ...row, parameters: row.parameters ?? [] };
 }
 
+/** Which of Auto Assembly's studios the first pick is from, if any. */
+async function findFastener(
+    db: Db,
+    definition: OnshapeAssemblyDefinition,
+    parts: SelectedEntity[]
+): Promise<FastenerKind | undefined> {
+    const instance = parts[0] && topInstance(definition, parts[0]);
+    const set = instance && (await getFastenerSet(db));
+    return (
+        set &&
+        Object.values(FastenerKind).find(
+            (kind) =>
+                set.studios[kind].location.documentId === instance.documentId &&
+                set.studios[kind].location.elementId === instance.elementId
+        )
+    );
+}
+
 /**
  * POST /api/edit-parts/check — which library part the picks are copies of,
  * its configuration now, how many copies an edit would reach, and what's
@@ -113,9 +133,14 @@ editPartsRoutes.post(
             await c.var.getOnshapeApi(),
             assembly
         );
-        const part = await findPart(getDb(c.env.DB), definition, parts);
+        const db = getDb(c.env.DB);
+        const [part, fastener] = await Promise.all([
+            findPart(db, definition, parts),
+            findFastener(db, definition, parts)
+        ]);
+        const found = fastener ? { fastener } : {};
         if (!part) {
-            return c.json(none);
+            return c.json({ ...none, ...found });
         }
         const plan = planEdit({
             definition,
@@ -127,6 +152,7 @@ editPartsRoutes.post(
         });
         return c.json({
             insertableId: part.id,
+            ...found,
             selection: plan.targets[0]?.copy.selection,
             pickedCount: plan.pickedCount,
             matchingCount: plan.matchingCount,

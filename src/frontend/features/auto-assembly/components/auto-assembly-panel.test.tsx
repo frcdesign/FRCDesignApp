@@ -99,6 +99,7 @@ beforeEach(() => {
         replaced: [],
         stopFace: [],
         chosenScrewInputs: [],
+        chosenParts: [],
         flipped: [],
         flipScrews: false
     });
@@ -342,13 +343,54 @@ describe("AutoAssemblyPanel", () => {
             }),
             {
                 problems: [],
-                existingScrew: { size: "NO_8_32", head: "BUTTON" }
+                existingScrew: { screw: { size: "NO_8_32", head: "BUTTON" } }
             }
         );
         await waitFor(() =>
             expect(useAutoAssemblyStore.getState().screw.size).toBe("NO_8_32")
         );
         expect(useAutoAssemblyStore.getState().screw.head).toBe("SOCKET");
+    });
+
+    it("adds the washers and nut the existing screw has, as it has them, but what's chosen by hand", async () => {
+        const queryClient = createTestQueryClient();
+        renderPanel(queryClient);
+        useAutoAssemblyStore
+            .getState()
+            .updateScrew({ ...face("S"), entityType: "BODY" });
+        await userEvent.click(await screen.findByLabelText("Add nut washer"));
+        const state = useAutoAssemblyStore.getState();
+        expect(state.form.selectBy).toBe(SelectionMode.SCREWS);
+        queryClient.setQueryData(
+            pickCheckQueryKey({
+                assembly: ASSEMBLY,
+                selectionMode: SelectionMode.SCREWS,
+                targets: [],
+                excluded: [],
+                replaced: toSelectedEntities(state.replaced),
+                flipped: [],
+                flipScrews: false,
+                options: fastenerOptions(settleChoices(FASTENER_SET, state))
+            }),
+            {
+                problems: [],
+                existingScrew: {
+                    screw: { size: "NO_10_32" },
+                    screwWasher: { type: "OD_3_4_X_0_062" }
+                }
+            }
+        );
+
+        await waitFor(() =>
+            expect(useAutoAssemblyStore.getState().added).toEqual({
+                screwWasher: true,
+                nut: false,
+                nutWasher: true
+            })
+        );
+        expect(useAutoAssemblyStore.getState().parts.screwWasher.type).toBe(
+            "OD_3_4_X_0_062"
+        );
     });
 
     it("flips a circular edge from its row, and every screw to update with Flip screws", async () => {

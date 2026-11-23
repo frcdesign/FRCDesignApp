@@ -15,7 +15,10 @@ import {
     type OnshapeAssemblyDefinition,
     type OnshapeAssemblyInstance
 } from "../../lib/onshape/types";
+import { FASTENER_SET } from "../../../__test_utils__/fastener-set";
 import { SelectedEntityType } from "../auto-assembly/contract";
+import * as FastenerSets from "../auto-assembly/fastener-set";
+import { FastenerKind } from "../auto-assembly/studios";
 import {
     type ConfigurationParameter,
     OptionVisibilityType,
@@ -176,6 +179,36 @@ describe("edit parts routes", () => {
             matchingCount: 0,
             problems: []
         });
+    });
+
+    it("says which library fastener the pick is, by its studio's element", async () => {
+        vi.spyOn(FastenerSets, "getFastenerSet").mockResolvedValue(
+            FASTENER_SET
+        );
+        const { location } = FASTENER_SET.studios[FastenerKind.SCREW];
+        mockAssembly([
+            {
+                id: "screw",
+                type: "Part",
+                documentId: location.documentId,
+                elementId: location.elementId
+            },
+            copy("a", "")
+        ]);
+
+        const screw = await post("/api/edit-parts/check", {
+            assembly: ASSEMBLY,
+            parts: [pick("screw")]
+        });
+        expect(await screw.json()).toMatchObject({
+            fastener: FastenerKind.SCREW
+        });
+
+        const other = await post("/api/edit-parts/check", {
+            assembly: ASSEMBLY,
+            parts: [pick("a")]
+        });
+        expect(await other.json()).not.toHaveProperty("fastener");
     });
 
     it("inserts each matching copy again where it sits, then deletes the old ones", async () => {

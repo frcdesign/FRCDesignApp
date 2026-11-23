@@ -135,6 +135,8 @@ interface AutoAssemblyState extends Choices {
     excluded: OnshapeSelection[];
     /** The screw's inputs chosen by hand since the last run; the rest follow what's picked. */
     chosenScrewInputs: string[];
+    /** The washers and nut changed by hand since the last run; the rest follow the screw picked. */
+    chosenParts: Part[];
     /** Keys (`selectionKey`) of the circular edges fastened from the far end of their holes. */
     flipped: string[];
     /** Every screw to update goes in from the other end of its holes. */
@@ -144,6 +146,10 @@ interface AutoAssemblyState extends Choices {
     setScrew: (id: string, value: string) => void;
     /** The screw's inputs as the picks say, but those chosen by hand. */
     followScrew: (screw: Record<string, string>) => void;
+    /** Each washer and the nut added as the existing screw has it, configured as its own, but those chosen by hand. */
+    followParts: (existing: ExistingScrew) => void;
+    /** Updates this screw alone, with everything following it: how Edit parts hands a screw over. */
+    updateScrew: (screw: OnshapeSelection) => void;
     toggleFlipped: (entity: OnshapeSelection) => void;
     setFlipScrews: (flipScrews: boolean) => void;
     /** Picks and flips cleared, and the screw free to follow them again, after a run starts. */
@@ -825,6 +831,12 @@ function stackParts(
     occurrences: PartOccurrence[],
     set: FastenerSet
 ): PartOccurrence[];
+// Which of those is under the head, the nut, and under the nut.
+function stackRoles(
+    screw: PartOccurrence,
+    stack: PartOccurrence[],
+    set: FastenerSet
+): StackRoles;
 // The mates any of whose queries name a deleted instance.
 function orphanedMates(
     features: OnshapeListedFeature[],
@@ -982,6 +994,11 @@ callout saying screws, washers or nuts are also available via Auto Assembly
 (`AutoAssemblyCallout`, in the style of the app's other callouts); its button
 closes the menu and switches to the page.
 
+**Edit** in Edit parts, on a library screw, switches to the page too
+([edit-parts.md](./edit-parts.md)). Select by becomes Existing screws, with
+that screw the one to update (`updateScrew`). Nothing is chosen by hand yet, so
+the screw, its washers and its nut all follow it.
+
 ### Picking
 
 1. Once the app sends `applicationInit`, Onshape sends the window's whole
@@ -1102,7 +1119,10 @@ input from another (`followScrew`):
 
 - Size follows the size the first hole picked is made for (`holeSize`).
 - Every screw input follows the first existing screw picked (`existingScrew`).
-- An input chosen by hand stops following (`chosenScrewInputs`). A run
+- Each washer and the nut follow that screw too (`followParts`). One it has is
+  added, configured as its own. One it doesn't have is unticked.
+- An input chosen by hand stops following (`chosenScrewInputs`). So does a
+  washer or nut whose checkbox or inputs are changed by hand (`chosenParts`). A run
   starting frees them all again (`finishRun`).
 
 The studios' parameters are their configurations as Onshape answers them,
@@ -1180,8 +1200,11 @@ It also answers what the screw follows in the form:
 
 - `holeSize`: the size the first hole picked is made for, from the targets,
   then the screws to update (`pickedHoleSize`).
-- `existingScrew`: the first screw to update's configuration, its studio's
-  defaults filled in (`firstScrew`).
+- `existingScrew`: the first screw to update's configuration, and those of
+  the washers and nut on it, each with its studio's defaults filled in
+  (`firstScrew`). They're the parts a run would delete with it
+  (`stackParts`). A washer facing the way the screw does is its screw washer;
+  one facing back is its nut washer (`stackRoles`).
 
 Nothing picked asks Onshape nothing. FTC, or parts the catalog doesn't make,
 is checked without planning. The last check's marks stay while the next goes,

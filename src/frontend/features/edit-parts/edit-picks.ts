@@ -11,6 +11,7 @@ interface EditPicksState {
 /** Held for the tab: picks belong to the assembly open now. */
 export const useEditPicks = create<EditPicksState>(() => ({ parts: [] }));
 
+/** One part at most: a new pick takes the old one's place. */
 export function setEditParts(parts: OnshapeSelection[]): void {
-    useEditPicks.setState({ parts });
+    useEditPicks.setState({ parts: parts.slice(-1) });
 }

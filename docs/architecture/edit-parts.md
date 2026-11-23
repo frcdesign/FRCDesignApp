@@ -3,9 +3,11 @@
 ## Purpose
 
 Changing the configuration of library parts already in an assembly. Someone
-picks copies of one part in the Onshape window, changes its parameters in the
-configuration menu, and every picked copy takes the change. The edit can widen
-to every copy configured like a pick.
+picks a copy of a part in the Onshape window and changes its parameters in the
+configuration menu. The edit can widen to every copy configured like the pick.
+
+A library screw is edited in Auto Assembly instead, with the washers and nut on
+it ([auto-assembly.md](./auto-assembly.md)).
 
 It edits copies of one part at a time. It doesn't swap a part for another, and
 it doesn't reach copies inside a subassembly, which belong to that
@@ -27,7 +29,7 @@ the old one deleted. Mates to the old copy go with it.
 ```ts
 // Edit parts in the bar opens the picker under it and starts selecting.
 function ContextBar(props: ContextBarProps): ReactNode;
-// Parts to edit, Select all with the same configuration, Cancel and Edit.
+// Part to edit, Select all with the same configuration, Cancel and Edit.
 function EditPartsPicker(props: EditPartsPickerProps): ReactNode;
 function openEditMenu(props: EditMenuContentProps): void;
 // The part's parameters on the first pick's configuration, then Update.
@@ -49,6 +51,7 @@ interface EditMenuContentProps {
 }
 
 interface EditPicksState {
+    /** One at most. */
     parts: OnshapeSelection[];
 }
 ```
@@ -73,6 +76,8 @@ interface EditCheckIn {
 interface EditCheckOut {
     /** The part the first pick is a copy of; absent when it's no library part. */
     insertableId?: string;
+    /** Which library fastener the first pick is, by its studio's element; absent for any other part. */
+    fastener?: FastenerKind;
     /** The first pick's configuration as it is now. */
     selection?: Selection;
     /** Copies the picks name. */
@@ -130,12 +135,12 @@ interface EditPlan {
 }
 ```
 
-`SelectedEntity` and `PickProblem` are Auto Assembly's
+`SelectedEntity`, `PickProblem` and `FastenerKind` are Auto Assembly's
 ([auto-assembly.md](./auto-assembly.md)).
 
 ## Storage
 
-- **Memory** `useEditPicks` — the parts picked, for the tab.
+- **Memory** `useEditPicks` — the part picked, for the tab.
 - **D1** analytics, through `recordInserts`: one insert per copy replaced,
   source `edit` ([analytics.md](./analytics.md)).
 
@@ -148,23 +153,31 @@ from the assembly on every check and run.
 
 1. **Edit parts** in the context bar opens `EditPartsPicker` under the bar,
    as **Preselection** opens its lists, and starts selecting with its list.
-   Onshape then lets only whole parts be picked (`SOLID_BODIES`). The picker
-   is mounted only while open.
-2. A moment after the picks change, `POST /api/edit-parts/check` reads the
-   assembly. The first pick's top-level instance names the part, by its
-   document and element. `planEdit` marks a pick of another part, and counts
-   the copies configured like a pick.
-3. **Select all with the same configuration** is unticked to start. Under it,
-   the count of matching copies.
-4. **Edit** is enabled once the check names a part the open library holds. A
-   part of another library says to open that library.
+   Onshape then lets only whole parts be picked (`SOLID_BODIES`). The list
+   holds one part: a new pick takes the old one's place. The picker is
+   mounted only while open.
+2. A moment after the pick changes, `POST /api/edit-parts/check` reads the
+   assembly. The pick's top-level instance names the part, by its document
+   and element. The same document and element name a library fastener when
+   they're one of Auto Assembly's studios (`findFastener`).
+3. **Select all with the same configuration** is unticked to start. It's
+   hidden for a screw.
+4. **Edit** is enabled once the check names a part the open library holds, or
+   a screw. A part of another library says to open that library.
 5. **Cancel** clears the picks, stops selecting and closes the section.
    **Stop selecting** closes it and keeps the picks.
+
+### Editing a screw
+
+1. **Edit** on a library screw clears the pick and switches to Auto Assembly
+   (`updateScrew`). Select by is Existing screws, with the screw to update.
+2. Its check reads the screw's configuration and the washers and nut on it.
+   The form follows them.
 
 ### Editing
 
 1. **Edit** opens the configuration menu over the panel, titled with the part,
-   on the first pick's configuration.
+   on the pick's configuration.
 2. The changes are the parameters whose value differs from where the menu
    started. With none, **Update** is disabled. It counts the copies it will
    replace: the matching ones with **Select all**, else the picks.
@@ -193,7 +206,9 @@ In [strings/edit-parts.md](../strings/edit-parts.md).
 
 ## Invariants
 
-- An edit changes copies of one part: the first pick's.
+- An edit changes copies of one part: the pick's.
+- A library screw is never replaced here: Auto Assembly updates it, with what's
+  on it.
 - Only the parameters changed in the menu are applied. A copy keeps its other
   values.
 - A copy whose configuration can't take the changes is never touched.
@@ -229,5 +244,11 @@ In [strings/edit-parts.md](../strings/edit-parts.md).
   to widen them come first, so the menu opens knowing what it edits.
 - **Following by value.** "Select all" reaches copies by their configuration
   now, so it covers copies made by patterns or pasted in Onshape.
+- **One pick.** "Select all" is the way to reach more copies, so a second
+  pick adds nothing it can't.
+- **A screw goes to Auto Assembly.** A screw's washers and nut belong with it.
+  Auto Assembly already finds them, and replaces the whole stack in its hole.
+  A screw is told by its studio's element, as Auto Assembly tells its own
+  parts.
 
 _Last reviewed: 2026-11-13_

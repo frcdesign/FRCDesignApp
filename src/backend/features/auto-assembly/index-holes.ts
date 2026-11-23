@@ -23,6 +23,7 @@ import {
 } from "./assembly";
 import { FastenerKind, type FastenerSet } from "./studios";
 import {
+    type ExistingScrew,
     HoleStatus,
     type PlannedHole,
     type SelectedEntity,
@@ -37,7 +38,13 @@ import { type Selection } from "../configurations/contract";
 import { decodeConfiguration } from "../configurations/utils";
 import { scanStudio, type StudioScan } from "./scan";
 import { pickKey } from "./picked";
-import { type Replacement, screwLength, seatEdge, stackParts } from "./replace";
+import {
+    type Replacement,
+    screwLength,
+    seatEdge,
+    stackParts,
+    stackRoles
+} from "./replace";
 
 /** Part Studios evaluated at once: each is one Onshape call, and an assembly can have dozens. */
 const SCAN_CONCURRENCY = 6;
@@ -56,8 +63,8 @@ export interface IndexedHoles {
     stopPlane?: AssemblyPlane;
     /** Why the face picked to stop at gave no plane. */
     stopFaceProblem?: string;
-    /** The first screw to replace's configuration, its studio's defaults filled in. */
-    firstScrew?: Selection;
+    /** The first screw to replace and what's on it, their studios' defaults filled in. */
+    firstScrew?: ExistingScrew;
 }
 
 /** Which holes are fastened from their far end. */
@@ -312,7 +319,7 @@ export async function indexHoles(
     const firstScrew =
         replacing.screws[0] &&
         fasteners &&
-        screwSelection(fasteners, replacing.screws[0]);
+        existingScrew(fasteners, replacing.screws[0], occurrences);
 
     return {
         circularEdges: [
@@ -340,18 +347,43 @@ export async function indexHoles(
     };
 }
 
-/** A placed screw's configuration, each input it leaves out at its studio's default. */
-function screwSelection(
+/** A placed fastener's configuration, each input it leaves out at its studio's default. */
+function studioSelection(
     fasteners: FastenerSet,
-    screw: PartOccurrence
+    kind: FastenerKind,
+    occurrence: PartOccurrence
 ): Selection {
-    const chosen = decodeConfiguration(screw.source.configuration ?? "");
+    const chosen = decodeConfiguration(occurrence.source.configuration ?? "");
     return Object.fromEntries(
-        fasteners.studios[FastenerKind.SCREW].parameters.map((parameter) => [
+        fasteners.studios[kind].parameters.map((parameter) => [
             parameter.id,
             chosen[parameter.id] ?? parameter.default
         ])
     );
+}
+
+/** A screw and the washers and nut on it, as their studios' inputs. */
+function existingScrew(
+    fasteners: FastenerSet,
+    screw: PartOccurrence,
+    occurrences: PartOccurrence[]
+): ExistingScrew {
+    const length = screwLength(fasteners, screw);
+    const stack = stackRoles(
+        screw,
+        length === undefined
+            ? []
+            : stackParts(screw, length, occurrences, fasteners),
+        fasteners
+    );
+    const selection = (kind: FastenerKind, part: PartOccurrence | undefined) =>
+        part && studioSelection(fasteners, kind, part);
+    return {
+        screw: studioSelection(fasteners, FastenerKind.SCREW, screw),
+        screwWasher: selection(FastenerKind.WASHER, stack.screwWasher),
+        nut: selection(FastenerKind.NUT, stack.nut),
+        nutWasher: selection(FastenerKind.WASHER, stack.nutWasher)
+    };
 }
 
 function maxWasherThickness(fasteners: FastenerSet): number {
