@@ -202,9 +202,10 @@ async function logEvents(
 ): Promise<void>;
 ```
 
-`src/backend/features/analytics/schema.ts`: the `events` table, whose row is
-`LoggedEvent` (`typeof events.$inferSelect`), spelled out here with the
-columns' comments. Every rollup table is listed under **Storage**.
+`src/backend/features/analytics/event-columns.ts`: an event's columns,
+declared as a table for their types and names though no migration creates it
+(`eventColumns`). Its row is `LoggedEvent`, spelled out here with the columns'
+comments. Every rollup table is listed under **Storage**.
 
 ```ts
 /** One row of the log: everything the rollups are derived from. */
@@ -835,7 +836,7 @@ interface InsertableReportOut {
 ```
 
 `scripts/migrate-analytics/`, run once: the legacy app's log, from BigQuery
-into `events` and the rollups; see Imported history
+into D1's `events` table and the rollups; see Imported history
 
 ```text
 export.py      BigQuery to JSONL, one row per logged insert or app open
@@ -1031,14 +1032,11 @@ table, `analytics.events`, to the R2 bucket `frc-design-app-<env>-events`:
   column goes in `data`.
 - Pipelines adds `__ingest_ts` and partitions by its day, and writes files
   every five minutes. Nothing in the running app reads it.
-- `scripts/event-log/` creates an environment's stream, sink and pipeline
-  (`setup.sh`), and moves D1's `events` into it (`move-events.ts`).
-
-**D1**, in `features/analytics/schema.ts` (kept apart from `db/schema.ts`, since
-no foreign key crosses between them):
-
-- `events` — the log's earlier home, kept until `move-events.ts` has moved
-  it; nothing writes it. Its columns are the event's. Every event has an id, type, time, day key,
+- `scripts/event-log/setup.sh` creates an environment's bucket, catalog,
+  stream, sink and pipeline.
+- Every event D1's `events` table held is in it, sent once before migration
+  `0016_drop_events.sql` dropped that table.
+- An event's columns are `eventColumns`. Every event has an id, type, time, day key,
   user and schema version, and the library where it has one; a use adds the
   element path, insertable, canonical selection, source and favorite flag, and
   an insert also its target tab type and the quick-insert, fasten, fastenable
@@ -1066,6 +1064,10 @@ no foreign key crosses between them):
   version run, which acts on the Onshape document the app was launched from,
   a FeatureScript add, and a report about the app itself or the FeatureScripts. A report from somebody signed out has
   `user_id` `signed-out` (`SIGNED_OUT_USER_ID`).
+
+**D1**, in `features/analytics/schema.ts` (kept apart from `db/schema.ts`, since
+no foreign key crosses between them):
+
 - Rollups, each derived from the log alone: `daily_metrics`,
   `daily_target_metrics`, `daily_source_metrics`, `insertable_stats`,
   `daily_insertable_metrics`, `daily_insertable_users`,
@@ -1108,11 +1110,8 @@ no foreign key crosses between them):
   FeatureScript add, a signed-in report, a default configuration. An Auto
   Assembly run's uses count only toward `AUTO_ASSEMBLY`, not toward fasten or
   the other flags they set. Live tracking writes it from migration
-  `0015_feature_reach.sql` on. Its history comes from D1's `events`, either
-  way matching `featuresOf`:
-    - `scripts/backfill-feature-users.ts`, while `events` is still in D1: one
-      statement a feature a week (`featureUsersBackfill`), inside D1.
-    - `move-events.ts`, as it moves `events` to the event log.
+  `0015_feature_reach.sql` on. Its history was filled from D1's `events`,
+  matching `featuresOf`, before that table was dropped.
 
     `at_insert_location` and `default_selection` begin with schema version 4.
 
@@ -1404,8 +1403,8 @@ is withheld while its baseline reaches back before tracking began.
   reach; nearly everybody searches, so its share sits near the top and hides
   growth. Their charts count the week's users instead.
 - **A feature's line starts at its first recorded use.** `daily_feature_users`
-  is filled from history by `move-events.ts`, not by a migration: replaying
-  2.8 million events outlasts D1's 30-second limit. Before a feature's first row nothing tells a week nobody used it
+  was filled from history once, outside any migration: replaying 2.8 million
+  events outlasts D1's 30-second limit. Before a feature's first row nothing tells a week nobody used it
   from one nothing recorded, so the line is left blank rather than drawn at 0%.
   It costs the weeks before a new feature's first use, which read the same.
 - **An Auto Assembly run's uses are Auto Assembly's alone.** A run's planner

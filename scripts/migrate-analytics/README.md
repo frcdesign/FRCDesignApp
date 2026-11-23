@@ -1,7 +1,9 @@
 # Analytics migration
 
 One-shot tooling that moved the legacy app's usage log out of GCP and into the
-D1 analytics tables. Kept because the run left decisions in it worth being
+D1 analytics tables. Its output targets D1's `events` table, which migration
+`0016_drop_events.sql` dropped once its rows were in the event log
+(`scripts/event-log/`), so a rebuild sends them to the log instead. Kept because the run left decisions in it worth being
 able to re-read, and so the import can be rebuilt from the archive. [analytics.md](../../docs/architecture/analytics.md)
 describes the imported rows under **Imported history**.
 

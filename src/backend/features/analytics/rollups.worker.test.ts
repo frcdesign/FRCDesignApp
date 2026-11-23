@@ -25,7 +25,6 @@ import {
     FeedbackTopic
 } from "../feedback/contract";
 import { rollupWrites } from "./rollups";
-import { featureUsersBackfill } from "./feature-users-backfill";
 import {
     dailyAppOpens,
     dailyConfigurationMetrics,
@@ -37,7 +36,6 @@ import {
     dailyTargetMetrics,
     dailyUserActivity,
     dailyVersionMetrics,
-    events,
     insertableStats,
     userStats
 } from "./schema";
@@ -289,55 +287,6 @@ describe("rollupWrites", () => {
             expect(await readFeatureUsers()).not.toContainEqual(
                 expect.stringContaining(SIGNED_OUT_USER_ID)
             );
-        });
-
-        it("is rebuilt from the log alone by the backfill, row for row", async () => {
-            await trackEveryFeature();
-            await trackInsert(
-                fakeContext("placer"),
-                insertEvent({
-                    targetElementType: ElementType.ASSEMBLY,
-                    atInsertLocation: true
-                })
-            );
-            await trackDefaultSelection(fakeContext("configurer"), {
-                libraryId: TEST_LIBRARY_ID,
-                path: TEST_PART_STUDIO_PATH,
-                insertableId: TEST_PART_STUDIO_ID
-            });
-            const recorded = await db.select().from(dailyFeatureUsers).all();
-            // As D1 still holds them where the log hasn't taken them over
-            for (const event of loggedEvents()) {
-                await db.insert(events).values(event);
-            }
-            await db.delete(dailyFeatureUsers);
-
-            const backfill = featureUsersBackfill({
-                from: "2000-01-01",
-                to: "2100-12-31"
-            });
-            const run = () =>
-                env.DB.batch(
-                    backfill.map((statement) => env.DB.prepare(statement))
-                );
-            await run();
-            // Twice, as a rerun over days already filled would
-            await run();
-
-            const rebuilt = await db.select().from(dailyFeatureUsers).all();
-            const rows = (all: typeof recorded) =>
-                all.map((row) => JSON.stringify(row)).sort();
-            expect(rows(rebuilt)).toEqual(rows(recorded));
-            expect(recorded.length).toBeGreaterThan(10);
-        });
-
-        it("refuses a backfill range that isn't day keys", () => {
-            expect(() =>
-                featureUsersBackfill({
-                    from: "2026-01-01'; --",
-                    to: "2026-01-02"
-                })
-            ).toThrow();
         });
 
         it("doesn't count a default configuration as activity", async () => {

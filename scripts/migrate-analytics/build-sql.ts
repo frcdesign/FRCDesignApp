@@ -41,11 +41,11 @@ import {
     dailySourceMetrics,
     dailyTargetMetrics,
     dailyUserActivity,
-    events,
     insertableStats,
     userStats,
     type LoggedEvent
 } from "../../src/backend/features/analytics/schema";
+import { eventColumns } from "../../src/backend/features/analytics/event-columns";
 import { rollupWrites } from "../../src/backend/features/analytics/rollups";
 import {
     NO_ELEMENT,
@@ -494,8 +494,8 @@ const dumpPlan = (): TableDump[] => {
         // Plain inserts: applying a file twice fails on its first event, before
         // any rollup could be counted again.
         {
-            name: getTableConfig(events).name,
-            columns: getTableConfig(events).columns.map((c) => c.name),
+            name: getTableConfig(eventColumns).name,
+            columns: getTableConfig(eventColumns).columns.map((c) => c.name),
             suffix: ""
         }
     ];
@@ -712,7 +712,7 @@ const main = async () => {
         );
         if (!result) continue;
         const chunk = chunkOf(result.event.day);
-        run(chunk, builder.insert(events).values(result.event));
+        run(chunk, builder.insert(eventColumns).values(result.event));
         for (const write of rollupWrites(
             builder,
             result.event,

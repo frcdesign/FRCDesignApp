@@ -1,5 +1,5 @@
 import { getTableColumns } from "drizzle-orm";
-import { events, type LoggedEvent } from "./schema";
+import { eventColumns, type LoggedEvent } from "./event-columns";
 
 /**
  * One event as the log stores it: the columns every event has, and the rest
@@ -31,7 +31,7 @@ const CORE_COLUMNS = [
 
 export function toLogRecord(event: LoggedEvent): EventLogRecord {
     const data: Record<string, unknown> = {};
-    for (const [key, column] of Object.entries(getTableColumns(events))) {
+    for (const [key, column] of Object.entries(getTableColumns(eventColumns))) {
         if ((CORE_COLUMNS as readonly string[]).includes(key)) continue;
         data[column.name] = event[key as keyof LoggedEvent];
     }

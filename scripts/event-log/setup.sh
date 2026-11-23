@@ -5,7 +5,7 @@
 set -euo pipefail
 
 ENV="${1:?usage: setup.sh <cert|prod>}"
-: "${CATALOG_TOKEN:?set CATALOG_TOKEN to an API token with R2 Storage Admin Read & Write and R2 Data Catalog Read & Write}"
+: "${CATALOG_TOKEN:?set CATALOG_TOKEN to an API token with Workers R2 Storage Edit and Basin Catalog Edit}"
 
 BUCKET="frc-design-app-${ENV}-events"
 STREAM="frc_design_app_${ENV}_events"
