@@ -36,6 +36,7 @@ import {
     settleChoices
 } from "../options";
 import { useAutoAssemblyStore } from "../store";
+import * as Notifications from "../../../lib/notifications";
 import { useOnshapeLaunch } from "../../../lib/onshape-params";
 import { AutoAssemblyPanel } from "./auto-assembly-panel";
 import { JobDetails, JobDetailsTitle } from "./job-details";
@@ -308,6 +309,7 @@ describe("AutoAssemblyPanel", () => {
     });
 
     it("sizes the screw by the first hole picked, until Size is chosen by hand", async () => {
+        const toast = vi.spyOn(Notifications, "showInfoToast");
         const queryClient = createTestQueryClient();
         renderPanel(queryClient);
         await userEvent.click(
@@ -337,6 +339,9 @@ describe("AutoAssemblyPanel", () => {
                 "QUARTER_20"
             )
         );
+        expect(toast).toHaveBeenCalledWith("Screw size updated", {
+            id: expect.any(String)
+        });
 
         await choose("Size", "#8-32");
         useAutoAssemblyStore.getState().followScrew({ size: "QUARTER_20" });
@@ -349,6 +354,7 @@ describe("AutoAssemblyPanel", () => {
     });
 
     it("takes a flat head for a countersunk first hole, and the default head back for a plain one", async () => {
+        const toast = vi.spyOn(Notifications, "showInfoToast");
         const queryClient = createTestQueryClient();
         renderPanel(queryClient);
         await userEvent.click(
@@ -378,6 +384,10 @@ describe("AutoAssemblyPanel", () => {
         await waitFor(() =>
             expect(useAutoAssemblyStore.getState().screw.head).toBe("FLAT")
         );
+        // The size is the screw's already, so only its type changed
+        expect(toast).toHaveBeenLastCalledWith("Screw type updated", {
+            id: expect.any(String)
+        });
         answer(false);
         await waitFor(() =>
             expect(useAutoAssemblyStore.getState().screw.head).toBe(

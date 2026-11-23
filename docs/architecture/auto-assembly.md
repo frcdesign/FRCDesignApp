@@ -1136,6 +1136,9 @@ clicking Insert each leave nothing specified (`open`, `finishRun`).
 - Every screw input follows the first existing screw picked (`existingScrew`).
 - What's picked sets only the screw inputs that aren't specified
   (`followScrew`).
+- Where that changes the screw's settled head or size, a toast says so
+  ("Screw type updated", "Screw size updated", or both in one), each replacing
+  the last (`followAndAnnounce`).
 
 The studios' parameters are their configurations as Onshape answers them,
 parsed by `parseOnshapeConfiguration`, so their options show as the Part

@@ -27,6 +27,7 @@ import { Status } from "../../../lib/status";
 import { IconSize } from "../../../lib/style-constants";
 import { ParameterGrid } from "../../../components/parameter-input";
 import { PanelFooter } from "../../../components/panel-footer";
+import { showInfoToast } from "../../../lib/notifications";
 import { QueryList } from "../../../components/query-list";
 import {
     isBody,
@@ -89,6 +90,45 @@ export function AutoAssemblyPanel(props: AutoAssemblyPanelProps): ReactNode {
         );
     }
     return <AutoAssemblyForm assembly={assembly} set={set} />;
+}
+
+/** One toast at a time, the latest change's. */
+const SCREW_FOLLOWED_TOAST_ID = "auto-assembly-screw-followed";
+
+/** Follows what's picked, and says so where the screw's type or size changed. */
+function followAndAnnounce(
+    set: FastenerSet,
+    followScrew: (screw: Record<string, string>) => void,
+    changes: Record<string, string>
+): void {
+    const settledScrew = () =>
+        settleScrew(set, useAutoAssemblyStore.getState().screw);
+    const before = settledScrew();
+    followScrew(changes);
+    const after = settledScrew();
+    const message = screwFollowedMessage(
+        before.head !== after.head,
+        before.size !== after.size
+    );
+    if (message) {
+        showInfoToast(message, { id: SCREW_FOLLOWED_TOAST_ID });
+    }
+}
+
+function screwFollowedMessage(
+    isTypeChanged: boolean,
+    isSizeChanged: boolean
+): string | undefined {
+    if (isTypeChanged && isSizeChanged) {
+        return m.autoAssemblyScrewTypeAndSizeUpdated();
+    }
+    if (isTypeChanged) {
+        return m.autoAssemblyScrewTypeUpdated();
+    }
+    if (isSizeChanged) {
+        return m.autoAssemblyScrewSizeUpdated();
+    }
+    return undefined;
 }
 
 interface AutoAssemblyFormProps {
@@ -174,16 +214,16 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
                       settleScrew(set, screw).head,
                       isHoleCountersunk
                   );
-        followScrew({
+        followAndAnnounce(set, followScrew, {
             [StudioInput.SIZE]: holeSize,
             ...(head ? { [StudioInput.HEAD]: head } : {})
         });
     }, [holeSize, isHoleCountersunk, set, followScrew]);
     useEffect(() => {
         if (existingScrew) {
-            followScrew(existingScrew);
+            followAndAnnounce(set, followScrew, existingScrew);
         }
-    }, [existingScrew, followScrew]);
+    }, [existingScrew, set, followScrew]);
 
     const isRunning = job?.state === AssemblyJobState.RUNNING;
     const problem = (entity: OnshapeSelection) =>
