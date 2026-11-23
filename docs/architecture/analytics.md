@@ -916,9 +916,9 @@ interface DashboardEmptyProps {
 ```
 
 `src/frontend/features/dashboard/nudges.ts`, every nudge toward a feature and
-the day it shipped; `feature-reach.ts` turns the route's days or weeks into each
-feature's line and places the nudges on it; `feature-reach-section.tsx` draws
-them
+every release of one, with the day each shipped; `feature-reach.ts` turns the
+route's days or weeks into each feature's line and marks both on it;
+`feature-reach-section.tsx` draws them
 
 ```ts
 const NUDGES: readonly Nudge[];
@@ -933,8 +933,17 @@ interface Nudge {
     day?: string;
 }
 
-// Share of active users, or a count of users, per feature.
-function featureMeasure(feature: AppFeature): ReachMeasure;
+const RELEASES: readonly Release[];
+
+interface Release {
+    feature: AppFeature;
+    /** A new way to reach it ("Inline button"); absent where it created the feature. */
+    name?: ReleaseName;
+    day: string;
+}
+
+// Share of active users while the range's share is in SHARE_BAND, else a count.
+function reachMeasure(out: FeatureReachOut, feature: AppFeature): ReachMeasure;
 // Values per week in that measure, of everybody, the new and the existing;
 // null before the feature's first recorded use, for a share of nobody, or
 // where new users can't be told apart.
@@ -943,10 +952,12 @@ function toReachSeries(
     feature: AppFeature,
     measure?: ReachMeasure
 ): ReachPoint[];
-// A marker per week the feature's nudges changed in, labelled by kind.
-function nudgeMarks(
+// A marker per day or week the feature's releases and nudges fell in.
+function featureMarks(
     feature: AppFeature,
     points: ReachPoint[],
+    interval: ReachInterval,
+    releases?: readonly Release[],
     nudges?: readonly Nudge[]
 ): { bucket: string; label: string }[];
 ```
@@ -1258,19 +1269,27 @@ page; a library's sections only for the same library. The library, part and
 unused dashboards keep the range picker in the navbar, which the overview
 hides.
 
-**Feature usage** is one small chart per `AppFeature`, each saying under its
-title what counts as a use (`featureDescription`), a point a day over a
-range of 90 days or less after clamping (`REACH_DAILY_DAYS`, `reachInterval`),
-a point a week past it. For each point, the share of its active users who used
-the feature then, on a shared 0–100% axis, or for search, STEP downloads and
-reports the number of people who did, on an axis that fits it
-(`featureMeasure`). Active is `activeUserRows` unioned with the point's
+**Feature usage** is one small chart per `AppFeature` but the default
+configuration, which is recorded and not charted. A chart has a point a day
+over a range of 90 days or less after clamping (`REACH_DAILY_DAYS`,
+`reachInterval`), and a point a week past it. Each chart picks its measure
+from the range (`reachMeasure`):
+
+- the share of each point's active users who used the feature, on a shared
+  0–100% axis, while the feature's share of the range's active users is
+  between 5% and 90% (`SHARE_BAND`);
+- otherwise the number of people who used it, on an axis that fits it.
+
+Active is `activeUserRows` unioned with the point's
 feature users, so a share never passes 100%. Weeks are Monday to Sunday; the
 first may begin before the range, and only its days inside it count. A
 feature's line starts at its first recorded use, all time, and a point with
 nobody about is left blank. A dashed line marks the day or week each of the
-feature's nudges (`NUDGES`) shipped or was withdrawn; features with a nudge
-come first. A nudge is something pointing people at the feature: a blue dot, a
+feature's releases (`RELEASES`) and nudges (`NUDGES`) shipped, or a nudge was
+withdrawn; features with a nudge come first. A release reads "Created", or the
+new way to reach the feature it shipped ("Inline button", "Context menu"). A
+nudge added the day its feature was created came with it, so that marker reads
+"Created" alone. A nudge is something pointing people at the feature: a blue dot, a
 tip, or a suggestion on its page. A tip making one part of a feature faster
 isn't one. A marker reads its nudge's name where it has one ("Suggested
 links"), else its kind. A nudge still on cert has no day and no marker until
@@ -1324,7 +1343,8 @@ is withheld while its baseline reaches back before tracking began.
 - Everybody a rollup names has a record in `users`, dated no later than the
   first day it names them.
 - Every nudge toward a feature is in `NUDGES`, added in the change that ships
-  or withdraws it.
+  or withdraws it. Every release since tracking began is in `RELEASES`, the
+  same way.
 - An event's columns are decided in `logged-event.ts`; a new column fails to
   compile until each kind of event says what it holds.
 - Values are compared and counted canonically, never by configuration key.
@@ -1398,10 +1418,10 @@ is withheld while its baseline reaches back before tracking began.
   standalone users included, which allows new users and growth in users over
   time. Working first days out from the rollups on each request reads every
   person's days and holds D1 for seconds.
-- **Some features are counted, not shared.** Nobody should need to report an
-  issue or download a STEP file, so a share of everybody has no target to
-  reach; nearly everybody searches, so its share sits near the top and hides
-  growth. Their charts count the week's users instead.
+- **A chart counts its users outside the middle band.** A share of a few
+  percent, such as the Version Manager's or Insert location's, reads as a
+  flat line at the bottom. A share near 100% hides growth. A count shows
+  both, so the measure follows the range's share rather than a fixed list.
 - **A feature's line starts at its first recorded use.** `daily_feature_users`
   was filled from history once, outside any migration: replaying 2.8 million
   events outlasts D1's 30-second limit. Before a feature's first row nothing tells a week nobody used it
@@ -1413,6 +1433,10 @@ is withheld while its baseline reaches back before tracking began.
 - **A default configuration is not activity.** Saving one places nothing, so
   like a report it writes no library rollup; it counts only toward its
   feature's reach.
+- **Releases are listed in code, dated by production's deploys.** A feature
+  older than tracking has none, since its line could only start after it. A
+  release is dated by the first deploy that carried it, in the reporting
+  day's time zone.
 - **Nudges are listed in code, dated by `main`.** A push to `main` deploys to
   production, so the day a change reached it is the day people first saw the
   nudge. Nothing records that on its own, and a list beside the chart is

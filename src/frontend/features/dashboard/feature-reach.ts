@@ -5,7 +5,15 @@ import {
 import { AppFeature } from "@backend/features/analytics/usage";
 import { toWeekStart } from "@backend/features/analytics/day";
 import { formatBucket, Granularity, type BucketPoint } from "./series";
-import { NUDGES, nudgeLabel, type Nudge } from "./nudges";
+import {
+    NUDGES,
+    NudgeChange,
+    nudgeLabel,
+    RELEASES,
+    releaseLabel,
+    type Nudge,
+    type Release
+} from "./nudges";
 import { m } from "../../paraglide/messages";
 
 /** One group's part of a day or week: how many used the feature, of how many about. */
@@ -34,28 +42,33 @@ export enum ReachMeasure {
     USERS = "users"
 }
 
+/** A share inside this band reads well; outside it, a count shows more. */
+export const SHARE_BAND = { min: 5, max: 90 };
+
 /**
- * Counted where a share says little: nobody should need to report an issue or
- * download a part, and nearly everybody searches.
+ * A share where the feature's share of the range's active users is in
+ * {@link SHARE_BAND}: a few percent hides who uses it, and near 100% hides
+ * growth.
  */
-export function featureMeasure(feature: AppFeature): ReachMeasure {
-    switch (feature) {
-        case AppFeature.SEARCH:
-        case AppFeature.DOWNLOAD:
-        case AppFeature.REPORT:
-            return ReachMeasure.USERS;
-        case AppFeature.FAVORITES:
-        case AppFeature.RECENTS:
-        case AppFeature.QUICK_INSERT:
-        case AppFeature.FASTEN:
-        case AppFeature.PRESELECTION:
-        case AppFeature.INSERT_LOCATION:
-        case AppFeature.AUTO_ASSEMBLY:
-        case AppFeature.DEFAULT_CONFIGURATION:
-        case AppFeature.VERSION_MANAGER:
-        case AppFeature.FEATURESCRIPTS:
-            return ReachMeasure.SHARE;
+export function reachMeasure(
+    out: FeatureReachOut,
+    feature: AppFeature
+): ReachMeasure {
+    const firstUsed = out.firstUsed[feature];
+    if (!firstUsed) return ReachMeasure.USERS;
+    const firstBucket = bucketOf(firstUsed, out.interval);
+    let users = 0;
+    let activeUsers = 0;
+    for (const bucket of out.buckets) {
+        if (bucket.start < firstBucket) continue;
+        users += bucket.users[feature] ?? 0;
+        activeUsers += bucket.activeUsers;
     }
+    if (activeUsers === 0) return ReachMeasure.USERS;
+    const share = (users / activeUsers) * 100;
+    return share >= SHARE_BAND.min && share <= SHARE_BAND.max
+        ? ReachMeasure.SHARE
+        : ReachMeasure.USERS;
 }
 
 /** The day, or the Monday of the week, a day falls in. */
@@ -81,7 +94,7 @@ function granularityOf(interval: ReachInterval): Granularity {
 export function toReachSeries(
     out: FeatureReachOut,
     feature: AppFeature,
-    measure: ReachMeasure = featureMeasure(feature)
+    measure: ReachMeasure = reachMeasure(out, feature)
 ): ReachPoint[] {
     const firstUsed = out.firstUsed[feature];
     const firstBucket = firstUsed
@@ -146,29 +159,48 @@ export function evenTicks(buckets: string[], max: number): string[] {
     return buckets.filter((_, i) => (buckets.length - 1 - i) % step === 0);
 }
 
+/** Recorded for its own sake, and not charted. */
+const UNCHARTED: readonly AppFeature[] = [AppFeature.DEFAULT_CONFIGURATION];
+
 /** Nudged features first, in the order their nudges shipped, so the ones being pushed lead. */
 export function featureOrder(): AppFeature[] {
     const nudged = [...new Set(NUDGES.map((nudge) => nudge.feature))];
     const rest = Object.values(AppFeature).filter(
         (feature) => !nudged.includes(feature)
     );
-    return [...nudged, ...rest];
+    return [...nudged, ...rest].filter(
+        (feature) => !UNCHARTED.includes(feature)
+    );
 }
 
-/** A marker per day or week the feature's nudges changed in, where the chart has it. */
-export function nudgeMarks(
+/**
+ * A marker per day or week the feature, or a way to reach it, was released or
+ * a nudge toward it changed in, where the chart has it. A nudge added the day
+ * its feature was created came with it, so the marker says "Created" alone.
+ */
+export function featureMarks(
     feature: AppFeature,
     points: ReachPoint[],
     interval: ReachInterval,
+    releases: readonly Release[] = RELEASES,
     nudges: readonly Nudge[] = NUDGES
 ): { bucket: string; label: string }[] {
     const buckets = new Set(points.map((point) => point.bucket));
     const labels = new Map<string, string[]>();
+    const mark = (day: string, label: string) => {
+        const bucket = bucketOf(day, interval);
+        if (!buckets.has(bucket)) return;
+        labels.set(bucket, [...(labels.get(bucket) ?? []), label]);
+    };
+    const own = releases.filter((release) => release.feature === feature);
+    const created = own.find((release) => release.name === undefined)?.day;
+    for (const release of own) mark(release.day, releaseLabel(release));
     for (const nudge of nudges) {
         if (nudge.feature !== feature || nudge.day === undefined) continue;
-        const bucket = bucketOf(nudge.day, interval);
-        if (!buckets.has(bucket)) continue;
-        labels.set(bucket, [...(labels.get(bucket) ?? []), nudgeLabel(nudge)]);
+        if (nudge.change === NudgeChange.ADDED && nudge.day === created) {
+            continue;
+        }
+        mark(nudge.day, nudgeLabel(nudge));
     }
     return [...labels.entries()].map(([bucket, names]) => ({
         bucket,
@@ -204,37 +236,5 @@ export function featureLabel(feature: AppFeature): string {
             return m.dashboardFeatureFeatureScripts();
         case AppFeature.REPORT:
             return m.dashboardFeatureReport();
-    }
-}
-
-/** What counts as a use of the feature, as `featuresOf` records it. */
-export function featureDescription(feature: AppFeature): string {
-    switch (feature) {
-        case AppFeature.SEARCH:
-            return m.dashboardFeatureSearchDescription();
-        case AppFeature.FAVORITES:
-            return m.dashboardFeatureFavoritesDescription();
-        case AppFeature.RECENTS:
-            return m.dashboardFeatureRecentsDescription();
-        case AppFeature.QUICK_INSERT:
-            return m.dashboardFeatureQuickInsertDescription();
-        case AppFeature.FASTEN:
-            return m.dashboardFeatureFastenDescription();
-        case AppFeature.PRESELECTION:
-            return m.dashboardFeaturePreselectionDescription();
-        case AppFeature.AUTO_ASSEMBLY:
-            return m.dashboardFeatureAutoAssemblyDescription();
-        case AppFeature.INSERT_LOCATION:
-            return m.dashboardFeatureInsertLocationDescription();
-        case AppFeature.DOWNLOAD:
-            return m.dashboardFeatureDownloadDescription();
-        case AppFeature.DEFAULT_CONFIGURATION:
-            return m.dashboardFeatureDefaultConfigurationDescription();
-        case AppFeature.VERSION_MANAGER:
-            return m.dashboardFeatureVersionManagerDescription();
-        case AppFeature.FEATURESCRIPTS:
-            return m.dashboardFeatureFeatureScriptsDescription();
-        case AppFeature.REPORT:
-            return m.dashboardFeatureReportDescription();
     }
 }

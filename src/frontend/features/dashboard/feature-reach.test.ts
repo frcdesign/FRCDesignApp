@@ -7,12 +7,21 @@ import { AppFeature } from "@backend/features/analytics/usage";
 import {
     evenTicks,
     featureOrder,
+    featureMarks,
     latestPoint,
-    nudgeMarks,
+    reachMeasure,
     ReachMeasure,
     toReachSeries
 } from "./feature-reach";
-import { NUDGES, NudgeChange, NudgeKind, NudgeName } from "./nudges";
+import {
+    NUDGES,
+    NudgeChange,
+    NudgeKind,
+    NudgeName,
+    ReleaseName,
+    type Nudge,
+    type Release
+} from "./nudges";
 
 // 2026-10-26 is a Monday.
 const REACH: FeatureReachOut = {
@@ -156,9 +165,13 @@ describe("toReachSeries, a point a day", () => {
         };
 
         expect(
-            nudgeMarks(AppFeature.INSERT_LOCATION, points, ReachInterval.DAY, [
-                nudge
-            ])
+            featureMarks(
+                AppFeature.INSERT_LOCATION,
+                points,
+                ReachInterval.DAY,
+                [],
+                [nudge]
+            )
         ).toEqual([{ bucket: "2026-10-30", label: "Blue dot" }]);
     });
 });
@@ -185,8 +198,8 @@ describe("toReachSeries, counted", () => {
     });
 });
 
-describe("nudgeMarks", () => {
-    const dot = {
+describe("featureMarks", () => {
+    const dot: Nudge = {
         feature: AppFeature.VERSION_MANAGER,
         kind: NudgeKind.DOT,
         change: NudgeChange.ADDED,
@@ -194,14 +207,16 @@ describe("nudgeMarks", () => {
     };
     const tip = { ...dot, kind: NudgeKind.TIP, day: "2026-10-31" };
     const points = toReachSeries(REACH, AppFeature.VERSION_MANAGER);
+    const marks = (
+        nudges: Nudge[],
+        releases: Release[] = [],
+        feature = AppFeature.VERSION_MANAGER
+    ) => featureMarks(feature, points, ReachInterval.WEEK, releases, nudges);
 
     it("marks a nudge on the week it shipped in, joining a week's nudges", () => {
-        expect(
-            nudgeMarks(AppFeature.VERSION_MANAGER, points, ReachInterval.WEEK, [
-                dot,
-                tip
-            ])
-        ).toEqual([{ bucket: "2026-10-26", label: "Blue dot · Tip" }]);
+        expect(marks([dot, tip])).toEqual([
+            { bucket: "2026-10-26", label: "Blue dot · Tip" }
+        ]);
     });
 
     it("labels a named nudge by its name", () => {
@@ -212,39 +227,45 @@ describe("nudgeMarks", () => {
         };
         const withdrawn = { ...links, change: NudgeChange.REMOVED };
 
-        expect(
-            nudgeMarks(AppFeature.VERSION_MANAGER, points, ReachInterval.WEEK, [
-                links
-            ])
-        ).toEqual([{ bucket: "2026-10-26", label: "Suggested links" }]);
-        expect(
-            nudgeMarks(AppFeature.VERSION_MANAGER, points, ReachInterval.WEEK, [
-                withdrawn
-            ])
-        ).toEqual([{ bucket: "2026-10-26", label: "Suggested links removed" }]);
+        expect(marks([links])).toEqual([
+            { bucket: "2026-10-26", label: "Suggested links" }
+        ]);
+        expect(marks([withdrawn])).toEqual([
+            { bucket: "2026-10-26", label: "Suggested links removed" }
+        ]);
     });
 
     it("leaves a nudge unmarked until it has shipped", () => {
         const unshipped = { ...dot, day: undefined };
 
-        expect(
-            nudgeMarks(AppFeature.VERSION_MANAGER, points, ReachInterval.WEEK, [
-                unshipped
-            ])
-        ).toEqual([]);
+        expect(marks([unshipped])).toEqual([]);
+    });
+
+    it("says Created alone where a nudge came with the feature", () => {
+        const created = { feature: AppFeature.VERSION_MANAGER, day: dot.day! };
+
+        expect(marks([dot, tip], [created])).toEqual([
+            { bucket: "2026-10-26", label: "Created · Tip" }
+        ]);
+    });
+
+    it("labels a new way to reach a feature by its name", () => {
+        const menu = {
+            feature: AppFeature.VERSION_MANAGER,
+            name: ReleaseName.CONTEXT_MENU,
+            day: "2026-10-30"
+        };
+
+        expect(marks([dot], [menu])).toEqual([
+            { bucket: "2026-10-26", label: "Context menu · Blue dot" }
+        ]);
     });
 
     it("marks only the feature's own nudges, inside the range", () => {
         const outside = { ...dot, day: "2026-12-01" };
 
-        expect(
-            nudgeMarks(AppFeature.SEARCH, points, ReachInterval.WEEK, [dot])
-        ).toEqual([]);
-        expect(
-            nudgeMarks(AppFeature.VERSION_MANAGER, points, ReachInterval.WEEK, [
-                outside
-            ])
-        ).toEqual([]);
+        expect(marks([dot], [], AppFeature.SEARCH)).toEqual([]);
+        expect(marks([outside])).toEqual([]);
     });
 });
 
@@ -267,10 +288,54 @@ describe("evenTicks", () => {
 });
 
 describe("featureOrder", () => {
-    it("lists every feature once, the nudged ones first", () => {
+    it("lists every charted feature once, the nudged ones first", () => {
         const order = featureOrder();
 
-        expect([...order].sort()).toEqual(Object.values(AppFeature).sort());
+        expect([...order].sort()).toEqual(
+            Object.values(AppFeature)
+                .filter(
+                    (feature) => feature !== AppFeature.DEFAULT_CONFIGURATION
+                )
+                .sort()
+        );
         expect(order[0]).toBe(NUDGES[0].feature);
+    });
+});
+
+describe("reachMeasure", () => {
+    const reach = (users: number, activeUsers = 100): FeatureReachOut => ({
+        interval: ReachInterval.WEEK,
+        buckets: [
+            // Before the feature's record starts, so left out.
+            { start: "2026-10-19", activeUsers: 1000, users: {} },
+            {
+                start: "2026-10-26",
+                activeUsers,
+                users: { [AppFeature.FASTEN]: users }
+            }
+        ],
+        firstUsed: { [AppFeature.FASTEN]: "2026-10-26" }
+    });
+
+    it("shares a feature in the middle band", () => {
+        expect(reachMeasure(reach(40), AppFeature.FASTEN)).toBe(
+            ReachMeasure.SHARE
+        );
+    });
+
+    it("counts a feature few or nearly all use", () => {
+        expect(reachMeasure(reach(2), AppFeature.FASTEN)).toBe(
+            ReachMeasure.USERS
+        );
+        expect(reachMeasure(reach(97), AppFeature.FASTEN)).toBe(
+            ReachMeasure.USERS
+        );
+    });
+
+    it("counts a feature with nothing recorded", () => {
+        expect(reachMeasure(REACH, AppFeature.FASTEN)).toBe(ReachMeasure.USERS);
+        expect(reachMeasure(reach(0, 0), AppFeature.FASTEN)).toBe(
+            ReachMeasure.USERS
+        );
     });
 });

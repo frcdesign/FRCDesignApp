@@ -18,12 +18,11 @@ import { DashboardEmpty, DashboardState } from "./dashboard-state";
 import { ChartRangeControl } from "./range-control";
 import {
     evenTicks,
-    featureDescription,
     featureLabel,
-    featureMeasure,
+    featureMarks,
     featureOrder,
     latestPoint,
-    nudgeMarks,
+    reachMeasure,
     ReachMeasure,
     toReachSeries,
     type ReachCount,
@@ -76,14 +75,22 @@ export function FeatureReachSection({
             <SplitLegend />
             {query.data ? (
                 <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }}>
-                    {featureOrder().map((feature) => (
-                        <FeatureReachPanel
-                            key={feature}
-                            feature={feature}
-                            points={toReachSeries(query.data, feature)}
-                            interval={query.data.interval}
-                        />
-                    ))}
+                    {featureOrder().map((feature) => {
+                        const measure = reachMeasure(query.data, feature);
+                        return (
+                            <FeatureReachPanel
+                                key={feature}
+                                feature={feature}
+                                measure={measure}
+                                points={toReachSeries(
+                                    query.data,
+                                    feature,
+                                    measure
+                                )}
+                                interval={query.data.interval}
+                            />
+                        );
+                    })}
                 </SimpleGrid>
             ) : (
                 <DashboardState
@@ -153,21 +160,22 @@ const SERIES: LineChartSeries[] = [
 
 interface FeatureReachPanelProps {
     feature: AppFeature;
+    measure: ReachMeasure;
     points: ReachPoint[];
     interval: ReachInterval;
 }
 
 function FeatureReachPanel({
     feature,
+    measure,
     points,
     interval
 }: FeatureReachPanelProps): ReactNode {
     const latest = latestPoint(points);
-    const measure = featureMeasure(feature);
     const middle = points[Math.floor(points.length / 2)]?.bucket ?? "";
     return (
         <Card>
-            <Group justify="space-between" align="flex-start">
+            <Group justify="space-between" align="flex-start" mb="xs">
                 <Text fw={700}>{featureLabel(feature)}</Text>
                 {latest?.value != null && (
                     <Text c="dimmed">
@@ -178,9 +186,6 @@ function FeatureReachPanel({
                     </Text>
                 )}
             </Group>
-            <Text size="sm" c="dimmed" mb="xs">
-                {featureDescription(feature)}
-            </Text>
             {latest ? (
                 <LineChart
                     h={PANEL_HEIGHT}
@@ -211,7 +216,7 @@ function FeatureReachPanel({
                             />
                         )
                     }}
-                    referenceLines={nudgeMarks(feature, points, interval).map(
+                    referenceLines={featureMarks(feature, points, interval).map(
                         (mark) => ({
                             x: mark.bucket,
                             color: MUTED_MARK,
