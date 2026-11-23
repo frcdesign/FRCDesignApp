@@ -11,7 +11,7 @@ import {
 import { createTestApp, jsonRequest } from "../../../__test_utils__";
 import * as DocumentEndpoints from "../../lib/onshape/endpoints/documents";
 import * as WebhookEndpoints from "../../lib/onshape/endpoints/webhooks";
-import { MassUnit, QuantityType, Unit } from "./enums";
+import { QuantityType, Unit } from "./enums";
 
 function mockUnits() {
     return vi.spyOn(DocumentEndpoints, "getUnitInfo").mockResolvedValue({
@@ -19,13 +19,13 @@ function mockUnits() {
             units: [
                 { key: QuantityType.ANGLE, value: Unit.DEGREE },
                 { key: QuantityType.LENGTH, value: Unit.INCH },
-                { key: "MASS", value: MassUnit.POUND }
+                { key: "MASS", value: Unit.POUND }
             ]
         },
         unitsDisplayPrecision: {
             [Unit.DEGREE]: 1,
             [Unit.INCH]: 3,
-            [MassUnit.POUND]: 2
+            [Unit.POUND]: 2
         }
     });
 }
@@ -65,7 +65,7 @@ describe("a workspace's units", () => {
         const res = await unitInfo("v", "doc-mass");
 
         expect(await res.json()).toMatchObject({
-            massUnit: MassUnit.POUND,
+            massUnit: Unit.POUND,
             massPrecision: 2
         });
     });
@@ -79,7 +79,7 @@ describe("a workspace's units", () => {
 
         const res = await unitInfo("v", "doc-old");
 
-        expect(await res.json()).toMatchObject({ massUnit: MassUnit.POUND });
+        expect(await res.json()).toMatchObject({ massUnit: Unit.POUND });
         expect(fetch).toHaveBeenCalledOnce();
     });
 

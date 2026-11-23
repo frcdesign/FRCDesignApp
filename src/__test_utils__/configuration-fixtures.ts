@@ -11,11 +11,7 @@ import {
     type UnitInfo,
     ParameterRole
 } from "@backend/features/configurations/contract";
-import {
-    MassUnit,
-    QuantityType,
-    Unit
-} from "@backend/features/configurations/enums";
+import { QuantityType, Unit } from "@backend/features/configurations/enums";
 import { quantityDefault } from "@backend/features/configurations/selection";
 
 /** Builds an enum parameter whose options are named after their ids. */
@@ -110,7 +106,7 @@ export const TEST_UNIT_INFO: UnitInfo = {
     lengthPrecision: 4,
     anglePrecision: 3,
     realPrecision: 3,
-    massUnit: MassUnit.POUND,
+    massUnit: Unit.POUND,
     massPrecision: 3
 };
 

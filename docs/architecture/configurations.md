@@ -18,7 +18,7 @@ or the load that probes Onshape ([loading.md](./loading.md)); both consume it.
 | `src/backend/features/configurations/contract.ts`                         | Parameter, `Selection`, `ConfigurationKey`, record and result types         |
 | `src/backend/features/configurations/selection.ts`                        | The only place a selection or key is built; see the invariants              |
 | `src/backend/features/configurations/utils.ts`                            | Visibility conditions, option resolution, configuration text encodings      |
-| `src/backend/features/configurations/input-parser.ts`                     | Parses and evaluates typed quantity expressions (`(2 + 3) in`)              |
+| `src/backend/features/configurations/input-parser.ts`                     | Parses and evaluates typed quantity expressions (`(2 + 3) in`), and masses  |
 | `src/backend/features/configurations/combinations.ts`                     | Indexing limits and bands, enumeration and counting of combinations         |
 | `src/backend/features/configurations/roles.ts`                            | Recognizes parameter roles by name (derivation variable, color, ...)        |
 | `src/backend/features/configurations/instances.ts`                        | Splits a parameter by the choices that filter it, for reporting             |

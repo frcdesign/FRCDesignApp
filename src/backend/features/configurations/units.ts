@@ -12,7 +12,7 @@ import { getUnitInfo } from "../../lib/onshape/endpoints/documents";
 import type { InstancePath } from "../../lib/onshape/path";
 import { watchWorkspaceUnits } from "../webhooks/transient";
 import type { UnitInfo } from "./contract";
-import { MassUnit, QuantityType, type Unit } from "./enums";
+import { MASS_UNITS, type MassUnit, QuantityType, Unit } from "./enums";
 import { DEFAULT_QUANTITY_PRECISION } from "./utils";
 
 const unitInfos = kvStore<UnitInfo>("unit-info", {
@@ -25,12 +25,9 @@ function unitInfoId(path: InstancePath): string {
 
 /** One entry of Onshape's `defaultUnits`: which unit a quantity type is in. */
 interface OnshapeUnit {
-    key: string;
-    value: string;
+    key: QuantityType;
+    value: Unit;
 }
-
-/** Mass isn't a configuration quantity, so it has no `QuantityType`. */
-const MASS_QUANTITY = "MASS";
 
 /** Onshape names a unit for every type, so a missing one is a response we don't understand. */
 function getDefaultUnit(
@@ -44,16 +41,13 @@ function getDefaultUnit(
             HttpStatus.BAD_GATEWAY
         );
     }
-    return unit.value as Unit;
+    return unit.value;
 }
 
 /** Kilograms where Onshape names none the app knows, so units for configurations never fail on mass. */
 function getMassUnit(units: OnshapeUnit[]): MassUnit {
-    const value = units.find((entry) => entry.key === MASS_QUANTITY)?.value;
-    return (
-        Object.values(MassUnit).find((unit) => unit === value) ??
-        MassUnit.KILOGRAM
-    );
+    const value = units.find((entry) => entry.key === QuantityType.MASS)?.value;
+    return MASS_UNITS.find((unit) => unit === value) ?? Unit.KILOGRAM;
 }
 
 async function fetchUnitInfo(

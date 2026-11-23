@@ -5,12 +5,11 @@ import { AppBreadcrumbs } from "../../../components/breadcrumbs";
 import { SectionNotice } from "../../../components/app-notice";
 import { AppColor } from "../../../theme";
 import { m } from "../../../paraglide/messages";
-import { getMassUnitDisplayStr } from "@backend/features/configurations/enums";
 import {
     canOpen,
     type MassDisplay,
     type MassLevel,
-    roundTo,
+    formatMass,
     toTiles,
     type MassTile
 } from "../mass-data";
@@ -31,7 +30,7 @@ export function MassTreemap({
     display,
     onOpen
 }: MassTreemapProps): ReactNode {
-    const tiles = toTiles(level.children, AppColor.MASS_ANALYSIS, display.unit);
+    const tiles = toTiles(level.children, AppColor.MASS_ANALYSIS);
     const total = tiles.reduce((sum, tile) => sum + tile.value, 0);
     const openedIds = level.trail.map((assembly) => assembly.id);
 
@@ -71,8 +70,7 @@ export function MassTreemap({
                     h={CHART_HEIGHT}
                     valueFormatter={(mass) =>
                         m.massAnalysisShare({
-                            mass: roundTo(mass, display.precision),
-                            unit: getMassUnitDisplayStr(display.unit),
+                            mass: formatMass(mass, display),
                             share: mass / total
                         })
                     }

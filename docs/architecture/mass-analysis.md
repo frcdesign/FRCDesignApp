@@ -77,6 +77,7 @@ function toMassReport(
     libraryDocumentIds: ReadonlySet<string>
 ): MassReportOut;
 // A number, a string with units, or an object holding either; kilograms.
+// A string is read by `evaluateBaseValue`, as a quantity box reads one.
 function parseMass(value: unknown): number | undefined;
 // Each a path of instance ids, joined by `/` or as an array.
 function parseOccurrences(value: unknown): string[][];
@@ -133,11 +134,10 @@ function sumMass(nodes: MassNode[]): number;
 function canOpen(node: MassNode): node is MassAssembly;
 // As deep along `path` as the report still goes.
 function findLevel(report: MassReportOut, path: string[]): MassLevel;
-// In `unit`, heaviest first; massless items are left out.
-function toTiles(children: MassNode[], hue: string, unit: MassUnit): MassTile[];
-function inUnit(kilograms: number, unit: MassUnit): number;
-// To `precision` decimal places, as the document shows a mass.
-function roundTo(value: number, precision: number): number;
+// Heaviest first; massless items are left out.
+function toTiles(children: MassNode[], hue: string): MassTile[];
+// As a quantity box shows it, through `formatValueWithUnits`: "9.8 kg".
+function formatMass(kilograms: number, display: MassDisplay): string;
 // Each part below the level with no mass, once, but those in a library's assembly.
 function missingParts(children: MassNode[]): MissingPart[];
 
@@ -154,7 +154,7 @@ interface MassDisplay {
     precision: number;
 }
 
-/** A treemap tile; its area is its share of the level's mass, in `unit`. */
+/** A treemap tile; its area is its share of the level's mass, in kilograms. */
 interface MassTile {
     id: string;
     name: string;
@@ -276,5 +276,8 @@ read again on a refresh.
 - **The document's units, from `GET /api/unit-info`.** Its KV entry and the
   units webhook already keep a document's units; mass is one more field on
   them (see [configurations.md](./configurations.md)).
+- **Masses go through the quantity parser.** `input-parser.ts` knows mass
+  units beside length and angle, so a BOM cell and the page's display convert
+  as a configuration's quantities do.
 - **No server cache.** A cache keyed by the workspace would need a call to find
   its microversion, which saves nothing over reading the BOM again.

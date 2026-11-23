@@ -4,7 +4,9 @@ export enum QuantityType {
     LENGTH = "LENGTH",
     ANGLE = "ANGLE",
     INTEGER = "INTEGER",
-    REAL = "REAL"
+    REAL = "REAL",
+    /** A document's mass unit; no configuration parameter is one. */
+    MASS = "MASS"
 }
 
 export enum Unit {
@@ -16,8 +18,22 @@ export enum Unit {
     INCH = "inch",
     DEGREE = "degree",
     RADIAN = "radian",
+    KILOGRAM = "kilogram",
+    GRAM = "gram",
+    POUND = "pound",
+    OUNCE = "ounce",
     UNITLESS = ""
 }
+
+/** The units a mass can be shown in. */
+export const MASS_UNITS = [
+    Unit.KILOGRAM,
+    Unit.GRAM,
+    Unit.POUND,
+    Unit.OUNCE
+] as const;
+
+export type MassUnit = (typeof MASS_UNITS)[number];
 
 export function getUnitDisplayStr(unit: Unit): string {
     switch (unit) {
@@ -37,29 +53,16 @@ export function getUnitDisplayStr(unit: Unit): string {
             return "deg";
         case Unit.RADIAN:
             return "rad";
+        case Unit.KILOGRAM:
+            return "kg";
+        case Unit.GRAM:
+            return "g";
+        case Unit.POUND:
+            return "lb";
+        case Unit.OUNCE:
+            return "oz";
         case Unit.UNITLESS:
             return "";
-    }
-}
-
-/** A document's mass unit, as Onshape names it; no configuration parameter takes one. */
-export enum MassUnit {
-    KILOGRAM = "kilogram",
-    GRAM = "gram",
-    POUND = "pound",
-    OUNCE = "ounce"
-}
-
-export function getMassUnitDisplayStr(unit: MassUnit): string {
-    switch (unit) {
-        case MassUnit.KILOGRAM:
-            return "kg";
-        case MassUnit.GRAM:
-            return "g";
-        case MassUnit.POUND:
-            return "lb";
-        case MassUnit.OUNCE:
-            return "oz";
     }
 }
 

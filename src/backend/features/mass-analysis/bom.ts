@@ -3,29 +3,13 @@ import type {
     OnshapeBomHeader,
     OnshapeBomRow
 } from "../../lib/onshape/types";
+import { QuantityType, Unit } from "../configurations/enums";
+import { evaluateBaseValue } from "../configurations/input-parser";
 import {
     type MassAssembly,
     MassNodeKind,
     type MassReportOut
 } from "./contract";
-
-/** Kilograms in one of each unit Onshape may write a mass in. */
-const KILOGRAMS_PER_UNIT: Record<string, number> = {
-    kg: 1,
-    kilogram: 1,
-    kilograms: 1,
-    g: 0.001,
-    gram: 0.001,
-    grams: 0.001,
-    lb: 0.45359237,
-    lbm: 0.45359237,
-    lbs: 0.45359237,
-    pound: 0.45359237,
-    pounds: 0.45359237,
-    oz: 0.028349523125,
-    ounce: 0.028349523125,
-    ounces: 0.028349523125
-};
 
 /** The cell shapes are undocumented, so each takes a number, a string with units, or an object holding either. */
 export function parseMass(value: unknown): number | undefined {
@@ -33,13 +17,8 @@ export function parseMass(value: unknown): number | undefined {
         return value > 0 ? value : undefined;
     }
     if (typeof value === "string") {
-        const match = /^\s*([-+]?[\d.]+(?:e[-+]?\d+)?)\s*([a-z]*)/i.exec(value);
-        if (!match) return undefined;
-        const amount = Number(match[1]);
-        const unit = match[2].toLowerCase();
-        const scale = unit === "" ? 1 : KILOGRAMS_PER_UNIT[unit];
-        if (!Number.isFinite(amount) || scale === undefined) return undefined;
-        return amount > 0 ? amount * scale : undefined;
+        const mass = evaluateBaseValue(value, QuantityType.MASS, Unit.KILOGRAM);
+        return mass && mass.value > 0 ? mass.value : undefined;
     }
     if (typeof value === "object" && value !== null) {
         const object = value as Record<string, unknown>;

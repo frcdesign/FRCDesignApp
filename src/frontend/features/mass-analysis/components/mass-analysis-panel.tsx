@@ -5,18 +5,14 @@ import { PageError, PageLoading } from "../../../components/app-notice";
 import { RefreshButton } from "../../../components/refresh-button";
 import { SectionCard } from "../../../components/section";
 import { m } from "../../../paraglide/messages";
-import {
-    getMassUnitDisplayStr,
-    MassUnit
-} from "@backend/features/configurations/enums";
+import { Unit } from "@backend/features/configurations/enums";
 import { useUnitInfo } from "../../../lib/unit-info";
 import { DEFAULT_QUANTITY_PRECISION } from "@backend/features/configurations/utils";
 import {
     findLevel,
-    inUnit,
+    formatMass,
     type MassDisplay,
     missingParts,
-    roundTo,
     sumMass
 } from "../mass-data";
 import { useMassReportQuery } from "../queries";
@@ -50,19 +46,15 @@ export function MassAnalysisPanel({
     const level = findLevel(report.data, path);
     // Kilograms, Onshape's base unit, until the document's units load.
     const display: MassDisplay = {
-        unit: unitInfo?.massUnit ?? MassUnit.KILOGRAM,
+        unit: unitInfo?.massUnit ?? Unit.KILOGRAM,
         precision: unitInfo?.massPrecision ?? DEFAULT_QUANTITY_PRECISION
     };
-    const total = inUnit(sumMass(level.children), display.unit);
 
     return (
         <Stack gap="md" p="md">
             <SectionCard
                 title={m.massAnalysisChartTitle()}
-                caption={m.massAnalysisMass({
-                    mass: roundTo(total, display.precision),
-                    unit: getMassUnitDisplayStr(display.unit)
-                })}
+                caption={formatMass(sumMass(level.children), display)}
                 aside={
                     <RefreshButton
                         loading={report.isFetching}

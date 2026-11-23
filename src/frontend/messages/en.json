@@ -1003,8 +1003,7 @@
     "massAnalysisChartTitle": "Mass",
     "massAnalysisChartEmpty": "No parts with a mass",
     "massAnalysisTopLevel": "Assembly",
-    "massAnalysisMass": "{mass: number maximumFractionDigits=6} {unit}",
-    "massAnalysisShare": "{mass: number maximumFractionDigits=6} {unit} ({share: number style=percent maximumFractionDigits=1})",
+    "massAnalysisShare": "{mass} ({share: number style=percent maximumFractionDigits=1})",
     "massAnalysisMissingTitle": "Parts without a mass",
     "massAnalysisMissingCaption": [
         {

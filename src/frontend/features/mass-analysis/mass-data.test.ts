@@ -5,12 +5,11 @@ import {
     type MassNode,
     type MassPart
 } from "@backend/features/mass-analysis/contract";
-import { MassUnit } from "@backend/features/configurations/enums";
+import { type MassUnit, Unit } from "@backend/features/configurations/enums";
 import {
     findLevel,
     missingParts,
-    inUnit,
-    roundTo,
+    formatMass,
     sumMass,
     toTiles,
     totalMass
@@ -83,30 +82,30 @@ describe("findLevel", () => {
 });
 
 describe("toTiles", () => {
-    it("sizes tiles in pounds, heaviest first, leaving out the massless", () => {
+    it("sizes tiles by mass, heaviest first, leaving out the massless", () => {
         const tiles = toTiles(
             [part("Light", 1), part("None"), part("Heavy", 2)],
-            "blue",
-            MassUnit.POUND
+            "blue"
         );
 
         expect(tiles.map((tile) => tile.id)).toEqual(["Heavy", "Light"]);
-        expect(tiles[0].value).toBeCloseTo(4.40925);
+        expect(tiles[0].value).toBe(2);
     });
 });
 
-describe("units", () => {
-    it("converts kilograms to the document's unit", () => {
-        expect(inUnit(1, MassUnit.KILOGRAM)).toBe(1);
-        expect(inUnit(1, MassUnit.GRAM)).toBeCloseTo(1000);
-        expect(inUnit(0.45359237, MassUnit.POUND)).toBeCloseTo(1);
-        expect(inUnit(0.45359237, MassUnit.OUNCE)).toBeCloseTo(16);
-    });
-
-    it("rounds to the document's precision", () => {
-        expect(roundTo(4.40925, 2)).toBe(4.41);
-        expect(roundTo(4.40925, 0)).toBe(4);
-    });
+describe("formatMass", () => {
+    it.each<[number, MassUnit, number, string]>([
+        [2, Unit.KILOGRAM, 2, "2 kg"],
+        [2, Unit.POUND, 2, "4.41 lb"],
+        [2, Unit.POUND, 0, "4 lb"],
+        [0.5, Unit.GRAM, 3, "500 g"],
+        [0.45359237, Unit.OUNCE, 1, "16 oz"]
+    ])(
+        "shows %s kg in %s to %s places as %s",
+        (kilograms, unit, precision, shown) => {
+            expect(formatMass(kilograms, { unit, precision })).toBe(shown);
+        }
+    );
 });
 
 describe("missingParts", () => {

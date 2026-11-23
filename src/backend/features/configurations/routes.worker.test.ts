@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { MassUnit, QuantityType, Unit } from "./enums";
+import { QuantityType, Unit } from "./enums";
 import {
     TEST_PART_STUDIO_ID,
     createTestApp,
@@ -151,7 +151,7 @@ describe("configuration routes", () => {
             lengthPrecision: 4,
             realPrecision: 3,
             // Kilograms: the mock names no mass unit.
-            massUnit: MassUnit.KILOGRAM,
+            massUnit: Unit.KILOGRAM,
             massPrecision: 3
         });
     });
