@@ -1,9 +1,10 @@
 import {
     ReachInterval,
+    splitsNewUsers,
     type FeatureReachOut
 } from "@backend/features/analytics/contract";
 import { AppFeature } from "@backend/features/analytics/usage";
-import { toWeekStart } from "@backend/features/analytics/day";
+import { addDays, toWeekStart } from "@backend/features/analytics/day";
 import { formatBucket, Granularity, type BucketPoint } from "./series";
 import {
     NUDGES,
@@ -19,6 +20,8 @@ import { m } from "../../paraglide/messages";
 export interface ReachCount {
     users: number;
     activeUsers: number;
+    /** How many times they used it; undefined where that wasn't counted. */
+    times?: number;
 }
 
 export interface ReachPoint extends BucketPoint, ReachCount {
@@ -37,24 +40,25 @@ export interface ReachPoint extends BucketPoint, ReachCount {
 export enum ReachMeasure {
     /** The percentage of the day's or week's active users who used it. */
     SHARE = "share",
-    /** How many people used it that day or week. */
-    USERS = "users"
+    /** How many times it was used that day or week. */
+    TIMES = "times"
 }
 
-/** A share inside this band reads well; outside it, a count shows more. */
-export const SHARE_BAND = { min: 5, max: 90 };
+/** A range's share at or past this hides growth, which the times used show. */
+export const TIMES_FROM_SHARE = 85;
 
 /**
- * A share where the feature's share of the range's active users is in
- * {@link SHARE_BAND}: a few percent hides who uses it, and near 100% hides
- * growth.
+ * A report's times, since a share of people reporting reads as adoption.
+ * Otherwise a share, unless it reaches {@link TIMES_FROM_SHARE} over the range
+ * and the times are counted for all of it.
  */
 export function reachMeasure(
     out: FeatureReachOut,
     feature: AppFeature
 ): ReachMeasure {
+    if (feature === AppFeature.REPORT) return ReachMeasure.TIMES;
     const firstUsed = out.firstUsed[feature];
-    if (!firstUsed) return ReachMeasure.USERS;
+    if (!firstUsed) return ReachMeasure.SHARE;
     const firstBucket = bucketOf(firstUsed, out.interval);
     let users = 0;
     let activeUsers = 0;
@@ -63,11 +67,32 @@ export function reachMeasure(
         users += bucket.users[feature] ?? 0;
         activeUsers += bucket.activeUsers;
     }
-    if (activeUsers === 0) return ReachMeasure.USERS;
+    if (activeUsers === 0) return ReachMeasure.SHARE;
     const share = (users / activeUsers) * 100;
-    return share >= SHARE_BAND.min && share <= SHARE_BAND.max
-        ? ReachMeasure.SHARE
-        : ReachMeasure.USERS;
+    const rangeStart = out.buckets[0]?.start ?? firstBucket;
+    const countedFrom = timesFrom(out, feature, firstBucket);
+    return share >= TIMES_FROM_SHARE &&
+        countedFrom <= (firstBucket > rangeStart ? firstBucket : rangeStart)
+        ? ReachMeasure.TIMES
+        : ReachMeasure.SHARE;
+}
+
+/** The first bucket whose times are all counted. */
+function timesFrom(
+    out: FeatureReachOut,
+    feature: AppFeature,
+    firstBucket: string
+): string {
+    const since = out.timesSince[feature];
+    if (!since) return firstBucket;
+    const full = firstWholeBucket(since, out.interval);
+    return full > firstBucket ? full : firstBucket;
+}
+
+/** The first day or week that starts on or after a day. */
+function firstWholeBucket(day: string, interval: ReachInterval): string {
+    const start = bucketOf(day, interval);
+    return start === day ? start : addDays(start, 7);
 }
 
 /** The day, or the Monday of the week, a day falls in. */
@@ -99,23 +124,34 @@ export function toReachSeries(
     const firstBucket = firstUsed
         ? bucketOf(firstUsed, out.interval)
         : undefined;
+    const countedFrom = firstBucket && timesFrom(out, feature, firstBucket);
     return out.buckets.map((bucket) => {
         const recorded =
             firstBucket !== undefined && bucket.start >= firstBucket;
+        const counted =
+            countedFrom !== undefined && bucket.start >= countedFrom;
         const all: ReachCount = {
             users: bucket.users[feature] ?? 0,
-            activeUsers: bucket.activeUsers
+            activeUsers: bucket.activeUsers,
+            times: counted ? (bucket.times[feature] ?? 0) : undefined
         };
         const newCount: ReachCount | undefined =
-            bucket.newActiveUsers === undefined
+            bucket.newActiveUsers === undefined || !splitsNewUsers(feature)
                 ? undefined
                 : {
                       users: bucket.newUsers?.[feature] ?? 0,
-                      activeUsers: bucket.newActiveUsers
+                      activeUsers: bucket.newActiveUsers,
+                      times: counted
+                          ? (bucket.newTimes?.[feature] ?? 0)
+                          : undefined
                   };
         const existingCount: ReachCount | undefined = newCount && {
             users: all.users - newCount.users,
-            activeUsers: all.activeUsers - newCount.activeUsers
+            activeUsers: all.activeUsers - newCount.activeUsers,
+            times:
+                all.times === undefined || newCount.times === undefined
+                    ? undefined
+                    : all.times - newCount.times
         };
         const valueOf = (count: ReachCount | undefined) =>
             recorded && count ? measured(count, measure) : null;
@@ -134,8 +170,8 @@ export function toReachSeries(
 
 function measured(count: ReachCount, measure: ReachMeasure): number | null {
     switch (measure) {
-        case ReachMeasure.USERS:
-            return count.users;
+        case ReachMeasure.TIMES:
+            return count.times ?? null;
         case ReachMeasure.SHARE:
             return count.activeUsers > 0
                 ? (count.users / count.activeUsers) * 100

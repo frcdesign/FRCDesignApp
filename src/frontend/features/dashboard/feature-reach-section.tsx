@@ -8,9 +8,10 @@ import { type UseQueryResult } from "@tanstack/react-query";
 import { type ReactNode } from "react";
 import {
     ReachInterval,
+    splitsNewUsers,
     type FeatureReachOut
 } from "@backend/features/analytics/contract";
-import { type AppFeature } from "@backend/features/analytics/usage";
+import { AppFeature } from "@backend/features/analytics/usage";
 import { Section } from "../../components/section";
 import { MUTED_MARK } from "../../lib/style-constants";
 import { formatCount, formatPercent } from "./format";
@@ -54,6 +55,8 @@ const MAX_DOTTED_POINTS = 60;
 const EXISTING_COLOR = "frcGreen.7";
 const NEW_COLOR = "blue.6";
 const NEW_DASH = "5 3";
+/** Neither group's color, for a feature whose users aren't split. */
+const ALL_COLOR = "gray.6";
 
 interface FeatureReachSectionProps {
     query: UseQueryResult<FeatureReachOut>;
@@ -102,7 +105,7 @@ export function FeatureReachSection({
     );
 }
 
-/** One legend for every panel, since they all draw the same two lines. */
+/** One legend for the panels that split their users. */
 function SplitLegend(): ReactNode {
     return (
         <Group gap="lg">
@@ -158,6 +161,11 @@ const SERIES: LineChartSeries[] = [
     }
 ];
 
+function seriesOf(feature: AppFeature): LineChartSeries[] {
+    if (splitsNewUsers(feature)) return SERIES;
+    return [{ name: "value", label: featureLabel(feature), color: ALL_COLOR }];
+}
+
 interface FeatureReachPanelProps {
     feature: AppFeature;
     measure: ReachMeasure;
@@ -181,7 +189,7 @@ function FeatureReachPanel({
                     <Text c="dimmed">
                         {latestLabel(
                             interval,
-                            formatHeadline(latest.value, measure)
+                            formatHeadline(latest.value, measure, feature)
                         )}
                     </Text>
                 )}
@@ -213,6 +221,7 @@ function FeatureReachPanel({
                                 }
                                 interval={interval}
                                 measure={measure}
+                                feature={feature}
                             />
                         )
                     }}
@@ -229,7 +238,7 @@ function FeatureReachPanel({
                                     : "insideTopLeft"
                         })
                     )}
-                    series={SERIES}
+                    series={seriesOf(feature)}
                 />
             ) : (
                 <DashboardEmpty title={m.dashboardFeatureReachNoData()} />
@@ -242,13 +251,15 @@ interface ReachTooltipProps {
     point: ReachPoint | undefined;
     interval: ReachInterval;
     measure: ReachMeasure;
+    feature: AppFeature;
 }
 
 /** The value with what it's a share of, since a small day or week swings it. */
 function ReachTooltip({
     point,
     interval,
-    measure
+    measure,
+    feature
 }: ReachTooltipProps): ReactNode {
     if (point?.value == null) return null;
     const newCount = point.newCount;
@@ -278,7 +289,7 @@ function ReachTooltip({
                 </>
             ) : (
                 <TooltipLine
-                    value={formatHeadline(point.value, measure)}
+                    value={formatHeadline(point.value, measure, feature)}
                     count={point}
                     measure={measure}
                 />
@@ -293,7 +304,7 @@ interface TooltipLineProps {
     measure: ReachMeasure;
 }
 
-/** A share says what it's of; a count already is the number of people. */
+/** A share says what it's of. */
 function TooltipLine({ value, count, measure }: TooltipLineProps): ReactNode {
     return (
         <>
@@ -319,7 +330,7 @@ function axisFor(measure: ReachMeasure): LineChartProps["yAxisProps"] {
                 ticks: PERCENT_TICKS,
                 tickFormatter: (value: number) => `${value}%`
             };
-        case ReachMeasure.USERS:
+        case ReachMeasure.TIMES:
             return {
                 domain: [0, "auto"],
                 allowDecimals: false,
@@ -343,18 +354,46 @@ function formatValue(value: number, measure: ReachMeasure): string {
     switch (measure) {
         case ReachMeasure.SHARE:
             return formatPercent(value);
-        case ReachMeasure.USERS:
+        case ReachMeasure.TIMES:
             return formatCount(value);
     }
 }
 
-/** On its own: "18.0%", "37 users". */
-function formatHeadline(value: number, measure: ReachMeasure): string {
+/** On its own: "18.0%", "37 reports". */
+function formatHeadline(
+    value: number,
+    measure: ReachMeasure,
+    feature: AppFeature
+): string {
     switch (measure) {
         case ReachMeasure.SHARE:
             return formatPercent(value);
-        case ReachMeasure.USERS:
-            return m.dashboardFeatureReachUserCount({ count: value });
+        case ReachMeasure.TIMES:
+            return formatTimes(value, feature);
+    }
+}
+
+/** In what one use of the feature is. */
+function formatTimes(count: number, feature: AppFeature): string {
+    switch (feature) {
+        case AppFeature.REPORT:
+            return m.dashboardFeatureReachReports({ count });
+        case AppFeature.VERSION_MANAGER:
+            return m.dashboardFeatureReachRuns({ count });
+        case AppFeature.FEATURESCRIPTS:
+            return m.dashboardFeatureReachAdds({ count });
+        case AppFeature.DEFAULT_CONFIGURATION:
+            return m.dashboardFeatureReachSaves({ count });
+        case AppFeature.SEARCH:
+        case AppFeature.FAVORITES:
+        case AppFeature.RECENTS:
+        case AppFeature.QUICK_INSERT:
+        case AppFeature.FASTEN:
+        case AppFeature.PRESELECTION:
+        case AppFeature.AUTO_ASSEMBLY:
+        case AppFeature.INSERT_LOCATION:
+        case AppFeature.DOWNLOAD:
+            return m.dashboardFeatureReachUses({ count });
     }
 }
 

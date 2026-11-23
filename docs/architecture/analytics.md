@@ -486,7 +486,8 @@ async function getHealthCounts(
     libraryId?: LibraryId
 ): Promise<LibraryHealthCounts>;
 // `feature-reach.ts`: each day's or week's active users and each feature's
-// users among them, all and only the new, and each feature's first recorded use.
+// users and times used among them, all and only the new, each feature's first
+// recorded use, and the day its times are counted from.
 async function getFeatureReach(
     db: Db,
     range: DayRange,
@@ -738,19 +739,28 @@ interface FeatureReachBucket {
     activeUsers: number;
     /** Distinct users of each feature then; a feature nobody used is absent. */
     users: Partial<Record<AppFeature, number>>;
+    /** How many times each feature was used then, over its counted days; a report's counts signed-out reports. */
+    times: Partial<Record<AppFeature, number>>;
     /** Of `activeUsers`, the new; absent while the window reaches back to when tracking began. */
     newActiveUsers?: number;
     /** Of `users`, the new; set whenever `newActiveUsers` is. */
     newUsers?: Partial<Record<AppFeature, number>>;
+    /** Of `times`, the new users'; set whenever `newActiveUsers` is, never for a report. */
+    newTimes?: Partial<Record<AppFeature, number>>;
 }
 
 /** Each day or week of the range, oldest first, and where each feature's record starts. */
 interface FeatureReachOut {
     interval: ReachInterval;
     buckets: FeatureReachBucket[];
-    /** Each feature's first recorded use, all time; absent for one never used. */
+    /** Each feature's first recorded use, all time; absent for one never used. A report's is the first report. */
     firstUsed: Partial<Record<AppFeature, string>>;
+    /** The day after a feature's last uncounted row; absent where every row is counted. */
+    timesSince: Partial<Record<AppFeature, string>>;
 }
+
+// Reports have no new-user split: `daily_report_metrics` names nobody.
+function splitsNewUsers(feature: AppFeature): boolean;
 
 /** The overview's headline numbers, and the series its trends are drawn from. */
 interface OverviewUsageOut {
@@ -942,11 +952,12 @@ interface Release {
     day: string;
 }
 
-// Share of active users while the range's share is in SHARE_BAND, else a count.
+// A report's times used. Otherwise a share of active users, or the times used
+// once the range's share reaches TIMES_FROM_SHARE and every point is counted.
 function reachMeasure(out: FeatureReachOut, feature: AppFeature): ReachMeasure;
 // Values per week in that measure, of everybody, the new and the existing;
-// null before the feature's first recorded use, for a share of nobody, or
-// where new users can't be told apart.
+// null before the feature's first recorded use, before its times are counted,
+// for a share of nobody, or where new users can't be told apart.
 function toReachSeries(
     out: FeatureReachOut,
     feature: AppFeature,
@@ -1115,7 +1126,10 @@ no foreign key crosses between them):
   indexed on day and opens (`daily_app_opens_day_opens_idx`), so a range's
   opens sum from the index alone.
 - `daily_feature_users` is keyed by feature, day and user: who used each
-  `AppFeature` that day, as `featuresOf` decides from the event. Feature first,
+  `AppFeature` that day, as `featuresOf` decides from the event, and `times`,
+  how many times they did. `times` is null on a row from before migration
+  `0017_feature_times.sql`, and stays null as that day's events arrive. A
+  partial index, `daily_feature_users_uncounted_idx`, holds only those rows. Feature first,
   so a feature's first recorded day is an index seek. Any kind of event can
   write it: a use by where it started and its flags, a version run, a
   FeatureScript add, a signed-in report, a default configuration. An Auto
@@ -1275,10 +1289,17 @@ over a range of 90 days or less after clamping (`REACH_DAILY_DAYS`,
 `reachInterval`), and a point a week past it. Each chart picks its measure
 from the range (`reachMeasure`):
 
-- the share of each point's active users who used the feature, on a shared
-  0–100% axis, while the feature's share of the range's active users is
-  between 5% and 90% (`SHARE_BAND`);
-- otherwise the number of people who used it, on an axis that fits it.
+- for reports, how many were filed, signed out or not, from
+  `daily_report_metrics`, on one line with no new-user split;
+- for any other feature, the share of each point's active users who used it,
+  on a shared 0–100% axis;
+- the times it was used instead, once its share of the range's active users
+  reaches 85% (`TIMES_FROM_SHARE`) and its times are counted over the whole
+  range (`timesSince`). The axis fits the count.
+
+A chart of times reads "uses" for a use, "runs" for the Version Manager and
+"adds" for FeatureScripts. A week is charted only once all its days are
+counted.
 
 Active is `activeUserRows` unioned with the point's
 feature users, so a share never passes 100%. Weeks are Monday to Sunday; the
@@ -1406,9 +1427,10 @@ is withheld while its baseline reaches back before tracking began.
   shows a nudge's effect the day it lands, which the owner asked for, though a
   quiet day's share swings. Past 90 days, a week a point keeps the chart
   readable.
-- **Feature usage always splits new from existing users.** Whether a feature
-  reaches newcomers or only the people who were already using the app is
-  what the chart is read for, so there's no view without it.
+- **Feature usage splits new from existing users, but for reports.** Whether a
+  feature reaches newcomers or only the people who were already using the app
+  is what the chart is read for. A report is counted from
+  `daily_report_metrics`, which names nobody, so its one line holds both.
 - **The Version Manager, FeatureScripts and reports are all time.** They're
   used rarely enough that a month of them says little.
 - **New means first seen in the last four weeks, across every rollup.** Four
@@ -1418,10 +1440,21 @@ is withheld while its baseline reaches back before tracking began.
   standalone users included, which allows new users and growth in users over
   time. Working first days out from the rollups on each request reads every
   person's days and holds D1 for seconds.
-- **A chart counts its users outside the middle band.** A share of a few
-  percent, such as the Version Manager's or Insert location's, reads as a
-  flat line at the bottom. A share near 100% hides growth. A count shows
-  both, so the measure follows the range's share rather than a fixed list.
+- **A chart is a share of users, on a fixed axis.** One 0–100% axis lets
+  every chart's height be compared. A few percent reads low, which is what it
+  is. A count of users is the same measure divided by nothing, so it isn't
+  shown.
+- **Reports are counted, not shared.** A report is an incident, not something
+  to adopt: 2% of a day's users reporting would be alarming, and a share
+  reads it as low.
+- **Past 85% a chart counts times used.** Near everybody, a share hides
+  growth, and how often people use the feature shows it. The switch waits for
+  the range to be counted throughout, so a chart doesn't go blank.
+- **Times used are counted from `0017_feature_times.sql` on.** Rows from
+  before hold `times` null. Filling them means replaying the event log, which
+  outlasts D1's 30-second limit, so it waits until a feature needs it. A
+  partial index holds the null rows, so finding where counting begins skips
+  the rest.
 - **A feature's line starts at its first recorded use.** `daily_feature_users`
   was filled from history once, outside any migration: replaying 2.8 million
   events outlasts D1's 30-second limit. Before a feature's first row nothing tells a week nobody used it

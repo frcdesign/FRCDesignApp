@@ -27,19 +27,22 @@ import {
 const REACH: FeatureReachOut = {
     interval: ReachInterval.WEEK,
     buckets: [
-        { start: "2026-10-19", activeUsers: 10, users: {} },
+        { start: "2026-10-19", activeUsers: 10, users: {}, times: {} },
         {
             start: "2026-10-26",
             activeUsers: 8,
-            users: { [AppFeature.INSERT_LOCATION]: 2 }
+            users: { [AppFeature.INSERT_LOCATION]: 2 },
+            times: {}
         },
-        { start: "2026-11-02", activeUsers: 0, users: {} },
+        { start: "2026-11-02", activeUsers: 0, users: {}, times: {} },
         {
             start: "2026-11-09",
             activeUsers: 5,
-            users: { [AppFeature.SEARCH]: 5 }
+            users: { [AppFeature.SEARCH]: 5 },
+            times: {}
         }
     ],
+    timesSince: {},
     firstUsed: {
         [AppFeature.INSERT_LOCATION]: "2026-10-30",
         [AppFeature.SEARCH]: "2026-01-04"
@@ -82,11 +85,12 @@ describe("toReachSeries, new and existing users", () => {
         interval: ReachInterval.WEEK,
         buckets: [
             // Too near when tracking began to tell new users apart.
-            { start: "2026-10-26", activeUsers: 6, users: {} },
+            { start: "2026-10-26", activeUsers: 6, users: {}, times: {} },
             {
                 start: "2026-11-02",
                 activeUsers: 10,
                 users: { [AppFeature.SEARCH]: 6 },
+                times: {},
                 newActiveUsers: 4,
                 newUsers: { [AppFeature.SEARCH]: 1 }
             },
@@ -94,10 +98,12 @@ describe("toReachSeries, new and existing users", () => {
                 start: "2026-11-09",
                 activeUsers: 5,
                 users: { [AppFeature.SEARCH]: 5 },
+                times: {},
                 newActiveUsers: 0,
                 newUsers: {}
             }
         ],
+        timesSince: {},
         firstUsed: { [AppFeature.SEARCH]: "2026-01-04" }
     };
 
@@ -138,13 +144,15 @@ describe("toReachSeries, a point a day", () => {
     const daily: FeatureReachOut = {
         interval: ReachInterval.DAY,
         buckets: [
-            { start: "2026-10-29", activeUsers: 4, users: {} },
+            { start: "2026-10-29", activeUsers: 4, users: {}, times: {} },
             {
                 start: "2026-10-30",
                 activeUsers: 4,
-                users: { [AppFeature.INSERT_LOCATION]: 1 }
+                users: { [AppFeature.INSERT_LOCATION]: 1 },
+                times: {}
             }
         ],
+        timesSince: {},
         firstUsed: { [AppFeature.INSERT_LOCATION]: "2026-10-30" }
     };
 
@@ -176,25 +184,76 @@ describe("toReachSeries, a point a day", () => {
     });
 });
 
-describe("toReachSeries, counted", () => {
-    it("counts the week's users, a quiet week at zero", () => {
+describe("toReachSeries, times", () => {
+    // Counted from Wednesday 2026-10-28, so from the week after.
+    const counted: FeatureReachOut = {
+        interval: ReachInterval.WEEK,
+        buckets: [
+            {
+                start: "2026-10-26",
+                activeUsers: 10,
+                users: { [AppFeature.SEARCH]: 9 },
+                times: { [AppFeature.SEARCH]: 4 }
+            },
+            {
+                start: "2026-11-02",
+                activeUsers: 10,
+                users: { [AppFeature.SEARCH]: 9 },
+                times: { [AppFeature.SEARCH]: 30 },
+                newActiveUsers: 2,
+                newUsers: { [AppFeature.SEARCH]: 2 },
+                newTimes: { [AppFeature.SEARCH]: 5 }
+            },
+            {
+                start: "2026-11-09",
+                activeUsers: 10,
+                users: {},
+                times: {},
+                newActiveUsers: 0,
+                newUsers: {},
+                newTimes: {}
+            }
+        ],
+        firstUsed: { [AppFeature.SEARCH]: "2026-01-04" },
+        timesSince: { [AppFeature.SEARCH]: "2026-10-28" }
+    };
+
+    it("starts at the first whole week counted, a quiet week at zero", () => {
         const points = toReachSeries(
-            REACH,
+            counted,
             AppFeature.SEARCH,
-            ReachMeasure.USERS
+            ReachMeasure.TIMES
         );
 
-        expect(points.map((point) => point.value)).toEqual([0, 0, 0, 5]);
+        expect(points.map((point) => point.value)).toEqual([null, 30, 0]);
+        expect(points[1]).toMatchObject({ newValue: 5, existingValue: 25 });
     });
 
-    it("still starts the line at the feature's first recorded use", () => {
-        const points = toReachSeries(
-            REACH,
-            AppFeature.INSERT_LOCATION,
-            ReachMeasure.USERS
-        );
+    it("counts every report in one line", () => {
+        const reports: FeatureReachOut = {
+            interval: ReachInterval.WEEK,
+            buckets: [
+                {
+                    start: "2026-11-02",
+                    activeUsers: 10,
+                    users: { [AppFeature.REPORT]: 1 },
+                    times: { [AppFeature.REPORT]: 3 },
+                    newActiveUsers: 2,
+                    newUsers: {},
+                    newTimes: {}
+                }
+            ],
+            firstUsed: { [AppFeature.REPORT]: "2026-01-04" },
+            timesSince: {}
+        };
 
-        expect(points.map((point) => point.value)).toEqual([null, 2, 0, 0]);
+        const [week] = toReachSeries(reports, AppFeature.REPORT);
+
+        expect(week).toMatchObject({
+            value: 3,
+            newValue: null,
+            existingValue: null
+        });
     });
 });
 
@@ -309,39 +368,60 @@ describe("featureOrder", () => {
 });
 
 describe("reachMeasure", () => {
-    const reach = (users: number, activeUsers = 100): FeatureReachOut => ({
+    const reach = (
+        users: number,
+        activeUsers = 100,
+        timesSince?: string
+    ): FeatureReachOut => ({
         interval: ReachInterval.WEEK,
         buckets: [
             // Before the feature's record starts, so left out.
-            { start: "2026-10-19", activeUsers: 1000, users: {} },
+            { start: "2026-10-19", activeUsers: 1000, users: {}, times: {} },
             {
                 start: "2026-10-26",
                 activeUsers,
-                users: { [AppFeature.FASTEN]: users }
+                users: { [AppFeature.FASTEN]: users },
+                times: { [AppFeature.FASTEN]: users * 3 }
             }
         ],
-        firstUsed: { [AppFeature.FASTEN]: "2026-10-26" }
+        firstUsed: { [AppFeature.FASTEN]: "2026-10-26" },
+        timesSince: timesSince ? { [AppFeature.FASTEN]: timesSince } : {}
     });
 
-    it("shares a feature in the middle band", () => {
-        expect(reachMeasure(reach(40), AppFeature.FASTEN)).toBe(
+    it("shares a feature however few use it", () => {
+        expect(reachMeasure(reach(2), AppFeature.FASTEN)).toBe(
+            ReachMeasure.SHARE
+        );
+        expect(reachMeasure(reach(84), AppFeature.FASTEN)).toBe(
             ReachMeasure.SHARE
         );
     });
 
-    it("counts a feature few or nearly all use", () => {
-        expect(reachMeasure(reach(2), AppFeature.FASTEN)).toBe(
-            ReachMeasure.USERS
-        );
-        expect(reachMeasure(reach(97), AppFeature.FASTEN)).toBe(
-            ReachMeasure.USERS
+    it("counts the times a feature nearly all use is used", () => {
+        expect(reachMeasure(reach(85), AppFeature.FASTEN)).toBe(
+            ReachMeasure.TIMES
         );
     });
 
-    it("counts a feature with nothing recorded", () => {
-        expect(reachMeasure(REACH, AppFeature.FASTEN)).toBe(ReachMeasure.USERS);
+    it("shares it while part of the range is uncounted", () => {
+        expect(
+            reachMeasure(reach(97, 100, "2026-10-27"), AppFeature.FASTEN)
+        ).toBe(ReachMeasure.SHARE);
+        expect(
+            reachMeasure(reach(97, 100, "2026-10-26"), AppFeature.FASTEN)
+        ).toBe(ReachMeasure.TIMES);
+    });
+
+    it("counts reports", () => {
+        expect(reachMeasure(reach(40), AppFeature.REPORT)).toBe(
+            ReachMeasure.TIMES
+        );
+    });
+
+    it("shares a feature with nothing recorded", () => {
+        expect(reachMeasure(REACH, AppFeature.FASTEN)).toBe(ReachMeasure.SHARE);
         expect(reachMeasure(reach(0, 0), AppFeature.FASTEN)).toBe(
-            ReachMeasure.USERS
+            ReachMeasure.SHARE
         );
     });
 });

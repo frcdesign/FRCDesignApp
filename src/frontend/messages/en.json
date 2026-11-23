@@ -428,7 +428,7 @@
     ],
     "dashboardFeatureReachExisting": "Existing users",
     "dashboardFeatureReachNew": "New users",
-    "dashboardFeatureReachUserCount": [
+    "dashboardFeatureReachUses": [
         {
             "declarations": [
                 "input count",
@@ -437,8 +437,64 @@
             ],
             "selectors": ["countPlural"],
             "match": {
-                "countPlural=one": "{formatted} user",
-                "countPlural=other": "{formatted} users"
+                "countPlural=one": "{formatted} use",
+                "countPlural=other": "{formatted} uses"
+            }
+        }
+    ],
+    "dashboardFeatureReachReports": [
+        {
+            "declarations": [
+                "input count",
+                "local countPlural = count: plural",
+                "local formatted = count: number"
+            ],
+            "selectors": ["countPlural"],
+            "match": {
+                "countPlural=one": "{formatted} report",
+                "countPlural=other": "{formatted} reports"
+            }
+        }
+    ],
+    "dashboardFeatureReachRuns": [
+        {
+            "declarations": [
+                "input count",
+                "local countPlural = count: plural",
+                "local formatted = count: number"
+            ],
+            "selectors": ["countPlural"],
+            "match": {
+                "countPlural=one": "{formatted} run",
+                "countPlural=other": "{formatted} runs"
+            }
+        }
+    ],
+    "dashboardFeatureReachAdds": [
+        {
+            "declarations": [
+                "input count",
+                "local countPlural = count: plural",
+                "local formatted = count: number"
+            ],
+            "selectors": ["countPlural"],
+            "match": {
+                "countPlural=one": "{formatted} add",
+                "countPlural=other": "{formatted} adds"
+            }
+        }
+    ],
+    "dashboardFeatureReachSaves": [
+        {
+            "declarations": [
+                "input count",
+                "local countPlural = count: plural",
+                "local formatted = count: number"
+            ],
+            "selectors": ["countPlural"],
+            "match": {
+                "countPlural=one": "{formatted} save",
+                "countPlural=other": "{formatted} saves"
             }
         }
     ],
