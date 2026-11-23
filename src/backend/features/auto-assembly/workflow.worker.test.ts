@@ -403,11 +403,15 @@ describe("AutoAssemblyWorkflow", () => {
                     {
                         featureId: "oldMate",
                         featureType: "mate",
+                        name: "Old mate",
+                        suppressed: false,
                         parameters: [{ queries: [{ path: ["oldScrew"] }] }]
                     },
                     {
                         featureId: "otherMate",
                         featureType: "mate",
+                        name: "Other mate",
+                        suppressed: false,
                         parameters: [{ queries: [{ path: ["bracket"] }] }]
                     }
                 ]

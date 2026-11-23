@@ -6,5 +6,6 @@ export enum Hint {
     OPENED_SET_DEFAULT_CONFIGURATION = "opened-set-default-configuration",
     OPENED_REPORT_ISSUE = "opened-report-issue",
     /** Seen once an insert has fastened to picked circular edges, rather than on opening. */
-    FASTENED_TO_CIRCULAR_EDGES = "fastened-to-circular-edges"
+    FASTENED_TO_CIRCULAR_EDGES = "fastened-to-circular-edges",
+    OPENED_DESIGN_CHECK = "opened-design-check"
 }

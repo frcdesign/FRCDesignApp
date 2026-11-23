@@ -14,6 +14,7 @@ import {
     getOverviewUsageQuery,
     getPartsQuery,
     getVersionManagerQuery,
+    getDesignCheckQuery,
     firstPending
 } from "../../features/dashboard/dashboard-queries";
 import { DashboardState } from "../../features/dashboard/dashboard-state";
@@ -36,6 +37,7 @@ import { Section, SectionCard } from "../../components/section";
 import { UsageTreemap } from "../../features/dashboard/usage-treemap";
 import { VersionManagerTiles } from "../../features/dashboard/version-manager-tiles";
 import { FeatureScriptUsageSection } from "../../features/dashboard/featurescript-usage";
+import { DesignCheckTiles } from "../../features/dashboard/design-check-tiles";
 import { OverviewReports } from "../../features/dashboard/report-summary";
 import { HealthTiles } from "../../features/dashboard/health-report";
 import { FeatureReachSection } from "../../features/dashboard/feature-reach-section";
@@ -71,6 +73,7 @@ function DashboardOverview(): ReactNode {
     // Rare enough that a month of them says little
     const versionManager = useQuery(getVersionManagerQuery(allTime));
     const featureScripts = useQuery(getOverviewFeatureScriptsQuery(allTime));
+    const designCheck = useQuery(getDesignCheckQuery(allTime));
     const reports = useQuery(getOverviewReportsQuery(allTime));
     const allTimeCaption = m.dashboardRangeAllTime();
     const featureReach = useQuery(getOverviewFeatureReachQuery(featureRange));
@@ -149,6 +152,20 @@ function DashboardOverview(): ReactNode {
                     query={featureScripts}
                     loading={m.dashboardLoadingFeatureScripts()}
                     title={m.dashboardFeatureScripts()}
+                    caption={allTimeCaption}
+                />
+            )}
+
+            {designCheck.data ? (
+                <DesignCheckTiles
+                    totals={designCheck.data}
+                    caption={allTimeCaption}
+                />
+            ) : (
+                <DashboardState
+                    query={designCheck}
+                    loading={m.dashboardLoadingDesignCheck()}
+                    title={m.dashboardDesignCheck()}
                     caption={allTimeCaption}
                 />
             )}

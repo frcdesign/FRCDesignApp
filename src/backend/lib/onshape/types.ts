@@ -252,27 +252,43 @@ export interface OnshapeDocumentContents {
 export interface OnshapeAssemblyFeature {
     featureType: string;
     id: string;
-    /** Present on mate connectors; its `occurrence` is the path to the connector. */
-    featureData?: { occurrence: string[] };
+    suppressed?: boolean;
+    featureData?: {
+        name?: string;
+        /** A mate connector's: the path to the connector. */
+        occurrence?: string[];
+        /** A mate's: "FASTENED", "REVOLUTE" and the like. */
+        mateType?: string;
+        /** A mate's two ends; an empty `matedOccurrence` is the assembly origin. */
+        matedEntities?: { matedOccurrence?: string[] }[];
+        /** A group's members (`featureType` "mateGroup"). */
+        occurrences?: { occurrence?: string[] }[];
+    };
 }
 
 /** An instance in the root assembly or a subassembly. */
 export interface OnshapeAssemblyInstance {
     id: string;
-    /** "Part", "Assembly", or "Feature" for an inserted sketch. */
-    type: string;
+    /**
+     * "Part", "Assembly", or "Feature" for an inserted sketch. Absent, with
+     * everything but `id` and `name`, when what it was inserted from is gone.
+     */
+    type?: string;
+    /** Optional only so a test fixture can leave it out. */
+    name?: string;
     suppressed?: boolean;
+    /** A part's id in its Part Studio; empty when the part it was inserted from is gone. */
+    partId?: string;
     /** The tab the instance came from, and the feature within it for a sketch. */
     documentId?: string;
     elementId?: string;
     featureId?: string;
-    /** A part's id in its Part Studio. */
-    partId?: string;
     /** Encoded, the way it's inserted. */
     configuration?: string;
     fullConfiguration?: string;
-    /** Set when it's from a version; otherwise the microversion it's at. */
+    /** The version it came from, for a tab of another document. */
     documentVersion?: string;
+    /** The microversion it came from, for a tab of the same document. */
     documentMicroversion?: string;
     isStandardContent?: boolean;
 }
@@ -282,6 +298,7 @@ export interface OnshapeOccurrence {
     /** Instance ids from the root down; one entry for a top-level instance. */
     path: string[];
     transform: number[];
+    fixed?: boolean;
 }
 
 /** A part in the assembly's flattened `parts` list. */
@@ -322,6 +339,18 @@ export interface OnshapeAssemblyDefinition {
         occurrences?: OnshapeOccurrence[];
         /** The assembly's "Part number" property, when set. */
         partNumber?: string;
+        /** Each pattern's copies, keyed by the instance they copy. */
+        patterns?: {
+            suppressed?: boolean;
+            seedToPatternInstances?: Record<string, string[]>;
+        }[];
+        /** Each Replicate's, Mirror's or derived mirror's copies, which follow their seed. */
+        parametricInstances?: {
+            /** "Replicate", "Mirror" or "Derived Assembly Mirror", which lists no children. */
+            type?: string;
+            suppressed?: boolean;
+            children?: { seedOccurrence?: string; instanceIds?: string[] }[];
+        }[];
     };
     parts: OnshapeAssemblyPart[];
     subAssemblies: OnshapeSubAssembly[];
@@ -359,11 +388,12 @@ type OnshapePartBodyType = "solid" | "sheet" | "composite";
 /** A part in a part studio (the subset we read). */
 export interface OnshapePart {
     partId: string;
-    /** The part's metadata properties, when set. */
-    partNumber?: string;
+    /** The part's metadata properties; null when unset. */
+    partNumber?: string | null;
     bodyType?: OnshapePartBodyType;
     name?: string;
-    description?: string;
+    description?: string | null;
+    /** Absent when unset. */
     material?: { displayName?: string };
     vendor?: string;
 }
@@ -393,11 +423,34 @@ interface OnshapePartStudioFeature {
     suppressed: boolean;
     /** A configuration decides whether it is suppressed. */
     suppressionConfigured?: boolean;
+    /** A custom feature's Feature Studio, `d{documentId}::v{versionId}::e{elementId}::m{microversionId}`. */
+    namespace?: string;
+    parameters?: OnshapeFeatureParameter[];
 }
+
+/** A feature's parameter; only a selection box's picks are read. */
+interface OnshapeFeatureParameter {
+    btType?: string;
+    parameterId?: string;
+    /** A query list's picks. */
+    queries?: OnshapeFeatureQuery[];
+}
+
+interface OnshapeFeatureQuery {
+    btType?: string;
+    /** With geometry ids asked for, what the pick resolves to: none once it is gone. */
+    deterministicIds?: string[];
+    /** In an assembly, the instances it names, from the top down. */
+    path?: string[];
+}
+
+type OnshapeFeatureStatus = "OK" | "INFO" | "WARNING" | "ERROR" | "UNKNOWN";
 
 /** Whether a feature regenerated. */
 interface OnshapeFeatureState {
-    featureStatus?: "OK" | "INFO" | "WARNING" | "ERROR" | "UNKNOWN";
+    featureStatus?: OnshapeFeatureStatus;
+    /** A mate whose instance is suppressed, which Onshape grays out though its status is ERROR. */
+    inactive?: boolean;
 }
 
 /** GET /partstudios/d/{did}/{wvm}/{wvmid}/e/{eid}/features (the subset we read). */
@@ -405,6 +458,23 @@ export interface OnshapeFeatureListResponse {
     features: OnshapePartStudioFeature[];
     /** Keyed by feature id. */
     featureStates?: Record<string, OnshapeFeatureState>;
+    /** The index of the first feature below the rollback bar: the feature count at the end, or -1 by the spec. */
+    rollbackIndex?: number;
+}
+
+export type OnshapeSketchSolveStatus =
+    | "UNDERDEFINED"
+    | "WELL_DEFINED"
+    | "OVERDEFINED"
+    | "UNKNOWN";
+
+/** GET /partstudios/d/{did}/{wvm}/{wvmid}/e/{eid}/sketches (the subset we read). */
+export interface OnshapeSketchList {
+    /** Unsuppressed sketches above the rollback bar. */
+    sketches?: {
+        featureId: string;
+        sketchSolveStatus?: OnshapeSketchSolveStatus;
+    }[];
 }
 
 // === external references (GET /documents/d/{did}/w/{wid}/externalreferences) ===
@@ -464,11 +534,7 @@ export interface OnshapeFeatureScriptResponse {
     notices?: { level?: string; message?: { message?: string } }[];
 }
 
-/** GET /assemblies/.../features: each feature as Onshape stores it. */
-export interface OnshapeAssemblyFeatureList {
-    features: OnshapeListedFeature[];
-}
-
+/** A feature of GET /assemblies/.../features, as Auto Assembly reads it. */
 export interface OnshapeListedFeature {
     featureId: string;
     featureType: string;
