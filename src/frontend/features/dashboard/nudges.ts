@@ -5,7 +5,14 @@ export enum NudgeKind {
     /** The blue dot on something not yet opened; see `features/hints`. */
     DOT = "dot",
     /** A tip toast; see `showTipToast`. */
-    TIP = "tip"
+    TIP = "tip",
+    /** Something on the feature's own page suggesting a use of it. */
+    SUGGESTION = "suggestion"
+}
+
+/** Which one, where its kind alone doesn't say: a marker is labelled by it in place of its kind. */
+export enum NudgeName {
+    SUGGESTED_LINKS = "suggested-links"
 }
 
 export enum NudgeChange {
@@ -17,12 +24,17 @@ export enum NudgeChange {
 export interface Nudge {
     feature: AppFeature;
     kind: NudgeKind;
+    name?: NudgeName;
     change: NudgeChange;
     /** The day it reached `main`, which deploys to production; absent until then, and unmarked. */
     day?: string;
 }
 
-/** Every nudge shipped or withdrawn; add one in the change that ships it. */
+/**
+ * Every nudge toward a feature shipped or withdrawn; add one in the change that
+ * ships it. A tip making one part of a feature faster doesn't send anybody to
+ * the feature, so it isn't one.
+ */
 export const NUDGES: readonly Nudge[] = [
     {
         feature: AppFeature.VERSION_MANAGER,
@@ -48,12 +60,13 @@ export const NUDGES: readonly Nudge[] = [
         change: NudgeChange.ADDED,
         day: "2026-11-06"
     },
-    // Quick recursive push and pull, after a recursive run from the form.
+    // Parents to link, in the parents' list and on the welcome page.
     {
         feature: AppFeature.VERSION_MANAGER,
-        kind: NudgeKind.TIP,
+        kind: NudgeKind.SUGGESTION,
+        name: NudgeName.SUGGESTED_LINKS,
         change: NudgeChange.ADDED,
-        day: "2026-11-14"
+        day: "2026-11-07"
     },
     // Shown since before tracking began, so only its removal is marked.
     {
@@ -62,27 +75,34 @@ export const NUDGES: readonly Nudge[] = [
         change: NudgeChange.REMOVED,
         day: "2026-11-14"
     },
-    // On cert: give each its day when it reaches main.
     {
         feature: AppFeature.AUTO_ASSEMBLY,
         kind: NudgeKind.DOT,
-        change: NudgeChange.ADDED
+        change: NudgeChange.ADDED,
+        day: "2026-11-22"
     },
     // An insert and fasten with nothing picked, until somebody has fastened to picks.
     {
         feature: AppFeature.PRESELECTION,
         kind: NudgeKind.TIP,
-        change: NudgeChange.ADDED
+        change: NudgeChange.ADDED,
+        day: "2026-11-22"
     },
     {
         feature: AppFeature.VERSION_MANAGER,
         kind: NudgeKind.DOT,
-        change: NudgeChange.REMOVED
+        change: NudgeChange.REMOVED,
+        day: "2026-11-22"
     }
+    // On cert: give each its day when it reaches main.
 ];
 
 export function nudgeLabel(nudge: Nudge): string {
     const added = nudge.change === NudgeChange.ADDED;
+    if (nudge.name !== undefined) {
+        const name = nameLabel(nudge.name);
+        return added ? name : m.dashboardNudgeRemoved({ name });
+    }
     switch (nudge.kind) {
         case NudgeKind.DOT:
             return added
@@ -92,5 +112,16 @@ export function nudgeLabel(nudge: Nudge): string {
             return added
                 ? m.dashboardNudgeTipAdded()
                 : m.dashboardNudgeTipRemoved();
+        case NudgeKind.SUGGESTION:
+            return added
+                ? m.dashboardNudgeSuggestionAdded()
+                : m.dashboardNudgeSuggestionRemoved();
+    }
+}
+
+function nameLabel(name: NudgeName): string {
+    switch (name) {
+        case NudgeName.SUGGESTED_LINKS:
+            return m.dashboardNudgeSuggestedLinks();
     }
 }
