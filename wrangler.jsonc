@@ -229,6 +229,13 @@
                     "bucket_name": "frc-design-app-prod-blob"
                 }
             ],
+            // The analytics event log; see scripts/event-log/README.md.
+            "pipelines": [
+                {
+                    "binding": "EVENT_LOG",
+                    "stream": "3cedda77a4d1482eaf30b96db0e73d4a"
+                }
+            ],
             "workflows": [
                 {
                     "name": "reload-library-workflow-prod",
