@@ -1,6 +1,7 @@
 /**
  * Finding the insert location in an assembly, and working out where it sits,
- * cached by what pins the assembly, so asking again between edits reads nothing.
+ * cached by what pins the assembly tab, so asking again between its edits reads
+ * only the workspace's tabs.
  */
 import { INSERT_LOCATION_SOURCE } from "./contract";
 import { kvStore, putQuietly } from "../../lib/kv-store";
@@ -71,13 +72,13 @@ const placements = kvStore<Placement>("insert-location", {
     ttlSeconds: PLACEMENT_TTL_SECONDS
 });
 
-/** From the cache when nothing in the document has changed since it was last read. */
+/** From the cache when the assembly tab hasn't changed since it was last read. */
 async function readPlacement(
     onshapeApi: OnshapeApi,
     kv: KVNamespace,
     assemblyPath: ElementPath
 ): Promise<Placement> {
-    const pin = await pinElement(onshapeApi, assemblyPath);
+    const { pin } = await pinElement(onshapeApi, assemblyPath);
     const cached = pin ? await placements.get(kv, pin) : undefined;
     if (cached) {
         return cached;

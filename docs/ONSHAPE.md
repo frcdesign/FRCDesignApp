@@ -269,15 +269,17 @@ errors.
   read the assembly on every pick. Which endpoint ran out, and whether its
   remaining count was at 0, these logs can't say: each 429 now logs both.
 
-- **A workspace's current microversion** is
-  `GET /documents/d/{did}/w/{wid}/currentmicroversion`, answering
-  `{ microversion }` (`BTMicroversionInfo`) — _documented_ in the OpenAPI spec.
-  Every edit to any tab of the workspace moves it, as it makes a new
-  microversion — _documented_. Being a documents endpoint, it doesn't spend the
-  assembly definition's count; what its own allows is _unverified_. That
-  dragging an instance in an assembly is an edit that moves it is
-  _unverified_; the insert location's cache relies on it, so a marker dragged
-  without a new microversion would be found where it was.
+- **A workspace's current microversion**
+  (`GET /documents/d/{did}/w/{wid}/currentmicroversion`) moves on every edit
+  to any tab — _documented_. The app pins a workspace tab by the tab's own
+  `microversionId` instead, from `GET /documents/d/{did}/w/{wid}/elements`
+  with no `elementType` (optional in the OpenAPI spec), so an edit to an
+  unrelated tab keeps its caches. Being a documents endpoint, the listing
+  doesn't spend the assembly definition's count; what its own allows is
+  _unverified_.
+- **Dragging an instance in an assembly** moves the assembly tab's
+  microversion — _unverified_. The insert location's cache relies on it, so a
+  marker dragged without a new microversion would be found where it was.
 
 - **Inserts often take several seconds** — _observed_ in Workers Logs for the
   week to 2026-11-09, as the whole insert request's wall time, which includes

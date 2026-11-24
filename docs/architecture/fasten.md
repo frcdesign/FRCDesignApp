@@ -296,7 +296,8 @@ enum MateLocation {
 - **KV** `insert-location:{pin}` — the assembly's marker and where each
   top-level instance sits (`placements` in
   `src/backend/features/insert-location/parse.ts`), for a week. The pin is the
-  workspace's current microversion (`pinElement`), so any edit misses.
+  assembly tab's own microversion (`pinElement`), so an edit to the assembly
+  misses.
 - **KV** `seen-hints:` — `Hint.FASTENED_TO_CIRCULAR_EDGES`, once the user has
   fastened to circular edges; see [auth.md](./auth.md).
 - **Memory** `useFastenPicks` — the targets and edges to exclude, for the tab,
@@ -320,7 +321,7 @@ enum MateLocation {
    (`useInsertLocationQuery`). That's asked when the app opens, and again when
    the panel regains focus with an answer over 30 seconds old, since the marker
    may have been deleted in Onshape. The server reads the assembly only when
-   the workspace has changed since it last did; otherwise it answers from KV.
+   the assembly's tab has changed since it last did; otherwise it answers from KV.
    Once it adds one, the button turns green and reads **Insert location
    added** for as long as the bar is up.
     - A part that can insert and fasten (`useCanFasten`) has a plugs icon
@@ -363,7 +364,7 @@ enum MateLocation {
    circular edges in the assembly with their radii: each picked edge that is
    circular, or every circular edge of each picked face, less the skipped
    holes. It reads through Auto Assembly's caches, so right after a check of
-   the same picks it asks Onshape only for the workspace's microversion. None
+   the same picks it asks Onshape only for the workspace's tabs. None
    found answers 400 and inserts nothing.
 3. It inserts the part at the insert location, where the marker sits in the
    assembly's cached placement, then names its mates after the

@@ -31,15 +31,20 @@ const MARKER: OnshapeAssemblyInstance = {
     featureId: INSERT_LOCATION_SKETCH_ID
 };
 
-/** The workspace at `microversion`, which each edit moves. */
+/** The assembly tab at `microversion`, which each edit to it moves. */
 function atMicroversion(microversion: string) {
-    return vi
-        .spyOn(DocumentEndpoints, "getCurrentMicroversion")
-        .mockResolvedValue({ microversion });
+    return vi.spyOn(DocumentEndpoints, "getElements").mockResolvedValue([
+        {
+            id: targetPath.elementId,
+            name: "Assembly",
+            elementType: "ASSEMBLY",
+            microversionId: microversion
+        }
+    ] as Awaited<ReturnType<typeof DocumentEndpoints.getElements>>);
 }
 
 function mockAssembly(instances: OnshapeAssemblyInstance[]) {
-    atMicroversion("m1");
+    atMicroversion("a1");
     return vi.spyOn(AssemblyEndpoints, "getAssembly").mockResolvedValue({
         rootAssembly: { features: [], instances, occurrences: [] },
         parts: [],
@@ -65,7 +70,7 @@ describe("insert location routes", () => {
         } satisfies InsertLocationOut);
     });
 
-    it("GET reads the assembly again only once it has been edited", async () => {
+    it("GET reads the assembly again only once its tab has been edited", async () => {
         const read = mockAssembly([MARKER]);
         const get = () =>
             createTestApp().request(
@@ -80,7 +85,7 @@ describe("insert location routes", () => {
         } satisfies InsertLocationOut);
         expect(read).toHaveBeenCalledTimes(1);
 
-        atMicroversion("m2");
+        atMicroversion("a2");
         await get();
         expect(read).toHaveBeenCalledTimes(2);
     });

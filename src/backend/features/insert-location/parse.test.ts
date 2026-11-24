@@ -36,11 +36,11 @@ const ASSEMBLY_PATH: ElementPath = {
     elementId: "asm"
 };
 
-/** A client answering `assembly`, and no microversion, so nothing is cached. */
+/** A client answering `assembly`, and no tabs, so nothing is cached. */
 function answering(assembly: OnshapeAssemblyDefinition): MockOnshapeApi {
     const api = new MockOnshapeApi();
     vi.spyOn(api, "get").mockImplementation((path) =>
-        Promise.resolve(path.endsWith("/currentmicroversion") ? {} : assembly)
+        Promise.resolve(path.endsWith("/elements") ? [] : assembly)
     );
     return api;
 }

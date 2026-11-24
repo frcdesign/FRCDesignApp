@@ -238,11 +238,6 @@ export interface OnshapeElement {
     microversionId: string;
 }
 
-/** GET /documents/d/{did}/{wv}/{wvid}/currentmicroversion (`BTMicroversionInfo`). */
-export interface OnshapeCurrentMicroversion {
-    microversion?: string;
-}
-
 /** GET /documents/d/{did}/{wvm}/{wvmid}/contents (the fields we read). */
 export interface OnshapeDocumentContents {
     /** Root folder; its `groups` is the ordered folder/element tree. */

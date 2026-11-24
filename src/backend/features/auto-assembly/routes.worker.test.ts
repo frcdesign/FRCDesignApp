@@ -7,7 +7,7 @@ import {
     ASSEMBLY,
     BODY,
     mockAssemblyReads,
-    studioElements
+    workspaceElements
 } from "../../../__test_utils__/auto-assembly-fixtures";
 import { Program } from "./catalog";
 import {
@@ -406,11 +406,11 @@ describe("POST /api/auto-assembly/check, checked again", () => {
             ])
         );
 
-        // The same picks again: nothing but the microversion is asked
+        // The same picks again: nothing but the workspace's tabs is asked
         const again = await check(BODY.targets);
         expect(await again.json()).toEqual(await first.json());
         expect(reads.assembly).toHaveBeenCalledTimes(1);
-        expect(reads.elements).toHaveBeenCalledTimes(1);
+        expect(reads.elements).toHaveBeenCalledTimes(2);
         expect(reads.scan).toHaveBeenCalledTimes(2);
 
         // One more pick: only its studio is scanned, for it alone
@@ -421,13 +421,26 @@ describe("POST /api/auto-assembly/check, checked again", () => {
         ]);
     });
 
-    it("reads again once the workspace is edited, and scans only the studio that changed", async () => {
+    it("reads nothing again when a tab the assembly doesn't reference is edited", async () => {
+        const reads = mockAssemblyReads();
+        await check(BODY.targets);
+
+        reads.elements.mockResolvedValue(workspaceElements({ drawing: "d2" }));
+        await check(BODY.targets);
+
+        expect(reads.assembly).toHaveBeenCalledTimes(1);
+        expect(reads.scan).toHaveBeenCalledTimes(2);
+    });
+
+    it("reads again once a studio in it is edited, and scans only that studio", async () => {
         const reads = mockAssemblyReads();
         await check([...BODY.targets, BOTTOM_TOP]);
         expect(reads.scan).toHaveBeenCalledTimes(2);
 
-        reads.microversion.mockResolvedValue({ microversion: "m2" });
-        reads.elements.mockResolvedValue(studioElements("t2"));
+        // Onshape moves the assembly's microversion with the studio's
+        reads.elements.mockResolvedValue(
+            workspaceElements({ assembly: "a2", top: "t2" })
+        );
         await check([...BODY.targets, BOTTOM_TOP]);
 
         expect(reads.assembly).toHaveBeenCalledTimes(2);

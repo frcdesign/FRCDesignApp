@@ -89,6 +89,18 @@ const targetPath = {
     elementId: "target-element"
 };
 
+/** The target assembly's tab, at one edit, so its reads are cached. */
+function mockAssemblyTab() {
+    vi.spyOn(DocumentEndpoints, "getElements").mockResolvedValue([
+        {
+            id: targetPath.elementId,
+            name: "Assembly",
+            elementType: "ASSEMBLY",
+            microversionId: "a1"
+        }
+    ] as Awaited<ReturnType<typeof DocumentEndpoints.getElements>>);
+}
+
 describe("insertable routes", () => {
     beforeEach(async () => {
         await resetDb(db);
@@ -437,9 +449,7 @@ describe("insertable routes", () => {
 
     it("POST /add-to-assembly lands the insert on the insert location", async () => {
         await seedAssembly(db);
-        vi.spyOn(DocumentEndpoints, "getCurrentMicroversion").mockResolvedValue(
-            { microversion: "m1" }
-        );
+        mockAssemblyTab();
         vi.spyOn(AssemblyEndpoints, "getAssembly").mockResolvedValue({
             rootAssembly: {
                 features: [],
@@ -498,9 +508,7 @@ describe("insertable routes", () => {
     // The marker can be deleted after the app opens.
     it("POST /add-to-assembly inserts at the origin when the location is gone", async () => {
         await seedAssembly(db);
-        vi.spyOn(DocumentEndpoints, "getCurrentMicroversion").mockResolvedValue(
-            { microversion: "m1" }
-        );
+        mockAssemblyTab();
         vi.spyOn(AssemblyEndpoints, "getAssembly").mockResolvedValue({
             rootAssembly: { features: [], instances: [], occurrences: [] },
             parts: [],
@@ -804,7 +812,6 @@ describe("insertable routes", () => {
             fastenedCount: 1
         } satisfies InsertOut);
         expect(reads.assembly).toHaveBeenCalledTimes(1);
-        expect(reads.elements).toHaveBeenCalledTimes(1);
         expect(reads.scan).toHaveBeenCalledTimes(scans);
     });
 

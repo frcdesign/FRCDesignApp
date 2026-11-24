@@ -110,20 +110,49 @@ export function plateScan(partId: string, edges: string[] = []) {
     });
 }
 
-/** Each plate's Part Studio, at the microversion its last edit made. */
-export function studioElements(top = "t1", bottom = "b1") {
+/** The microversion each tab of `ASSEMBLY`'s workspace last changed in. */
+export interface TabMicroversions {
+    assembly: string;
+    top: string;
+    bottom: string;
+    /** A tab nothing in the assembly references. */
+    drawing: string;
+}
+
+const FIRST_EDITS: TabMicroversions = {
+    assembly: "a1",
+    top: "t1",
+    bottom: "b1",
+    drawing: "d1"
+};
+
+/** `ASSEMBLY`'s workspace's tabs, each at its microversion. */
+export function workspaceElements(edits: Partial<TabMicroversions> = {}) {
+    const at = { ...FIRST_EDITS, ...edits };
     return [
+        {
+            id: ASSEMBLY.elementId,
+            name: "Assembly",
+            elementType: "ASSEMBLY",
+            microversionId: at.assembly
+        },
         {
             id: "topStudio",
             name: "Top",
             elementType: "PARTSTUDIO",
-            microversionId: top
+            microversionId: at.top
         },
         {
             id: "bottomStudio",
             name: "Bottom",
             elementType: "PARTSTUDIO",
-            microversionId: bottom
+            microversionId: at.bottom
+        },
+        {
+            id: "drawing",
+            name: "Drawing",
+            elementType: "DRAWING",
+            microversionId: at.drawing
         }
     ] as Awaited<ReturnType<typeof Documents.getElements>>;
 }
@@ -132,18 +161,15 @@ export function studioElements(top = "t1", bottom = "b1") {
 const PLATE_EDGES = ["TOP-top", "BOTTOM-top"];
 
 /**
- * Onshape's answers to reading `ASSEMBLY`'s workspace at `microversion`: its
- * definition, its studios, and each studio's scan, which gives a circle for each
- * plate edge it is asked about.
+ * Onshape's answers to reading `ASSEMBLY`'s workspace: its tabs, its
+ * definition, and each studio's scan, which gives a circle for each plate edge
+ * it is asked about.
  */
-export function mockAssemblyReads(microversion = "m1") {
+export function mockAssemblyReads() {
     return {
-        microversion: vi
-            .spyOn(Documents, "getCurrentMicroversion")
-            .mockResolvedValue({ microversion }),
         elements: vi
             .spyOn(Documents, "getElements")
-            .mockResolvedValue(studioElements()),
+            .mockResolvedValue(workspaceElements()),
         assembly: vi
             .spyOn(Assemblies, "getAssembly")
             .mockResolvedValue(DEFINITION),

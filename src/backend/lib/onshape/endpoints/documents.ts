@@ -8,7 +8,6 @@ import {
     toInstanceApiPath
 } from "../path";
 import {
-    OnshapeCurrentMicroversion,
     OnshapeDocumentContents,
     OnshapeDocumentInfo,
     OnshapeElement,
@@ -124,27 +123,13 @@ export function updateReferences(
     );
 }
 
-/**
- * `GET /documents/d/{did}/{wv}/{wvid}/currentmicroversion`
- *
- * The microversion a workspace is at: any edit to any of its tabs moves it.
- */
-export function getCurrentMicroversion(
-    client: OnshapeApi,
-    instancePath: InstancePath
-): Promise<OnshapeCurrentMicroversion> {
-    return client.get(
-        `/documents${toInstanceApiPath(instancePath)}/currentmicroversion`
-    );
-}
-
-/** A workspace's or version's tabs of one type, each with its microversion: anonymous for a public document. */
+/** A workspace's or version's tabs, of one type or all, each with its microversion: anonymous for a public document. */
 export function getElements(
     client: OnshapeApi,
     instancePath: InstancePath,
-    elementType: OnshapeElementType
+    elementType?: OnshapeElementType
 ): Promise<OnshapeElement[]> {
     return client.get(`/documents${toInstanceApiPath(instancePath)}/elements`, {
-        query: { elementType }
+        query: elementType ? { elementType } : {}
     });
 }

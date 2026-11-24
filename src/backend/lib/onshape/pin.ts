@@ -3,24 +3,42 @@
  * one pin is always the same content, so a cache keyed by it is never stale.
  */
 import { type OnshapeApi } from "./client";
-import { getCurrentMicroversion } from "./endpoints/documents";
+import { getElements } from "./endpoints/documents";
 import { type ElementPath } from "./path";
 
+export interface ElementPin {
+    /** Undefined where Onshape names no microversion for the element. */
+    pin?: string;
+    /** Every tab's microversion, by element id; empty outside a workspace. */
+    microversions: Map<string, string>;
+}
+
 /**
- * A version or microversion pins itself. A workspace is pinned by the
- * microversion it is at, which any edit to any of its tabs moves, so it covers
- * what the element references in the document as well as the element itself.
- * Undefined where Onshape names none.
+ * A version or microversion pins itself. A workspace tab is pinned by its own
+ * microversion, which moves when it or a tab it depends on changes, so an edit
+ * to an unrelated tab keeps the pin. One listing of the workspace's tabs.
  */
 export async function pinElement(
     client: OnshapeApi,
     path: ElementPath
-): Promise<string | undefined> {
+): Promise<ElementPin> {
     if (path.instanceType !== "w") {
-        return `${path.documentId}|${path.instanceType}|${path.instanceId}|${path.elementId}`;
+        return {
+            pin: `${path.documentId}|${path.instanceType}|${path.instanceId}|${path.elementId}`,
+            microversions: new Map()
+        };
     }
-    const { microversion } = await getCurrentMicroversion(client, path);
-    return microversion
-        ? `${path.documentId}|m|${microversion}|${path.elementId}`
-        : undefined;
+    const microversions = new Map(
+        (await getElements(client, path)).map((element) => [
+            element.id,
+            element.microversionId
+        ])
+    );
+    const microversion = microversions.get(path.elementId);
+    return {
+        ...(microversion
+            ? { pin: `${path.documentId}|e|${microversion}|${path.elementId}` }
+            : {}),
+        microversions
+    };
 }
