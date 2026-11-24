@@ -1,23 +1,25 @@
-import { AppLink } from "../../../components/app-link";
-import { Group, Stack, Text, UnstyledButton } from "@mantine/core";
+import { AppLink } from "./app-link";
+import { Divider, Group, Stack, Text, UnstyledButton } from "@mantine/core";
 import { ArrowRightIcon, BooksIcon } from "@phosphor-icons/react";
 import { ReactNode } from "react";
 import { LibraryId } from "@backend/features/library/library-id";
-import { type AppTab } from "../../../lib/app-tab";
-import { AppBrandMark } from "../../../components/app-brand";
-import { AppModal, AppModalBody } from "../../../components/app-modal";
-import { AppIcon } from "../../../components/app-icon";
-import { SectionNotice } from "../../../components/app-notice";
+import { type AppTab, UtilityTab } from "../lib/app-tab";
+import { AppBrandMark } from "./app-brand";
+import { AppModal, AppModalBody } from "./app-modal";
+import { AppIcon } from "./app-icon";
+import { SectionNotice } from "./app-notice";
+import { FontWeight, IconSize, StatusColor } from "../lib/style-constants";
+import { getLibraryName } from "../lib/library";
 import {
-    FontWeight,
-    IconSize,
-    StatusColor
-} from "../../../lib/style-constants";
-import { getLibraryName } from "../../../lib/library";
-import { useNavigateToTab } from "../../../lib/tabs";
-import { getLibraryShade } from "../../../theme";
-import { updateUiState, useUiState } from "../../../lib/ui-state";
-import styles from "../../../lib/styles.module.css";
+    getUtilityColor,
+    getUtilityIcon,
+    getUtilityName,
+    useNavigateToTab
+} from "../lib/tabs";
+import { getLibraryShade, toShade } from "../theme";
+import { updateUiState, useUiState } from "../lib/ui-state";
+import { m } from "../paraglide/messages";
+import styles from "../lib/styles.module.css";
 
 interface Program {
     libraryId: LibraryId;
@@ -31,8 +33,26 @@ const PROGRAMS: Program[] = [
     { libraryId: LibraryId.CONFIG_LIB, name: "FTC" }
 ];
 
+/** In the page picker's order. */
+const UTILITIES: UtilityTab[] = [
+    UtilityTab.FEATURESCRIPTS,
+    UtilityTab.VERSION_MANAGER,
+    UtilityTab.AUTO_ASSEMBLY
+];
+
 /** FIRST's own site, which their notice has to name. */
 const FIRST_URL = "https://www.firstinspires.org";
+
+function describeUtility(tab: UtilityTab): string {
+    switch (tab) {
+        case UtilityTab.VERSION_MANAGER:
+            return m.welcomeVersionManagerDescription();
+        case UtilityTab.AUTO_ASSEMBLY:
+            return m.welcomeAutoAssemblyDescription();
+        case UtilityTab.FEATURESCRIPTS:
+            return m.welcomeFeatureScriptsDescription();
+    }
+}
 
 /** The registration these names carry, raised off the name it follows. */
 function RegisteredMark(): ReactNode {
@@ -79,6 +99,42 @@ function ProgramCard(props: ProgramCardProps): ReactNode {
     );
 }
 
+interface UtilityCardProps {
+    tab: UtilityTab;
+    onSelect: (tabId: AppTab) => void;
+}
+
+/** A page that is not a library, smaller than a program so the program reads as the choice to make. */
+function UtilityCard(props: UtilityCardProps): ReactNode {
+    const { tab, onSelect } = props;
+
+    return (
+        <UnstyledButton
+            className={`interactive ${styles.outlined}`}
+            px="md"
+            py="sm"
+            onClick={() => {
+                onSelect(tab);
+            }}
+        >
+            <Group gap="md" wrap="nowrap">
+                <AppIcon
+                    icon={getUtilityIcon(tab)}
+                    size={IconSize.CONTROL}
+                    color={toShade(getUtilityColor(tab))}
+                />
+                <Stack gap={0} flex={1} miw={0} ta="left">
+                    <Text fw={FontWeight.BOLD}>{getUtilityName(tab)}</Text>
+                    <Text size="sm" c={StatusColor.DIMMED}>
+                        {describeUtility(tab)}
+                    </Text>
+                </Stack>
+                <ArrowRightIcon size={IconSize.SMALL} />
+            </Group>
+        </UnstyledButton>
+    );
+}
+
 /** FIRST's required notice, under the two names it covers. */
 function TrademarkDisclaimer(): ReactNode {
     return (
@@ -99,8 +155,11 @@ function TrademarkDisclaimer(): ReactNode {
     );
 }
 
-/** Asks a new user's program, which becomes their tab. Asked once per browser. */
-export function ProgramSelect(): ReactNode {
+/**
+ * Asks a new user's program, which becomes their tab, and shows the utilities
+ * beside it, any of which can be the tab instead. Asked once per browser.
+ */
+export function Welcome(): ReactNode {
     const tabId = useUiState((state) => state.tabId);
     const navigateToTab = useNavigateToTab();
 
@@ -114,8 +173,8 @@ export function ProgramSelect(): ReactNode {
             <AppModalBody>
                 <SectionNotice
                     icon={<AppBrandMark size={IconSize.PAGE} />}
-                    title="Welcome to the FRCDesignApp!"
-                    description="To get started, select your library. You can switch between libraries at any time from the menu in the top navbar."
+                    title={m.welcomeTitle()}
+                    description={m.welcomeDescription()}
                     action={
                         // Side by side, each would be narrower than its name in Onshape's panel.
                         <Stack gap="sm" w="100%" maw={320}>
@@ -123,6 +182,17 @@ export function ProgramSelect(): ReactNode {
                                 <ProgramCard
                                     key={program.libraryId}
                                     program={program}
+                                    onSelect={selectTab}
+                                />
+                            ))}
+                            <Divider
+                                label={m.welcomeUtilities()}
+                                labelPosition="center"
+                            />
+                            {UTILITIES.map((tab) => (
+                                <UtilityCard
+                                    key={tab}
+                                    tab={tab}
                                     onSelect={selectTab}
                                 />
                             ))}

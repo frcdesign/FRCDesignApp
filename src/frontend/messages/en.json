@@ -1038,5 +1038,11 @@
     "versionManagerFormRecursivePushInfo": "Recursively push changes across multiple links.",
     "versionManagerFormRecursivePullInfo": "Also pulls into the parent from the documents linked above it first, saving a new version of each one along the way so the next can use it. Each is numbered from its own versions unless you name them above.",
     "versionManagerQuickRecursivePushTip": "Tip: Quick recursive push in a link's ⋯ menu does this in one click, without opening the form.",
-    "versionManagerQuickRecursivePullTip": "Tip: Quick recursive pull in a link's ⋯ menu does this in one click, without opening the form."
+    "versionManagerQuickRecursivePullTip": "Tip: Quick recursive pull in a link's ⋯ menu does this in one click, without opening the form.",
+    "welcomeTitle": "Welcome to the FRCDesignApp!",
+    "welcomeDescription": "Pick your library to get started. You can switch at any time from the menu at the top.",
+    "welcomeUtilities": "Utilities",
+    "welcomeFeatureScriptsDescription": "Add custom features to your Part Studios.",
+    "welcomeVersionManagerDescription": "Push and pull versions between linked documents.",
+    "welcomeAutoAssemblyDescription": "Put screws, washers and nuts in an assembly's holes."
 }

@@ -2,9 +2,25 @@
 
 The library's pages, which have no architecture document of their own; how a
 document loads is in [loading.md](../architecture/loading.md). Messages are
-keyed `groupPage…`, `changesBadge…`, `library…` and `insert…` in
+keyed `groupPage…`, `changesBadge…`, `library…`, `insert…` and `welcome…` in
 `src/frontend/messages/en.json`. Only what has moved into the catalog is
 listed so far: the rest join as their strings move there.
+
+## Welcome
+
+The modal a new browser opens on, until a library or utility is picked:
+`src/frontend/components/welcome.tsx`. Each utility shows its tab's name and
+its navbar icon. FIRST's trademark notice under it is fixed wording, kept in
+the code.
+
+| String                                                                                   | Kind             | Where                       | When   | Review         |
+| ---------------------------------------------------------------------------------------- | ---------------- | --------------------------- | ------ | -------------- |
+| "Welcome to the FRCDesignApp!"                                                           | Notice title     | Top of the modal            | Always |                |
+| "Pick your library to get started. You can switch at any time from the menu at the top." | Notice text      | Under the title             | Always | **⚑** Reworded |
+| "Utilities"                                                                              | Divider label    | Under the FRC and FTC cards | Always | **⚑** New      |
+| "Add custom features to your Part Studios."                                              | Card description | FeatureScripts' card        | Always | **⚑** New      |
+| "Push and pull versions between linked documents."                                       | Card description | Version Manager's card      | Always | **⚑** New      |
+| "Put screws, washers and nuts in an assembly's holes."                                   | Card description | Auto Assembly's card        | Always | **⚑** New      |
 
 ## Menus
 
