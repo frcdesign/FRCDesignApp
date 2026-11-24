@@ -124,7 +124,7 @@ export function useInsertMutation(assembly: ElementPath) {
 }
 
 /** Long enough that picking edges one at a time checks once per pause, not once per pick. */
-const PICK_CHECK_DELAY_MS = 1500;
+export const PICK_CHECK_DELAY_MS = 1500;
 
 export interface PickProblems {
     /** Each pick's problem, by its row key. */
