@@ -6,13 +6,13 @@ import {
     OnshapeRateLimitError,
     OnshapeTimeoutError
 } from "./onshape/client";
-import { OnshapeFailure } from "./onshape/failures";
+import { OnshapeFailure, rateLimitedMessage } from "./onshape/failures";
 import {
     ApiError,
     ApiErrorKind,
     forbiddenError,
-    handledError,
     internalError,
+    rateLimitedError,
     signInRequiredError
 } from "./api-error";
 import type { AppContext, AppContextEnv } from "./context";
@@ -28,9 +28,9 @@ function logServerError(c: AppContext, error: unknown): string {
 /** Anything not named here stays generic. */
 function fromOnshapeError(error: OnshapeApiError): ApiError {
     if (error instanceof OnshapeRateLimitError) {
-        return handledError(
-            OnshapeFailure.RATE_LIMITED,
-            HttpStatus.TOO_MANY_REQUESTS
+        return rateLimitedError(
+            rateLimitedMessage(error.retryAfterSeconds),
+            error.retryAfterSeconds
         );
     }
     if (error.status === HttpStatus.UNAUTHORIZED) {
@@ -52,11 +52,12 @@ export const errorHandler: ErrorHandler<AppContextEnv> = (err, c) => {
     if (err instanceof OnshapeApiError) {
         const apiError = fromOnshapeError(err);
         if (apiError.body.kind !== ApiErrorKind.INTERNAL) {
-            // The user reads our wording; Onshape's own reason is only here.
+            // The user reads our wording; Onshape's own reason is only here, under the id a report quotes.
+            const errorId = c.req.header("cf-ray") ?? crypto.randomUUID();
             console.warn(
-                `Onshape refused ${c.req.method} ${c.req.path}: ${describeError(err)}`
+                `Onshape refused ${c.req.method} ${c.req.path} (${errorId}): ${describeError(err)}`
             );
-            return c.json(apiError.body, apiError.status);
+            return c.json({ ...apiError.body, errorId }, apiError.status);
         }
         return c.json(
             { ...apiError.body, errorId: logServerError(c, err) },

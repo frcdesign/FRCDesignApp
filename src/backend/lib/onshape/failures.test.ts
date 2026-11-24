@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import { OnshapeApiError, OnshapeRateLimitError } from "./client";
 import {
     describeOnshapeFailure,
+    describeWait,
     isTransient,
     OnshapeFailure,
-    onshapeStatus
+    onshapeStatus,
+    readRetryAfterSeconds
 } from "./failures";
 
 function apiError(status: number, body = ""): OnshapeApiError {
@@ -63,6 +65,22 @@ describe("describeOnshapeFailure", () => {
         );
     });
 
+    it("says how long a rate limit lasts, from the wait Onshape gave", () => {
+        expect(
+            describeOnshapeFailure(
+                new OnshapeRateLimitError("slow down", 86367)
+            )
+        ).toBe("Onshape is limiting requests. Try again in about 24 hours.");
+        // As Workflows rebuilds it, with the step's name in front
+        expect(
+            describeOnshapeFailure(
+                new Error(
+                    `index: ${new OnshapeRateLimitError("slow down", 300).message}`
+                )
+            )
+        ).toBe("Onshape is limiting requests. Try again in about 5 minutes.");
+    });
+
     it("says what was refused in the caller's terms", () => {
         expect(describeOnshapeFailure(apiError(403))).toBe(
             OnshapeFailure.FORBIDDEN
@@ -83,5 +101,25 @@ describe("describeOnshapeFailure", () => {
         expect(
             describeOnshapeFailure(new TypeError("x is undefined"))
         ).toBeUndefined();
+    });
+});
+
+describe("describeWait", () => {
+    it("rounds a wait as people say it", () => {
+        expect(describeWait(10)).toBe("about a minute");
+        expect(describeWait(300)).toBe("about 5 minutes");
+        expect(describeWait(3570)).toBe("about an hour");
+        expect(describeWait(76620)).toBe("about 21 hours");
+        expect(describeWait(86367)).toBe("about 24 hours");
+        expect(describeWait(3 * 86400)).toBe("about 3 days");
+    });
+});
+
+describe("readRetryAfterSeconds", () => {
+    it("reads the wait back out of a rate limit's message", () => {
+        expect(
+            readRetryAfterSeconds(new OnshapeRateLimitError("slow down", 90))
+        ).toBe(90);
+        expect(readRetryAfterSeconds(new Error("boom"))).toBeUndefined();
     });
 });

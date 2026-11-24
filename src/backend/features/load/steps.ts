@@ -1,5 +1,5 @@
 import type { WorkflowBackoff, WorkflowStep } from "cloudflare:workers";
-import { readRetryAfterSeconds } from "../../lib/onshape/client";
+import { readRetryAfterSeconds } from "../../lib/onshape/failures";
 import { type ThumbnailUrls } from "../thumbnails/contract";
 import type { LoadContext } from "./context";
 

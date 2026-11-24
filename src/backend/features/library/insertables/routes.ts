@@ -453,6 +453,7 @@ insertableRoutes.post(
                 const transform = body.insertLocationId
                     ? await getInsertLocationTransform(
                           onshapeApi,
+                          c.env.KV,
                           targetPath,
                           body.insertLocationId
                       )

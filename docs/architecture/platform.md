@@ -14,10 +14,13 @@ their Onshape calls and link here for how those calls behave.
 | `src/backend/lib/onshape/client.ts`               | `OnshapeApi`, `OAuthApi`, `ApiKeyApi`; `OnshapeApiError`, `OnshapeRateLimitError`, `OnshapeTimeoutError`               |
 | `src/backend/lib/onshape/retry.ts`                | `retryInsert`, `INSERT_RETRY`: an insert's timeout, calling again on a 5xx, and wording a timeout                      |
 | `src/backend/lib/onshape/endpoints/`              | One wrapper per Onshape endpoint, grouped by Onshape's API category                                                    |
+| `src/backend/lib/onshape/pin.ts`                  | `pinElement`: what pins an element's content, for keying a cache of Onshape's answers                                  |
+| `src/backend/lib/kv-store.ts`                     | `kvStore`; `putQuietly`, a cache write whose failure is a later miss                                                   |
 | `src/backend/lib/api-error.ts`                    | `ApiError` and its four kinds; the body every failed `/api` response carries                                           |
 | `src/backend/lib/errors.ts`                       | `errorHandler`: turns any thrown error into that body and a status                                                     |
 | `src/backend/lib/error-text.ts`                   | `describeError`: an error's message and its causes', as one line for a log                                             |
 | `src/backend/lib/onshape/failures.ts`             | `onshapeStatus`, `isTransient`, `isRateLimited`; `OnshapeFailure` and `describeOnshapeFailure`: one wording per status |
+| `src/backend/lib/workflow-steps.ts`               | `failFastOnLongLimits`, `isLongRateLimit`: a step fails at once on a rate limit too long to sleep through              |
 | `src/backend/lib/run-failures.ts`                 | `runFailures`: a background run's failures worded at the step and read back at the report                              |
 | `src/backend/features/load/steps.ts`              | Workflow retry policies for Onshape and thumbnail steps                                                                |
 | `src/backend/features/load/context.ts`            | The load's limiters                                                                                                    |
@@ -25,6 +28,7 @@ their Onshape calls and link here for how those calls behave.
 | `src/backend/features/push/`                      | `ClientRelay` Durable Object, message contract, `notify.ts` senders                                                    |
 | `src/frontend/lib/api-client.ts`                  | `apiGet`, `apiPost`, `apiDelete`, `loadImage`; appends `?v=` for cached reads                                          |
 | `src/frontend/lib/errors.ts`                      | `AppError`, `handleAppError`, `getAppErrorHandler`                                                                     |
+| `src/frontend/lib/rate-limit-holds.ts`            | `HoldScope`, `unlessHeld`, `useRateLimitHold`: a feature stops calling after a 429 until its wait is over              |
 | `src/frontend/lib/stale-build.ts`                 | `reloadOnStaleBuild`: reloads a tab whose build a deploy removed                                                       |
 | `src/frontend/lib/notifications.tsx`              | `showLoadingToast`, `showSuccessToast`, `showInfoToast`, `showErrorToast`                                              |
 | `src/frontend/lib/query-client.ts`                | TanStack Query defaults, including retry                                                                               |
@@ -51,7 +55,8 @@ Every call goes through `OnshapeApi._call` to
 - **Errors.** Any non-2xx throws `OnshapeApiError` with the status and the
   response text. A 429 throws `OnshapeRateLimitError` carrying `Retry-After`
   (60 s when absent), and spells it into the message, since a Workflow rebuilds
-  errors and only the message survives; `readRetryAfterSeconds` reads it back.
+  errors and only the message survives; `readRetryAfterSeconds` in
+  `failures.ts` reads it back.
 - **No retry in the client.** A request is tried once (plus the 401 refresh). Retrying
   belongs to the caller: a workflow step's policy, `retryInsert` around an
   insert, or the user.
@@ -68,7 +73,7 @@ A route throws; `errorHandler` answers with `{ kind, message }` and a status:
 | `signInRequiredError(message)`   | `sign-in-required` | 401      | `message`, with a **Sign in** button                                       |
 | `forbiddenError(message)`        | `forbidden`        | 403      | `message`                                                                  |
 | `internalError(message, status)` | `internal`         | as given | The caller's default wording; `message` is logged                          |
-| `OnshapeRateLimitError`          | `handled`          | 429      | `OnshapeFailure.RATE_LIMITED`                                              |
+| `OnshapeRateLimitError`          | `handled`          | 429      | `rateLimitedMessage(retryAfterSeconds)`; the body has `retryAfterSeconds`  |
 | `OnshapeApiError` 401            | `sign-in-required` | 401      | `OnshapeFailure.SIGN_IN_EXPIRED`                                           |
 | `OnshapeApiError` 403            | `forbidden`        | 403      | `OnshapeFailure.FORBIDDEN`                                                 |
 | Any other `OnshapeApiError`      | `internal`         | 502      | Default wording; logged                                                    |
@@ -87,8 +92,13 @@ error whose cause is D1's. `runInBackground` and `retryInsert` log the same
 way.
 
 An Onshape refusal the user is told about in our own words (401, 403, 429) is
-logged as a warning, `Onshape refused <method> <path>: <Onshape's message>`,
-since Onshape's reason appears nowhere else.
+logged as a warning, `Onshape refused <method> <path> (<errorId>): <Onshape's message>`,
+since Onshape's reason appears nowhere else; its body carries that `errorId`
+too, so a report finds the line. A 429's message names the Onshape call and
+its `Retry-After` and `x-rate-limit-remaining` headers as sent, and the client
+also logs every 429 as `Onshape 429 on <method> <endpoint>` with those as
+fields (`onshapeEndpoint` has ids as `:id`), routes and workflows alike, so
+Workers Logs can group them by endpoint.
 
 On the client, `apiGet`/`apiPost`/`apiDelete` throw an `AppError` holding that
 body and the request that failed (`FailedRequest`: method, path without the
@@ -120,12 +130,45 @@ says and then to `UNEXPECTED_FAILURE`.
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | `SIGN_IN_EXPIRED` | "Your Onshape sign-in expired. Sign in again, then try again."                                                                       |
 | `FORBIDDEN`       | "Onshape rejected the operation. Make sure you have access to this document and you're signed in to the correct Onshape enterprise." |
-| `RATE_LIMITED`    | "Onshape is limiting requests. Try again in a few minutes."                                                                          |
+| `RATE_LIMITED`    | "Onshape is limiting requests. Try again later." (a 429 whose wait is unknown)                                                       |
 | `UNAVAILABLE`     | "Onshape is having problems. Try again shortly." (5xx)                                                                               |
 | `NO_ANSWER`       | "Onshape stopped responding. Try again shortly." (no response)                                                                       |
 
+A 429 whose wait is known says it instead, `rateLimitedMessage`: "Onshape is
+limiting requests. Try again in {wait}." `describeWait` rounds the wait as
+people say it: "about a minute", "about 5 minutes", "about an hour", "about 23
+hours", "about 3 days".
+
 `UNEXPECTED_FAILURE` (`src/backend/lib/api-error.ts`): "Something went wrong.
 If it keeps happening, send a report."
+
+## Rate limits
+
+Onshape limits each user per endpoint. Running out locks them out of that
+endpoint for about a day ([ONSHAPE.md](../ONSHAPE.md#calling-the-api)), so a
+429 is a bug in how much we call, not a hiccup to retry through:
+
+- **Cache what's read.** A read on a path someone repeats is cached in KV by
+  what pins it (`pinElement`), so it never goes stale and needs no
+  invalidation. [auto-assembly.md](./auto-assembly.md#caching-onshapes-answers)
+  covers the assembly and scan caches, and [fasten.md](./fasten.md) the insert
+  location's.
+- **Say the real wait.** The 429's body carries `retryAfterSeconds`, and its
+  message says the wait (`rateLimitedMessage`). `fromApiErrorBody` reads it
+  back on the client.
+- **Stop calling.** A feature's calls go through `unlessHeld` with its
+  `HoldScope`: Auto Assembly's check, prepare and run; inserting; the insert
+  location. A 429 holds that scope alone until its wait is over, since other
+  endpoints still answer. A held call fails at once with the wait, without a
+  request, and `useRateLimitHold` gives the wait to show. Holds are kept in
+  `localStorage` (`rateLimitHolds`), so they outlast the panel reopening, and
+  they are per browser.
+- **Don't sleep through a lockout.** A Workflow step retrying after a
+  `Retry-After` of over 10 minutes (`isLongRateLimit`) would hold its run a
+  day. The library reload, thumbnail render, FeatureScripts load and Version Manager workflows
+  wrap their steps in `failFastOnLongLimits`, which fails such a step at once,
+  its message whole, so the run's report says the wait. Auto Assembly's
+  `runTask` does the same for its own steps.
 
 ## Retries and timeouts
 
@@ -134,11 +177,13 @@ If it keeps happening, send a report."
 | Any Onshape request             | `REQUEST_TIMEOUT_MS`               | Aborts after 60 s                                                                       |
 | An insert's Onshape call        | `INSERT_RETRY`                     | Aborts after 60 s; 1 retry after 1 s on a 5xx, none on a timeout, a 4xx or a 429        |
 | An insert after a disconnect    | `finishEvenIfDisconnected`         | Keeps running up to 30 s past the client leaving, so Onshape's insert is still recorded |
-| Steps calling Onshape           | `ONSHAPE_STEP_RETRIES`             | 1 retry after 2 s; a 429 waits its `Retry-After` plus 0–20 s of jitter                  |
+| Steps calling Onshape           | `ONSHAPE_STEP_RETRIES`             | 1 retry after 2 s; a 429 waits its `Retry-After` plus 0–20 s of jitter, up to 10 min    |
 | Load thumbnail steps            | `THUMBNAIL_RETRIES`                | 3 retries after 10, 20, 40 s; a 429 as above                                            |
-| Configuration renders           | `RENDER_RETRIES`                   | 30 retries every 2 s; a 429 waits its `Retry-After` plus jitter                         |
+| Configuration renders           | `RENDER_RETRIES`                   | 30 retries every 2 s; a 429 waits its `Retry-After` plus jitter, up to 10 min           |
+| A longer `Retry-After`          | `failFastOnLongLimits`             | No retry: the step fails at once, saying the wait                                       |
 | A reload waiting its turn       | `TURN_INTERVAL`                    | Checks the library again every 30 s                                                     |
 | Client queries                  | `queryClient` default              | 2 retries after 1 and 2 s, none for an `AppError` that isn't `internal`                 |
+| After a 429, on the client      | `unlessHeld`                       | That feature sends nothing until the `Retry-After` is over                              |
 | A library's cache version       | `LIBRARY_VERSION_RETRIES`          | 5 retries after 1, 2, 4, 8 and 16 s, none for an `AppError` that isn't `internal`       |
 | D1 reads                        | D1's own                           | D1 retries a read-only query twice on a retryable error; the app adds none              |
 | Stored thumbnails on the client | `STORED_RETRIES`                   | 1 retry                                                                                 |

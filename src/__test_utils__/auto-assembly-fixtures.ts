@@ -1,4 +1,8 @@
 /** A stubbed assembly for Auto Assembly's worker tests: two 1/4 in. plates, each in its own Part Studio. */
+import { vi } from "vitest";
+import * as Assemblies from "@backend/lib/onshape/endpoints/assemblies";
+import * as Documents from "@backend/lib/onshape/endpoints/documents";
+import * as PartStudios from "@backend/lib/onshape/endpoints/part-studios";
 import { toTranslation } from "@backend/lib/onshape/objects/transform";
 import {
     type OnshapeAssemblyDefinition,
@@ -104,6 +108,58 @@ export function plateScan(partId: string, edges: string[] = []) {
         parts: fs.map({ [partId]: fs.map({ holes: fs.array([hole]) }) }),
         circles: fs.array(circles)
     });
+}
+
+/** Each plate's Part Studio, at the microversion its last edit made. */
+export function studioElements(top = "t1", bottom = "b1") {
+    return [
+        {
+            id: "topStudio",
+            name: "Top",
+            elementType: "PARTSTUDIO",
+            microversionId: top
+        },
+        {
+            id: "bottomStudio",
+            name: "Bottom",
+            elementType: "PARTSTUDIO",
+            microversionId: bottom
+        }
+    ] as Awaited<ReturnType<typeof Documents.getElements>>;
+}
+
+/** Picked edges a plate's scan gives a circle for. */
+const PLATE_EDGES = ["TOP-top", "BOTTOM-top"];
+
+/**
+ * Onshape's answers to reading `ASSEMBLY`'s workspace at `microversion`: its
+ * definition, its studios, and each studio's scan, which gives a circle for each
+ * plate edge it is asked about.
+ */
+export function mockAssemblyReads(microversion = "m1") {
+    return {
+        microversion: vi
+            .spyOn(Documents, "getCurrentMicroversion")
+            .mockResolvedValue({ microversion }),
+        elements: vi
+            .spyOn(Documents, "getElements")
+            .mockResolvedValue(studioElements()),
+        assembly: vi
+            .spyOn(Assemblies, "getAssembly")
+            .mockResolvedValue(DEFINITION),
+        scan: vi
+            .spyOn(PartStudios, "evaluateFeatureScript")
+            .mockImplementation((_client, path, script) => {
+                const partId =
+                    path.elementId === "topStudio" ? "TOP" : "BOTTOM";
+                const edges = PLATE_EDGES.filter(
+                    (id) =>
+                        id.startsWith(partId) &&
+                        script.includes(`qTransient(${JSON.stringify(id)})`)
+                );
+                return Promise.resolve({ result: plateScan(partId, edges) });
+            })
+    };
 }
 
 /** Fasten the top plate's top edge, with a nylock. */

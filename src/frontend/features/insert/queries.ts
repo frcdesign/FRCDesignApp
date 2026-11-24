@@ -27,6 +27,7 @@ import { markHintSeen } from "../hints/queries";
 import { clearFastenPicks, useFastenPicks } from "./fasten-picks";
 import { toSelectedEntities } from "../../lib/selection";
 import { SelectionMode } from "@backend/features/auto-assembly/contract";
+import { HoldScope, unlessHeld } from "../../lib/rate-limit-holds";
 
 /** Most inserts answer within 10 s; a slower one shouldn't look stuck. */
 const SLOW_INSERT_MS = 15_000;
@@ -115,27 +116,33 @@ export function useInsertMutation(
 
     return useMutation({
         mutationKey: ["insert", insertable.id],
-        mutationFn: async (fasten: boolean) => {
-            const { endpoint, body } = toRequest(fasten);
-            await queryClient.cancelQueries({ queryKey: renderQueryPrefix() });
-            showLoadingToast(`Inserting ${insertable.name}...`, toastId);
-            const slow = setTimeout(
-                () =>
-                    showLoadingToast(
-                        m.insertStillInserting({ name: insertable.name }),
-                        toastId
-                    ),
-                SLOW_INSERT_MS
-            );
-            try {
-                return await apiPost<InsertOut>(
-                    endpoint + toInsertablePath(insertable.id),
-                    { body }
+        mutationFn: (fasten: boolean) =>
+            unlessHeld(HoldScope.INSERT, async () => {
+                const { endpoint, body } = toRequest(fasten);
+                await queryClient.cancelQueries({
+                    queryKey: renderQueryPrefix()
+                });
+                showLoadingToast(
+                    m.insertInserting({ name: insertable.name }),
+                    toastId
                 );
-            } finally {
-                clearTimeout(slow);
-            }
-        },
+                const slow = setTimeout(
+                    () =>
+                        showLoadingToast(
+                            m.insertStillInserting({ name: insertable.name }),
+                            toastId
+                        ),
+                    SLOW_INSERT_MS
+                );
+                try {
+                    return await apiPost<InsertOut>(
+                        endpoint + toInsertablePath(insertable.id),
+                        { body }
+                    );
+                } finally {
+                    clearTimeout(slow);
+                }
+            }),
         onError: (error) =>
             handleAppError(
                 error,

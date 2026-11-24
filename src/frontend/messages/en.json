@@ -947,6 +947,7 @@
     "insertQuickInsert": "Insert",
     "insertQuickDerive": "Derive",
     "insertCannotDeriveAssembly": "Assemblies can't be derived into a Part Studio.",
+    "insertInserting": "Inserting {name}...",
     "insertStillInserting": "Still inserting {name}. Onshape is taking longer than usual...",
     "versionManagerMenuPush": "Push",
     "versionManagerMenuPull": "Pull",

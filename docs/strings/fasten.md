@@ -45,3 +45,15 @@ A row's problem under it is the check's, listed in
 | "No circular edges were found in what was selected." | Error, insert route | Picks with no circular edge    |        |
 | "Select only what Select by asks for."               | Error, insert route | Picks the mode doesn't ask for |        |
 | "{name} does not support insert and fasten."         | Error, insert route | A part with no fasten info     |        |
+
+## Rate limits
+
+`rateLimitedMessage` in `src/backend/lib/onshape/failures.ts` words these, on
+the server and while the client holds a feature. `{wait}` is rounded as people
+say it: "about 5 minutes", "about 23 hours".
+
+| String                                               | Kind                          | When                                                  | Review    |
+| ---------------------------------------------------- | ----------------------------- | ----------------------------------------------------- | --------- |
+| "Onshape is limiting requests. Try again in {wait}." | Error toast                   | An insert, or adding an insert location, answered 429 | **⚑** New |
+| "Onshape is limiting requests. Try again in {wait}." | Tooltip, on disabled Insert   | Until the wait is over                                | **⚑** New |
+| "Onshape is limiting requests. Try again in {wait}." | Error callout, over the lists | The picks' check answered 429, until the wait is over | **⚑** New |

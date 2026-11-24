@@ -34,6 +34,7 @@ import type { ThumbnailUrls } from "../thumbnails/contract";
 import { deleteStaleThumbnails } from "../thumbnails/reconcile";
 import { uploadThumbnails } from "../thumbnails/store";
 import { ensureWebhook } from "../webhooks/registration";
+import { failFastOnLongLimits } from "../../lib/workflow-steps";
 import {
     FeatureScriptProblem,
     FeatureScriptsLoadState,
@@ -154,7 +155,7 @@ export class LoadFeatureScriptsWorkflow extends WorkflowEntrypoint<
         }
         const ctx: FeatureScriptsLoadContext = {
             env: this.env,
-            step,
+            step: failFastOnLongLimits(step),
             sessionId: event.payload.sessionId,
             limit: createLimiter(LOAD_CONCURRENCY),
             thumbnailLimit: createLimiter(LOAD_CONCURRENCY)

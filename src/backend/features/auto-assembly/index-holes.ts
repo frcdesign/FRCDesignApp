@@ -1,15 +1,10 @@
 /** Indexes an assembly's holes: reads it and scans its Part Studios for everything the planner needs. */
 import { createLimiter } from "../../lib/limiter";
 import { type OnshapeApi } from "../../lib/onshape/client";
-import { getAssembly } from "../../lib/onshape/endpoints/assemblies";
-import { getElements } from "../../lib/onshape/endpoints/documents";
 import { type ElementPath } from "../../lib/onshape/path";
-import { OnshapeElementType } from "../../lib/onshape/types";
 import {
     type AssemblyPlane,
-    type ElementMicroversions,
     isFromStudio,
-    isLocal,
     partOccurrences,
     pathKey,
     placedScrew,
@@ -36,6 +31,7 @@ import {
 import { type Selection } from "../configurations/contract";
 import { decodeConfiguration } from "../configurations/utils";
 import { scanStudio, type StudioScan } from "./scan";
+import { assemblyInstances, readAssembly } from "./assembly-read";
 import { pickKey } from "./picked";
 import { type Replacement, screwLength, seatEdge, stackParts } from "./replace";
 
@@ -77,29 +73,6 @@ function isFastener(
     );
 }
 
-async function localMicroversions(
-    client: OnshapeApi,
-    assembly: ElementPath,
-    instances: { documentId?: string; documentVersion?: string }[]
-): Promise<ElementMicroversions> {
-    const anyLocal = instances.some(
-        (instance) =>
-            instance.documentVersion === undefined &&
-            instance.documentId === assembly.documentId
-    );
-    if (!anyLocal || assembly.instanceType !== "w") {
-        return new Map();
-    }
-    const elements = await getElements(
-        client,
-        assembly,
-        OnshapeElementType.PART_STUDIO
-    );
-    return new Map(
-        elements.map((element) => [element.id, element.microversionId])
-    );
-}
-
 export async function indexHoles(
     client: OnshapeApi,
     kv: KVNamespace,
@@ -114,21 +87,12 @@ export async function indexHoles(
     stopFace?: SelectedEntity,
     flips: Flips = { flipped: [], flipScrews: false }
 ): Promise<IndexedHoles> {
-    const definition = await getAssembly(client, assembly, {
-        excludeSuppressed: true
-    });
-    const instances = [
-        ...definition.rootAssembly.instances,
-        ...definition.subAssemblies.flatMap((sub) => sub.instances ?? [])
-    ];
-    const microversions = await localMicroversions(
+    const { definition, microversions } = await readAssembly(
         client,
-        assembly,
-        instances.filter(
-            (instance) =>
-                instance.type === "Part" && isLocal(instance, assembly)
-        )
+        kv,
+        assembly
     );
+    const instances = assemblyInstances(definition);
     const occurrences = partOccurrences(definition, assembly, microversions);
     const byPath = new Map(
         occurrences.map((occurrence) => [pathKey(occurrence.path), occurrence])

@@ -289,14 +289,22 @@ enum MateLocation {
   by a load or the toggle, cleared when fasten is turned off. A new row is off,
   except a generated tab's, which is on (see
   [generated-parts.md](./generated-parts.md)).
-- **KV** `auto-assembly-scan:` — each Part Studio's scan, shared with Quick
-  fastener, which owns it.
+- **KV** `auto-assembly-scan:`, `auto-assembly-picks:` and
+  `auto-assembly-assembly:` — each Part Studio's holes, what each pick in it
+  gave, and the assembly's definition, shared with Auto Assembly, which owns
+  them.
+- **KV** `insert-location:{pin}` — the assembly's marker and where each
+  top-level instance sits (`placements` in
+  `src/backend/features/insert-location/parse.ts`), for a week. The pin is the
+  workspace's current microversion (`pinElement`), so any edit misses.
 - **KV** `seen-hints:` — `Hint.FASTENED_TO_CIRCULAR_EDGES`, once the user has
   fastened to circular edges; see [auth.md](./auth.md).
 - **Memory** `useFastenPicks` — the targets and edges to exclude, for the tab,
   shared by the navbar and the insert menu.
 - **localStorage** (`ui-state`): `fasten`, `fastenSelectionMode` and
   `fastenCircularEdgesTipCount`.
+- **localStorage** `rateLimitHolds` — when inserting, and the insert location,
+  may call again after a 429 (`src/frontend/lib/rate-limit-holds.ts`).
 
 ## Flows
 
@@ -311,7 +319,8 @@ enum MateLocation {
    **Add insert location** shows beside it while the assembly has none
    (`useInsertLocationQuery`). That's asked when the app opens, and again when
    the panel regains focus with an answer over 30 seconds old, since the marker
-   may have been deleted in Onshape.
+   may have been deleted in Onshape. The server reads the assembly only when
+   the workspace has changed since it last did; otherwise it answers from KV.
    Once it adds one, the button turns green and reads **Insert location
    added** for as long as the bar is up.
     - A part that can insert and fasten (`useCanFasten`) has a plugs icon
@@ -350,12 +359,14 @@ enum MateLocation {
    them with `fasten` to `POST /add-to-assembly`, from the insert menu's
    **Insert** or a row's **Quick insert and fasten** alike.
    `isConsistentPick` refuses edges as faces, or faces as edges.
-2. With picks, the route calls `indexHoles` first, which scans each Part Studio
-   holding a pick (cached) and answers the picked circular edges in the
-   assembly with their radii: each picked edge that is circular, or every
-   circular edge of each picked face, less the skipped holes. None found
-   answers 400 and inserts nothing.
-3. It inserts the part at the insert location, then names its mates after the
+2. With picks, the route calls `indexHoles` first, which answers the picked
+   circular edges in the assembly with their radii: each picked edge that is
+   circular, or every circular edge of each picked face, less the skipped
+   holes. It reads through Auto Assembly's caches, so right after a check of
+   the same picks it asks Onshape only for the workspace's microversion. None
+   found answers 400 and inserts nothing.
+3. It inserts the part at the insert location, where the marker sits in the
+   assembly's cached placement, then names its mates after the
    part: its configuration's indexed record's name, the element's own part's at
    the defaults, else the tab's (`partName`, `readStoredParts`):
     - **No picks**: adds a fasten mate naming only the part's connector, and
@@ -367,6 +378,9 @@ enum MateLocation {
       `fastenedCount` and records `Hint.FASTENED_TO_CIRCULAR_EDGES`.
 
 4. On `fastenedCount` the client clears the picks.
+   After a 429, **Insert** and **Quick insert** are disabled until the wait
+   is over, their tooltip saying how long, and the picks' lists stop being
+   checked, saying so above them.
 5. An insert and fasten with nothing picked shows the circular edges tip,
    unless the quick insert tip showed, at most three times and never after the
    hint is seen.
@@ -396,6 +410,8 @@ In [strings/fasten.md](../strings/fasten.md).
   inserted; see [auto-assembly.md](./auto-assembly.md).
 - **A pick isn't circular**: the scan finds no circular edge for it and it is left
   out; with nothing left, the request answers 400.
+- **Onshape rate-limits the insert**: the toast says how long to wait, and the
+  insert buttons stay disabled until then, in this browser.
 
 ## Decisions
 

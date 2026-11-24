@@ -23,6 +23,7 @@ import {
     PageNotice
 } from "../../../components/app-notice";
 import { StatusIcon } from "../../../components/status-icon";
+import { Callout } from "../../../components/callout";
 import { Status } from "../../../lib/status";
 import { IconSize } from "../../../lib/style-constants";
 import { ParameterGrid } from "../../../components/parameter-input";
@@ -194,8 +195,14 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
                   },
         [assembly, mode, isFtc, settled, picks, pickCount]
     );
-    const { problems, holeSize, isHoleCountersunk, existingScrew, isChecking } =
-        usePickProblems(checkBody);
+    const {
+        problems,
+        holeSize,
+        isHoleCountersunk,
+        existingScrew,
+        isChecking,
+        hold
+    } = usePickProblems(checkBody);
 
     // Opened afresh, as an Onshape feature dialog: nothing set by hand yet
     useEffect(open, [open]);
@@ -244,6 +251,7 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
         <>
             <Stack gap="md" p="md">
                 <LastRunCallout assembly={assembly} />
+                {hold && <Callout status={Status.ERROR} text={hold} />}
                 <ParameterGrid>
                     <ParameterGroup title={m.autoAssemblySelections()}>
                         <FormInputRow
@@ -330,6 +338,7 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
                         picks.targets.length + picks.replaced.length === 0 ||
                         (isStopFace && !picks.stopFace) ||
                         isRunning ||
+                        hold !== undefined ||
                         insertMutation.isPending
                     }
                     loading={insertMutation.isPending}

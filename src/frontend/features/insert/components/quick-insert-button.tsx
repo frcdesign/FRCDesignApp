@@ -12,6 +12,7 @@ import {
 } from "../insert-hooks";
 import { useInsertMutation } from "../queries";
 import { useFastenCircularEdgesTip } from "../insert-tips";
+import { HoldScope, useRateLimitHold } from "../../../lib/rate-limit-holds";
 
 interface QuickInsertButtonProps {
     insertable: InsertableOut;
@@ -38,6 +39,7 @@ export function QuickInsertButton(props: QuickInsertButtonProps): ReactNode {
         source
     });
     const showFastenCircularEdgesTip = useFastenCircularEdgesTip();
+    const hold = useRateLimitHold(HoldScope.INSERT);
 
     if (!targetElementType) {
         return null;
@@ -50,9 +52,7 @@ export function QuickInsertButton(props: QuickInsertButtonProps): ReactNode {
             icon={<PlusIcon />}
             loading={insertMutation.isPending}
             disabledReason={
-                isAssemblyInPartStudio
-                    ? m.insertCannotDeriveAssembly()
-                    : undefined
+                isAssemblyInPartStudio ? m.insertCannotDeriveAssembly() : hold
             }
             onClick={() => {
                 insertMutation.mutate(fasten);

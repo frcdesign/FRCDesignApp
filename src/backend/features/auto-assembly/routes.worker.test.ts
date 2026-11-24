@@ -3,7 +3,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as FastenerSets from "./fastener-set";
 import { FASTENER_SET } from "../../../__test_utils__/fastener-set";
 import { createTestApp, jsonRequest } from "../../../__test_utils__";
-import { ASSEMBLY, BODY } from "../../../__test_utils__/auto-assembly-fixtures";
+import {
+    ASSEMBLY,
+    BODY,
+    mockAssemblyReads,
+    studioElements
+} from "../../../__test_utils__/auto-assembly-fixtures";
 import { Program } from "./catalog";
 import {
     AssemblyJobState,
@@ -360,6 +365,75 @@ describe("POST /api/auto-assembly/check", () => {
                 }
             ]
         });
+    });
+});
+
+describe("POST /api/auto-assembly/check, checked again", () => {
+    const BOTTOM_TOP = {
+        occurrencePath: ["bottom"],
+        entityId: "BOTTOM-top",
+        entityType: SelectedEntityType.EDGE
+    };
+
+    const check = (targets: unknown[]) =>
+        post("/auto-assembly/check", {
+            assembly: ASSEMBLY,
+            selectionMode: SelectionMode.LOCATIONS,
+            targets
+        });
+
+    /** Each Part Studio scanned, with the edges it was asked about. */
+    const scanned = (reads: ReturnType<typeof mockAssemblyReads>) =>
+        reads.scan.mock.calls.map(([, path, script]) => ({
+            studio: path.elementId,
+            edges: [...script.matchAll(/qTransient\("([^"]+)"\)/g)].map(
+                (match) => match[1]
+            )
+        }));
+
+    it("reads the assembly once between edits, and scans only picks it hasn't", async () => {
+        const reads = mockAssemblyReads();
+
+        const first = await check(BODY.targets);
+        expect(first.status).toBe(200);
+        expect(reads.assembly).toHaveBeenCalledTimes(1);
+        expect(reads.elements).toHaveBeenCalledTimes(1);
+        expect(scanned(reads)).toHaveLength(2);
+        expect(scanned(reads)).toEqual(
+            expect.arrayContaining([
+                { studio: "topStudio", edges: ["TOP-top"] },
+                { studio: "bottomStudio", edges: [] }
+            ])
+        );
+
+        // The same picks again: nothing but the microversion is asked
+        const again = await check(BODY.targets);
+        expect(await again.json()).toEqual(await first.json());
+        expect(reads.assembly).toHaveBeenCalledTimes(1);
+        expect(reads.elements).toHaveBeenCalledTimes(1);
+        expect(reads.scan).toHaveBeenCalledTimes(2);
+
+        // One more pick: only its studio is scanned, for it alone
+        await check([...BODY.targets, BOTTOM_TOP]);
+        expect(reads.assembly).toHaveBeenCalledTimes(1);
+        expect(scanned(reads).slice(2)).toEqual([
+            { studio: "bottomStudio", edges: ["BOTTOM-top"] }
+        ]);
+    });
+
+    it("reads again once the workspace is edited, and scans only the studio that changed", async () => {
+        const reads = mockAssemblyReads();
+        await check([...BODY.targets, BOTTOM_TOP]);
+        expect(reads.scan).toHaveBeenCalledTimes(2);
+
+        reads.microversion.mockResolvedValue({ microversion: "m2" });
+        reads.elements.mockResolvedValue(studioElements("t2"));
+        await check([...BODY.targets, BOTTOM_TOP]);
+
+        expect(reads.assembly).toHaveBeenCalledTimes(2);
+        expect(scanned(reads).slice(2)).toEqual([
+            { studio: "topStudio", edges: ["TOP-top"] }
+        ]);
     });
 });
 

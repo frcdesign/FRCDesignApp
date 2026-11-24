@@ -6,6 +6,7 @@ import {
     jsonRequest
 } from "../../../__test_utils__";
 import * as AssemblyEndpoints from "../../lib/onshape/endpoints/assemblies";
+import * as DocumentEndpoints from "../../lib/onshape/endpoints/documents";
 import {
     INSERT_LOCATION_SKETCH_ID,
     INSERT_LOCATION_SOURCE,
@@ -30,7 +31,15 @@ const MARKER: OnshapeAssemblyInstance = {
     featureId: INSERT_LOCATION_SKETCH_ID
 };
 
+/** The workspace at `microversion`, which each edit moves. */
+function atMicroversion(microversion: string) {
+    return vi
+        .spyOn(DocumentEndpoints, "getCurrentMicroversion")
+        .mockResolvedValue({ microversion });
+}
+
 function mockAssembly(instances: OnshapeAssemblyInstance[]) {
+    atMicroversion("m1");
     return vi.spyOn(AssemblyEndpoints, "getAssembly").mockResolvedValue({
         rootAssembly: { features: [], instances, occurrences: [] },
         parts: [],
@@ -54,6 +63,26 @@ describe("insert location routes", () => {
         expect(await res.json()).toEqual({
             instanceId: "marker"
         } satisfies InsertLocationOut);
+    });
+
+    it("GET reads the assembly again only once it has been edited", async () => {
+        const read = mockAssembly([MARKER]);
+        const get = () =>
+            createTestApp().request(
+                `/api/insert-location?${targetQuery}`,
+                jsonRequest("GET"),
+                env
+            );
+
+        await get();
+        expect(await (await get()).json()).toEqual({
+            instanceId: "marker"
+        } satisfies InsertLocationOut);
+        expect(read).toHaveBeenCalledTimes(1);
+
+        atMicroversion("m2");
+        await get();
+        expect(read).toHaveBeenCalledTimes(2);
     });
 
     it("GET answers no instance for an assembly without one", async () => {

@@ -74,6 +74,9 @@ beforeEach(async () => {
     vi.spyOn(RequestAuth, "getOnshapeApiFromSessionId").mockResolvedValue(
         {} as OAuthApi
     );
+    vi.spyOn(Documents, "getCurrentMicroversion").mockResolvedValue({
+        microversion: "m1"
+    });
     vi.spyOn(Documents, "getElements").mockResolvedValue([
         {
             id: "topStudio",

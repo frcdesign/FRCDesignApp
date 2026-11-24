@@ -234,6 +234,13 @@ errors.
 - **Rate limits** answer 429 — _documented_ — usually with `Retry-After`,
   which is sometimes absent — _observed_. Calls also count against the account's API
   allocation, which a full library reload spends a lot of — _documented_.
+- **Limits are per endpoint, per time window.** Every answer carries
+  `X-Rate-Limit-Remaining` for its endpoint, and a 429's `Retry-After` is the
+  seconds until that endpoint's count resets — _documented_
+  (<https://onshape-public.github.io/docs/api-adv/errors>).
+- **The app's App Store listing is public**, and calls from a public App Store
+  OAuth app don't count toward the annual API limits — the owner, from Onshape
+  staff. The per-endpoint limits still apply.
 - **Each answer says how many calls are left** in `x-rate-limit-remaining`,
   and in no other header: nothing names the limit or when it resets —
   _observed_ (2026-11-08, the owner's OAuth token through the testbench). What
@@ -247,9 +254,30 @@ errors.
     features and session info counted down together (8990, 8989, 8988), while
     document elements stood apart (8998) — consistent with a count per endpoint
     group, not proven. The counts are per user, so one person's heavy use
-    doesn't spend another's — _unverified_, the owner's understanding. The
-    window they refill over is _unverified_; checking again an hour later would
-    tell.
+    doesn't spend another's — the owner. The window they refill over is
+    _unverified_; checking again an hour later would tell.
+
+- **A user who runs out is locked out for about a day** — _observed_ in
+  production Workers Logs, 2026-11-23 to 24. Every 429 in those two days sent
+  a `Retry-After` between 76,620 and 86,367 s (21–24 h). They fell into five
+  groups, and each group counted down to one reset instant, to the second:
+  call time plus `Retry-After` gave the same moment for every 429 in it. In
+  the clearest group the first 429 came at 07:45:46 UTC with 86,367 s, so the
+  lockout began within a minute of it and ran 24 h. Other users' inserts went
+  through during that lockout, so it is not app-wide; it is the user's own
+  count, as above. Nearly every 429 came from Auto Assembly's check, which then
+  read the assembly on every pick. Which endpoint ran out, and whether its
+  remaining count was at 0, these logs can't say: each 429 now logs both.
+
+- **A workspace's current microversion** is
+  `GET /documents/d/{did}/w/{wid}/currentmicroversion`, answering
+  `{ microversion }` (`BTMicroversionInfo`) — _documented_ in the OpenAPI spec.
+  Every edit to any tab of the workspace moves it, as it makes a new
+  microversion — _documented_. Being a documents endpoint, it doesn't spend the
+  assembly definition's count; what its own allows is _unverified_. That
+  dragging an instance in an assembly is an edit that moves it is
+  _unverified_; the insert location's cache relies on it, so a marker dragged
+  without a new microversion would be found where it was.
 
 - **Inserts often take several seconds** — _observed_ in Workers Logs for the
   week to 2026-11-09, as the whole insert request's wall time, which includes

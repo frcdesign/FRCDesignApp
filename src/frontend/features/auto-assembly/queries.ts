@@ -32,6 +32,11 @@ import { useIsSignedIn } from "../auth/access-level";
 import { getLibraryVersionQuery } from "../library/queries";
 import { type RowProblem } from "../../components/query-list";
 import { Status } from "../../lib/status";
+import {
+    HoldScope,
+    unlessHeld,
+    useRateLimitHold
+} from "../../lib/rate-limit-holds";
 import { m } from "../../paraglide/messages";
 
 const FASTENER_VERSION_STALE_MS = 60 * 1000;
@@ -87,14 +92,18 @@ const PREPARE_STALE_MS = 60 * 1000;
  */
 export function usePrepareHoles(assembly: ElementPath): void {
     const isSignedIn = useIsSignedIn();
+    const hold = useRateLimitHold(HoldScope.AUTO_ASSEMBLY);
     useQuery({
         queryKey: prepareHolesQueryKey(assembly),
-        queryFn: isSignedIn
-            ? () =>
-                  apiPost<{ holes: number }>("/auto-assembly/prepare", {
-                      body: { assembly }
-                  })
-            : skipToken,
+        queryFn:
+            isSignedIn && !hold
+                ? () =>
+                      unlessHeld(HoldScope.AUTO_ASSEMBLY, () =>
+                          apiPost<{ holes: number }>("/auto-assembly/prepare", {
+                              body: { assembly }
+                          })
+                      )
+                : skipToken,
         staleTime: PREPARE_STALE_MS,
         retry: false
     });
@@ -105,15 +114,17 @@ export function useInsertMutation(assembly: ElementPath) {
     return useMutation({
         mutationKey: ["auto-assembly-insert", assembly],
         mutationFn: (body: AutoAssemblyIn) =>
-            apiPost<AssemblyJobStatus>("/auto-assembly/insert", { body }),
+            unlessHeld(HoldScope.AUTO_ASSEMBLY, () =>
+                apiPost<AssemblyJobStatus>("/auto-assembly/insert", { body })
+            ),
         onSuccess: (status) =>
             queryClient.setQueryData(assemblyJobQueryKey(assembly), status),
         onError: getAppErrorHandler(m.autoAssemblyStartFailed())
     });
 }
 
-/** Long enough that picking several in a row checks them once. */
-const PICK_CHECK_DELAY_MS = 600;
+/** Long enough that picking edges one at a time checks once per pause, not once per pick. */
+const PICK_CHECK_DELAY_MS = 1500;
 
 export interface PickProblems {
     /** Each pick's problem, by its row key. */
@@ -126,20 +137,27 @@ export interface PickProblems {
     existingScrew?: Record<string, string>;
     /** Whether a check is waiting for the picks to settle, or going. */
     isChecking: boolean;
+    /** Why no check is sent: Onshape is limiting Auto Assembly, for how long. */
+    hold?: string;
 }
 
 /**
- * Each pick's problem, checked in the background once the picks settle; each
- * check reads the assembly in Onshape. Memoize `body`.
+ * Each pick's problem, checked in the background once the picks settle; a
+ * check reads Onshape only for what changed since the last. None is sent while
+ * Onshape is limiting Auto Assembly. Memoize `body`.
  */
 export function usePickProblems(body: PickCheckIn | undefined): PickProblems {
     const isSignedIn = useIsSignedIn();
+    const hold = useRateLimitHold(HoldScope.AUTO_ASSEMBLY);
     const [settled] = useDebouncedValue(body, PICK_CHECK_DELAY_MS);
     const { data, isFetching, isPlaceholderData } = useQuery<PickCheckOut>({
         queryKey: pickCheckQueryKey(settled),
         queryFn:
-            settled && isSignedIn
-                ? () => apiPost("/auto-assembly/check", { body: settled })
+            settled && isSignedIn && !hold
+                ? () =>
+                      unlessHeld(HoldScope.AUTO_ASSEMBLY, () =>
+                          apiPost("/auto-assembly/check", { body: settled })
+                      )
                 : skipToken,
         // The last check's marks stay while the next is going
         placeholderData: keepPreviousData,
@@ -165,7 +183,11 @@ export function usePickProblems(body: PickCheckIn | undefined): PickProblems {
             : data?.isHoleCountersunk,
         existingScrew: isPlaceholderData ? undefined : data?.existingScrew,
         isChecking:
-            isSignedIn && body !== undefined && (settled !== body || isFetching)
+            isSignedIn &&
+            !hold &&
+            body !== undefined &&
+            (settled !== body || isFetching),
+        ...(hold ? { hold } : {})
     };
 }
 
