@@ -277,9 +277,9 @@ errors.
   unrelated tab keeps its caches. Being a documents endpoint, the listing
   doesn't spend the assembly definition's count; what its own allows is
   _unverified_.
-- **Dragging an instance in an assembly** moves the assembly tab's
-  microversion — _unverified_. The insert location's cache relies on it, so a
-  marker dragged without a new microversion would be found where it was.
+- **Dragging an instance in an assembly** is an edit, so it moves the
+  assembly tab's microversion — the owner. The insert location's cache relies
+  on it to find a dragged marker where it now is.
 
 - **Inserts often take several seconds** — _observed_ in Workers Logs for the
   week to 2026-11-09, as the whole insert request's wall time, which includes
