@@ -1,6 +1,8 @@
 import {
+    hashKey,
     keepPreviousData,
     skipToken,
+    useIsFetching,
     useMutation,
     useQuery
 } from "@tanstack/react-query";
@@ -26,6 +28,7 @@ import {
     assemblyJobQueryKey,
     fastenerSetQueryKey,
     pickCheckQueryKey,
+    pickChecksQueryKey,
     prepareHolesQueryKey
 } from "../../lib/query-keys";
 import { useIsSignedIn } from "../auth/access-level";
@@ -150,10 +153,16 @@ export function usePickProblems(body: PickCheckIn | undefined): PickProblems {
     const isSignedIn = useIsSignedIn();
     const hold = useRateLimitHold(HoldScope.AUTO_ASSEMBLY);
     const [settled] = useDebouncedValue(body, PICK_CHECK_DELAY_MS);
+    // One check at a time: a slow one would otherwise have the next run beside it
+    const othersChecking = useIsFetching({
+        queryKey: pickChecksQueryKey(),
+        predicate: (query) =>
+            query.queryHash !== hashKey(pickCheckQueryKey(settled))
+    });
     const { data, isFetching, isPlaceholderData } = useQuery<PickCheckOut>({
         queryKey: pickCheckQueryKey(settled),
         queryFn:
-            settled && isSignedIn && !hold
+            settled && isSignedIn && !hold && othersChecking === 0
                 ? () =>
                       unlessHeld(HoldScope.AUTO_ASSEMBLY, () =>
                           apiPost("/auto-assembly/check", { body: settled })
@@ -186,7 +195,7 @@ export function usePickProblems(body: PickCheckIn | undefined): PickProblems {
             isSignedIn &&
             !hold &&
             body !== undefined &&
-            (settled !== body || isFetching),
+            (settled !== body || isFetching || othersChecking > 0),
         ...(hold ? { hold } : {})
     };
 }

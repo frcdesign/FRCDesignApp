@@ -1,26 +1,16 @@
 /**
  * Finding the insert location in an assembly, and working out where it sits,
- * cached by what pins the assembly tab, so asking again between its edits reads
- * only the workspace's tabs.
+ * from the assembly as Auto Assembly reads and caches it, so asking again
+ * between its edits reads only the workspace's tabs.
  */
 import { INSERT_LOCATION_SOURCE } from "./contract";
-import { kvStore, putQuietly } from "../../lib/kv-store";
+import { readAssembly } from "../auto-assembly/assembly-read";
 import { OnshapeApi } from "../../lib/onshape/client";
-import { getAssembly } from "../../lib/onshape/endpoints/assemblies";
 import { type ElementPath } from "../../lib/onshape/path";
-import { pinElement } from "../../lib/onshape/pin";
 import {
     type OnshapeAssemblyDefinition,
     type OnshapeAssemblyInstance
 } from "../../lib/onshape/types";
-
-/** Sketches aren't solids, so the marker needs `includeNonSolids`. */
-function getAssemblyWithMarkers(
-    onshapeApi: OnshapeApi,
-    assemblyPath: ElementPath
-): Promise<OnshapeAssemblyDefinition> {
-    return getAssembly(onshapeApi, assemblyPath, { includeNonSolids: true });
-}
 
 /** Whether something an assembly names came from the marker's tab. */
 function isFromSourceTab(reference: {
@@ -58,44 +48,28 @@ function findInsertLocationInstance(
     );
 }
 
-/** An assembly at one pin: its marker, and where each top-level instance sits. */
+/** An assembly as it is now: its marker, and where each top-level instance sits. */
 interface Placement {
     instanceId?: string;
     /** By instance id; the marker's is among them. */
     transforms: Record<string, number[]>;
 }
 
-/** A week: a pin is never stale, so this only bounds what's kept of assemblies edited since. */
-const PLACEMENT_TTL_SECONDS = 7 * 24 * 60 * 60;
-
-const placements = kvStore<Placement>("insert-location", {
-    ttlSeconds: PLACEMENT_TTL_SECONDS
-});
-
-/** From the cache when the assembly tab hasn't changed since it was last read. */
+/** Read through Auto Assembly's cache, so an insert and its fasten read the assembly once. */
 async function readPlacement(
     onshapeApi: OnshapeApi,
     kv: KVNamespace,
     assemblyPath: ElementPath
 ): Promise<Placement> {
-    const { pin } = await pinElement(onshapeApi, assemblyPath);
-    const cached = pin ? await placements.get(kv, pin) : undefined;
-    if (cached) {
-        return cached;
-    }
-    const assembly = await getAssemblyWithMarkers(onshapeApi, assemblyPath);
-    const placement: Placement = {
-        instanceId: findInsertLocationInstance(assembly)?.id,
+    const { definition } = await readAssembly(onshapeApi, kv, assemblyPath);
+    return {
+        instanceId: findInsertLocationInstance(definition)?.id,
         transforms: Object.fromEntries(
-            (assembly.rootAssembly.occurrences ?? [])
+            (definition.rootAssembly.occurrences ?? [])
                 .filter((occurrence) => occurrence.path.length === 1)
                 .map((occurrence) => [occurrence.path[0], occurrence.transform])
         )
     };
-    if (pin) {
-        await putQuietly(placements, kv, pin, placement);
-    }
-    return placement;
 }
 
 /** The marker's instance id in the assembly as it is now. */
@@ -105,6 +79,19 @@ export async function findInsertLocation(
     assemblyPath: ElementPath
 ): Promise<string | undefined> {
     return (await readPlacement(onshapeApi, kv, assemblyPath)).instanceId;
+}
+
+/**
+ * The marker's instance id as the assembly was last read, which an insert does
+ * whenever it lands on the marker. Undefined when it has never been read.
+ */
+export async function findLastInsertLocation(
+    onshapeApi: OnshapeApi,
+    kv: KVNamespace,
+    assemblyPath: ElementPath
+): Promise<string | undefined> {
+    const { definition } = await readAssembly(onshapeApi, kv, assemblyPath, []);
+    return findInsertLocationInstance(definition)?.id;
 }
 
 /**

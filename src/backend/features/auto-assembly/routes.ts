@@ -21,7 +21,7 @@ import {
 } from "./contract";
 import { getFastenerSet } from "./fastener-set";
 import { getJobStatus, reportJob } from "./jobs";
-import { indexHoles } from "./index-holes";
+import { IndexScope, indexHoles } from "./index-holes";
 import { planHoles } from "./planner";
 import { pickedHole, pickProblems } from "./check";
 import {
@@ -233,7 +233,11 @@ autoAssemblyRoutes.post(
             set,
             replaced,
             request.stopFace,
-            { flipped: request.flipped, flipScrews: request.flipScrews }
+            { flipped: request.flipped, flipScrews: request.flipScrews },
+            // Nothing is planned, so only the picks' own edges matter
+            !options && replaced.length === 0 && !request.stopFace
+                ? IndexScope.PICKS
+                : IndexScope.PLAN
         );
         // Only parts the catalog makes can be planned with
         const canPlan =

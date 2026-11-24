@@ -162,7 +162,12 @@ export function fastenerSetQueryKey(cacheVersion: number | undefined) {
 
 /** The whole body, so a pick or an option changed is a new check. */
 export function pickCheckQueryKey(body: PickCheckIn | undefined) {
-    return ["pick-check", body];
+    return [...pickChecksQueryKey(), body];
+}
+
+/** Every pick check, whatever its body. */
+export function pickChecksQueryKey() {
+    return ["pick-check"];
 }
 
 export function assemblyJobQueryKey(assembly: ElementPath | undefined) {

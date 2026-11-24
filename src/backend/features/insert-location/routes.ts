@@ -13,7 +13,7 @@ import {
     INSERT_LOCATION_SOURCE,
     type InsertLocationOut
 } from "./contract";
-import { findInsertLocation } from "./parse";
+import { findInsertLocation, findLastInsertLocation } from "./parse";
 import { toMarkerPoint } from "./placement";
 
 export const insertLocationRoutes = getApp();
@@ -32,7 +32,7 @@ insertLocationRoutes.get(
     requireSignInMiddleware,
     validate("query", assemblyPathSchema),
     async (c) => {
-        const instanceId = await findInsertLocation(
+        const instanceId = await findLastInsertLocation(
             await c.var.getOnshapeApi(),
             c.env.KV,
             c.req.valid("query")

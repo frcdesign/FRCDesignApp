@@ -510,7 +510,7 @@ interface AssemblyJobParams {
 `src/backend/features/auto-assembly/hole-scan.fs`
 
 ```ts
-// Reads the assembly and scans every Part Studio it needs.
+// Reads the assembly and scans every Part Studio its scope needs.
 async function indexHoles(
     client: OnshapeApi,
     kv: KVNamespace,
@@ -519,14 +519,32 @@ async function indexHoles(
     excluded: SelectedEntity[],
     fasteners: FastenerSet | undefined,
     replaced: SelectedEntity[],
-    stopFace?: SelectedEntity
+    stopFace?: SelectedEntity,
+    flips?: Flips,
+    scope?: IndexScope
 ): Promise<IndexedHoles>;
-// The definition and its workspace's Part Studio microversions, from KV when nothing in the document changed.
+// The definition and its workspace's Part Studio microversions, from KV while the assembly tab is unchanged,
+// or, given `holding`, at the last read that has every one of those occurrences.
 async function readAssembly(
     client: OnshapeApi,
     kv: KVNamespace,
-    assembly: ElementPath
+    assembly: ElementPath,
+    holding?: string[][]
 ): Promise<AssemblyRead>;
+
+enum IndexScope {
+    /** Planning: every Part Studio's holes, at the assembly as it is now. */
+    PLAN = "plan",
+    /** The picks' circular edges alone, from the Part Studios picked in. */
+    PICKS = "picks"
+}
+
+interface AssemblyRead {
+    definition: OnshapeAssemblyDefinition;
+    microversions: ElementMicroversions;
+    /** False when the definition is from an earlier edit, served for `holding`. */
+    isCurrent: boolean;
+}
 // Every part occurrence, through subassemblies, with the edit it's from.
 function partOccurrences(
     definition: OnshapeAssemblyDefinition,
@@ -975,11 +993,16 @@ vectors, Onshape's 4×4 transforms and `LINEAR_TOLERANCE`.
   where it's released), as the group's last load stored them; read, never
   written, here (see [generated-parts.md](./generated-parts.md)).
 - **KV** `auto-assembly-assembly:{pin}|{options}` — the assembly's
-  definition, for a week (`definitions` in `assembly-read.ts`). The pin is the
+  definition, for a week (`definitions` in `assembly-read.ts`), with
+  non-solids so the insert location reads it too. The pin is the
   version or microversion in the path, or for a workspace
   `{documentId}|e|{elementMicroversionId}|{elementId}`, the assembly tab's own
   microversion (`pinElement` in `src/backend/lib/onshape/pin.ts`). The options
   are those the definition was asked with.
+- **KV** `auto-assembly-latest:{documentId}|w|{workspaceId}|{elementId}` —
+  the `auto-assembly-assembly` id a workspace assembly was last read under,
+  for a week (`latestReads`). Read by `IndexScope.PICKS` and by the insert
+  location's `GET`.
 - **KV** `auto-assembly-picks:v{n}|{key}` — what each entity picked in a Part
   Studio gave, by its id: circles for an edge or a face, a plane for a face to
   stop at, an empty list for one that gave nothing. For a month, under the
@@ -1223,7 +1246,8 @@ if the panel closes (`finishEvenIfDisconnected`).
 
 Each list's rows are checked in the background (`usePickProblems`), 1.5 s
 after the picks or options last changed (`PICK_CHECK_DELAY_MS`), so picking
-edges one at a time checks once per pause. The rows show checking from the
+edges one at a time checks once per pause. One check goes at a time: one
+that settles while another is going waits for it to answer. The rows show checking from the
 first change until the answer. A row that won't do what it was
 picked for turns red with why under it, and one that will, but not as well as
 it should, turns yellow (`QueryList`'s `problem`, from the problem's
@@ -1257,8 +1281,11 @@ Nothing picked asks Onshape nothing. Otherwise a check lists the workspace's
 tabs, and asks nothing else while the assembly hasn't changed and every pick
 was scanned before (see
 [Caching Onshape's answers](#caching-onshapes-answers)). FTC, or parts the
-catalog doesn't make, is checked without planning. The last check's marks stay while the next goes,
-and the same picks and options are checked once. Insert and fasten's lists use
+catalog doesn't make, is checked without planning. A check without options,
+and with no screws to update or face to stop at, needs only the picks' own
+edges. It indexes with `IndexScope.PICKS` (step 5 of the caching below). The
+last check's marks stay while the next goes, and the same picks and options
+are checked once. Insert and fasten's lists use
 the same route without options (see [fasten.md](./fasten.md)).
 
 ### Caching Onshape's answers
@@ -1283,6 +1310,13 @@ on is unchanged:
 4. **Picks.** Each picked entity's answer is cached under the same pin, so a
    check evaluates a studio only for entities it never scanned there, and only
    those. A studio whose holes and picks are all cached isn't evaluated.
+5. **Picks alone.** `IndexScope.PICKS` scans only the Part Studios picked
+   in. It takes the last definition read of the assembly (`latestReads`)
+   while that has every picked occurrence, however the assembly was edited
+   since. An insert, a mate or a drag moves the assembly tab, but not which
+   Part Studio a part is from. A pick on an occurrence it lacks reads the
+   assembly afresh. So does a pick that gives no circular edge from an
+   earlier read, as one on a part reconfigured since can.
 
 A write that fails, as a second write to a key within a second does, leaves a
 miss for later (`putQuietly`), not a failed request. The add-to-assembly
@@ -1492,9 +1526,13 @@ In [strings/auto-assembly.md](../strings/auto-assembly.md).
 - Every part is in the screw's size.
 - A scan is keyed by something that never changes, so a cached scan is never
   stale and nothing invalidates it.
-- An assembly read is keyed by the assembly tab's own microversion, which
-  moves with every tab it depends on, so an edit to a tab it references
-  misses too.
+- An assembly read for planning is keyed by the assembly tab's own
+  microversion, which moves with every tab it depends on, so an edit to a tab
+  it references misses too.
+- A picks-only index (`IndexScope.PICKS`) may use an earlier edit's
+  definition, but only one with every picked occurrence, from which every
+  pick gives a circular edge. Anything else reads the assembly afresh.
+- A page sends one pick check at a time.
 - Between edits to the assembly, checking the same picks again asks Onshape
   only for the workspace's tabs.
 - Fasteners are only ever inserted into an assembly in a workspace.
@@ -1665,6 +1703,15 @@ In [strings/auto-assembly.md](../strings/auto-assembly.md).
   the first. Picked on purpose, it must still be fastened. So only the first
   hole sets the screw, and a hole that doesn't match it is fastened with a
   warning on its row.
+- **Preselection reads the assembly as last read.** Every insert, mate and
+  drag moves the assembly tab, so pinning cost a definition read, the scarcest
+  count, after every insert. Fastening to a pick needs only which Part Studio
+  its part is from, and its mate names the edge, not where it sits. A part
+  reconfigured or replaced since can answer from its old Part Studio until a
+  pick on it fails to resolve; at worst its mate fails in Onshape.
+- **Checks go one at a time.** A check can take seconds, and overlapping ones
+  each evaluate what the other is evaluating. One lockout began with four
+  checks running at once.
 - **Every scan is sent the picked ids, not a `queries` body.** The lambda is
   wrapped to build its queries from `qTransient`, whose form std documents.
 

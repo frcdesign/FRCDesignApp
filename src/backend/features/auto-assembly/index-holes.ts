@@ -31,7 +31,11 @@ import {
 import { type Selection } from "../configurations/contract";
 import { decodeConfiguration } from "../configurations/utils";
 import { scanStudio, type StudioScan } from "./scan";
-import { assemblyInstances, readAssembly } from "./assembly-read";
+import {
+    type AssemblyRead,
+    assemblyInstances,
+    readAssembly
+} from "./assembly-read";
 import { pickKey } from "./picked";
 import { type Replacement, screwLength, seatEdge, stackParts } from "./replace";
 
@@ -73,6 +77,28 @@ function isFastener(
     );
 }
 
+/** What an index is for, which decides what it reads. */
+export enum IndexScope {
+    /** Planning: every Part Studio's holes, at the assembly as it is now. */
+    PLAN = "plan",
+    /**
+     * The picks' circular edges alone, as insert and fasten needs them: only
+     * the Part Studios picked in are scanned, at the last assembly read that
+     * has every pick.
+     */
+    PICKS = "picks"
+}
+
+interface IndexRequest {
+    targets: SelectedEntity[];
+    excluded: SelectedEntity[];
+    fasteners: FastenerSet | undefined;
+    replaced: SelectedEntity[];
+    stopFace?: SelectedEntity;
+    flips: Flips;
+    scope: IndexScope;
+}
+
 export async function indexHoles(
     client: OnshapeApi,
     kv: KVNamespace,
@@ -85,13 +111,59 @@ export async function indexHoles(
     replaced: SelectedEntity[] = [],
     /** The planar face to stop at, scanned for its plane. */
     stopFace?: SelectedEntity,
-    flips: Flips = { flipped: [], flipScrews: false }
+    flips: Flips = { flipped: [], flipScrews: false },
+    scope: IndexScope = IndexScope.PLAN
 ): Promise<IndexedHoles> {
-    const { definition, microversions } = await readAssembly(
+    const request: IndexRequest = {
+        targets,
+        excluded,
+        fasteners,
+        replaced,
+        stopFace,
+        flips,
+        scope
+    };
+    const picks = [...targets, ...excluded];
+    const read = await readAssembly(
         client,
         kv,
-        assembly
+        assembly,
+        scope === IndexScope.PICKS
+            ? picks.map((pick) => pick.occurrencePath)
+            : undefined
     );
+    const indexed = await indexRead(client, kv, assembly, read, request);
+    // An earlier edit's configuration can lack a picked entity
+    const isResolved = picks.every(
+        (pick) => (indexed.pickEdges[pickKey(pick)] ?? []).length > 0
+    );
+    if (read.isCurrent || isResolved) {
+        return indexed;
+    }
+    return indexRead(
+        client,
+        kv,
+        assembly,
+        await readAssembly(client, kv, assembly),
+        request
+    );
+}
+
+async function indexRead(
+    client: OnshapeApi,
+    kv: KVNamespace,
+    assembly: ElementPath,
+    { definition, microversions }: AssemblyRead,
+    {
+        targets,
+        excluded,
+        fasteners,
+        replaced,
+        stopFace,
+        flips,
+        scope
+    }: IndexRequest
+): Promise<IndexedHoles> {
     const instances = assemblyInstances(definition);
     const occurrences = partOccurrences(definition, assembly, microversions);
     const byPath = new Map(
@@ -111,7 +183,7 @@ export async function indexHoles(
     );
     const sources = new Map(
         [
-            ...scanned,
+            ...(scope === IndexScope.PLAN ? scanned : []),
             ...byPathValues(byPath, [...targets, ...excluded, ...stopFaces])
         ].map((occurrence) => [occurrence.source.key, occurrence.source])
     );

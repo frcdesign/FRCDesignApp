@@ -70,24 +70,23 @@ describe("insert location routes", () => {
         } satisfies InsertLocationOut);
     });
 
-    it("GET reads the assembly again only once its tab has been edited", async () => {
+    it("GET answers from the assembly as last read, edited since or not", async () => {
         const read = mockAssembly([MARKER]);
-        const get = () =>
-            createTestApp().request(
-                `/api/insert-location?${targetQuery}`,
-                jsonRequest("GET"),
-                env
-            );
+        const get = async () =>
+            (
+                await createTestApp().request(
+                    `/api/insert-location?${targetQuery}`,
+                    jsonRequest("GET"),
+                    env
+                )
+            ).json();
 
         await get();
-        expect(await (await get()).json()).toEqual({
+        atMicroversion("a2");
+        expect(await get()).toEqual({
             instanceId: "marker"
         } satisfies InsertLocationOut);
         expect(read).toHaveBeenCalledTimes(1);
-
-        atMicroversion("a2");
-        await get();
-        expect(read).toHaveBeenCalledTimes(2);
     });
 
     it("GET answers no instance for an assembly without one", async () => {

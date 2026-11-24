@@ -268,6 +268,31 @@ errors.
   count, as above. Nearly every 429 came from Auto Assembly's check, which then
   read the assembly on every pick. Which endpoint ran out, and whether its
   remaining count was at 0, these logs can't say: each 429 now logs both.
+- **A user runs out within seconds, not over a long session** — _observed_ in
+  production Workers Logs, 2026-11-23 to 24. Clients locked out had sent only
+  30–70 checks in the 36 h before. Two, traced request by request:
+    - Four checks ran at once 21 s before the first 429, each 10–15 s, then
+      seven more a few seconds apart. All eleven answered 502.
+    - Auto Assembly's prepare got 86,383 s about 40 s after the panel opened.
+      So that count's 24 h began during prepare's own scan of every Part
+      Studio. A check 5 s later got 9,877 s from a second count, empty since
+      the evening before.
+
+    So seconds of calls emptied a count, though the owner's account reads
+    ~3,000 and ~9,000. Whether these users' limits are lower (many FRC
+    users are on Education or free plans), or a burst limit carries a day's
+    lockout, is _unverified_. Every 429 found came before 2026-11-24 20:50
+    UTC, when the caches went live.
+
+- **Onshape publishes neither the per-endpoint limits nor how plans differ**
+  — _documented_: "Onshape does not publish this information"
+  (<https://onshape-public.github.io/docs/api-adv/errors>). Only the annual
+  allocation is broken down by plan
+  (<https://onshape-public.github.io/docs/auth/limits>).
+- **Calls answered 4xx or 5xx don't count** toward the limits — _documented_
+  (<https://onshape-public.github.io/docs/auth/limits>). A FeatureScript
+  evaluation whose script fails can answer 200 with notices
+  (`evaluateScan` handles it); that it then counts is _unverified_.
 
 - **A workspace's current microversion**
   (`GET /documents/d/{did}/w/{wid}/currentmicroversion`) moves on every edit

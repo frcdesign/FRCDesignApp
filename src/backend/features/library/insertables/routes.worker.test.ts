@@ -48,7 +48,8 @@ import { AUTO_INDEX_THRESHOLD } from "../../configurations/combinations";
 import {
     ASSEMBLY,
     BODY,
-    mockAssemblyReads
+    mockAssemblyReads,
+    workspaceElements
 } from "../../../../__test_utils__/auto-assembly-fixtures";
 import {
     enumParam,
@@ -813,6 +814,36 @@ describe("insertable routes", () => {
         } satisfies InsertOut);
         expect(reads.assembly).toHaveBeenCalledTimes(1);
         expect(reads.scan).toHaveBeenCalledTimes(scans);
+    });
+
+    it("reads the assembly once an insert has moved it only to land on the insert location", async () => {
+        await seedFastenable();
+        vi.spyOn(AssemblyEndpoints, "addAssemblyFeature").mockResolvedValue({
+            feature: { featureId: "f1" }
+        });
+        const reads = mockAssemblyReads();
+        const insert = (body: Record<string, unknown>) =>
+            createTestApp().request(
+                `/api/add-to-assembly/insertable/${TEST_ASSEMBLY_ID}`,
+                jsonRequest("POST", {
+                    targetPath: ASSEMBLY,
+                    fasten: true,
+                    targets: BODY.targets,
+                    ...body
+                }),
+                env
+            );
+
+        expect((await insert({})).status).toBe(200);
+        expect(reads.assembly).toHaveBeenCalledTimes(1);
+
+        reads.elements.mockResolvedValue(workspaceElements({ assembly: "a2" }));
+        expect((await insert({})).status).toBe(200);
+        expect(reads.assembly).toHaveBeenCalledTimes(1);
+
+        reads.elements.mockResolvedValue(workspaceElements({ assembly: "a3" }));
+        expect((await insert({ insertLocationId: "marker" })).status).toBe(200);
+        expect(reads.assembly).toHaveBeenCalledTimes(2);
     });
 
     it("refuses faces picked as circular edges", async () => {
