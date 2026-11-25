@@ -519,6 +519,8 @@
     "dashboardNudgeTipRemoved": "Tip removed",
     "dashboardNudgeSuggestionAdded": "Suggestions",
     "dashboardNudgeSuggestionRemoved": "Suggestions removed",
+    "dashboardNudgeSplashScreenAdded": "Splash screen",
+    "dashboardNudgeSplashScreenRemoved": "Splash screen removed",
     "dashboardNudgeSuggestedLinks": "Suggested links",
     "dashboardNudgeRemoved": "{name} removed",
     "dashboardReleaseCreated": "Created",
@@ -1038,5 +1040,11 @@
     "versionManagerFormRecursivePushInfo": "Recursively push changes across multiple links.",
     "versionManagerFormRecursivePullInfo": "Also pulls into the parent from the documents linked above it first, saving a new version of each one along the way so the next can use it. Each is numbered from its own versions unless you name them above.",
     "versionManagerQuickRecursivePushTip": "Tip: Quick recursive push in a link's ⋯ menu does this in one click, without opening the form.",
-    "versionManagerQuickRecursivePullTip": "Tip: Quick recursive pull in a link's ⋯ menu does this in one click, without opening the form."
+    "versionManagerQuickRecursivePullTip": "Tip: Quick recursive pull in a link's ⋯ menu does this in one click, without opening the form.",
+    "splashScreenTitle": "Welcome to the FRCDesignApp!",
+    "splashScreenFrcDesignLibDescription": "Parts library for FRC®",
+    "splashScreenConfigLibDescription": "Parts library for FTC®",
+    "splashScreenFeatureScriptsDescription": "Add custom features to your Part Studios",
+    "splashScreenVersionManagerDescription": "Push and pull versions between linked documents",
+    "splashScreenAutoAssemblyDescription": "Quickly add hardware to an assembly"
 }

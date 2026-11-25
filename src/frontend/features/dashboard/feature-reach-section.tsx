@@ -3,7 +3,8 @@ import {
     type LineChartProps,
     type LineChartSeries
 } from "@mantine/charts";
-import { Card, Group, Paper, SimpleGrid, Text } from "@mantine/core";
+import { Box, Card, Group, Paper, SimpleGrid, Text } from "@mantine/core";
+import { useElementSize } from "@mantine/hooks";
 import { type UseQueryResult } from "@tanstack/react-query";
 import { type ReactNode } from "react";
 import {
@@ -23,6 +24,8 @@ import {
     featureMarks,
     featureOrder,
     latestPoint,
+    MarkSide,
+    placeMarks,
     reachMeasure,
     ReachMeasure,
     toReachSeries,
@@ -44,6 +47,18 @@ const COUNT_TICK_COUNT = 3;
 
 /** As many labels as fit under a panel without crowding. */
 const MAX_TICKS = 5;
+
+/** Recharts' default y axis width, which the plot starts after. */
+const Y_AXIS_WIDTH = 60;
+
+/** Room right of the plot for half the last date, which is centered on its tick. */
+const RIGHT_MARGIN = 20;
+
+/** Recharts' own, on the sides it is not widened. */
+const CHART_MARGIN = { top: 5, right: RIGHT_MARGIN, bottom: 5, left: 5 };
+
+/** A 12px label's line, the step between stacked marker labels. */
+const LABEL_ROW_HEIGHT = 14;
 
 /** A year of weeks still reads with dots; past that they crowd. */
 const MAX_DOTTED_POINTS = 60;
@@ -179,8 +194,13 @@ function FeatureReachPanel({
     points,
     interval
 }: FeatureReachPanelProps): ReactNode {
+    const { ref, width } = useElementSize();
     const latest = latestPoint(points);
-    const middle = points[Math.floor(points.length / 2)]?.bucket ?? "";
+    const marks = placeMarks(
+        featureMarks(feature, points, interval),
+        points.map((point) => point.bucket),
+        width - Y_AXIS_WIDTH - CHART_MARGIN.left - RIGHT_MARGIN
+    );
     return (
         <Card>
             <Group justify="space-between" align="flex-start" mb="xs">
@@ -194,55 +214,58 @@ function FeatureReachPanel({
                     </Text>
                 )}
             </Group>
-            {latest ? (
-                <LineChart
-                    h={PANEL_HEIGHT}
-                    data={points}
-                    dataKey="bucket"
-                    xAxisProps={{
-                        ticks: evenTicks(
-                            points.map((point) => point.bucket),
-                            MAX_TICKS
-                        ),
-                        interval: 0,
-                        tickFormatter: toLabel(points)
-                    }}
-                    yAxisProps={axisFor(measure)}
-                    valueFormatter={(value) => formatValue(value, measure)}
-                    curveType="monotone"
-                    withDots={points.length <= MAX_DOTTED_POINTS}
-                    tooltipProps={{
-                        content: ({ payload }) => (
-                            <ReachTooltip
-                                point={
-                                    payload?.[0]?.payload as
-                                        | ReachPoint
-                                        | undefined
-                                }
-                                interval={interval}
-                                measure={measure}
-                                feature={feature}
-                            />
-                        )
-                    }}
-                    referenceLines={featureMarks(feature, points, interval).map(
-                        (mark) => ({
+            <Box ref={ref}>
+                {latest ? (
+                    <LineChart
+                        h={PANEL_HEIGHT}
+                        data={points}
+                        dataKey="bucket"
+                        lineChartProps={{ margin: CHART_MARGIN }}
+                        xAxisProps={{
+                            ticks: evenTicks(
+                                points.map((point) => point.bucket),
+                                MAX_TICKS
+                            ),
+                            interval: 0,
+                            tickFormatter: toLabel(points)
+                        }}
+                        yAxisProps={axisFor(measure)}
+                        valueFormatter={(value) => formatValue(value, measure)}
+                        curveType="monotone"
+                        withDots={points.length <= MAX_DOTTED_POINTS}
+                        tooltipProps={{
+                            content: ({ payload }) => (
+                                <ReachTooltip
+                                    point={
+                                        payload?.[0]?.payload as
+                                            | ReachPoint
+                                            | undefined
+                                    }
+                                    interval={interval}
+                                    measure={measure}
+                                    feature={feature}
+                                />
+                            )
+                        }}
+                        referenceLines={marks.map((mark) => ({
                             x: mark.bucket,
                             color: MUTED_MARK,
                             strokeDasharray: "4 4",
-                            label: mark.label,
-                            // Toward the middle, so a label at either end stays on the card.
+                            label: {
+                                value: mark.label,
+                                dy: mark.row * LABEL_ROW_HEIGHT
+                            },
                             labelPosition:
-                                mark.bucket > middle
+                                mark.side === MarkSide.LEFT
                                     ? "insideTopRight"
                                     : "insideTopLeft"
-                        })
-                    )}
-                    series={seriesOf(feature)}
-                />
-            ) : (
-                <DashboardEmpty title={m.dashboardFeatureReachNoData()} />
-            )}
+                        }))}
+                        series={seriesOf(feature)}
+                    />
+                ) : (
+                    <DashboardEmpty title={m.dashboardFeatureReachNoData()} />
+                )}
+            </Box>
         </Card>
     );
 }

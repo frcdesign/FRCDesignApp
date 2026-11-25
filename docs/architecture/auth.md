@@ -59,7 +59,8 @@ team, plus one owner set by configuration.
   default configuration** on closing, and a part's menu (on its card or in the
   insert menu) offering **Report an issue** on closing. Fastening an insert to
   circular edges is recorded by the insert request itself, and `markHintSeen`
-  shows it at once. Kept until deleted; losing it only shows a dot again. The
+  shows it at once. The splash screen is recorded once a card on it is picked
+  or it is closed. Kept until deleted; losing it only shows a dot again. The
   day each dot shipped is listed in
   `src/frontend/features/dashboard/nudges.ts`, which marks it on the
   dashboard's Feature usage; a new hint adds its entry there.
@@ -67,7 +68,9 @@ team, plus one owner set by configuration.
   `seenHints`, the hints dismissed in this browser. `useHasSeenHint` reads them
   beside the server's list, so a refetch that reads KV before the dismissal
   lands can't bring a dot back. Signed out, `useHasSeenHint` reads every hint
-  as seen: no dot or **New** badge shows.
+  as seen: no dot or **New** badge shows. `useHasSeenScreen`, for the splash
+  screen, reads this browser's list alone when signed out, so it shows once
+  per browser then.
 
 ## Flows
 

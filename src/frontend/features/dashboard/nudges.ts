@@ -7,7 +7,9 @@ export enum NudgeKind {
     /** A tip toast; see `showTipToast`. */
     TIP = "tip",
     /** Something on the feature's own page suggesting a use of it. */
-    SUGGESTION = "suggestion"
+    SUGGESTION = "suggestion",
+    /** A card on the splash screen everybody sees once at launch. */
+    SPLASH_SCREEN = "splash-screen"
 }
 
 /** Which one, where its kind alone doesn't say: a marker is labelled by it in place of its kind. */
@@ -87,6 +89,25 @@ export const NUDGES: readonly Nudge[] = [
         kind: NudgeKind.TIP,
         change: NudgeChange.ADDED,
         day: "2026-11-22"
+    },
+    // A card on the splash screen, shown once to everybody on their next launch.
+    {
+        feature: AppFeature.FEATURESCRIPTS,
+        kind: NudgeKind.SPLASH_SCREEN,
+        change: NudgeChange.ADDED,
+        day: "2026-11-25"
+    },
+    {
+        feature: AppFeature.VERSION_MANAGER,
+        kind: NudgeKind.SPLASH_SCREEN,
+        change: NudgeChange.ADDED,
+        day: "2026-11-25"
+    },
+    {
+        feature: AppFeature.AUTO_ASSEMBLY,
+        kind: NudgeKind.SPLASH_SCREEN,
+        change: NudgeChange.ADDED,
+        day: "2026-11-25"
     }
 ];
 
@@ -169,6 +190,10 @@ export function nudgeLabel(nudge: Nudge): string {
             return added
                 ? m.dashboardNudgeSuggestionAdded()
                 : m.dashboardNudgeSuggestionRemoved();
+        case NudgeKind.SPLASH_SCREEN:
+            return added
+                ? m.dashboardNudgeSplashScreenAdded()
+                : m.dashboardNudgeSplashScreenRemoved();
     }
 }
 

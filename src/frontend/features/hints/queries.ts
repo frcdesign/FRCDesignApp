@@ -12,6 +12,16 @@ export function useHasSeenHint(hint: Hint): boolean {
 }
 
 /**
+ * For a screen shown once, which unlike a dot shows signed out too: once per
+ * browser then. Seen while the answer is pending, so it never flashes up.
+ */
+export function useHasSeenScreen(hint: Hint): boolean {
+    const { seenHints, isPending } = useAccessData();
+    const seenHere = useUiState((state) => state.seenHints.includes(hint));
+    return isPending || seenHere || seenHints.includes(hint);
+}
+
+/**
  * Stops pointing a feature out, for once it has been opened: in this browser at
  * once, and on every computer when signed in. A no-op until access is known, or once seen.
  */

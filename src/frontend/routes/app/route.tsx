@@ -22,7 +22,7 @@ import {
 } from "../../lib/app-params";
 import { parseSearch } from "../../lib/search-params";
 import { AppNavbar } from "../../components/app-navbar";
-import { ProgramSelect } from "../../features/library/components/program-select";
+import { SplashScreen } from "../../components/splash-screen";
 import { SectionLoading } from "../../components/app-notice";
 import { useMessageListener } from "../../lib/messages";
 import { usePushSync } from "../../lib/push-sync";
@@ -96,7 +96,7 @@ function App() {
                 <TanStackRouterDevtools />
             </AppShell.Main>
             {/* Over whichever library the app opened in, until it is answered. */}
-            <ProgramSelect />
+            <SplashScreen />
         </AppShell>
     );
 }
