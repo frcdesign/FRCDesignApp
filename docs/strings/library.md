@@ -9,18 +9,18 @@ listed so far: the rest join as their strings move there.
 ## Welcome
 
 The modal a new browser opens on, until a library or utility is picked:
-`src/frontend/components/welcome.tsx`. Each utility shows its tab's name and
-its navbar icon. FIRST's trademark notice under it is fixed wording, kept in
-the code.
+`src/frontend/components/welcome.tsx`. Each card shows the tab's name and its
+navbar icon over a description. FIRST's trademark notice under the cards is
+fixed wording, kept in the code.
 
-| String                                                                                   | Kind             | Where                       | When   | Review         |
-| ---------------------------------------------------------------------------------------- | ---------------- | --------------------------- | ------ | -------------- |
-| "Welcome to the FRCDesignApp!"                                                           | Notice title     | Top of the modal            | Always |                |
-| "Pick your library to get started. You can switch at any time from the menu at the top." | Notice text      | Under the title             | Always | **⚑** Reworded |
-| "Utilities"                                                                              | Divider label    | Under the FRC and FTC cards | Always | **⚑** New      |
-| "Add custom features to your Part Studios."                                              | Card description | FeatureScripts' card        | Always | **⚑** New      |
-| "Push and pull versions between linked documents."                                       | Card description | Version Manager's card      | Always | **⚑** New      |
-| "Put screws, washers and nuts in an assembly's holes."                                   | Card description | Auto Assembly's card        | Always | **⚑** New      |
+| String                                              | Kind             | Where                             | When   | Review         |
+| --------------------------------------------------- | ---------------- | --------------------------------- | ------ | -------------- |
+| "Welcome to the FRCDesignApp!"                      | Notice title     | Top of the modal                  | Always |                |
+| "Pick your library to get started."                 | Notice text      | Under the title                   | Always | **⚑** Reworded |
+| "Parts library for FRC®" / "Parts library for FTC®" | Card description | FRCDesignLib's card / ConfigLib's | Always | **⚑** New      |
+| "Add custom features to your Part Studios."         | Card description | FeatureScripts' card              | Always | **⚑** New      |
+| "Push and pull versions between linked documents."  | Card description | Version Manager's card            | Always | **⚑** New      |
+| "Quickly add hardware to an assembly."              | Card description | Auto Assembly's card              | Always | **⚑** New      |
 
 ## Menus
 

@@ -18,7 +18,9 @@ afterEach(() => vi.clearAllMocks());
 describe("the welcome", () => {
     it("opens the library picked", async () => {
         renderWithProviders(<Welcome />);
-        await userEvent.click(screen.getByRole("button", { name: /FTC/ }));
+        await userEvent.click(
+            screen.getByRole("button", { name: /ConfigLib/ })
+        );
 
         expect(navigateToTab).toHaveBeenCalledWith(LibraryId.CONFIG_LIB);
         expect(getUiState().tabId).toBe(LibraryId.CONFIG_LIB);

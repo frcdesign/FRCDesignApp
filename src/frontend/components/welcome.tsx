@@ -1,6 +1,6 @@
 import { AppLink } from "./app-link";
-import { Divider, Group, Stack, Text, UnstyledButton } from "@mantine/core";
-import { ArrowRightIcon, BooksIcon } from "@phosphor-icons/react";
+import { Group, Stack, Text, UnstyledButton } from "@mantine/core";
+import { ArrowRightIcon, BooksIcon, type Icon } from "@phosphor-icons/react";
 import { ReactNode } from "react";
 import { LibraryId } from "@backend/features/library/library-id";
 import { type AppTab, UtilityTab } from "../lib/app-tab";
@@ -21,16 +21,21 @@ import { updateUiState, useUiState } from "../lib/ui-state";
 import { m } from "../paraglide/messages";
 import styles from "../lib/styles.module.css";
 
-interface Program {
+interface LibraryChoice {
     libraryId: LibraryId;
-    /** What a team calls the program it competes in. */
-    name: string;
+    description: () => string;
 }
 
 /** What the app is offered for. MKCad is deprecated, so nobody is started in it. */
-const PROGRAMS: Program[] = [
-    { libraryId: LibraryId.FRC_DESIGN_LIB, name: "FRC" },
-    { libraryId: LibraryId.CONFIG_LIB, name: "FTC" }
+const LIBRARIES: LibraryChoice[] = [
+    {
+        libraryId: LibraryId.FRC_DESIGN_LIB,
+        description: m.welcomeFrcDesignLibDescription
+    },
+    {
+        libraryId: LibraryId.CONFIG_LIB,
+        description: m.welcomeConfigLibDescription
+    }
 ];
 
 /** In the page picker's order. */
@@ -59,54 +64,34 @@ function RegisteredMark(): ReactNode {
     return <sup>&reg;</sup>;
 }
 
-interface ProgramCardProps {
-    program: Program;
+/** A message's ® raised, as FIRST's names carry it. */
+function withRegisteredMarks(text: string): ReactNode[] {
+    const nodes: ReactNode[] = [];
+    let start = 0;
+    for (const match of text.matchAll(/®/g)) {
+        nodes.push(
+            text.slice(start, match.index),
+            <RegisteredMark key={match.index} />
+        );
+        start = match.index + 1;
+    }
+    nodes.push(text.slice(start));
+    return nodes;
+}
+
+interface PageCardProps {
+    tab: AppTab;
+    icon: Icon;
+    /** A Mantine shade, which the icon takes. */
+    shade: string;
+    name: string;
+    description: ReactNode;
     onSelect: (tabId: AppTab) => void;
 }
 
-/** One program to pick, named the way its teams do, over the library it opens. */
-function ProgramCard(props: ProgramCardProps): ReactNode {
-    const { program, onSelect } = props;
-    const { libraryId, name } = program;
-    const shade = getLibraryShade(libraryId);
-
-    return (
-        <UnstyledButton
-            className={`interactive ${styles.outlined}`}
-            p="md"
-            onClick={() => {
-                onSelect(libraryId);
-            }}
-        >
-            <Group gap="md">
-                {/* In the library's own color, so the two choices read as the
-                    two libraries they open. */}
-                <AppIcon
-                    icon={BooksIcon}
-                    size={IconSize.SECTION}
-                    color={shade}
-                />
-                <Stack gap={2} flex={1} miw={0} ta="left">
-                    <Text size="xl" fw={FontWeight.BOLD} c={shade}>
-                        {name}
-                        <RegisteredMark />
-                    </Text>
-                    <Text>{getLibraryName(libraryId)}</Text>
-                </Stack>
-                <ArrowRightIcon size={IconSize.MEDIUM} />
-            </Group>
-        </UnstyledButton>
-    );
-}
-
-interface UtilityCardProps {
-    tab: UtilityTab;
-    onSelect: (tabId: AppTab) => void;
-}
-
-/** A page that is not a library, smaller than a program so the program reads as the choice to make. */
-function UtilityCard(props: UtilityCardProps): ReactNode {
-    const { tab, onSelect } = props;
+/** One page to start in: a library or a utility. */
+function PageCard(props: PageCardProps): ReactNode {
+    const { tab, icon, shade, name, description, onSelect } = props;
 
     return (
         <UnstyledButton
@@ -118,15 +103,11 @@ function UtilityCard(props: UtilityCardProps): ReactNode {
             }}
         >
             <Group gap="md" wrap="nowrap">
-                <AppIcon
-                    icon={getUtilityIcon(tab)}
-                    size={IconSize.CONTROL}
-                    color={toShade(getUtilityColor(tab))}
-                />
+                <AppIcon icon={icon} size={IconSize.CONTROL} color={shade} />
                 <Stack gap={0} flex={1} miw={0} ta="left">
-                    <Text fw={FontWeight.BOLD}>{getUtilityName(tab)}</Text>
+                    <Text fw={FontWeight.BOLD}>{name}</Text>
                     <Text size="sm" c={StatusColor.DIMMED}>
-                        {describeUtility(tab)}
+                        {description}
                     </Text>
                 </Stack>
                 <ArrowRightIcon size={IconSize.SMALL} />
@@ -156,8 +137,8 @@ function TrademarkDisclaimer(): ReactNode {
 }
 
 /**
- * Asks a new user's program, which becomes their tab, and shows the utilities
- * beside it, any of which can be the tab instead. Asked once per browser.
+ * Asks a new user which library or utility to start in, which becomes their
+ * tab. Asked once per browser.
  */
 export function Welcome(): ReactNode {
     const tabId = useUiState((state) => state.tabId);
@@ -176,23 +157,29 @@ export function Welcome(): ReactNode {
                     title={m.welcomeTitle()}
                     description={m.welcomeDescription()}
                     action={
-                        // Side by side, each would be narrower than its name in Onshape's panel.
+                        // Side by side, each would be narrower than its description in Onshape's panel.
                         <Stack gap="sm" w="100%" maw={320}>
-                            {PROGRAMS.map((program) => (
-                                <ProgramCard
-                                    key={program.libraryId}
-                                    program={program}
+                            {LIBRARIES.map(({ libraryId, description }) => (
+                                <PageCard
+                                    key={libraryId}
+                                    tab={libraryId}
+                                    icon={BooksIcon}
+                                    shade={getLibraryShade(libraryId)}
+                                    name={getLibraryName(libraryId)}
+                                    description={withRegisteredMarks(
+                                        description()
+                                    )}
                                     onSelect={selectTab}
                                 />
                             ))}
-                            <Divider
-                                label={m.welcomeUtilities()}
-                                labelPosition="center"
-                            />
                             {UTILITIES.map((tab) => (
-                                <UtilityCard
+                                <PageCard
                                     key={tab}
                                     tab={tab}
+                                    icon={getUtilityIcon(tab)}
+                                    shade={toShade(getUtilityColor(tab))}
+                                    name={getUtilityName(tab)}
+                                    description={describeUtility(tab)}
                                     onSelect={selectTab}
                                 />
                             ))}
