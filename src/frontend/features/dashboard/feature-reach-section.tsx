@@ -51,6 +51,12 @@ const MAX_TICKS = 5;
 /** Recharts' default y axis width, which the plot starts after. */
 const Y_AXIS_WIDTH = 60;
 
+/** Room right of the plot for half the last date, which is centered on its tick. */
+const RIGHT_MARGIN = 20;
+
+/** Recharts' own, on the sides it is not widened. */
+const CHART_MARGIN = { top: 5, right: RIGHT_MARGIN, bottom: 5, left: 5 };
+
 /** A 12px label's line, the step between stacked marker labels. */
 const LABEL_ROW_HEIGHT = 14;
 
@@ -193,7 +199,7 @@ function FeatureReachPanel({
     const marks = placeMarks(
         featureMarks(feature, points, interval),
         points.map((point) => point.bucket),
-        width - Y_AXIS_WIDTH
+        width - Y_AXIS_WIDTH - CHART_MARGIN.left - RIGHT_MARGIN
     );
     return (
         <Card>
@@ -214,6 +220,7 @@ function FeatureReachPanel({
                         h={PANEL_HEIGHT}
                         data={points}
                         dataKey="bucket"
+                        lineChartProps={{ margin: CHART_MARGIN }}
                         xAxisProps={{
                             ticks: evenTicks(
                                 points.map((point) => point.bucket),
