@@ -241,6 +241,65 @@ export function featureMarks(
     }));
 }
 
+/** A marker label's average character width at 12px, near enough to tell two apart. */
+const LABEL_CHAR_WIDTH = 6.5;
+/** Between a label and its line, and the least between two labels on a row. */
+const LABEL_GAP = 6;
+
+export enum MarkSide {
+    LEFT = "left",
+    RIGHT = "right"
+}
+
+export interface PlacedMark {
+    bucket: string;
+    label: string;
+    /** Toward the middle, so a label at either end stays on the card. */
+    side: MarkSide;
+    /** Rows down from the top, so labels that would touch stack instead. */
+    row: number;
+}
+
+/**
+ * Gives each marker the highest row its label fits on without touching
+ * another, `plotWidth` being the pixels between the first and last buckets.
+ */
+export function placeMarks(
+    marks: { bucket: string; label: string }[],
+    buckets: string[],
+    plotWidth: number
+): PlacedMark[] {
+    const last = Math.max(buckets.length - 1, 1);
+    const rows: [number, number][][] = [];
+    const placed = marks
+        .map((mark) => {
+            const index = buckets.indexOf(mark.bucket);
+            const x = (index / last) * plotWidth;
+            const side = index > last / 2 ? MarkSide.LEFT : MarkSide.RIGHT;
+            return { ...mark, x, side };
+        })
+        .sort((a, b) => a.x - b.x);
+    return placed.map(({ x, ...mark }) => {
+        const width = mark.label.length * LABEL_CHAR_WIDTH;
+        const span: [number, number] =
+            mark.side === MarkSide.RIGHT
+                ? [x + LABEL_GAP, x + LABEL_GAP + width]
+                : [x - LABEL_GAP - width, x - LABEL_GAP];
+        const free = (row: [number, number][]) =>
+            row.every(
+                ([start, end]) =>
+                    span[1] + LABEL_GAP <= start || span[0] >= end + LABEL_GAP
+            );
+        let row = rows.findIndex(free);
+        if (row === -1) {
+            row = rows.length;
+            rows.push([]);
+        }
+        rows[row].push(span);
+        return { ...mark, row };
+    });
+}
+
 export function featureLabel(feature: AppFeature): string {
     switch (feature) {
         case AppFeature.SEARCH:

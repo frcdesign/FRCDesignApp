@@ -9,6 +9,8 @@ import {
     featureOrder,
     featureMarks,
     latestPoint,
+    MarkSide,
+    placeMarks,
     reachMeasure,
     ReachMeasure,
     toReachSeries
@@ -349,6 +351,61 @@ describe("evenTicks", () => {
             "w8",
             "w11"
         ]);
+    });
+});
+
+describe("placeMarks", () => {
+    const days = Array.from({ length: 101 }, (_, i) => `d${i}`);
+    const place = (marks: [string, string][], width = 300) =>
+        placeMarks(
+            marks.map(([bucket, label]) => ({ bucket, label })),
+            days,
+            width
+        ).map(({ bucket, side, row }) => ({ bucket, side, row }));
+
+    it("faces each label toward the middle", () => {
+        expect(
+            place([
+                ["d10", "Created"],
+                ["d90", "Tip"]
+            ])
+        ).toEqual([
+            { bucket: "d10", side: MarkSide.RIGHT, row: 0 },
+            { bucket: "d90", side: MarkSide.LEFT, row: 0 }
+        ]);
+    });
+
+    it("stacks labels that would touch, and keeps apart ones on one row", () => {
+        expect(
+            place([
+                ["d80", "Created"],
+                ["d85", "Suggested links"],
+                ["d95", "Splash screen"],
+                ["d10", "Blue dot"],
+                ["d40", "Tip"]
+            ])
+        ).toEqual([
+            { bucket: "d10", side: MarkSide.RIGHT, row: 0 },
+            { bucket: "d40", side: MarkSide.RIGHT, row: 0 },
+            { bucket: "d80", side: MarkSide.LEFT, row: 0 },
+            { bucket: "d85", side: MarkSide.LEFT, row: 1 },
+            { bucket: "d95", side: MarkSide.LEFT, row: 2 }
+        ]);
+    });
+
+    it("needs fewer rows on a wider chart", () => {
+        const rows = (width: number) =>
+            Math.max(
+                ...place(
+                    [
+                        ["d80", "Created"],
+                        ["d95", "Splash screen"]
+                    ],
+                    width
+                ).map((mark) => mark.row)
+            );
+        expect(rows(300)).toBe(1);
+        expect(rows(1200)).toBe(0);
     });
 });
 

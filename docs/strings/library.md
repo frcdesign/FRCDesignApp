@@ -2,14 +2,15 @@
 
 The library's pages, which have no architecture document of their own; how a
 document loads is in [loading.md](../architecture/loading.md). Messages are
-keyed `groupPage…`, `changesBadge…`, `library…`, `insert…` and `welcome…` in
+keyed `groupPage…`, `changesBadge…`, `library…`, `insert…` and `splashScreen…` in
 `src/frontend/messages/en.json`. Only what has moved into the catalog is
 listed so far: the rest join as their strings move there.
 
-## Welcome
+## Splash screen
 
-The modal a new browser opens on, until a library or utility is picked:
-`src/frontend/components/welcome.tsx`. Each card shows the tab's name and its
+The modal everybody sees once on launch, until a card is picked; somebody with
+a tab already can close it instead: `src/frontend/components/splash-screen.tsx`.
+Each card shows the tab's name and its
 navbar icon over a description. FIRST's trademark notice under the cards is
 fixed wording, kept in the code.
 

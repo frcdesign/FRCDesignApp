@@ -935,7 +935,7 @@ const NUDGES: readonly Nudge[];
 
 interface Nudge {
     feature: AppFeature;
-    kind: NudgeKind; // a blue dot, a tip toast, or a suggestion on the feature's page
+    kind: NudgeKind; // a blue dot, a tip toast, a suggestion on the feature's page, or a splash screen card
     /** Which one, labelling its marker in place of its kind. */
     name?: NudgeName;
     change: NudgeChange; // added, or removed
@@ -971,6 +971,13 @@ function featureMarks(
     releases?: readonly Release[],
     nudges?: readonly Nudge[]
 ): { bucket: string; label: string }[];
+// Which side of its line each marker's label goes, and how many rows down,
+// so labels that would touch stack. `plotWidth` is the chart's in pixels.
+function placeMarks(
+    marks: { bucket: string; label: string }[],
+    buckets: string[],
+    plotWidth: number
+): PlacedMark[];
 ```
 
 `src/frontend/features/dashboard/metrics.ts`, what each trend tile and chart
@@ -1311,10 +1318,11 @@ withdrawn; features with a nudge come first. A release reads "Created", or the
 new way to reach the feature it shipped ("Button", "Context menu",
 "Preselection"). A nudge added or withdrawn on the day of one of the
 feature's releases came with it, so that marker names the release alone. A nudge is something pointing people at the feature: a blue dot, a
-tip, or a suggestion on its page. A tip making one part of a feature faster
+tip, a suggestion on its page, or a card on the splash screen. A tip making one part of a feature faster
 isn't one. A marker reads its nudge's name where it has one ("Suggested
 links"), else its kind. A nudge still on cert has no day and no marker until
-it reaches `main`. The tooltip gives a share's users and active users beside it.
+it reaches `main`. A label faces the middle of the chart, and one that would
+touch an earlier label drops a row. The tooltip gives a share's users and active users beside it.
 
 Each chart draws two lines, existing and new users. A person is new at a point
 when their first day (`users.created_at`) falls in the `NEW_USER_WEEKS` weeks

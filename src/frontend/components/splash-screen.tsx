@@ -18,6 +18,8 @@ import {
 } from "../lib/tabs";
 import { getLibraryShade, toShade } from "../theme";
 import { updateUiState, useUiState } from "../lib/ui-state";
+import { Hint } from "@backend/features/hints/contract";
+import { useHasSeenScreen, useMarkHintSeen } from "../features/hints/queries";
 import { m } from "../paraglide/messages";
 import styles from "../lib/styles.module.css";
 
@@ -30,11 +32,11 @@ interface LibraryChoice {
 const LIBRARIES: LibraryChoice[] = [
     {
         libraryId: LibraryId.FRC_DESIGN_LIB,
-        description: m.welcomeFrcDesignLibDescription
+        description: m.splashScreenFrcDesignLibDescription
     },
     {
         libraryId: LibraryId.CONFIG_LIB,
-        description: m.welcomeConfigLibDescription
+        description: m.splashScreenConfigLibDescription
     }
 ];
 
@@ -51,11 +53,11 @@ const FIRST_URL = "https://www.firstinspires.org";
 function describeUtility(tab: UtilityTab): string {
     switch (tab) {
         case UtilityTab.VERSION_MANAGER:
-            return m.welcomeVersionManagerDescription();
+            return m.splashScreenVersionManagerDescription();
         case UtilityTab.AUTO_ASSEMBLY:
-            return m.welcomeAutoAssemblyDescription();
+            return m.splashScreenAutoAssemblyDescription();
         case UtilityTab.FEATURESCRIPTS:
-            return m.welcomeFeatureScriptsDescription();
+            return m.splashScreenFeatureScriptsDescription();
     }
 }
 
@@ -137,24 +139,32 @@ function TrademarkDisclaimer(): ReactNode {
 }
 
 /**
- * Asks a new user which library or utility to start in, which becomes their
- * tab. Asked once per browser.
+ * Asks which library or utility to start in, which becomes the tab. Shown once
+ * to everybody; somebody with a tab already can close it.
  */
-export function Welcome(): ReactNode {
+export function SplashScreen(): ReactNode {
     const tabId = useUiState((state) => state.tabId);
+    const hasSeen = useHasSeenScreen(Hint.SAW_SPLASH_SCREEN);
+    const markSeen = useMarkHintSeen(Hint.SAW_SPLASH_SCREEN);
     const navigateToTab = useNavigateToTab();
 
     const selectTab = (tabId: AppTab) => {
+        markSeen();
         updateUiState({ tabId });
         navigateToTab(tabId);
     };
 
     return (
-        <AppModal opened={tabId === undefined} dismissible={false} size="lg">
+        <AppModal
+            opened={tabId === undefined || !hasSeen}
+            onClose={markSeen}
+            dismissible={tabId !== undefined}
+            size="lg"
+        >
             <AppModalBody>
                 <SectionNotice
                     icon={<AppBrandMark size={IconSize.PAGE} />}
-                    title={m.welcomeTitle()}
+                    title={m.splashScreenTitle()}
                     action={
                         // Side by side, each would be narrower than its description in Onshape's panel.
                         <Stack gap="sm" w="100%" maw={320}>
