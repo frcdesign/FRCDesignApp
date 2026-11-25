@@ -13,14 +13,13 @@ The modal a new browser opens on, until a library or utility is picked:
 navbar icon over a description. FIRST's trademark notice under the cards is
 fixed wording, kept in the code.
 
-| String                                              | Kind             | Where                             | When   | Review         |
-| --------------------------------------------------- | ---------------- | --------------------------------- | ------ | -------------- |
-| "Welcome to the FRCDesignApp!"                      | Notice title     | Top of the modal                  | Always |                |
-| "Pick your library to get started."                 | Notice text      | Under the title                   | Always | **⚑** Reworded |
-| "Parts library for FRC®" / "Parts library for FTC®" | Card description | FRCDesignLib's card / ConfigLib's | Always | **⚑** New      |
-| "Add custom features to your Part Studios."         | Card description | FeatureScripts' card              | Always | **⚑** New      |
-| "Push and pull versions between linked documents."  | Card description | Version Manager's card            | Always | **⚑** New      |
-| "Quickly add hardware to an assembly."              | Card description | Auto Assembly's card              | Always | **⚑** New      |
+| String                                              | Kind             | Where                             | When   | Review    |
+| --------------------------------------------------- | ---------------- | --------------------------------- | ------ | --------- |
+| "Welcome to the FRCDesignApp!"                      | Notice title     | Top of the modal                  | Always |           |
+| "Parts library for FRC®" / "Parts library for FTC®" | Card description | FRCDesignLib's card / ConfigLib's | Always | **⚑** New |
+| "Add custom features to your Part Studios"          | Card description | FeatureScripts' card              | Always | **⚑** New |
+| "Push and pull versions between linked documents"   | Card description | Version Manager's card            | Always | **⚑** New |
+| "Quickly add hardware to an assembly"               | Card description | Auto Assembly's card              | Always | **⚑** New |
 
 ## Menus
 

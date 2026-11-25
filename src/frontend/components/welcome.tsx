@@ -155,7 +155,6 @@ export function Welcome(): ReactNode {
                 <SectionNotice
                     icon={<AppBrandMark size={IconSize.PAGE} />}
                     title={m.welcomeTitle()}
-                    description={m.welcomeDescription()}
                     action={
                         // Side by side, each would be narrower than its description in Onshape's panel.
                         <Stack gap="sm" w="100%" maw={320}>

@@ -1040,10 +1040,9 @@
     "versionManagerQuickRecursivePushTip": "Tip: Quick recursive push in a link's ⋯ menu does this in one click, without opening the form.",
     "versionManagerQuickRecursivePullTip": "Tip: Quick recursive pull in a link's ⋯ menu does this in one click, without opening the form.",
     "welcomeTitle": "Welcome to the FRCDesignApp!",
-    "welcomeDescription": "Pick your library to get started.",
     "welcomeFrcDesignLibDescription": "Parts library for FRC®",
     "welcomeConfigLibDescription": "Parts library for FTC®",
-    "welcomeFeatureScriptsDescription": "Add custom features to your Part Studios.",
-    "welcomeVersionManagerDescription": "Push and pull versions between linked documents.",
-    "welcomeAutoAssemblyDescription": "Quickly add hardware to an assembly."
+    "welcomeFeatureScriptsDescription": "Add custom features to your Part Studios",
+    "welcomeVersionManagerDescription": "Push and pull versions between linked documents",
+    "welcomeAutoAssemblyDescription": "Quickly add hardware to an assembly"
 }
