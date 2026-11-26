@@ -471,6 +471,20 @@
             }
         }
     ],
+    "dashboardFeatureReachViews": [
+        {
+            "declarations": [
+                "input count",
+                "local countPlural = count: plural",
+                "local formatted = count: number"
+            ],
+            "selectors": ["countPlural"],
+            "match": {
+                "countPlural=one": "{formatted} view",
+                "countPlural=other": "{formatted} views"
+            }
+        }
+    ],
     "dashboardFeatureReachAdds": [
         {
             "declarations": [
@@ -1092,10 +1106,41 @@
     "versionManagerFormRecursivePullInfo": "Also pulls into the parent from the documents linked above it first, saving a new version of each one along the way so the next can use it. Each is numbered from its own versions unless you name them above.",
     "versionManagerQuickRecursivePushTip": "Tip: Quick recursive push in a link's ⋯ menu does this in one click, without opening the form.",
     "versionManagerQuickRecursivePullTip": "Tip: Quick recursive pull in a link's ⋯ menu does this in one click, without opening the form.",
+    "massAnalysisTabName": "Mass Analysis",
+    "massAnalysisOpenAssemblyTitle": "Open an assembly to weigh it",
+    "massAnalysisOpenAssemblyDescription": "Mass Analysis shows where an assembly's mass is. Open it from an assembly's panel.",
+    "massAnalysisSignInTitle": "Sign in to weigh your assembly",
+    "massAnalysisSignInDescription": "Mass Analysis reads your assembly's parts and their masses.",
+    "massAnalysisSignIn": "Sign in",
+    "massAnalysisLoading": "Loading masses...",
+    "massAnalysisLoadFailed": "Failed to read the assembly's masses",
+    "massAnalysisChartTitle": "Mass",
+    "massAnalysisChartEmpty": "No parts with a mass",
+    "massAnalysisTopLevel": "Assembly",
+    "massAnalysisShare": "{mass} ({share: number style=percent maximumFractionDigits=1})",
+    "massAnalysisMissingTitle": "Parts without a mass",
+    "massAnalysisMissingCaption": [
+        {
+            "declarations": [
+                "input count",
+                "local countPlural = count: plural",
+                "local formatted = count: number"
+            ],
+            "selectors": ["countPlural"],
+            "match": {
+                "countPlural=one": "{formatted} part",
+                "countPlural=other": "{formatted} parts"
+            }
+        }
+    ],
+    "massAnalysisMissingNone": "Every part has a mass",
+    "massAnalysisQuantity": "×{count: number}",
+    "dashboardFeatureMassAnalysis": "Mass Analysis",
     "splashScreenTitle": "Welcome to the FRCDesignApp!",
     "splashScreenFrcDesignLibDescription": "Parts library for FRC®",
     "splashScreenConfigLibDescription": "Parts library for FTC®",
     "splashScreenFeatureScriptsDescription": "Add custom features to your Part Studios",
     "splashScreenVersionManagerDescription": "Push and pull versions between linked documents",
-    "splashScreenAutoAssemblyDescription": "Quickly add hardware to an assembly"
+    "splashScreenAutoAssemblyDescription": "Quickly add hardware to an assembly",
+    "splashScreenMassAnalysisDescription": "Visualize the distribution of weight in an assembly"
 }

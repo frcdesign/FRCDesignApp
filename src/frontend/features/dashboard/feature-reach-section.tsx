@@ -407,6 +407,8 @@ function formatTimes(count: number, feature: AppFeature): string {
             return m.dashboardFeatureReachAdds({ count });
         case AppFeature.DEFAULT_CONFIGURATION:
             return m.dashboardFeatureReachSaves({ count });
+        case AppFeature.MASS_ANALYSIS:
+            return m.dashboardFeatureReachViews({ count });
         case AppFeature.SEARCH:
         case AppFeature.FAVORITES:
         case AppFeature.RECENTS:

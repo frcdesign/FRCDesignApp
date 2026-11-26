@@ -25,6 +25,7 @@ import { LibraryId } from "@backend/features/library/library-id";
 import { useIsVersionManager } from "./features/version-manager/navigation";
 import { useIsAutoAssembly } from "./features/auto-assembly/navigation";
 import { useIsFeatureScripts } from "./features/featurescripts/navigation";
+import { useIsMassAnalysis } from "./features/mass-analysis/navigation";
 import {
     FILLED_SHADE,
     FontWeight,
@@ -80,7 +81,9 @@ export const AppColor = {
     /** Auto Assembly's parts are FRCDesign's, but it acts on the open assembly. */
     AUTO_ASSEMBLY: "blue",
     /** FeatureScripts are their own area, released apart from any library. */
-    FEATURESCRIPTS: "blue"
+    FEATURESCRIPTS: "blue",
+    /** Mass Analysis acts on the open assembly, which is no library's. */
+    MASS_ANALYSIS: "blue"
 } as const;
 
 /**
@@ -93,6 +96,7 @@ export function useAppColor(libraryId: string): string {
     const isVersionManager = useIsVersionManager();
     const isAutoAssembly = useIsAutoAssembly();
     const isFeatureScripts = useIsFeatureScripts();
+    const isMassAnalysis = useIsMassAnalysis();
 
     if (isDashboard) {
         return dashboardLibraryId
@@ -107,6 +111,9 @@ export function useAppColor(libraryId: string): string {
     }
     if (isFeatureScripts) {
         return AppColor.FEATURESCRIPTS;
+    }
+    if (isMassAnalysis) {
+        return AppColor.MASS_ANALYSIS;
     }
     return getLibraryColor(libraryId);
 }

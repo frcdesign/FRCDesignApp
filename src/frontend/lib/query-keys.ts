@@ -201,3 +201,16 @@ export function featureScriptsLoadStatusQueryKey() {
 export function featureScriptStatsQueryKey() {
     return ["featurescripts", "stats"];
 }
+
+/** By the path alone, so a launch's extra fields don't make a second entry. */
+export function massReportQueryKey(assembly: ElementPath | undefined) {
+    return [
+        "mass-report",
+        assembly && [
+            assembly.documentId,
+            assembly.instanceType,
+            assembly.instanceId,
+            assembly.elementId
+        ]
+    ];
+}

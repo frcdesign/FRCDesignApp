@@ -57,7 +57,8 @@ describe("the splash screen", () => {
         for (const name of [
             "FeatureScripts",
             "Version Manager",
-            "Auto Assembly"
+            "Auto Assembly",
+            "Mass Analysis"
         ]) {
             expect(
                 screen.getByRole("button", { name: new RegExp(name) })

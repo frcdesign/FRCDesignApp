@@ -326,6 +326,8 @@ export function featureLabel(feature: AppFeature): string {
             return m.dashboardFeatureVersionManager();
         case AppFeature.FEATURESCRIPTS:
             return m.dashboardFeatureFeatureScripts();
+        case AppFeature.MASS_ANALYSIS:
+            return m.dashboardFeatureMassAnalysis();
         case AppFeature.REPORT:
             return m.dashboardFeatureReport();
     }

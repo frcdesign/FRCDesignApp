@@ -12,7 +12,7 @@ import { getUnitInfo } from "../../lib/onshape/endpoints/documents";
 import type { InstancePath } from "../../lib/onshape/path";
 import { watchWorkspaceUnits } from "../webhooks/transient";
 import type { UnitInfo } from "./contract";
-import { QuantityType, type Unit } from "./enums";
+import { MASS_UNITS, type MassUnit, QuantityType, Unit } from "./enums";
 import { DEFAULT_QUANTITY_PRECISION } from "./utils";
 
 const unitInfos = kvStore<UnitInfo>("unit-info", {
@@ -44,6 +44,12 @@ function getDefaultUnit(
     return unit.value;
 }
 
+/** Kilograms where Onshape names none the app knows, so units for configurations never fail on mass. */
+function getMassUnit(units: OnshapeUnit[]): MassUnit {
+    const value = units.find((entry) => entry.key === QuantityType.MASS)?.value;
+    return MASS_UNITS.find((unit) => unit === value) ?? Unit.KILOGRAM;
+}
+
 async function fetchUnitInfo(
     c: AppContext,
     path: InstancePath
@@ -52,13 +58,17 @@ async function fetchUnitInfo(
     const units = raw.defaultUnits.units as OnshapeUnit[];
     const angleUnit = getDefaultUnit(units, QuantityType.ANGLE);
     const lengthUnit = getDefaultUnit(units, QuantityType.LENGTH);
+    const massUnit = getMassUnit(units);
     return {
         angleUnit,
         lengthUnit,
         anglePrecision: raw.unitsDisplayPrecision[angleUnit],
         lengthPrecision: raw.unitsDisplayPrecision[lengthUnit],
         // Onshape carries no display precision for a unitless real.
-        realPrecision: DEFAULT_QUANTITY_PRECISION
+        realPrecision: DEFAULT_QUANTITY_PRECISION,
+        massUnit,
+        massPrecision:
+            raw.unitsDisplayPrecision[massUnit] ?? DEFAULT_QUANTITY_PRECISION
     };
 }
 
@@ -67,7 +77,8 @@ export async function getUnitInfoCached(
     path: InstancePath
 ): Promise<UnitInfo> {
     const cached = await unitInfos.get(c.env.KV, unitInfoId(path));
-    if (cached) {
+    // An entry kept without a mass unit is read again.
+    if (cached?.massUnit !== undefined) {
         return cached;
     }
     const unitInfo = await fetchUnitInfo(c, path);

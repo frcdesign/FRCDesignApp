@@ -351,6 +351,49 @@ export interface OnshapeCreatedFeature {
     feature: { featureId: string };
 }
 
+// === bill of materials (GET /assemblies/.../e/{eid}/bom) ===
+
+/** A BOM column; a row's cells are keyed by its `id`. */
+export interface OnshapeBomHeader {
+    id: string;
+    /** As the table shows it, e.g. "Mass". */
+    name?: string;
+    /** The metadata property behind it, e.g. "material". */
+    propertyName?: string;
+}
+
+/** Where a BOM row's item lives. */
+export interface OnshapeBomItemSource {
+    documentId?: string;
+    elementId?: string;
+    /** Absent for a subassembly. */
+    partId?: string;
+    wvmType?: string;
+    wvmId?: string;
+    configuration?: string;
+    fullConfiguration?: string;
+    /** Set for a row added to the BOM by hand, which has no geometry. */
+    nonGeometricItemId?: string;
+}
+
+export interface OnshapeBomRow {
+    id?: string;
+    rowId?: string;
+    name?: string;
+    /** 0 for the assembly's own items; a subassembly's are one deeper. */
+    indentLevel?: number;
+    itemSource?: OnshapeBomItemSource;
+    headerIdToValue?: Record<string, unknown>;
+    /** The instances of the row's item; documented as ids, their shape undocumented. */
+    relatedOccurrences?: unknown;
+}
+
+/** GET /assemblies/.../bom response (the subset we read). */
+export interface OnshapeBom {
+    headers?: OnshapeBomHeader[];
+    rows?: OnshapeBomRow[];
+}
+
 // === parts (GET /parts/d/{did}/{wvm}/{wvmid}/e/{eid}) ===
 
 /** A part's body classification; `composite` marks an open composite's part. */

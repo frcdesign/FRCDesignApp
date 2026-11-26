@@ -132,6 +132,33 @@ the app makes of them.
 - **Units** are per document, and
   `onshape.model.lifecycle.updateworkspaceunits` fires when a workspace's
   change — _observed_.
+- **A document's mass unit** is `defaultUnits`' entry keyed `MASS`, one of
+  `kilogram`, `gram`, `pound` and `ounce`, with its precision in
+  `unitsDisplayPrecision` under the unit's name — _unverified_. The app shows
+  kilograms when it finds none it knows.
+
+## Bill of materials
+
+[mass-analysis.md](./architecture/mass-analysis.md) is built on these.
+
+- **The BOM** (`GET /assemblies/d/{did}/{wvm}/{wvmid}/e/{eid}/bom`) answers
+  `headers` and `rows`. Each row's cells are `headerIdToValue`, keyed by a
+  header's `id`. `indented` with `multiLevel` expands every subassembly.
+  `includeExcluded` and `ignoreSubassemblyBomBehavior` keep rows a team's BOM
+  would hide. `generateIfAbsent` answers an assembly with no BOM yet instead
+  of 404 — all _documented_.
+- **A BOM row's `itemSource`** names the item's `documentId`, `elementId`,
+  `partId`, `wvmType`, `wvmId` and `configuration`. `nonGeometricItemId` marks
+  a row added by hand — the fields _documented_, their meaning _unverified_.
+- **What the app assumes of the BOM**, all _unverified_:
+    - a subassembly's rows follow it at `indentLevel` one deeper, and it has no
+      `partId`;
+    - a row's quantity is per one of its parent;
+    - the columns are named "Name", "Quantity", "Mass" and "Mass override";
+    - a Mass cell is a number, a string such as `1.5 lb`, or an object holding
+      a value and unit; a part with no material has none;
+    - a row's `relatedOccurrences` are its item's instances, each a path of
+      instance ids from the top assembly down, joined by `/` or as an array.
 
 ## Thumbnails
 

@@ -209,9 +209,9 @@ and in code; "inserts" means only the ones that went into Onshape.
 `README.md`: thumbnails, configurations, loading, favorites, recents, insert and
 fasten, auth (with access levels and environment variables), search,
 analytics, build issues and the admin card, the Version Manager, Auto Assembly,
-editing parts, and generated parts. Each states the area's flows, storage,
-**invariants**, failure modes and decisions. Read the area's document before
-changing it, and check the change against its invariants.
+Mass Analysis, editing parts, and generated parts. Each states the area's
+flows, storage, **invariants**, failure modes and decisions. Read the area's
+document before changing it, and check the change against its invariants.
 
 Update the document in the same commit when a change:
 

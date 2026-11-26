@@ -19,6 +19,7 @@ user.
 | [edit-parts.md](./edit-parts.md)           | Edit parts: picking the parts, and the menu              |
 | [auto-assembly.md](./auto-assembly.md)     | Auto Assembly's page, its runs, and pick problems        |
 | [fasten.md](./fasten.md)                   | Insert and fasten's card, toasts and tip                 |
+| [mass-analysis.md](./mass-analysis.md)     | Mass Analysis's page, its chart and parts without a mass |
 
 ## Shape of a file
 

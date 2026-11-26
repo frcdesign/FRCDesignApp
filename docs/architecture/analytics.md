@@ -37,7 +37,9 @@ enum EventType {
     /** One FeatureScript added to a Part Studio; see `features/featurescripts`. Not a use. */
     FEATURE_ADD = "feature_add",
     /** A favorite's default configuration saved; see `features/favorites`. Not a use. */
-    DEFAULT_SELECTION = "default_selection"
+    DEFAULT_SELECTION = "default_selection",
+    /** An assembly's masses read; see `features/mass-analysis`. Not a use. */
+    MASS_REPORT = "mass_report"
 }
 
 /** A use is an insert or a download: each counts toward a part's usage. */
@@ -90,6 +92,7 @@ enum AppFeature {
     DEFAULT_CONFIGURATION = "default_configuration",
     VERSION_MANAGER = "version_manager",
     FEATURESCRIPTS = "featurescripts",
+    MASS_ANALYSIS = "mass_analysis",
     REPORT = "report"
 }
 ```
@@ -112,6 +115,7 @@ function trackDefaultSelection(
     c: AppContext,
     event: DefaultSelectionEvent
 ): Promise<void>;
+function trackMassReport(c: AppContext, assembly: ElementPath): Promise<void>;
 // Awaited inside the workflow's `record-run` step, which swallows its failure.
 async function trackVersionRun(
     env: AppBindings,
@@ -1189,8 +1193,11 @@ no foreign key crosses between them):
    Onshape accepted the feature (see [featurescripts.md](./featurescripts.md));
    `POST /api/default-selection/favorite/:favoriteId` calls
    `trackDefaultSelection` once the default is saved (see
-   [favorites.md](./favorites.md)).
-2. A use, an open, a FeatureScript add, a report and a default configuration are recorded in the background (`runInBackground`),
+   [favorites.md](./favorites.md)); `GET /api/mass-analysis` calls
+   `trackMassReport` once the BOM is read (see
+   [mass-analysis.md](./mass-analysis.md)).
+2. A use, an open, a FeatureScript add, a report, a default configuration and a
+   mass report are recorded in the background (`runInBackground`),
    after the response; a workflow's step swallows a failure to record. So
    tracking never slows or fails what the user asked for.
 3. The selection is stored canonically (`canonicalValues`), so `5 in` and

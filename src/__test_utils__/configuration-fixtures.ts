@@ -105,7 +105,9 @@ export const TEST_UNIT_INFO: UnitInfo = {
     lengthUnit: Unit.INCH,
     lengthPrecision: 4,
     anglePrecision: 3,
-    realPrecision: 3
+    realPrecision: 3,
+    massUnit: Unit.POUND,
+    massPrecision: 3
 };
 
 /** A probe of one configuration; override whichever fields a test is about. */

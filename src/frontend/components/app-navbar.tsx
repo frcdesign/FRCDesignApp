@@ -62,6 +62,7 @@ import {
     useIsAutoAssemblyNew
 } from "../features/auto-assembly/navigation";
 import { useIsFeatureScripts } from "../features/featurescripts/navigation";
+import { useIsMassAnalysis } from "../features/mass-analysis/navigation";
 import { FeatureScriptSearchBar } from "../features/featurescripts/components/featurescript-search-bar";
 import { type WorkspacePath } from "@backend/features/version-manager/contract";
 import { type AppTab, UtilityTab } from "../lib/app-tab";
@@ -102,11 +103,16 @@ export function NavbarRow(props: PropsWithChildren): ReactNode {
 /** The page picker with the brand and settings, over search and its filters, then the context bar. */
 export function AppNavbar(): ReactNode {
     // Search and its filters belong to a library; FeatureScripts has a search
-    // of its own there, and the Version Manager's and Auto Assembly's pages fill the room.
+    // of its own there, and the other utilities' pages fill the room.
     const isVersionManager = useIsVersionManager();
     const isAutoAssembly = useIsAutoAssembly();
     const isFeatureScripts = useIsFeatureScripts();
-    const isLibrary = !isVersionManager && !isAutoAssembly && !isFeatureScripts;
+    const isMassAnalysis = useIsMassAnalysis();
+    const isLibrary =
+        !isVersionManager &&
+        !isAutoAssembly &&
+        !isFeatureScripts &&
+        !isMassAnalysis;
     const workspace = useTargetWorkspace();
 
     return (
@@ -170,6 +176,7 @@ function useAppPages(): AppPage[] {
     const targetElement = useTargetElement();
     const isAutoAssembly = useIsAutoAssembly();
     const isNew = useIsAutoAssemblyNew();
+    const isMassAnalysis = useIsMassAnalysis();
 
     const libraries = Object.values(LibraryId).map((libraryId) => ({
         tab: libraryId,
@@ -201,13 +208,18 @@ function useAppPages(): AppPage[] {
                   }
               ]
             : [];
+    const massAnalysis: AppPage[] =
+        targetElement || isMassAnalysis
+            ? [utility(UtilityTab.MASS_ANALYSIS)]
+            : [];
 
     return [
         ...libraries,
         // Needs no document: browsing works anywhere, and adding says why it can't.
         utility(UtilityTab.FEATURESCRIPTS),
         utility(UtilityTab.VERSION_MANAGER),
-        ...autoAssembly
+        ...autoAssembly,
+        ...massAnalysis
     ];
 }
 
@@ -227,6 +239,7 @@ function PagePicker(): ReactNode {
     const isVersionManager = useIsVersionManager();
     const isAutoAssembly = useIsAutoAssembly();
     const isFeatureScripts = useIsFeatureScripts();
+    const isMassAnalysis = useIsMassAnalysis();
     const navigateToTab = useNavigateToTab();
 
     const current: AppTab = isVersionManager
@@ -235,7 +248,9 @@ function PagePicker(): ReactNode {
           ? UtilityTab.AUTO_ASSEMBLY
           : isFeatureScripts
             ? UtilityTab.FEATURESCRIPTS
-            : currentLibraryId;
+            : isMassAnalysis
+              ? UtilityTab.MASS_ANALYSIS
+              : currentLibraryId;
     const currentPage = pages.find((page) => page.tab === current);
 
     // Warm the versions on hover, so picking one has nothing left to wait for.

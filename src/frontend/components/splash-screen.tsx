@@ -44,7 +44,8 @@ const LIBRARIES: LibraryChoice[] = [
 const UTILITIES: UtilityTab[] = [
     UtilityTab.FEATURESCRIPTS,
     UtilityTab.VERSION_MANAGER,
-    UtilityTab.AUTO_ASSEMBLY
+    UtilityTab.AUTO_ASSEMBLY,
+    UtilityTab.MASS_ANALYSIS
 ];
 
 /** FIRST's own site, which their notice has to name. */
@@ -58,6 +59,8 @@ function describeUtility(tab: UtilityTab): string {
             return m.splashScreenAutoAssemblyDescription();
         case UtilityTab.FEATURESCRIPTS:
             return m.splashScreenFeatureScriptsDescription();
+        case UtilityTab.MASS_ANALYSIS:
+            return m.splashScreenMassAnalysisDescription();
     }
 }
 

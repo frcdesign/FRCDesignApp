@@ -347,6 +347,35 @@ export function trackDefaultSelection(
     );
 }
 
+/** As `trackInsert`, once the BOM is read. Not a use: it belongs to no library. */
+export function trackMassReport(
+    c: AppContext,
+    assembly: ElementPath
+): Promise<void> {
+    return runInBackground(c, "record a mass report", async () =>
+        record(
+            c.env,
+            {
+                ...eventCore(
+                    EventType.MASS_REPORT,
+                    null,
+                    await c.var.getUserId()
+                ),
+                documentId: assembly.documentId,
+                instanceType: assembly.instanceType,
+                instanceId: assembly.instanceId,
+                elementId: assembly.elementId,
+                insertableId: null,
+                ...NOT_A_USE,
+                ...NOT_A_VERSION_RUN,
+                ...NOT_A_REPORT,
+                ...NOT_A_FEATURE_ADD
+            },
+            []
+        )
+    );
+}
+
 /** Batched so neither half lands without the other. */
 function record(
     env: TrackingBindings,

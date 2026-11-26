@@ -108,6 +108,12 @@ export const NUDGES: readonly Nudge[] = [
         kind: NudgeKind.SPLASH_SCREEN,
         change: NudgeChange.ADDED,
         day: "2026-11-26"
+    },
+    // On cert: give each its day when it reaches main.
+    {
+        feature: AppFeature.MASS_ANALYSIS,
+        kind: NudgeKind.SPLASH_SCREEN,
+        change: NudgeChange.ADDED
     }
 ];
 

@@ -48,6 +48,9 @@ export function featuresOf(event: LoggedEvent): AppFeature[] {
     if (event.type === EventType.DEFAULT_SELECTION) {
         return [AppFeature.DEFAULT_CONFIGURATION];
     }
+    if (event.type === EventType.MASS_REPORT) {
+        return [AppFeature.MASS_ANALYSIS];
+    }
     const use = asUse(event);
     if (!use) return [];
     // A run's planner fastens its parts; nobody chose to.

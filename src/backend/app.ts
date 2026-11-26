@@ -13,6 +13,7 @@ import { libraryRoutes } from "./features/library/routes";
 import { thumbnailRoutes } from "./features/thumbnails/routes";
 import { versionManagerRoutes } from "./features/version-manager/routes";
 import { autoAssemblyRoutes } from "./features/auto-assembly/routes";
+import { massAnalysisRoutes } from "./features/mass-analysis/routes";
 import { editPartsRoutes } from "./features/edit-parts/routes";
 import { webhookRoutes } from "./features/webhooks/routes";
 import { webhookProbeRoutes } from "./features/testbench/webhook-probe";
@@ -51,6 +52,7 @@ const apiRoutes = [
     hintRoutes,
     feedbackRoutes,
     autoAssemblyRoutes,
+    massAnalysisRoutes,
     editPartsRoutes,
     downloadRoutes,
     featureScriptRoutes

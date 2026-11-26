@@ -4,6 +4,7 @@ import {
     GitBranchIcon,
     type Icon,
     PuzzlePieceIcon,
+    ScalesIcon,
     ScrewdriverIcon
 } from "@phosphor-icons/react";
 import { type AppTab, getTabPath, isLibraryTab, UtilityTab } from "./app-tab";
@@ -38,6 +39,8 @@ export function getUtilityName(tabId: UtilityTab): string {
             return "Auto Assembly";
         case UtilityTab.FEATURESCRIPTS:
             return m.featureScriptsTabName();
+        case UtilityTab.MASS_ANALYSIS:
+            return m.massAnalysisTabName();
     }
 }
 
@@ -49,6 +52,8 @@ export function getUtilityIcon(tabId: UtilityTab): Icon {
             return ScrewdriverIcon;
         case UtilityTab.FEATURESCRIPTS:
             return PuzzlePieceIcon;
+        case UtilityTab.MASS_ANALYSIS:
+            return ScalesIcon;
     }
 }
 
@@ -61,5 +66,7 @@ export function getUtilityColor(tabId: UtilityTab): string {
             return AppColor.AUTO_ASSEMBLY;
         case UtilityTab.FEATURESCRIPTS:
             return AppColor.FEATURESCRIPTS;
+        case UtilityTab.MASS_ANALYSIS:
+            return AppColor.MASS_ANALYSIS;
     }
 }

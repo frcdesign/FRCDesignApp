@@ -53,13 +53,15 @@ function utilityRoute(tab: UtilityTab) {
             return "/app/auto-assembly" as const;
         case UtilityTab.FEATURESCRIPTS:
             return "/app/featurescripts" as const;
+        case UtilityTab.MASS_ANALYSIS:
+            return "/app/mass-analysis" as const;
     }
 }
 
 /**
  * Whether a utility page has what it acts on. The Version Manager acts on the
- * workspace Onshape launched the app in, and Auto Assembly on its tab; neither
- * has a page without one.
+ * workspace Onshape launched the app in, and Auto Assembly and Mass Analysis on
+ * its tab; none has a page without one.
  */
 function canResume(tab: UtilityTab, search: Record<string, unknown>): boolean {
     switch (tab) {
@@ -68,6 +70,7 @@ function canResume(tab: UtilityTab, search: Record<string, unknown>): boolean {
                 toTargetWorkspace(OnshapeLaunchType.parse(search)) !== undefined
             );
         case UtilityTab.AUTO_ASSEMBLY:
+        case UtilityTab.MASS_ANALYSIS:
             return (
                 toTargetElement(OnshapeLaunchType.parse(search)) !== undefined
             );
