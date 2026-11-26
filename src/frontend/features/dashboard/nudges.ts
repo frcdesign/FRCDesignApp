@@ -95,19 +95,19 @@ export const NUDGES: readonly Nudge[] = [
         feature: AppFeature.FEATURESCRIPTS,
         kind: NudgeKind.SPLASH_SCREEN,
         change: NudgeChange.ADDED,
-        day: "2026-11-25"
+        day: "2026-11-26"
     },
     {
         feature: AppFeature.VERSION_MANAGER,
         kind: NudgeKind.SPLASH_SCREEN,
         change: NudgeChange.ADDED,
-        day: "2026-11-25"
+        day: "2026-11-26"
     },
     {
         feature: AppFeature.AUTO_ASSEMBLY,
         kind: NudgeKind.SPLASH_SCREEN,
         change: NudgeChange.ADDED,
-        day: "2026-11-25"
+        day: "2026-11-26"
     }
 ];
 
