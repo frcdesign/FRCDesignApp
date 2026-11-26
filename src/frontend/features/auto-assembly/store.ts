@@ -1,7 +1,11 @@
 /** What Auto Assembly's page holds: its choices, kept between visits, and what's picked, kept for the tab. */
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
-import { type FastenerMode } from "@backend/features/auto-assembly/contract";
+import {
+    type ExistingScrew,
+    type FastenerMode,
+    SelectionMode
+} from "@backend/features/auto-assembly/contract";
 import { StudioInput } from "@backend/features/auto-assembly/studios";
 import { type OnshapeSelection } from "../../lib/selection";
 import { type Choices, defaultChoices, Part } from "./options";
@@ -14,6 +18,9 @@ export type InputOwner = "screw" | Part;
 export function specifiedKey(owner: InputOwner, id: string): string {
     return `${owner}.${id}`;
 }
+
+/** A washer's or the nut's checkbox, specified as its inputs are. */
+const ADDED = "added";
 
 interface AutoAssemblyState extends Choices {
     targets: OnshapeSelection[];
@@ -35,6 +42,10 @@ interface AutoAssemblyState extends Choices {
     setScrew: (id: string, value: string) => void;
     /** The screw's inputs as the picks say, but those specified. */
     followScrew: (screw: Record<string, string>) => void;
+    /** Each washer and the nut added as the existing screw has it, configured as its own, but for what's specified. */
+    followParts: (existing: ExistingScrew) => void;
+    /** Updates this screw alone, with nothing specified, so everything follows it. */
+    updateScrew: (screw: OnshapeSelection) => void;
     /** Picks cleared, and nothing specified, after a run starts. */
     finishRun: () => void;
     setPart: (part: Part, id: string, value: string) => void;
@@ -81,6 +92,32 @@ function withSpecified(specified: string[], key: string): string[] {
     return specified.includes(key) ? specified : [...specified, key];
 }
 
+/** The washers and nut as the existing screw has them, but for what's specified; undefined where nothing changes. */
+function followedParts(
+    state: AutoAssemblyState,
+    existing: ExistingScrew
+): Pick<Choices, "parts" | "added"> | undefined {
+    const parts = { ...state.parts };
+    const added = { ...state.added };
+    let isChanged = false;
+    for (const part of Object.values(Part)) {
+        const isSpecified = (id: string) =>
+            state.specified.includes(specifiedKey(part, id));
+        const selection = existing[part];
+        if (!isSpecified(ADDED) && added[part] !== (selection !== undefined)) {
+            added[part] = selection !== undefined;
+            isChanged = true;
+        }
+        for (const [id, value] of Object.entries(selection ?? {})) {
+            if (!isSpecified(id) && parts[part][id] !== value) {
+                parts[part] = { ...parts[part], [id]: value };
+                isChanged = true;
+            }
+        }
+    }
+    return isChanged ? { parts, added } : undefined;
+}
+
 export const useAutoAssemblyStore = create<AutoAssemblyState>()(
     persist(
         (set) => ({
@@ -122,6 +159,19 @@ export const useAutoAssemblyStore = create<AutoAssemblyState>()(
                         ? {}
                         : withScrew(state, followed);
                 }),
+            followParts: (existing) =>
+                set((state) => followedParts(state, existing) ?? {}),
+            updateScrew: (screw) =>
+                set((state) => ({
+                    form: {
+                        ...state.form,
+                        [FormInput.SELECT_BY]: SelectionMode.SCREWS
+                    },
+                    targets: [],
+                    excluded: [],
+                    replaced: [screw],
+                    specified: []
+                })),
             finishRun: () =>
                 set({ targets: [], excluded: [], replaced: [], specified: [] }),
             setPart: (part, id, value) =>
@@ -136,7 +186,13 @@ export const useAutoAssemblyStore = create<AutoAssemblyState>()(
                     )
                 })),
             setAdded: (part, added) =>
-                set((state) => ({ added: { ...state.added, [part]: added } })),
+                set((state) => ({
+                    added: { ...state.added, [part]: added },
+                    specified: withSpecified(
+                        state.specified,
+                        specifiedKey(part, ADDED)
+                    )
+                })),
             setTargets: (targets) => set({ targets }),
             setExcluded: (excluded) => set({ excluded }),
             setReplaced: (replaced) => set({ replaced }),

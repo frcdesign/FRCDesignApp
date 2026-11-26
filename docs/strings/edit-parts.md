@@ -1,0 +1,34 @@
+# Edit parts: strings
+
+What [edit-parts.md](../architecture/edit-parts.md) shows a person. Messages
+are keyed `editParts…` in `src/frontend/messages/en.json`. A pick's problem is
+written by the backend (`edit-parts/targets.ts`) and shown as it comes.
+
+## Picking
+
+Under the context bar, while Edit parts is open.
+
+| String                                     | Kind             | Where               | When                                          | Review    |
+| ------------------------------------------ | ---------------- | ------------------- | --------------------------------------------- | --------- |
+| "Edit parts"                               | Button           | The context bar     | A library page in an assembly, signed in      | **⚑** New |
+| "Part to edit"                             | Query list label | Under the bar       | Always; red while empty                       | **⚑** New |
+| "Part"                                     | Row name         | The list's row      | Something picked                              | **⚑** New |
+| "Open this part's library to edit it."     | Note             | Under the list      | The picks are a part of another library       | **⚑** New |
+| "Select all with the same configuration"   | Checkbox         | Under the list      | Unticked to start; hidden for a screw         | **⚑** New |
+| "Cancel" / "Edit"                          | Buttons          | Under the list      | Edit is disabled until the pick names a part  | **⚑** New |
+| "A different part"                         | Row problem      | Under a row         | A pick isn't a copy of the first pick's part  | **⚑** New |
+| "Not found in the assembly"                | Row problem      | Under a row         | A pick's instance is gone                     | **⚑** New |
+| "Its configuration can't take this change" | Row problem      | Counted in the menu | A pick's other values hide what the edit sets | **⚑** New |
+
+## The menu
+
+| String                                                                                                      | Kind          | Where            | When                                      | Review    |
+| ----------------------------------------------------------------------------------------------------------- | ------------- | ---------------- | ----------------------------------------- | --------- |
+| "Mates to these parts are deleted. Fasten them again by hand."                                              | Warning       | Top of the menu  | Always                                    | **⚑** New |
+| "1 pick can't take this change and is left alone." / "{n} picks can't take this change and are left alone." | Warning       | Under the inputs | The check marks picks against the changes | **⚑** New |
+| "Update 1 part" / "Update {n} parts"                                                                        | Button        | Footer           | Disabled until something changes          | **⚑** New |
+| "Cancel"                                                                                                    | Button        | Footer           | Always; keeps the picks                   |           |
+| "Updating {name}..."                                                                                        | Loading toast |                  | While the run goes                        | **⚑** New |
+| "Updated 1 part." / "Updated {n} parts."                                                                    | Success toast |                  | The run finished                          | **⚑** New |
+| "Unexpectedly failed to update {name}."                                                                     | Error toast   |                  | The run failed without a worded reason    | **⚑** New |
+| "Not a library part" / "No part can take this change"                                                       | Error toast   |                  | The run refuses: written by the route     | **⚑** New |

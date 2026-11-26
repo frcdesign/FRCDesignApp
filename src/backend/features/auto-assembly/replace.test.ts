@@ -3,7 +3,13 @@ import { FASTENER_SET } from "../../../__test_utils__/fastener-set";
 import { type PartOccurrence } from "./assembly";
 import { frameTransform, type Vec3 } from "./geometry";
 import { type AssemblyHole } from "./planner";
-import { orphanedMates, screwLength, seatEdge, stackParts } from "./replace";
+import {
+    orphanedMates,
+    screwLength,
+    seatEdge,
+    stackParts,
+    stackRoles
+} from "./replace";
 import { FastenerKind } from "./studios";
 
 const INCH = 0.0254;
@@ -112,6 +118,33 @@ describe("stackParts", () => {
                 FASTENER_SET
             ).map((each) => each.path[0])
         ).toEqual(["washer", "nut"]);
+    });
+
+    it("tells the washer under the head from the one under the nut by which way each faces", () => {
+        const screwWasher = part(
+            FastenerKind.WASHER,
+            "screwWasher",
+            [0, 0, 0.2 * INCH],
+            UP
+        );
+        const nutWasher = part(
+            FastenerKind.WASHER,
+            "nutWasher",
+            [0, 0, 0],
+            DOWN
+        );
+        const nut = part(FastenerKind.NUT, "nut", [0, 0, -0.05 * INCH], DOWN);
+
+        const roles = stackRoles(
+            screw,
+            [nutWasher, nut, screwWasher],
+            FASTENER_SET
+        );
+
+        expect(roles.screwWasher?.path).toEqual(["screwWasher"]);
+        expect(roles.nut?.path).toEqual(["nut"]);
+        expect(roles.nutWasher?.path).toEqual(["nutWasher"]);
+        expect(stackRoles(screw, [], FASTENER_SET)).toEqual({});
     });
 
     it("reads the screw's length from its configuration, or the studio's default", () => {

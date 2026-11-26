@@ -146,6 +146,10 @@ interface AutoAssemblyState extends Choices {
     setScrew: (id: string, value: string) => void;
     /** The screw's inputs as the picks say, but those specified. */
     followScrew: (screw: Record<string, string>) => void;
+    /** Each washer and the nut added as the existing screw has it, configured as its own, but for what's specified. */
+    followParts: (existing: ExistingScrew) => void;
+    /** Updates this screw alone, with nothing specified, so everything follows it: how Edit parts hands a screw over. */
+    updateScrew: (screw: OnshapeSelection) => void;
     /** Picks cleared, and nothing specified, after a run starts. */
     finishRun: () => void;
     setPart: (part: Part, id: string, value: string) => void;
@@ -863,6 +867,12 @@ function stackParts(
     occurrences: PartOccurrence[],
     set: FastenerSet
 ): PartOccurrence[];
+// Which of those is under the head, the nut, and under the nut.
+function stackRoles(
+    screw: PartOccurrence,
+    stack: PartOccurrence[],
+    set: FastenerSet
+): StackRoles;
 // The mates any of whose queries name a deleted instance.
 function orphanedMates(
     features: OnshapeListedFeature[],
@@ -1041,6 +1051,11 @@ callout saying screws, washers or nuts are also available via Auto Assembly
 (`AutoAssemblyCallout`, in the style of the app's other callouts); its button
 closes the menu and switches to the page.
 
+**Edit** in Edit parts, on a library screw, switches to the page too
+([edit-parts.md](./edit-parts.md)). Select by becomes Existing screws, with
+that screw the one to update (`updateScrew`). Nothing is specified, so
+the screw, its washers and its nut all follow it.
+
 ### Picking
 
 1. Once the app sends `applicationInit`, Onshape sends the window's whole
@@ -1184,6 +1199,9 @@ clicking Insert each leave nothing specified (`open`, `finishRun`).
   one chosen gets a warning on its row and is fastened as asked (see the
   planner's last step, under `planHoles`).
 - Every screw input follows the first existing screw picked (`existingScrew`).
+- Each washer and the nut follow that screw too (`followParts`). One it has is
+  added, configured as its own; one it doesn't have is unticked. A part's
+  checkbox ticked by hand is specified, as its inputs are.
 - What's picked sets only the screw inputs that aren't specified
   (`followScrew`).
 - Where that changes the screw's settled head or size, a toast says so
@@ -1274,8 +1292,11 @@ It also answers what the screw follows in the form:
 
 - `holeSize` and `isHoleCountersunk`: the first hole picked made for a size,
   from the targets, then the screws to update (`pickedHole`).
-- `existingScrew`: the first screw to update's configuration, its studio's
-  defaults filled in (`firstScrew`).
+- `existingScrew`: the first screw to update's configuration, and those of
+  the washers and nut on it, each with its studio's defaults filled in
+  (`firstScrew`). They're the parts a run would delete with it
+  (`stackParts`). A washer facing the way the screw does is its screw washer;
+  one facing back is its nut washer (`stackRoles`).
 
 Nothing picked asks Onshape nothing. Otherwise a check lists the workspace's
 tabs, and asks nothing else while the assembly hasn't changed and every pick

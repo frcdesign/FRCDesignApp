@@ -133,6 +133,33 @@ export function stackParts(
     });
 }
 
+/** A screw's washers and nut, by where each goes. */
+export interface StackRoles {
+    screwWasher?: PartOccurrence;
+    nut?: PartOccurrence;
+    nutWasher?: PartOccurrence;
+}
+
+/** A washer facing the way the screw does is under its head; one facing back is under the nut. */
+export function stackRoles(
+    screw: PartOccurrence,
+    stack: PartOccurrence[],
+    set: FastenerSet
+): StackRoles {
+    const { axis } = placedScrew(screw);
+    const washers = stack.filter((part) =>
+        isFromStudio(part, set.studios[FastenerKind.WASHER].location)
+    );
+    const facing = (part: PartOccurrence) => dot(placedScrew(part).axis, axis);
+    return {
+        screwWasher: washers.find((washer) => facing(washer) > 0),
+        nut: stack.find((part) =>
+            isFromStudio(part, set.studios[FastenerKind.NUT].location)
+        ),
+        nutWasher: washers.find((washer) => facing(washer) < 0)
+    };
+}
+
 /** Every query path anywhere in a feature, as its references name instances. */
 function queryPaths(value: unknown): string[][] {
     if (Array.isArray(value)) {

@@ -1,3 +1,4 @@
+import { type EditCheckIn } from "@backend/features/edit-parts/contract";
 /** Library-scoped keys hang off {@link libraryQueryKey}, so a refresh invalidates one prefix. */
 import { LibraryId } from "@backend/features/library/library-id";
 import { FASTENER_LIBRARY } from "@backend/features/auto-assembly/studios";
@@ -168,6 +169,10 @@ export function pickCheckQueryKey(body: PickCheckIn | undefined) {
 /** Every pick check, whatever its body. */
 export function pickChecksQueryKey() {
     return ["pick-check"];
+}
+
+export function editCheckQueryKey(body: EditCheckIn | undefined) {
+    return ["edit-check", body];
 }
 
 export function assemblyJobQueryKey(assembly: ElementPath | undefined) {

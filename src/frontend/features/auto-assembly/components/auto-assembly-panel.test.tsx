@@ -502,7 +502,7 @@ describe("AutoAssemblyPanel", () => {
             }),
             {
                 problems: [],
-                existingScrew: { size: "NO_8_32", head: "BUTTON" }
+                existingScrew: { screw: { size: "NO_8_32", head: "BUTTON" } }
             }
         );
         await waitFor(
@@ -513,6 +513,49 @@ describe("AutoAssemblyPanel", () => {
             SETTLED
         );
         expect(useAutoAssemblyStore.getState().screw.head).toBe("SOCKET");
+    });
+
+    it("adds the washers and nut the existing screw has, as it has them, but what's chosen by hand", async () => {
+        const queryClient = createTestQueryClient();
+        renderPanel(queryClient);
+        useAutoAssemblyStore
+            .getState()
+            .updateScrew({ ...face("S"), entityType: "BODY" });
+        await userEvent.click(
+            await screen.findByRole("checkbox", { name: "Add nut washer" })
+        );
+        const state = useAutoAssemblyStore.getState();
+        expect(state.form.selectBy).toBe(SelectionMode.SCREWS);
+        queryClient.setQueryData(
+            pickCheckQueryKey({
+                assembly: ASSEMBLY,
+                selectionMode: SelectionMode.SCREWS,
+                targets: [],
+                excluded: [],
+                replaced: toSelectedEntities(state.replaced),
+                options: fastenerOptions(settleChoices(FASTENER_SET, state))
+            }),
+            {
+                problems: [],
+                existingScrew: {
+                    screw: { size: "NO_10_32" },
+                    screwWasher: { type: "OD_3_4_X_0_062" }
+                }
+            }
+        );
+
+        await waitFor(
+            () =>
+                expect(useAutoAssemblyStore.getState().added).toEqual({
+                    screwWasher: true,
+                    nut: false,
+                    nutWasher: true
+                }),
+            SETTLED
+        );
+        expect(useAutoAssemblyStore.getState().parts.screwWasher.type).toBe(
+            "OD_3_4_X_0_062"
+        );
     });
 
     it("asks what to fasten before what to fasten with, each group folding from its header", async () => {

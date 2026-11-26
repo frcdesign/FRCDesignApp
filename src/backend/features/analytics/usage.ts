@@ -52,7 +52,9 @@ export enum UseSource {
     /** An Auto Assembly run, which inserts a part per fastener it places. */
     AUTO_ASSEMBLY = "auto_assembly",
     /** Imported from the legacy app's log, which never recorded where a use started. */
-    UNKNOWN = "unknown"
+    UNKNOWN = "unknown",
+    /** An edit, which inserts each copy it changes again; see `features/edit-parts`. */
+    EDIT = "edit"
 }
 
 /** What a client may send: the import is the only writer of `UNKNOWN`. */
