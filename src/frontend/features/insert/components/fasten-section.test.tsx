@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { InsertableOut } from "@backend/features/library/contract";
 import { ElementType } from "@backend/lib/onshape/element-type";
@@ -133,11 +133,11 @@ describe("fasten picks", () => {
             fastenSelectionMode: SelectionMode.LOCATIONS,
             openInsertableId: undefined
         });
-        // The last test's components unmount after its afterEach, which can leave a query of theirs behind
-        queryClient.clear();
     });
 
     afterEach(() => {
+        // Unmounted first: a mounted query refetches once the cache clears, after its calls are cleared
+        cleanup();
         queryClient.clear();
         vi.mocked(apiPost).mockClear();
         // Never answering, as the module mock starts
