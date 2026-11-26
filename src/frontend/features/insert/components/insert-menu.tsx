@@ -2,7 +2,7 @@ import { ReactNode, useCallback, useEffect, useState } from "react";
 import { type Favorite } from "@backend/features/favorites/contract";
 import { InsertableOut } from "@backend/features/library/contract";
 import { ElementType } from "@backend/lib/onshape/element-type";
-import { Button, Group, Stack } from "@mantine/core";
+import { Button, Group, Stack, Tooltip } from "@mantine/core";
 import { PlusIcon } from "@phosphor-icons/react";
 import {
     AppModalBody,
@@ -47,6 +47,7 @@ import { FastenSection } from "./fasten-section";
 import { ParameterGrid } from "../../../components/parameter-input";
 import { ParameterGroup } from "../../../components/parameter-group";
 import { m } from "../../../paraglide/messages";
+import { HoldScope, useRateLimitHold } from "../../../lib/rate-limit-holds";
 import { DownloadStepButton } from "../../download/components/download-step-button";
 
 interface UseMenuTitleProps extends Omit<MenuTitleProps, "name"> {
@@ -305,6 +306,7 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
     );
 
     const canFasten = useCanFasten(insertable);
+    const hold = useRateLimitHold(HoldScope.INSERT);
 
     const handleClick = useCallback(() => {
         insertMutation.mutate(canFasten && fasten);
@@ -324,17 +326,21 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
 
     return (
         <Group gap="sm" align="center">
-            <Button
-                // Light would put green on pale green.
-                variant="filled"
-                leftSection={<PlusIcon />}
-                loading={isLoadingConfiguration || insertMutation.isPending}
-                onClick={handleClick}
-            >
-                {targetElementType === ElementType.ASSEMBLY
-                    ? m.insertMenuInsert()
-                    : m.insertMenuDerive()}
-            </Button>
+            <Tooltip label={hold} disabled={!hold}>
+                {/* data-disabled, so the wait still shows on hover. */}
+                <Button
+                    // Light would put green on pale green.
+                    variant="filled"
+                    leftSection={<PlusIcon />}
+                    loading={isLoadingConfiguration || insertMutation.isPending}
+                    data-disabled={hold !== undefined || undefined}
+                    onClick={hold ? undefined : handleClick}
+                >
+                    {targetElementType === ElementType.ASSEMBLY
+                        ? m.insertMenuInsert()
+                        : m.insertMenuDerive()}
+                </Button>
+            </Tooltip>
         </Group>
     );
 }

@@ -5,6 +5,7 @@ import { type ReactNode } from "react";
 import { LibraryId } from "@backend/features/library/library-id";
 import { type DayRange } from "@backend/features/analytics/day";
 import {
+    getOverviewFeatureReachQuery,
     getOverviewFeatureScriptsQuery,
     getOverviewHealthQuery,
     getOverviewReportsQuery,
@@ -16,13 +17,20 @@ import {
     firstPending
 } from "../../features/dashboard/dashboard-queries";
 import { DashboardState } from "../../features/dashboard/dashboard-state";
-import { UsesByLibraryCard } from "../../features/dashboard/uses-chart";
+import { UsesByLibraryChart } from "../../features/dashboard/uses-chart";
+import { ChartRangeControl } from "../../features/dashboard/range-control";
 import {
     FastenMethodBreakdown,
     InsertMethodBreakdown,
     UseSourceBreakdown
 } from "../../features/dashboard/use-mix";
-import { toDayRange, useRangePreset } from "../../features/dashboard/range";
+import {
+    OVERVIEW_TOTALS_PRESET,
+    RANGE_PRESETS,
+    RangePreset,
+    toDayRange,
+    useChartPreset
+} from "../../features/dashboard/range";
 import { HeadlineTiles } from "../../features/dashboard/headline-tiles";
 import { Section, SectionCard } from "../../components/section";
 import { UsageTreemap } from "../../features/dashboard/usage-treemap";
@@ -30,6 +38,7 @@ import { VersionManagerTiles } from "../../features/dashboard/version-manager-ti
 import { FeatureScriptUsageSection } from "../../features/dashboard/featurescript-usage";
 import { OverviewReports } from "../../features/dashboard/report-summary";
 import { HealthTiles } from "../../features/dashboard/health-report";
+import { FeatureReachSection } from "../../features/dashboard/feature-reach-section";
 import { m } from "../../paraglide/messages";
 
 export const Route = createFileRoute("/dashboard/")({
@@ -46,21 +55,34 @@ function useAllParts(range: DayRange) {
 }
 
 function DashboardOverview(): ReactNode {
-    const preset = useRangePreset();
-    const range = toDayRange(preset);
-    const usage = useQuery(getOverviewUsageQuery(range));
-    const series = useQuery(getOverviewSeriesQuery(range));
+    // Totals and breakdowns cover one fixed window; the two charts pick their own.
+    const range = toDayRange(OVERVIEW_TOTALS_PRESET);
+    // The headline is all time, its changes and sparklines the recent window.
+    const allTime = toDayRange(RangePreset.ALL);
+    const caption = m.dashboardRangeLastDays({
+        days: RANGE_PRESETS[OVERVIEW_TOTALS_PRESET].days ?? 0
+    });
+    const usesRange = toDayRange(useChartPreset("usesRange"));
+    const featureRange = toDayRange(useChartPreset("featureRange"));
+    const usage = useQuery(getOverviewUsageQuery(allTime, range));
+    const series = useQuery(getOverviewSeriesQuery(usesRange));
     const sources = useQuery(getOverviewSourcesQuery(range));
     const health = useQuery(getOverviewHealthQuery());
-    const versionManager = useQuery(getVersionManagerQuery(range));
-    const featureScripts = useQuery(getOverviewFeatureScriptsQuery(range));
-    const reports = useQuery(getOverviewReportsQuery(range));
+    // Rare enough that a month of them says little
+    const versionManager = useQuery(getVersionManagerQuery(allTime));
+    const featureScripts = useQuery(getOverviewFeatureScriptsQuery(allTime));
+    const reports = useQuery(getOverviewReportsQuery(allTime));
+    const allTimeCaption = m.dashboardRangeAllTime();
+    const featureReach = useQuery(getOverviewFeatureReachQuery(featureRange));
     const allParts = useAllParts(range);
     const pendingParts = firstPending(allParts);
 
     return (
         <Stack gap="xl">
-            <Section title={m.dashboardOverviewOverall()}>
+            <Section
+                title={m.dashboardOverviewOverall()}
+                caption={m.dashboardRangeAllTime()}
+            >
                 {usage.data ? (
                     <HeadlineTiles
                         totals={usage.data.totals}
@@ -76,15 +98,21 @@ function DashboardOverview(): ReactNode {
                 )}
             </Section>
 
-            {series.data ? (
-                <UsesByLibraryCard series={series.data} />
-            ) : (
-                <DashboardState
-                    query={series}
-                    loading={m.dashboardLoadingUsesOverTime()}
-                    title={m.dashboardUsesOverTime()}
-                />
-            )}
+            <SectionCard
+                title={m.dashboardUsesOverTime()}
+                aside={<ChartRangeControl searchKey="usesRange" />}
+            >
+                {series.data ? (
+                    <UsesByLibraryChart series={series.data} />
+                ) : (
+                    <DashboardState
+                        query={series}
+                        loading={m.dashboardLoadingUsesOverTime()}
+                    />
+                )}
+            </SectionCard>
+
+            <FeatureReachSection query={featureReach} />
 
             <Section title={m.dashboardHealthLibraries()}>
                 {health.data ? (
@@ -98,36 +126,48 @@ function DashboardOverview(): ReactNode {
             </Section>
 
             {versionManager.data ? (
-                <VersionManagerTiles totals={versionManager.data} />
+                <VersionManagerTiles
+                    totals={versionManager.data}
+                    caption={allTimeCaption}
+                />
             ) : (
                 <DashboardState
                     query={versionManager}
                     loading={m.dashboardLoadingVersionManager()}
                     title={m.dashboardVersionManager()}
+                    caption={allTimeCaption}
                 />
             )}
 
             {featureScripts.data ? (
-                <FeatureScriptUsageSection usage={featureScripts.data} />
+                <FeatureScriptUsageSection
+                    usage={featureScripts.data}
+                    caption={allTimeCaption}
+                />
             ) : (
                 <DashboardState
                     query={featureScripts}
                     loading={m.dashboardLoadingFeatureScripts()}
                     title={m.dashboardFeatureScripts()}
+                    caption={allTimeCaption}
                 />
             )}
 
             {reports.data ? (
-                <OverviewReports reports={reports.data} />
+                <OverviewReports
+                    reports={reports.data}
+                    caption={allTimeCaption}
+                />
             ) : (
                 <DashboardState
                     query={reports}
                     loading={m.dashboardLoadingReports()}
                     title={m.dashboardReports()}
+                    caption={allTimeCaption}
                 />
             )}
 
-            <SectionCard title={m.dashboardOverviewHowUsed()}>
+            <SectionCard title={m.dashboardOverviewHowUsed()} caption={caption}>
                 {sources.data ? (
                     <UseSourceBreakdown sources={sources.data} />
                 ) : (
@@ -149,10 +189,12 @@ function DashboardOverview(): ReactNode {
                     query={pendingParts}
                     loading={m.dashboardLoadingParts()}
                     title={m.dashboardTreemapTitle()}
+                    caption={caption}
                 />
             ) : (
                 <UsageTreemap
                     parts={allParts.flatMap((query) => query.data ?? [])}
+                    caption={caption}
                 />
             )}
         </Stack>

@@ -1,8 +1,8 @@
 import { env } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { events } from "../analytics/schema";
 import { EVENT_SCHEMA_VERSION, EventType } from "../analytics/usage";
 import {
+    loggedEvents,
     TEST_USER_ID,
     createTestApp,
     jsonRequest,
@@ -288,7 +288,7 @@ describe("POST /app-open", () => {
         );
 
         expect(res.status).toBe(200);
-        expect(await db.select().from(events).get()).toMatchObject({
+        expect(loggedEvents()[0]).toMatchObject({
             type: EventType.APP_OPEN,
             libraryId: null,
             userId: TEST_USER_ID,
@@ -303,6 +303,6 @@ describe("POST /app-open", () => {
         }).request("/api/app-open", jsonRequest("POST"), env);
 
         expect(res.status).not.toBe(200);
-        expect(await db.select().from(events).get()).toBeUndefined();
+        expect(loggedEvents()[0]).toBeUndefined();
     });
 });

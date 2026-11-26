@@ -229,7 +229,7 @@ editPartsRoutes.post(
 
         await runInBackground(c, "record an edit's inserts", async () =>
             recordInserts(
-                db,
+                c.env,
                 await c.var.getUserId(),
                 targets.map(({ selection }) => ({
                     libraryId: part.libraryId,
@@ -244,7 +244,9 @@ editPartsRoutes.post(
                     source: UseSource.EDIT,
                     fasten: false,
                     fastenable: part.fastenInfo !== null,
-                    preselected: false
+                    preselected: false,
+                    // Each copy goes back where it sat
+                    atInsertLocation: false
                 }))
             )
         );

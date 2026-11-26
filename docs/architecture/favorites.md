@@ -25,8 +25,9 @@ configuration each one opens with. Favorites are per user and per library.
 delete), `default_selection` (a stored selection, or null for the defaults),
 `sort_order`, `created_at`. Unique on user, library and insertable.
 
-`users` holds one row per user who has favorited anything; a favorite references
-it, so adding one inserts the user first.
+`users` holds a row per person, created by their first tracked event (see
+[analytics.md](./analytics.md)). A favorite references it, so adding one
+inserts the user first if they have no row yet.
 
 ## Flows
 
@@ -60,7 +61,9 @@ The icon beside the row's title lists that configuration on hover (see
 That selection is the favorite's default configuration; a favorite without one
 has the element's own defaults. The reset button returns to the default, and is
 off while it is on screen. **Set default configuration**, in the ⋯ menu,
-saves the configuration on screen as the default. Until the user first opens a
+saves the configuration on screen as the default, and records a
+`default_selection` event for the dashboard's Feature usage (see
+[analytics.md](./analytics.md)). Until the user first opens a
 menu offering it, a blue dot marks the ⋯ button and the item
 (`Hint.OPENED_SET_DEFAULT_CONFIGURATION`, see [auth.md](./auth.md)).
 

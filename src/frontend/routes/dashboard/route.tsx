@@ -15,7 +15,15 @@ const DashboardSearchType = z.object({
     /** Preset window for the range chart; kept in the URL so views are shareable. */
     range: z.enum(RangePreset).optional().catch(undefined),
     /** The uses a part must be at or below to count as low usage. */
-    threshold: z.coerce.number().int().nonnegative().optional().catch(undefined)
+    threshold: z.coerce
+        .number()
+        .int()
+        .nonnegative()
+        .optional()
+        .catch(undefined),
+    /** The overview's two charts' own ranges; the rest of the overview is fixed. */
+    usesRange: z.enum(RangePreset).optional().catch(undefined),
+    featureRange: z.enum(RangePreset).optional().catch(undefined)
 });
 
 type DashboardSearch = z.infer<typeof DashboardSearchType>;
@@ -25,7 +33,14 @@ export const Route = createFileRoute("/dashboard")({
     validateSearch: (search: Record<string, unknown>): DashboardSearch =>
         parseSearch(DashboardSearchType, search),
     search: {
-        middlewares: [retainSearchParams(["range", "threshold"])]
+        middlewares: [
+            retainSearchParams([
+                "range",
+                "threshold",
+                "usesRange",
+                "featureRange"
+            ])
+        ]
     }
 });
 

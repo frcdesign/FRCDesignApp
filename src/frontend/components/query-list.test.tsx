@@ -182,7 +182,7 @@ describe("QueryList", () => {
         expect(messages).toEqual([]);
     });
 
-    it("pauses selecting while a row is hovered, and selects again once the mouse leaves", async () => {
+    it("pauses selecting while a row is hovered, and lights every pick up again once the mouse leaves", async () => {
         renderWithProviders(
             <>
                 <Harness />
@@ -204,10 +204,20 @@ describe("QueryList", () => {
         await userEvent.unhover(row);
         expect(messages).toEqual([
             expect.objectContaining({
-                messageName: "requestSelection",
-                entityTypeSpecifier: ["EDGE"]
+                messageName: "requestSelectionHighlight",
+                selections: [
+                    expect.objectContaining({ selectionId: "A" }),
+                    expect.objectContaining({ selectionId: "B" })
+                ]
             })
         ]);
+        // Still the list's to take picks, and clicking it limits them again
+        expect(screen.getByText("Selecting: Holes")).toBeTruthy();
+        messages = [];
+        await userEvent.click(screen.getByText("Holes"));
+        expect(messages).toContainEqual(
+            expect.objectContaining({ messageName: "requestSelection" })
+        );
     });
 
     it("lights its picks up once the mouse leaves its rows when it isn't selecting", async () => {
@@ -255,7 +265,7 @@ describe("QueryList", () => {
         );
     });
 
-    it("selects with the focused list again after a row of another list", async () => {
+    it("lights the focused list's picks up again after a row of another list", async () => {
         function Other() {
             const [entities, setEntities] = useState(() => [edge("X")]);
             return (
@@ -287,8 +297,8 @@ describe("QueryList", () => {
         await userEvent.unhover(other);
         expect(messages).toEqual([
             expect.objectContaining({
-                messageName: "requestSelection",
-                entityTypeSpecifier: ["EDGE"]
+                messageName: "requestSelectionHighlight",
+                selections: [expect.objectContaining({ selectionId: "A" })]
             })
         ]);
     });

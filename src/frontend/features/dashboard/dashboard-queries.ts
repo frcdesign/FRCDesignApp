@@ -1,7 +1,12 @@
-import { queryOptions, type UseQueryResult } from "@tanstack/react-query";
+import {
+    keepPreviousData,
+    queryOptions,
+    type UseQueryResult
+} from "@tanstack/react-query";
 import { apiGet } from "../../lib/api-client";
 import type {
     DailyUsePoint,
+    FeatureReachOut,
     FeatureScriptUsageOut,
     LibrarySummaryOut,
     InsertableReportOut,
@@ -17,10 +22,24 @@ import { LibraryId } from "@backend/features/library/library-id";
 import { type DayRange } from "@backend/features/analytics/day";
 import { toLibraryPath } from "../../lib/api-paths";
 
+/**
+ * Keeps the last range's answer on screen while the next loads, so a section
+ * doesn't shrink to a loader and jump the page; only for the same library.
+ */
+function keepSameLibrary<T>(
+    previous: T | undefined,
+    query: { queryKey: readonly unknown[] } | undefined,
+    libraryId: LibraryId
+): T | undefined {
+    return query?.queryKey[2] === libraryId ? previous : undefined;
+}
+
 /** One overview area over `range`; each loads, and fails, on its own. */
 function overviewQuery<T>(area: string, range: DayRange) {
     return queryOptions<T>({
         queryKey: ["analytics", "overview", area, range.from, range.to],
+        // A new range keeps the last one's on screen, so the page doesn't shrink and jump
+        placeholderData: keepPreviousData,
         queryFn: () =>
             apiGet("/analytics/overview/" + area, {
                 query: { from: range.from, to: range.to }
@@ -28,8 +47,27 @@ function overviewQuery<T>(area: string, range: DayRange) {
     });
 }
 
-export function getOverviewUsageQuery(range: DayRange) {
-    return overviewQuery<OverviewUsageOut>("usage", range);
+/** Totals over `range`; the sparklines and changes over `trend` when given. */
+export function getOverviewUsageQuery(range: DayRange, trend?: DayRange) {
+    return queryOptions<OverviewUsageOut>({
+        queryKey: [
+            "analytics",
+            "overview",
+            "usage",
+            range.from,
+            range.to,
+            trend?.from
+        ],
+        placeholderData: keepPreviousData,
+        queryFn: () =>
+            apiGet("/analytics/overview/usage", {
+                query: {
+                    from: range.from,
+                    to: range.to,
+                    ...(trend ? { trendFrom: trend.from } : {})
+                }
+            })
+    });
 }
 
 export function getOverviewSeriesQuery(range: DayRange) {
@@ -48,6 +86,10 @@ export function getOverviewFeatureScriptsQuery(range: DayRange) {
     return overviewQuery<FeatureScriptUsageOut>("featurescripts", range);
 }
 
+export function getOverviewFeatureReachQuery(range: DayRange) {
+    return overviewQuery<FeatureReachOut>("feature-reach", range);
+}
+
 /** Every library's together; it changes with a reload, not with the range. */
 export function getOverviewHealthQuery() {
     return queryOptions<LibraryHealthCounts>({
@@ -63,6 +105,8 @@ export function getOverviewReportsQuery(range: DayRange) {
 export function getLibrarySummaryQuery(libraryId: LibraryId, range: DayRange) {
     return queryOptions<LibrarySummaryOut>({
         queryKey: ["analytics", "summary", libraryId, range.from, range.to],
+        placeholderData: (previous, query) =>
+            keepSameLibrary(previous, query, libraryId),
         queryFn: () =>
             apiGet("/analytics/summary" + toLibraryPath(libraryId), {
                 query: { from: range.from, to: range.to }
@@ -74,6 +118,8 @@ export function getLibrarySummaryQuery(libraryId: LibraryId, range: DayRange) {
 export function getPartsQuery(libraryId: LibraryId, range: DayRange) {
     return queryOptions<PartUsageOut[]>({
         queryKey: ["analytics", "parts", libraryId, range.from, range.to],
+        placeholderData: (previous, query) =>
+            keepSameLibrary(previous, query, libraryId),
         queryFn: () =>
             apiGet("/analytics/parts" + toLibraryPath(libraryId), {
                 query: { from: range.from, to: range.to }
@@ -95,6 +141,8 @@ export function getUnusedQuery(
             range.from,
             range.to
         ],
+        placeholderData: (previous, query) =>
+            keepSameLibrary(previous, query, libraryId),
         queryFn: () =>
             apiGet("/analytics/unused" + toLibraryPath(libraryId), {
                 query: {
@@ -120,6 +168,8 @@ export function getUnusedOptionsQuery(
             range.from,
             range.to
         ],
+        placeholderData: (previous, query) =>
+            keepSameLibrary(previous, query, libraryId),
         queryFn: () =>
             apiGet("/analytics/unused-options" + toLibraryPath(libraryId), {
                 query: {

@@ -9,6 +9,7 @@ import { getDb } from "../../db/client";
 import { configurations, insertables } from "../../db/schema";
 import type {
     DailyUsePoint,
+    FeatureReachOut,
     FeatureScriptUsageOut,
     InsertableReportOut,
     LibraryHealthCounts,
@@ -49,12 +50,14 @@ import {
 } from "./metric-queries";
 import { getReportedParts, getReportSummary } from "./report-queries";
 import { getFeatureScriptUsage } from "./featurescript-queries";
+import { getFeatureReach } from "./feature-reach";
 import { libraryTopic } from "../feedback/contract";
 import {
     clampRange,
     getTrackingSince,
     rangeQuery,
-    thresholdQuery
+    thresholdQuery,
+    trendRangeQuery
 } from "./range";
 
 export const analyticsRoutes = getApp();
@@ -66,18 +69,19 @@ export const analyticsRoutes = getApp();
 /** GET /api/analytics/overview/usage */
 analyticsRoutes.get(
     "/analytics/overview/usage",
-    validate("query", rangeQuery),
+    validate("query", trendRangeQuery),
     async (c) => {
         const db = getDb(c.env.DB);
-        const requested = c.req.valid("query");
+        const { trendFrom, ...requested } = c.req.valid("query");
         const trackingSince = await getTrackingSince(db);
         // Series are densified, so they need the clamped range.
         const range = clampRange(requested, trackingSince);
+        const trend = { from: trendFrom ?? requested.from, to: requested.to };
 
         const [totals, metricSeries, growth] = await Promise.all([
             getTotals(db, undefined, range),
-            getMetricSeries(db, range),
-            getGrowthFor(db, requested, trackingSince)
+            getMetricSeries(db, clampRange(trend, trackingSince)),
+            getGrowthFor(db, trend, trackingSince)
         ]);
         return c.json({
             totals,
@@ -132,6 +136,20 @@ analyticsRoutes.get(
         const db = getDb(c.env.DB);
         const usage = await getFeatureScriptUsage(db, c.req.valid("query"));
         return c.json(usage satisfies FeatureScriptUsageOut);
+    }
+);
+
+/** GET /api/analytics/overview/feature-reach */
+analyticsRoutes.get(
+    "/analytics/overview/feature-reach",
+    validate("query", rangeQuery),
+    async (c) => {
+        const db = getDb(c.env.DB);
+        const trackingSince = await getTrackingSince(db);
+        // Weeks are densified, so they need the clamped range.
+        const range = clampRange(c.req.valid("query"), trackingSince);
+        const reach = await getFeatureReach(db, range, trackingSince);
+        return c.json(reach satisfies FeatureReachOut);
     }
 );
 

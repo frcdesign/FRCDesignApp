@@ -22,7 +22,11 @@ import {
     toSelection
 } from "../configurations/selection";
 import { type StudioLocation } from "../generated-parts/studios";
+import { LibraryId } from "../library/library-id";
 import { type Catalog } from "./catalog";
+
+/** The library Auto Assembly's FRC fasteners are loaded into. */
+export const FASTENER_LIBRARY = LibraryId.FRC_DESIGN_LIB;
 
 export enum FastenerKind {
     SCREW = "screw",
@@ -54,6 +58,30 @@ export interface FastenerSet {
 export function isCountersunk(set: FastenerSet, head: string): boolean {
     const sizes = set.catalog.heads.find((each) => each.id === head)?.sizes;
     return Object.values(sizes ?? {}).some((size) => size.countersunk);
+}
+
+/**
+ * The head a hole asks for, where `head` isn't one: a flat head in a
+ * countersink, else the studio's default. Undefined to leave `head` as it is.
+ */
+export function headForHole(
+    set: FastenerSet,
+    head: string,
+    isHoleCountersunk: boolean
+): string | undefined {
+    if (isCountersunk(set, head) === isHoleCountersunk) {
+        return undefined;
+    }
+    const studioDefault = set.studios[FastenerKind.SCREW].parameters.find(
+        (parameter) => parameter.id === StudioInput.HEAD
+    )?.default;
+    const candidates = [
+        ...(studioDefault ? [studioDefault] : []),
+        ...set.catalog.heads.map((each) => each.id)
+    ];
+    return candidates.find(
+        (each) => isCountersunk(set, each) === isHoleCountersunk
+    );
 }
 
 /** The vendor offering every standard length, without part numbers. */
@@ -245,8 +273,8 @@ export function partVendors(
 
 /**
  * A washer or nut for a screw, as its studio allows it: in the screw's size,
- * and from a vendor making it there. Under a Generic screw it's Generic; else
- * the vendor chosen, else the screw's, else Generic; else the first making it.
+ * and from a vendor making it there: the vendor chosen, else the screw's, else
+ * Generic, else the first making it.
  * Undefined when nobody makes it in the size.
  */
 export function settlePart(
@@ -256,10 +284,7 @@ export function settlePart(
     screw: Pick<ScrewChoice, "vendor" | "size">
 ): PartChoice | undefined {
     const vendors = partVendors(set, kind, screw.size);
-    const vendor =
-        screw.vendor === GENERIC
-            ? [GENERIC]
-            : [choice[StudioInput.VENDOR], screw.vendor, GENERIC];
+    const vendor = [choice[StudioInput.VENDOR], screw.vendor, GENERIC];
     const picked =
         vendor.find((each) => each !== undefined && vendors.includes(each)) ??
         vendors[0];

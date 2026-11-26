@@ -85,6 +85,12 @@ them and the urls they become.
   are ignored — _observed_.
 - A part studio's thumbnail is rendered when it is saved, and can still be
   being written out just after — _observed_.
+- **A Hole feature attributes every face it makes** with a `HoleAttribute`:
+  the hole's cylinder and a countersink's cone alike. Its `holeType` is the
+  hole's style (`SIMPLE`, `C_BORE`, `C_SINK`), and a tapped hole's says
+  `isTappedHole` with its `majorDiameter`. Its edges carry none, but in sheet
+  metal. Std's source (`hole.fs`, `holeAttribute.fs`) says so; std's types are
+  internal, so this can change — _documented_.
 
 ## Configurations
 
@@ -97,6 +103,14 @@ the app makes of them.
 - A parameter or an enum option can be hidden by a **visibility condition**.
   An always-visible parameter carries a no-op condition,
   `BTParameterVisibilityCondition-177` — _observed_.
+- **A list none of whose options show is hidden**, as a parameter hidden by its
+  condition is — _observed_.
+    - A configuration setting such a list to anything but its default regenerates
+      nothing: the part studio answers no parts, and an instance inserted with it
+      errors. The same configuration without it answers the part. Seen with the
+      Fasteners washer studio: `vendor=WCP;type=OD_3_8_X_0_031;finish=BLACK`
+      gave no part, `vendor=WCP;type=OD_3_8_X_0_031` gave the washer —
+      _observed_.
 - Onshape doesn't mark what a parameter is for. A part number, a derivation
   variable or a channel is only recognized by its name — _observed_.
 - **A configuration is sent as text**, `id=value;id=value`.
@@ -220,6 +234,13 @@ errors.
 - **Rate limits** answer 429 — _documented_ — usually with `Retry-After`,
   which is sometimes absent — _observed_. Calls also count against the account's API
   allocation, which a full library reload spends a lot of — _documented_.
+- **Limits are per endpoint, per time window.** Every answer carries
+  `X-Rate-Limit-Remaining` for its endpoint, and a 429's `Retry-After` is the
+  seconds until that endpoint's count resets — _documented_
+  (<https://onshape-public.github.io/docs/api-adv/errors>).
+- **The app's App Store listing is public**, and calls from a public App Store
+  OAuth app don't count toward the annual API limits — the owner, from Onshape
+  staff. The per-endpoint limits still apply.
 - **Each answer says how many calls are left** in `x-rate-limit-remaining`,
   and in no other header: nothing names the limit or when it resets —
   _observed_ (2026-11-08, the owner's OAuth token through the testbench). What
@@ -233,9 +254,57 @@ errors.
     features and session info counted down together (8990, 8989, 8988), while
     document elements stood apart (8998) — consistent with a count per endpoint
     group, not proven. The counts are per user, so one person's heavy use
-    doesn't spend another's — _unverified_, the owner's understanding. The
-    window they refill over is _unverified_; checking again an hour later would
-    tell.
+    doesn't spend another's — the owner. The window they refill over is
+    _unverified_; checking again an hour later would tell.
+
+- **A user who runs out is locked out for about a day** — _observed_ in
+  production Workers Logs, 2026-11-23 to 24. Every 429 in those two days sent
+  a `Retry-After` between 76,620 and 86,367 s (21–24 h). They fell into five
+  groups, and each group counted down to one reset instant, to the second:
+  call time plus `Retry-After` gave the same moment for every 429 in it. In
+  the clearest group the first 429 came at 07:45:46 UTC with 86,367 s, so the
+  lockout began within a minute of it and ran 24 h. Other users' inserts went
+  through during that lockout, so it is not app-wide; it is the user's own
+  count, as above. Nearly every 429 came from Auto Assembly's check, which then
+  read the assembly on every pick. Which endpoint ran out, and whether its
+  remaining count was at 0, these logs can't say: each 429 now logs both.
+- **A user runs out within seconds, not over a long session** — _observed_ in
+  production Workers Logs, 2026-11-23 to 24. Clients locked out had sent only
+  30–70 checks in the 36 h before. Two, traced request by request:
+    - Four checks ran at once 21 s before the first 429, each 10–15 s, then
+      seven more a few seconds apart. All eleven answered 502.
+    - Auto Assembly's prepare got 86,383 s about 40 s after the panel opened.
+      So that count's 24 h began during prepare's own scan of every Part
+      Studio. A check 5 s later got 9,877 s from a second count, empty since
+      the evening before.
+
+    So seconds of calls emptied a count, though the owner's account reads
+    ~3,000 and ~9,000. Whether these users' limits are lower (many FRC
+    users are on Education or free plans), or a burst limit carries a day's
+    lockout, is _unverified_. Every 429 found came before 2026-11-24 20:50
+    UTC, when the caches went live.
+
+- **Onshape publishes neither the per-endpoint limits nor how plans differ**
+  — _documented_: "Onshape does not publish this information"
+  (<https://onshape-public.github.io/docs/api-adv/errors>). Only the annual
+  allocation is broken down by plan
+  (<https://onshape-public.github.io/docs/auth/limits>).
+- **Calls answered 4xx or 5xx don't count** toward the limits — _documented_
+  (<https://onshape-public.github.io/docs/auth/limits>). A FeatureScript
+  evaluation whose script fails can answer 200 with notices
+  (`evaluateScan` handles it); that it then counts is _unverified_.
+
+- **A workspace's current microversion**
+  (`GET /documents/d/{did}/w/{wid}/currentmicroversion`) moves on every edit
+  to any tab — _documented_. The app pins a workspace tab by the tab's own
+  `microversionId` instead, from `GET /documents/d/{did}/w/{wid}/elements`
+  with no `elementType` (optional in the OpenAPI spec), so an edit to an
+  unrelated tab keeps its caches. Being a documents endpoint, the listing
+  doesn't spend the assembly definition's count; what its own allows is
+  _unverified_.
+- **Dragging an instance in an assembly** is an edit, so it moves the
+  assembly tab's microversion — the owner. The insert location's cache relies
+  on it to find a dragged marker where it now is.
 
 - **Inserts often take several seconds** — _observed_ in Workers Logs for the
   week to 2026-11-09, as the whole insert request's wall time, which includes

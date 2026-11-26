@@ -45,7 +45,12 @@ export function ParameterGroup(props: ParameterGroupProps): ReactNode {
         >
             <Accordion.Item value={ITEM}>
                 {hasCheckbox ? (
-                    <Group gap="xs" wrap="nowrap" justify="space-between">
+                    <Group
+                        gap="xs"
+                        wrap="nowrap"
+                        justify="space-between"
+                        className={classes.header}
+                    >
                         <Checkbox
                             label={title}
                             checked={checked}

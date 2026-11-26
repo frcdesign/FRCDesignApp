@@ -75,7 +75,8 @@ describe("parseStudioScan", () => {
             end: number(0.01),
             closedAtStart: { btType: "BTFSValueBoolean-1195", value: false },
             closedAtEnd: { btType: "BTFSValueBoolean-1195", value: true },
-            threaded: { btType: "BTFSValueBoolean-1195", value: false }
+            threaded: { btType: "BTFSValueBoolean-1195", value: false },
+            countersunk: { btType: "BTFSValueBoolean-1195", value: true }
         });
         const scan = parseStudioScan(
             decodeFeatureScriptValue(
@@ -94,6 +95,7 @@ describe("parseStudioScan", () => {
             )
         );
         expect(scan.parts.JHD.holes[0].closedAtEnd).toBe(true);
+        expect(scan.parts.JHD.holes[0].countersunk).toBe(true);
         expect(scan.parts.JHD.holes[0].edges).toEqual([{ id: "E", at: 0 }]);
         expect(scan.planes).toEqual([
             {

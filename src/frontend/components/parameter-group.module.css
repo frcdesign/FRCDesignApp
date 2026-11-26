@@ -3,7 +3,7 @@
     grid-column: 1 / -1;
 }
 
-/* What folds it: its title and chevron, or beside a checkbox the chevron alone. */
+/* What folds it: its title and chevron across the group, or beside a checkbox the rest of the row. */
 .control {
     display: flex;
     align-items: center;
@@ -16,12 +16,21 @@
     margin-inline-end: calc(var(--mantine-spacing-xs) * -1);
 }
 
-.chevronOnly {
-    padding-inline: rem(6px);
+.control:first-child {
+    width: calc(100% + 2 * var(--mantine-spacing-xs));
+    margin-inline-start: calc(var(--mantine-spacing-xs) * -1);
 }
 
-.control:first-child {
-    margin-inline-start: calc(var(--mantine-spacing-xs) * -1);
+/* As tall as a control, so showing its chevron when ticked doesn't move it */
+.header {
+    min-height: rem(30px);
+}
+
+.chevronOnly {
+    flex: 1;
+    align-self: stretch;
+    justify-content: flex-end;
+    padding-inline: rem(6px);
 }
 
 .title {

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, screen } from "@testing-library/react";
+import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { InsertableOut } from "@backend/features/library/contract";
 import { ElementType } from "@backend/lib/onshape/element-type";
@@ -8,7 +8,7 @@ import { renderWithProviders } from "../../../../__test_utils__/render";
 import { ContextBar } from "../../../components/context-bar";
 import { SelectingActionBar } from "../../../components/selecting-action-bar";
 import { ParameterGrid } from "../../../components/parameter-input";
-import { apiPost } from "../../../lib/api-client";
+import { apiGet, apiPost } from "../../../lib/api-client";
 import { useOnshapeLaunch } from "../../../lib/onshape-params";
 import { queryClient } from "../../../lib/query-client";
 import {
@@ -29,6 +29,7 @@ import { enumParam } from "../../../../__test_utils__/configuration-fixtures";
 import { FastenMark } from "./fasten-mark";
 import { InsertMenuContent } from "./insert-menu";
 import { FastenSection } from "./fasten-section";
+import { PICK_CHECK_DELAY_MS } from "../../auto-assembly/queries";
 
 vi.mock("../../auth/access-level", async (importOriginal) => ({
     ...(await importOriginal<object>()),
@@ -116,6 +117,9 @@ function renderBar() {
     return renderWithProviders(<ContextBar isLibrary />, queryClient);
 }
 
+/** Long enough for the picks to settle and the check to be sent. */
+const SETTLED = { timeout: PICK_CHECK_DELAY_MS + 1000 };
+
 const preselection = () => screen.getByRole("button", { name: /Preselection/ });
 
 describe("fasten picks", () => {
@@ -129,11 +133,17 @@ describe("fasten picks", () => {
             fastenSelectionMode: SelectionMode.LOCATIONS,
             openInsertableId: undefined
         });
+        // The last test's components unmount after its afterEach, which can leave a query of theirs behind
+        queryClient.clear();
     });
 
     afterEach(() => {
         queryClient.clear();
         vi.mocked(apiPost).mockClear();
+        // Never answering, as the module mock starts
+        vi.mocked(apiGet)
+            .mockReset()
+            .mockImplementation(() => new Promise(() => undefined));
         clearFastenPicks();
         useOnshapeSelection.setState({
             focused: undefined,
@@ -273,6 +283,33 @@ describe("fasten picks", () => {
         expect(preselection().textContent).toContain("2");
     });
 
+    it("checks the picks one set at a time, the next once the last answers", async () => {
+        let answer: (value: unknown) => void = () => undefined;
+        vi.mocked(apiPost).mockImplementation((path) =>
+            path === "/auto-assembly/check"
+                ? new Promise((resolve) => {
+                      answer = resolve;
+                  })
+                : Promise.resolve({ instanceId: "marker" })
+        );
+        const checks = () =>
+            vi
+                .mocked(apiPost)
+                .mock.calls.filter(([path]) => path === "/auto-assembly/check");
+        renderBar();
+
+        selectInOnshape(edge("JH1"));
+        await waitFor(() => expect(checks()).toHaveLength(1), SETTLED);
+        selectInOnshape(edge("JH2"));
+        await new Promise((resolve) =>
+            setTimeout(resolve, PICK_CHECK_DELAY_MS + 200)
+        );
+        expect(checks()).toHaveLength(1);
+
+        act(() => answer({ problems: [] }));
+        await waitFor(() => expect(checks()).toHaveLength(2), SETTLED);
+    });
+
     it("starts selecting from Preselection, keeps the picks on Done and drops them on Cancel", async () => {
         renderBar();
         await userEvent.click(preselection());
@@ -315,6 +352,56 @@ describe("fasten picks", () => {
         expect(
             screen.queryByRole("button", { name: "Add insert location" })
         ).toBeNull();
+    });
+
+    it("asks again on focus once its answer is old, offering Add insert location once the marker is gone", async () => {
+        const answer = vi
+            .mocked(apiGet)
+            .mockResolvedValue({ instanceId: "marker" });
+        seedInsertLocation("marker");
+        renderBar();
+        // Whatever mounting asked has answered, with the marker still there
+        await waitFor(() =>
+            expect(
+                queryClient.isFetching({
+                    queryKey: insertLocationQueryKey(ASSEMBLY)
+                })
+            ).toBe(0)
+        );
+        expect(
+            screen.queryByRole("button", { name: "Add insert location" })
+        ).toBeNull();
+
+        // Deleted in Onshape since, and the answer is now old
+        answer.mockResolvedValue({ instanceId: undefined });
+        queryClient.setQueryData(
+            insertLocationQueryKey(ASSEMBLY),
+            { instanceId: "marker" },
+            { updatedAt: Date.now() - 60 * 1000 }
+        );
+        const asked = answer.mock.calls.length;
+        act(() => {
+            window.dispatchEvent(new Event("focus"));
+        });
+
+        expect(
+            await screen.findByRole(
+                "button",
+                { name: "Add insert location" },
+                { timeout: 5000 }
+            )
+        ).toBeTruthy();
+        expect(answer.mock.calls.length).toBe(asked + 1);
+    });
+
+    it("doesn't ask again on focus while its answer is fresh", () => {
+        seedInsertLocation("marker");
+        renderBar();
+        const asked = vi.mocked(apiGet).mock.calls.length;
+        act(() => {
+            window.dispatchEvent(new Event("focus"));
+        });
+        expect(vi.mocked(apiGet).mock.calls).toHaveLength(asked);
     });
 
     it("hands the bar's picks to the insert menu while one is open", () => {

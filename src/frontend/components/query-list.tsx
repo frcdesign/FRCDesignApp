@@ -24,7 +24,6 @@ import {
     holdPicks,
     nameList,
     onPick,
-    onResume,
     selectionKey,
     useOnshapeSelection,
     without,
@@ -210,19 +209,6 @@ export function QueryList(props: QueryListProps): ReactNode {
             }
         };
     }, [target, isFocused, filter, id, layout, isLimiting]);
-
-    useEffect(
-        () =>
-            onResume(id, () => {
-                if (target) {
-                    selectionRequest.current = sendSelectionRequest(
-                        target,
-                        filter
-                    );
-                }
-            }),
-        [id, target, filter]
-    );
 
     // Cleared, by Clear, its last row's removal or the form, it asks for picks again
     const wasEmpty = useRef(isEmpty);

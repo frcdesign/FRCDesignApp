@@ -18,6 +18,8 @@ interface UsageTreemapProps {
     parts: PartUsageOut[];
     /** The level this instance starts at and will not go above. */
     root?: TreemapPath;
+    /** Beside the title: the window it covers, where the page doesn't pick one. */
+    caption?: string;
 }
 
 /** Tall enough that the smaller slices still get a readable tile. */
@@ -26,7 +28,8 @@ const CHART_HEIGHT = 360;
 /** `root` is the highest level the breadcrumb can climb to. */
 export function UsageTreemap({
     parts,
-    root = {}
+    root = {},
+    caption
 }: UsageTreemapProps): ReactNode {
     const navigate = useNavigate();
     const [path, setPath] = useState<TreemapPath>(root);
@@ -50,7 +53,7 @@ export function UsageTreemap({
     };
 
     return (
-        <SectionCard title={m.dashboardTreemapTitle()}>
+        <SectionCard title={m.dashboardTreemapTitle()} caption={caption}>
             <TreemapTrail root={root} path={path} onSelect={setPath} />
             {nodes.length === 0 ? (
                 <DashboardEmpty title={m.dashboardTreemapEmpty()} />

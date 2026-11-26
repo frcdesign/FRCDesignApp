@@ -12,6 +12,9 @@ import type {
 import { EventType, UseTarget, type UseSource } from "./usage";
 import { type LoggedEvent } from "./schema";
 
+/** Who sent a report, when they weren't signed in. */
+export const SIGNED_OUT_USER_ID = "signed-out";
+
 /** What every event carries, whatever kind of event it is. */
 export type EventCore = Pick<
     LoggedEvent,
@@ -70,7 +73,8 @@ export const NOT_A_USE: UseColumns = {
     source: null,
     fasten: null,
     fastenable: null,
-    preselected: null
+    preselected: null,
+    atInsertLocation: null
 };
 
 export const NO_ELEMENT: ElementColumns = {

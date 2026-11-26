@@ -3,7 +3,13 @@ import { type Db } from "../../db/client";
 import { type ConfigurationParameter } from "../configurations/contract";
 import { toInstanceKeys } from "../configurations/instances";
 import { earliest, increment, latest } from "../../db/updates";
-import { EventType, USE_EVENT_TYPES, UseSource } from "./usage";
+import {
+    type AppFeature,
+    EventType,
+    USE_EVENT_TYPES,
+    UseSource
+} from "./usage";
+import { featuresOf } from "./feature-reach";
 import { ElementType } from "../../lib/onshape/element-type";
 import { VersionJobOutcome } from "../version-manager/contract";
 import {
@@ -30,6 +36,7 @@ import {
     dailyVersionMetrics,
     dailyFeatureScriptMetrics,
     dailyFeatureScriptUsers,
+    dailyFeatureUsers,
     insertableStats,
     userStats,
     type LoggedEvent
@@ -40,6 +47,29 @@ import {
  * by its branch, so a replay rebuilds the rollups exactly.
  */
 export function rollupWrites(
+    db: Db,
+    event: LoggedEvent,
+    parameters: ConfigurationParameter[]
+): BatchItem<"sqlite">[] {
+    return [
+        ...kindWrites(db, event, parameters),
+        ...featuresOf(event).map((feature) =>
+            markFeatureUsed(db, event, feature)
+        )
+    ];
+}
+
+/** Whether the event puts its user in a rollup that names people: activity, an open, a feature's users. */
+export function namesPerson(event: LoggedEvent): boolean {
+    return (
+        featuresOf(event).length > 0 ||
+        event.type === EventType.APP_OPEN ||
+        (isUseEvent(event.type) && event.libraryId !== null)
+    );
+}
+
+/** The rollups of the event's own kind. */
+function kindWrites(
     db: Db,
     event: LoggedEvent,
     parameters: ConfigurationParameter[]
@@ -60,6 +90,10 @@ export function rollupWrites(
     const report = asReport(event);
     if (report) {
         return [countReportDay(db, report)];
+    }
+    // Not activity either: setting up a favorite places nothing.
+    if (event.type === EventType.DEFAULT_SELECTION) {
+        return [];
     }
     // Every other rollup is keyed by library.
     if (event.libraryId === null) {
@@ -83,6 +117,21 @@ export function rollupWrites(
         countPartLifetime(db, use),
         ...countValues(db, use, parameters)
     ];
+}
+
+/** One row per user per feature per day; an uncounted row stays uncounted. */
+function markFeatureUsed(db: Db, event: LoggedEvent, feature: AppFeature) {
+    return db
+        .insert(dailyFeatureUsers)
+        .values({ day: event.day, feature, userId: event.userId, times: 1 })
+        .onConflictDoUpdate({
+            target: [
+                dailyFeatureUsers.feature,
+                dailyFeatureUsers.day,
+                dailyFeatureUsers.userId
+            ],
+            set: { times: increment(dailyFeatureUsers.times) }
+        });
 }
 
 function countFeatureAdd(db: Db, add: LoggedFeatureAdd) {

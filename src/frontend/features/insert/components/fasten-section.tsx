@@ -14,6 +14,8 @@ import {
 } from "../../../components/parameter-group";
 import { ParameterInput } from "../../../components/parameter-input";
 import { QueryList } from "../../../components/query-list";
+import { Callout } from "../../../components/callout";
+import { Status } from "../../../lib/status";
 import { CIRCULAR_EDGES } from "../../../lib/messages";
 import { useTargetAssembly } from "../../../lib/onshape-params";
 import {
@@ -104,7 +106,7 @@ export function FastenPicks(): ReactNode {
                   },
         [assembly, mode, isFaces, targets, excluded]
     );
-    const { problems, isChecking } = usePickProblems(checkBody);
+    const { problems, isChecking, hold } = usePickProblems(checkBody);
     useFastenPicksForMode(mode);
 
     const problem = (entity: OnshapeSelection) =>
@@ -112,6 +114,11 @@ export function FastenPicks(): ReactNode {
 
     return (
         <>
+            {hold && (
+                <FullWidthRow>
+                    <Callout status={Status.ERROR} text={hold} />
+                </FullWidthRow>
+            )}
             <ParameterInput
                 parameter={SELECT_BY}
                 value={mode}

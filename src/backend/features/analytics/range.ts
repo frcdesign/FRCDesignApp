@@ -14,6 +14,9 @@ const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
 export const rangeQuery = z.object({ from: day, to: day });
 
+/** A range, and where its trends start when they cover less of it than the totals. */
+export const trendRangeQuery = rangeQuery.extend({ trendFrom: day.optional() });
+
 /** A range, plus the cutoff the low-usage reports list at or below. */
 export const thresholdQuery = rangeQuery.extend({
     threshold: z.coerce

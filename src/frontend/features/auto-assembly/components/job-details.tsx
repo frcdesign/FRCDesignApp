@@ -19,6 +19,8 @@ import { AppIcon } from "../../../components/app-icon";
 import { SectionNotice } from "../../../components/app-notice";
 import { AppTitle } from "../../../components/app-title";
 import { StatusIcon } from "../../../components/status-icon";
+import { ReportButton } from "../../feedback/components/report-button";
+import { toReportedError } from "../../feedback/diagnostics";
 import {
     type HighlightedEntity,
     sendHighlightMessage,
@@ -107,8 +109,9 @@ export function JobDetails(props: JobDetailsProps): ReactNode {
                             size={IconSize.CONTROL}
                         />
                     }
-                    title={m.autoAssemblyStoppedEarly()}
-                    description={stopped}
+                    title={stopped}
+                    description={m.autoAssemblyTryAgain()}
+                    action={<ReportButton report={toReportedError(stopped)} />}
                 />
             )}
             <Stack gap="sm" onMouseLeave={leave}>

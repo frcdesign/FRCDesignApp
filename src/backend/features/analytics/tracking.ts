@@ -1,18 +1,22 @@
+import { eq, sql } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import { runInBackground } from "../../lib/background";
 import { type AppBindings, type AppContext } from "../../lib/context";
 import { getDb, type Db } from "../../db/client";
-import { events, type LoggedEvent } from "./schema";
+import { type LoggedEvent } from "./schema";
+import { logEvents } from "./event-log";
 import {
     NO_ELEMENT,
     NOT_A_USE,
     NOT_A_FEATURE_ADD,
     NOT_A_REPORT,
     NOT_A_VERSION_RUN,
+    SIGNED_OUT_USER_ID,
     type ElementColumns,
     type EventCore
 } from "./logged-event";
-import { rollupWrites } from "./rollups";
+import { namesPerson, rollupWrites } from "./rollups";
+import { libraries, users } from "../../db/schema";
 import { EVENT_SCHEMA_VERSION, EventType, UseSource } from "./usage";
 import {
     failedTaskCount,
@@ -23,7 +27,7 @@ import {
     type PushScopeKind,
     type VersionJobStatus
 } from "../version-manager/contract";
-import { type LibraryId } from "../library/library-id";
+import { DEFAULT_LIBRARY, type LibraryId } from "../library/library-id";
 import { type ElementPath } from "../../lib/onshape/path";
 import { ElementType } from "../../lib/onshape/element-type";
 import {
@@ -62,6 +66,8 @@ export interface InsertEvent extends UseEvent {
     fastenable: boolean;
     /** Fastened to circular edges or faces picked in Onshape beforehand. */
     preselected: boolean;
+    /** Placed at the assembly's insert location marker. */
+    atInsertLocation: boolean;
 }
 
 /**
@@ -75,7 +81,7 @@ export function trackInsert(
 ): Promise<void> {
     return runInBackground(c, "record an insert", async () =>
         recordInserts(
-            getDb(c.env.DB),
+            c.env,
             await c.var.getUserId(),
             Array.from({ length: instances }, () => event)
         )
@@ -84,12 +90,12 @@ export function trackInsert(
 
 /** One event per insert, all in one batch; for a caller with no request to track from. */
 export async function recordInserts(
-    db: Db,
+    env: TrackingBindings,
     userId: string,
     inserts: InsertEvent[]
 ): Promise<void> {
     await recordBatch(
-        db,
+        env,
         inserts.map((event) => ({
             event: {
                 ...columnsOfUse(EventType.INSERT, event, userId),
@@ -97,7 +103,8 @@ export async function recordInserts(
                 isQuickInsert: event.isQuickInsert,
                 fasten: event.fasten,
                 fastenable: event.fastenable,
-                preselected: event.preselected
+                preselected: event.preselected,
+                atInsertLocation: event.atInsertLocation
             },
             parameters: event.parameters
         }))
@@ -108,7 +115,7 @@ export async function recordInserts(
 export function trackDownload(c: AppContext, event: UseEvent): Promise<void> {
     return runInBackground(c, "record a download", async () =>
         record(
-            getDb(c.env.DB),
+            c.env,
             {
                 ...columnsOfUse(
                     EventType.DOWNLOAD,
@@ -119,7 +126,8 @@ export function trackDownload(c: AppContext, event: UseEvent): Promise<void> {
                 isQuickInsert: null,
                 fasten: null,
                 fastenable: null,
-                preselected: null
+                preselected: null,
+                atInsertLocation: null
             },
             event.parameters
         )
@@ -149,7 +157,7 @@ function columnsOfUse(
 export function trackAppOpen(c: AppContext): Promise<void> {
     return runInBackground(c, "record an app open", async () =>
         record(
-            getDb(c.env.DB),
+            c.env,
             {
                 ...eventCore(EventType.APP_OPEN, null, await c.var.getUserId()),
                 ...NO_ELEMENT,
@@ -207,7 +215,7 @@ export async function trackVersionRun(
 ): Promise<void> {
     const { status } = event;
     await record(
-        getDb(env.DB),
+        env,
         {
             ...eventCore(EventType.VERSION_RUN, null, event.userId),
             ...NO_ELEMENT,
@@ -225,9 +233,6 @@ export async function trackVersionRun(
         []
     );
 }
-
-/** Who sent a report, when they weren't signed in. */
-export const SIGNED_OUT_USER_ID = "signed-out";
 
 /** A report already posted to Discord; see `features/feedback`. */
 export interface ReportEvent {
@@ -255,7 +260,7 @@ export function trackReport(c: AppContext, event: ReportEvent): Promise<void> {
         : NO_ELEMENT;
     return runInBackground(c, "record a report", () =>
         record(
-            getDb(c.env.DB),
+            c.env,
             {
                 ...eventCore(
                     EventType.REPORT,
@@ -290,7 +295,7 @@ export function trackFeatureAdd(
 ): Promise<void> {
     return runInBackground(c, "record a FeatureScript add", async () =>
         record(
-            getDb(c.env.DB),
+            c.env,
             {
                 ...eventCore(
                     EventType.FEATURE_ADD,
@@ -309,13 +314,46 @@ export function trackFeatureAdd(
     );
 }
 
+/** A favorite's default configuration, saved; `path` is its part in the loaded version. */
+export interface DefaultSelectionEvent {
+    libraryId: LibraryId;
+    path: ElementPath;
+    insertableId: string;
+}
+
+/** As `trackInsert`, once the default is saved. Not a use: nothing was placed. */
+export function trackDefaultSelection(
+    c: AppContext,
+    event: DefaultSelectionEvent
+): Promise<void> {
+    return runInBackground(c, "record a default configuration", async () =>
+        record(
+            c.env,
+            {
+                ...eventCore(
+                    EventType.DEFAULT_SELECTION,
+                    event.libraryId,
+                    await c.var.getUserId()
+                ),
+                ...event.path,
+                insertableId: event.insertableId,
+                ...NOT_A_USE,
+                ...NOT_A_VERSION_RUN,
+                ...NOT_A_REPORT,
+                ...NOT_A_FEATURE_ADD
+            },
+            []
+        )
+    );
+}
+
 /** Batched so neither half lands without the other. */
 function record(
-    db: Db,
+    env: TrackingBindings,
     event: LoggedEvent,
     parameters: ConfigurationParameter[]
 ): Promise<void> {
-    return recordBatch(db, [{ event, parameters }]);
+    return recordBatch(env, [{ event, parameters }]);
 }
 
 interface Recorded {
@@ -323,15 +361,57 @@ interface Recorded {
     parameters: ConfigurationParameter[];
 }
 
-/** Several events and their rollups in one batch, so none lands without the rest. */
-async function recordBatch(db: Db, recorded: Recorded[]): Promise<void> {
+/** What recording reaches: D1 for the rollups, and the event log's stream. */
+type TrackingBindings = Pick<AppBindings, "DB" | "EVENT_LOG">;
+
+/**
+ * The rollups first, in one batch so none lands without the rest, then the
+ * events to the log. A failed send is reported, not thrown: a workflow step
+ * retried for it would count its rollups twice.
+ */
+async function recordBatch(
+    env: TrackingBindings,
+    recorded: Recorded[]
+): Promise<void> {
     if (recorded.length === 0) return;
+    const db = getDb(env.DB);
     const writes: BatchItem<"sqlite">[] = recorded.flatMap(
         ({ event, parameters }) => [
-            db.insert(events).values(event),
-            ...rollupWrites(db, event, parameters)
+            ...rollupWrites(db, event, parameters),
+            ...(namesPerson(event) ? [createUser(db, event)] : [])
         ]
     );
+    if (writes.length > 0) {
+        await db.batch(
+            writes as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]
+        );
+    }
+    await logEvents(
+        env,
+        recorded.map(({ event }) => event)
+    ).catch((error: unknown) => {
+        console.error("Failed to send events to the event log", error);
+    });
+}
 
-    await db.batch(writes as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
+/**
+ * The user's record, on the first event that names them. Through `libraries`,
+ * since its dead `library_id` must name one: with none to name, it writes nothing.
+ */
+function createUser(db: Db, event: LoggedEvent) {
+    return db
+        .insert(users)
+        .select(
+            db
+                .select({
+                    id: sql<string>`${event.userId}`.as("id"),
+                    libraryId: libraries.id,
+                    createdAt: sql<number>`${event.createdAt.getTime()}`.as(
+                        "created_at"
+                    )
+                })
+                .from(libraries)
+                .where(eq(libraries.id, event.libraryId ?? DEFAULT_LIBRARY))
+        )
+        .onConflictDoNothing();
 }

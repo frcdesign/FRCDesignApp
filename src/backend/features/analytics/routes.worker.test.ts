@@ -1,10 +1,11 @@
 import { sql } from "drizzle-orm";
 import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
-import { configurations, insertables } from "../../db/schema";
+import { configurations, insertables, users } from "../../db/schema";
 import {
     dailyAppOpens,
     dailyConfigurationMetrics,
+    dailyFeatureUsers,
     dailyFeatureScriptMetrics,
     dailyFeatureScriptUsers,
     dailyInsertableMetrics,
@@ -26,13 +27,14 @@ import {
     seedAssembly,
     seedConfiguration,
     seedFavorite,
+    seedLibrary,
     seedPartStudio,
     seedTestData
 } from "../../../__test_utils__";
 import { getDb } from "../../db/client";
 import { featureScripts } from "../featurescripts/schema";
 import { createApp } from "../../app";
-import { EventType, UseSource, UseTarget } from "./usage";
+import { AppFeature, EventType, UseSource, UseTarget } from "./usage";
 import { LibraryId } from "../library/library-id";
 import {
     ParameterType,
@@ -40,6 +42,8 @@ import {
 } from "../configurations/contract";
 import {
     type DailyUsePoint,
+    type FeatureReachOut,
+    ReachInterval,
     type FeatureScriptUsageOut,
     type OverviewUsageOut,
     type ReportSummary,
@@ -185,6 +189,7 @@ const OVERVIEW_AREAS = [
     "sources",
     "version-manager",
     "featurescripts",
+    "feature-reach",
     "health",
     "reports"
 ];
@@ -222,6 +227,31 @@ describe("analytics routes", () => {
     });
 
     describe("GET /analytics/overview/...", () => {
+        it("totals the whole range, and trends only from trendFrom", async () => {
+            await seedMetric("2026-01-05", 9);
+            await seedMetric("2026-03-01", 4);
+            await seedMetric("2026-03-03", 2);
+
+            const res = await anonymousGet(
+                "/api/analytics/overview/usage?from=2026-01-01&to=2026-03-03&trendFrom=2026-03-02"
+            );
+            const body: OverviewUsageOut = await res.json();
+
+            expect(body.totals.uses).toBe(15);
+            expect(
+                body.metricSeries.map((point) => [point.day, point.uses])
+            ).toEqual([
+                ["2026-03-02", 0],
+                ["2026-03-03", 2]
+            ]);
+            // Against the two days before the trend, not before the range.
+            expect(body.growth.uses).toMatchObject({
+                current: 2,
+                previous: 4,
+                currentFrom: "2026-03-02"
+            });
+        });
+
         it("sums the range's totals and counts unique users", async () => {
             await seedMetric("2026-01-01", 5);
             await seedMetric("2026-01-02", 3);
@@ -612,6 +642,292 @@ describe("analytics routes", () => {
             const body: LibrarySummaryOut = await res.json();
 
             expect(body.totals.uses).toBe(2);
+        });
+    });
+
+    describe("GET /analytics/overview/feature-reach", () => {
+        const seedReach = async () => {
+            // 2026-06-01 is a Monday.
+            await db.insert(dailyAppOpens).values([
+                { day: "2026-06-01", userId: "a", opens: 1 },
+                { day: "2026-06-03", userId: "b", opens: 2 },
+                { day: "2026-06-09", userId: "c", opens: 1 }
+            ]);
+            await db.insert(dailyUserActivity).values({
+                day: "2026-06-02",
+                libraryId: TEST_LIBRARY_ID,
+                userId: "a"
+            });
+            await db.insert(dailyFeatureUsers).values([
+                {
+                    day: "2026-05-01",
+                    feature: AppFeature.FAVORITES,
+                    userId: "a"
+                },
+                { day: "2026-06-02", feature: AppFeature.SEARCH, userId: "a" },
+                { day: "2026-06-04", feature: AppFeature.SEARCH, userId: "a" },
+                // Never opened the app that week, and still among its users.
+                {
+                    day: "2026-06-05",
+                    feature: AppFeature.VERSION_MANAGER,
+                    userId: "d"
+                },
+                { day: "2026-06-10", feature: AppFeature.SEARCH, userId: "c" }
+            ]);
+        };
+        const FIRST_USED = {
+            [AppFeature.FAVORITES]: "2026-05-01",
+            [AppFeature.SEARCH]: "2026-06-02",
+            [AppFeature.VERSION_MANAGER]: "2026-06-05"
+        };
+
+        it("counts each week's feature users among everybody active that week, past 90 days", async () => {
+            await seedReach();
+            // Tracked since well before, so the range isn't clamped under 90 days
+            await db
+                .insert(dailyAppOpens)
+                .values({ day: "2026-01-05", userId: "z", opens: 1 });
+
+            const res = await anonymousGet(
+                "/api/analytics/overview/feature-reach?from=2026-03-04&to=2026-06-21"
+            );
+            const body: FeatureReachOut = await res.json();
+
+            expect(body.interval).toBe(ReachInterval.WEEK);
+            // From the Monday of the week the range starts in
+            expect(body.buckets[0].start).toBe("2026-03-02");
+            // Nobody here has a record, so everybody is existing
+            const none = { newActiveUsers: 0, newUsers: {}, newTimes: {} };
+            expect(body.buckets.slice(-3)).toEqual([
+                {
+                    start: "2026-06-01",
+                    activeUsers: 3,
+                    users: {
+                        [AppFeature.SEARCH]: 1,
+                        [AppFeature.VERSION_MANAGER]: 1
+                    },
+                    times: {},
+                    ...none
+                },
+                {
+                    start: "2026-06-08",
+                    activeUsers: 1,
+                    users: { [AppFeature.SEARCH]: 1 },
+                    times: {},
+                    ...none
+                },
+                {
+                    start: "2026-06-15",
+                    activeUsers: 0,
+                    users: {},
+                    times: {},
+                    ...none
+                }
+            ]);
+            expect(body.firstUsed).toEqual(FIRST_USED);
+        });
+
+        it("counts each day's within 90 days, only the range's days", async () => {
+            await seedReach();
+
+            const res = await anonymousGet(
+                "/api/analytics/overview/feature-reach?from=2026-06-03&to=2026-06-21"
+            );
+            const body: FeatureReachOut = await res.json();
+
+            expect(body.interval).toBe(ReachInterval.DAY);
+            expect(body.buckets).toHaveLength(19);
+            const on = (day: string) =>
+                body.buckets.find((bucket) => bucket.start === day);
+            expect(body.buckets[0]).toEqual({
+                start: "2026-06-03",
+                activeUsers: 1,
+                users: {},
+                times: {}
+            });
+            expect(on("2026-06-04")).toEqual({
+                start: "2026-06-04",
+                activeUsers: 1,
+                users: { [AppFeature.SEARCH]: 1 },
+                times: {}
+            });
+            expect(on("2026-06-05")).toEqual({
+                start: "2026-06-05",
+                activeUsers: 1,
+                users: { [AppFeature.VERSION_MANAGER]: 1 },
+                times: {}
+            });
+            expect(on("2026-06-06")).toEqual({
+                start: "2026-06-06",
+                activeUsers: 0,
+                users: {},
+                times: {}
+            });
+            expect(body.firstUsed).toEqual(FIRST_USED);
+        });
+        it("counts the times a feature was used, a report's from its own rollup", async () => {
+            await db
+                .insert(dailyAppOpens)
+                .values({ day: "2026-05-01", userId: "a", opens: 1 });
+            await db.insert(dailyFeatureUsers).values([
+                // Uncounted, so search is counted from the day after.
+                { day: "2026-06-02", feature: AppFeature.SEARCH, userId: "a" },
+                {
+                    day: "2026-06-03",
+                    feature: AppFeature.SEARCH,
+                    userId: "a",
+                    times: 3
+                },
+                {
+                    day: "2026-06-04",
+                    feature: AppFeature.SEARCH,
+                    userId: "b",
+                    times: 2
+                },
+                {
+                    day: "2026-06-04",
+                    feature: AppFeature.REPORT,
+                    userId: "b",
+                    times: 1
+                }
+            ]);
+            await db.insert(dailyReportMetrics).values(
+                (
+                    [
+                        ["2026-05-20", FeedbackTopic.APP, 1],
+                        ["2026-06-04", FeedbackTopic.APP, 4],
+                        ["2026-06-04", FeedbackTopic.MKCAD, 1]
+                    ] as const
+                ).map(([day, topic, count]) => ({
+                    day,
+                    topic,
+                    category: FeedbackCategory.BUG,
+                    source: FeedbackSource.GENERAL,
+                    count
+                }))
+            );
+
+            const res = await anonymousGet(
+                "/api/analytics/overview/feature-reach?from=2026-06-01&to=2026-06-07"
+            );
+            const body: FeatureReachOut = await res.json();
+
+            const on = (day: string) =>
+                body.buckets.find((bucket) => bucket.start === day);
+            expect(on("2026-06-02")?.times).toEqual({});
+            expect(on("2026-06-03")?.times).toEqual({
+                [AppFeature.SEARCH]: 3
+            });
+            expect(on("2026-06-04")?.times).toEqual({
+                [AppFeature.SEARCH]: 2,
+                [AppFeature.REPORT]: 5
+            });
+            expect(body.timesSince).toEqual({
+                [AppFeature.SEARCH]: "2026-06-03"
+            });
+            expect(body.firstUsed[AppFeature.REPORT]).toBe("2026-05-20");
+        });
+    });
+
+    describe("GET /analytics/overview/feature-reach, new users", () => {
+        it("splits out those first seen in the four weeks up to each", async () => {
+            // The week of 2026-06-01 counts as new anyone first seen from 2026-05-11.
+            const opens: [string, string][] = [
+                ["2026-01-05", "old"],
+                ["2026-06-02", "old"],
+                ["2026-05-10", "edge-old"],
+                ["2026-06-06", "edge-old"],
+                ["2026-05-11", "edge-new"],
+                ["2026-06-03", "edge-new"],
+                ["2026-06-04", "fresh"]
+            ];
+            await db
+                .insert(dailyAppOpens)
+                .values(
+                    opens.map(([day, userId]) => ({ day, userId, opens: 1 }))
+                );
+            await seedLibrary(db);
+            await db.insert(users).values(
+                [
+                    ["old", "2026-01-05"],
+                    ["edge-old", "2026-05-10"],
+                    ["edge-new", "2026-05-11"],
+                    ["fresh", "2026-06-04"]
+                ].map(([id, day]) => ({
+                    id,
+                    createdAt: new Date(`${day}T15:00:00Z`)
+                }))
+            );
+            await db.insert(dailyFeatureUsers).values([
+                {
+                    day: "2026-06-02",
+                    feature: AppFeature.SEARCH,
+                    userId: "old",
+                    times: 2
+                },
+                {
+                    day: "2026-06-03",
+                    feature: AppFeature.SEARCH,
+                    userId: "edge-new",
+                    times: 3
+                }
+            ]);
+
+            const weekly = await anonymousGet(
+                "/api/analytics/overview/feature-reach?from=2026-03-02&to=2026-06-07"
+            );
+            const weeks: FeatureReachOut = await weekly.json();
+
+            expect(weeks.interval).toBe(ReachInterval.WEEK);
+            expect(weeks.buckets.at(-1)).toEqual({
+                start: "2026-06-01",
+                activeUsers: 4,
+                users: { [AppFeature.SEARCH]: 2 },
+                times: { [AppFeature.SEARCH]: 5 },
+                newActiveUsers: 2,
+                newUsers: { [AppFeature.SEARCH]: 1 },
+                newTimes: { [AppFeature.SEARCH]: 3 }
+            });
+
+            // A day's window is the four weeks ending with it: 2026-06-03's starts 2026-05-07
+            const daily = await anonymousGet(
+                "/api/analytics/overview/feature-reach?from=2026-06-01&to=2026-06-07"
+            );
+            const days: FeatureReachOut = await daily.json();
+
+            expect(days.interval).toBe(ReachInterval.DAY);
+            expect(
+                days.buckets.find((bucket) => bucket.start === "2026-06-03")
+            ).toEqual({
+                start: "2026-06-03",
+                activeUsers: 1,
+                users: { [AppFeature.SEARCH]: 1 },
+                times: { [AppFeature.SEARCH]: 3 },
+                newActiveUsers: 1,
+                newUsers: { [AppFeature.SEARCH]: 1 },
+                newTimes: { [AppFeature.SEARCH]: 3 }
+            });
+        });
+
+        it("doesn't split a day whose window reaches back to when tracking began", async () => {
+            await db.insert(dailyAppOpens).values([
+                { day: "2026-05-15", userId: "a", opens: 1 },
+                { day: "2026-06-02", userId: "a", opens: 1 }
+            ]);
+
+            const res = await anonymousGet(
+                "/api/analytics/overview/feature-reach?from=2026-06-01&to=2026-06-07"
+            );
+            const body: FeatureReachOut = await res.json();
+
+            expect(
+                body.buckets.find((bucket) => bucket.start === "2026-06-02")
+            ).toEqual({
+                start: "2026-06-02",
+                activeUsers: 1,
+                users: {},
+                times: {}
+            });
         });
     });
 

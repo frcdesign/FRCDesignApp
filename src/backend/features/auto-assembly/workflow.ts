@@ -19,6 +19,7 @@ import { getOnshapeApiFromSessionId } from "../auth/request-auth";
 import { ONSHAPE_STEP_RETRIES } from "../load/steps";
 import { getDb } from "../../db/client";
 import { isRateLimited, isTransient } from "../../lib/onshape/failures";
+import { isLongRateLimit } from "../../lib/workflow-steps";
 import {
     AssemblyJobState,
     AssemblyTaskAction,
@@ -101,7 +102,7 @@ export class AutoAssemblyWorkflow extends WorkflowEntrypoint<
     async run(
         event: WorkflowEvent<AssemblyJobParams>,
         step: WorkflowStep
-    ): Promise<AssemblyJobResult> {
+    ): Promise<AssemblyJobStatus> {
         const { sessionId, userId, request } = event.payload;
         const tasks: AssemblyTask[] = pendingTasks();
         const ctx: RunContext = {
@@ -129,16 +130,24 @@ export class AutoAssemblyWorkflow extends WorkflowEntrypoint<
         } catch (thrown) {
             error = thrown;
         }
-        await step.do("finish-job", () =>
-            reportJob(this.env, request.assembly, {
-                ...ctx.status(
-                    error ? AssemblyJobState.FAILED : AssemblyJobState.COMPLETE
-                ),
-                ...(error ? { error: describeRunFailure(error) } : {}),
-                finishedAt: Date.now()
-            })
+        // Returned too: a read of KV can still see the run going after it has ended.
+        const finished = await step.do(
+            "finish-job",
+            async (): Promise<AssemblyJobStatus> => {
+                const status = {
+                    ...ctx.status(
+                        error
+                            ? AssemblyJobState.FAILED
+                            : AssemblyJobState.COMPLETE
+                    ),
+                    ...(error ? { error: describeRunFailure(error) } : {}),
+                    finishedAt: Date.now()
+                };
+                await reportJob(this.env, request.assembly, status);
+                return status;
+            }
         );
-        return ctx.result;
+        return finished;
     }
 }
 
@@ -260,15 +269,9 @@ async function runSteps(ctx: RunContext, request: AutoAssemblyIn) {
     }
     // Whatever fastening managed, what was inserted counts
     await ctx.step.do("record-inserts", () =>
-        recordRunInserts(
-            getDb(ctx.env.DB),
-            ctx.userId,
-            set,
-            parts,
-            paths,
-            mated
-        ).catch((error: unknown) =>
-            console.error("Failed to record Auto Assembly's inserts", error)
+        recordRunInserts(ctx.env, ctx.userId, set, parts, paths, mated).catch(
+            (error: unknown) =>
+                console.error("Failed to record Auto Assembly's inserts", error)
         )
     );
 }
@@ -426,7 +429,11 @@ async function runTask<T>(
                 );
             } catch (error) {
                 // Our own errors carry a status too, but say the same thing every time
-                if (!(error instanceof ApiError) && retryable(error)) {
+                if (
+                    !(error instanceof ApiError) &&
+                    retryable(error) &&
+                    !isLongRateLimit(error)
+                ) {
                     console.warn(
                         `Auto Assembly step ${name} will retry`,
                         error

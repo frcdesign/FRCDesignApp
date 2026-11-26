@@ -61,7 +61,7 @@ import {
     fastenToCircularEdges,
     getInstancePath
 } from "./fasten-circular-edges";
-import { indexHoles } from "../../auto-assembly/index-holes";
+import { IndexScope, indexHoles } from "../../auto-assembly/index-holes";
 import { SelectionMode } from "../../auto-assembly/contract";
 import {
     entitySchema,
@@ -377,7 +377,8 @@ insertableRoutes.post(
                     // Insert-and-fasten is only offered for assembly targets.
                     fasten: false,
                     fastenable: row.fastenInfo !== null,
-                    preselected: false
+                    preselected: false,
+                    atInsertLocation: false
                 });
 
                 return c.json({
@@ -452,6 +453,7 @@ insertableRoutes.post(
                 const transform = body.insertLocationId
                     ? await getInsertLocationTransform(
                           onshapeApi,
+                          c.env.KV,
                           targetPath,
                           body.insertLocationId
                       )
@@ -477,7 +479,8 @@ insertableRoutes.post(
                             source: body.source,
                             fasten,
                             fastenable: row.fastenInfo !== null,
-                            preselected
+                            preselected,
+                            atInsertLocation: transform !== undefined
                         },
                         instances
                     );
@@ -495,7 +498,11 @@ insertableRoutes.post(
                               targetPath,
                               body.targets,
                               body.excluded,
-                              await getFastenerSet(getDb(c.env.DB))
+                              await getFastenerSet(getDb(c.env.DB)),
+                              [],
+                              undefined,
+                              undefined,
+                              IndexScope.PICKS
                           )
                       ).circularEdges
                     : [];

@@ -10,7 +10,7 @@ import { Callout, CalloutButton } from "../../../components/callout";
 import { formatTimeAgo } from "../../../lib/format-time";
 import { Status } from "../../../lib/status";
 import { IconSize } from "../../../lib/style-constants";
-import { jobHeadline, OUTCOME_STATUS, runningHeadline } from "../job-report";
+import { jobHeadline, OUTCOME_STATUS, runningCallout } from "../job-report";
 import { openJobDetails } from "../open-job-details";
 import { useAssemblyJobQuery } from "../queries";
 import { m } from "../../../paraglide/messages";
@@ -55,7 +55,7 @@ export function LastRunCallout(props: LastRunCalloutProps): ReactNode {
 function calloutText(status: AssemblyJobStatus): string {
     const outcome = assemblyJobOutcome(status);
     if (!outcome) {
-        return m.autoAssemblyRunningCallout({ step: runningHeadline(status) });
+        return runningCallout(status);
     }
     const headline = jobHeadline(status, outcome);
     return status.finishedAt

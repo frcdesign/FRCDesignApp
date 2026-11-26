@@ -2,6 +2,7 @@
 import {
     HoleStatus,
     type PickCheckIn,
+    type PickCheckOut,
     type PickProblem,
     type PlannedHole,
     ProblemSeverity
@@ -90,17 +91,26 @@ function plannedProblem(
     return { ...worst[0], message: `${counted}: ${worst[0].message}` };
 }
 
-/** The size the first hole picked is made for, in the order picked: a target's, else a screw's to update. */
-export function pickedHoleSize(
+/**
+ * The first hole picked made for a size, in the order picked: a target's, else
+ * a screw's to update. Its size and countersink are what the screw follows.
+ */
+export function pickedHole(
     request: Pick<PickCheckIn, "targets" | "replaced">,
     indexed: IndexedHoles,
     planned: PlannedHole[]
-): string | undefined {
+): Pick<PickCheckOut, "holeSize" | "isHoleCountersunk"> {
     const plans = new Map(planned.map((hole) => [hole.key, hole]));
-    return [...request.targets, ...request.replaced]
+    const first = [...request.targets, ...request.replaced]
         .flatMap((pick) => indexed.pickEdges[pickKey(pick)] ?? [])
-        .map((edge) => plans.get(edge)?.madeFor)
-        .find((size) => size !== undefined);
+        .map((edge) => plans.get(edge))
+        .find((plan) => plan?.madeFor !== undefined);
+    return first
+        ? {
+              holeSize: first.madeFor,
+              isHoleCountersunk: first.isCountersunk ?? false
+          }
+        : {};
 }
 
 /** Plans are left out when there are no options to plan with. */

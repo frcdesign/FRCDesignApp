@@ -231,6 +231,34 @@ describe("appliedValues", () => {
             reinforced: "false"
         });
     });
+
+    // Onshape hides it, and refuses a configuration setting it off its default
+    it("leaves out a list none of whose options show, and sends no override for it", () => {
+        const finish = enumParam("finish", ["stainless", "black"], {
+            optionConditions: [
+                {
+                    type: OptionVisibilityType.LIST,
+                    controlledOptions: ["stainless", "black"],
+                    condition: {
+                        type: VisibilityType.EQUAL,
+                        id: "size",
+                        value: "l"
+                    }
+                }
+            ]
+        });
+        const lists = [size, finish];
+        const small = select({ size: "s", finish: "black" }, lists);
+
+        expect(appliedValues(small, lists)).toEqual({ size: "s" });
+        expect(partStudioInsertOverrides(small, lists)).toEqual({ size: "s" });
+        expect(
+            partStudioInsertOverrides(
+                select({ size: "l", finish: "black" }, lists),
+                lists
+            )
+        ).toEqual({ size: "l", finish: "black" });
+    });
 });
 
 describe("canonicalValues", () => {

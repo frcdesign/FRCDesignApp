@@ -1,13 +1,14 @@
 /**
  * The hole scan: `hole-scan.fs`'s `fastenerHoleScan`, evaluated in a Part
- * Studio, decoded, and cached by what it was evaluated at. A version, a
- * document microversion and a tab's microversion never change, so neither does
- * a scan keyed by one: nothing invalidates the cache, it only grows keys.
+ * Studio, decoded, and cached by what it was evaluated at: a studio's holes,
+ * and what each entity picked in it gave. A version, a document microversion
+ * and a tab's microversion never change, so neither does a scan keyed by one:
+ * nothing invalidates the cache, it only grows keys.
  */
 import { HttpStatus } from "http-status-ts";
 import { z } from "zod";
 import { internalError } from "../../lib/api-error";
-import { kvStore } from "../../lib/kv-store";
+import { kvStore, putQuietly } from "../../lib/kv-store";
 import { type OnshapeApi } from "../../lib/onshape/client";
 import { evaluateFeatureScript } from "../../lib/onshape/endpoints/part-studios";
 import { type ElementPath } from "../../lib/onshape/path";
@@ -27,6 +28,7 @@ const holeSchema = z.object({
     closedAtEnd: z.boolean(),
     threaded: z.boolean(),
     majorDiameter: z.number().optional(),
+    countersunk: z.boolean().optional(),
     edges: z.array(z.object({ id: z.string(), at: z.number() }))
 });
 
@@ -90,6 +92,26 @@ const SCAN_TTL_SECONDS = 30 * 24 * 60 * 60;
 export const holeScans = kvStore<ScannedParts>("auto-assembly-scan", {
     ttlSeconds: SCAN_TTL_SECONDS
 });
+
+/** What each entity picked in a studio gave, by its id; one that gave nothing has an empty list. */
+interface PickScans {
+    edges: Record<string, ScannedCircularEdge[]>;
+    faces: Record<string, ScannedCircularEdge[]>;
+    planes: Record<string, ScannedPlane[]>;
+}
+
+/** Per studio, so a pick is evaluated once however many are picked beside it. */
+const pickScans = kvStore<PickScans>("auto-assembly-picks", {
+    ttlSeconds: SCAN_TTL_SECONDS
+});
+
+/** Bumped when what a scan answers changes, so no cached scan is read in an older shape. */
+const SCAN_VERSION = 2;
+
+/** A scan's cache id: the scan's version and what pins the studio. */
+function scanId(source: StudioSource): string {
+    return `v${SCAN_VERSION}|${source.key}`;
+}
 
 /** Deterministic ids are letters, digits and a few marks; anything else can't reach the script. */
 export const DETERMINISTIC_ID = /^[A-Za-z0-9_.+/-]+$/;
@@ -181,22 +203,73 @@ function isSelectionEmpty(selection: StudioSelection): boolean {
     );
 }
 
-/**
- * A studio's holes, from the cache when nothing is picked in it; what's picked
- * is scanned every time, and the holes that scan finds are cached with it.
- */
-export async function scanStudio(
+/** Those of the selection with no entry in `known`. */
+function unscanned(
+    selection: StudioSelection,
+    known: PickScans
+): StudioSelection {
+    const isNew = (scanned: Record<string, unknown>) => (id: string) =>
+        !Object.hasOwn(scanned, id);
+    return {
+        edges: selection.edges.filter(isNew(known.edges)),
+        faces: selection.faces.filter(isNew(known.faces)),
+        planes: selection.planes.filter(isNew(known.planes))
+    };
+}
+
+/** `known`, with what a scan of `scanned` gave each of its entities. */
+function withScanned(
+    known: PickScans,
+    scanned: StudioSelection,
+    scan: StudioScan
+): PickScans {
+    const each = <T>(ids: string[], found: (id: string) => T[]) =>
+        Object.fromEntries(ids.map((id) => [id, found(id)]));
+    return {
+        edges: {
+            ...known.edges,
+            ...each(scanned.edges, (id) =>
+                scan.circles.filter(
+                    (circle) => circle.id === id && circle.faceId === undefined
+                )
+            )
+        },
+        faces: {
+            ...known.faces,
+            ...each(scanned.faces, (id) =>
+                scan.circles.filter((circle) => circle.faceId === id)
+            )
+        },
+        planes: {
+            ...known.planes,
+            ...each(scanned.planes, (id) =>
+                scan.planes.filter((plane) => plane.id === id)
+            )
+        }
+    };
+}
+
+/** The scan of a selection, out of what each of its entities gave. */
+function toStudioScan(
+    parts: ScannedParts,
+    picks: PickScans,
+    selection: StudioSelection
+): StudioScan {
+    return {
+        parts,
+        circles: [
+            ...selection.edges.flatMap((id) => picks.edges[id] ?? []),
+            ...selection.faces.flatMap((id) => picks.faces[id] ?? [])
+        ],
+        planes: selection.planes.flatMap((id) => picks.planes[id] ?? [])
+    };
+}
+
+async function evaluateScan(
     client: OnshapeApi,
-    kv: KVNamespace,
     source: StudioSource,
     selection: StudioSelection
 ): Promise<StudioScan> {
-    if (isSelectionEmpty(selection)) {
-        const parts = await holeScans.get(kv, source.key);
-        if (parts) {
-            return { parts, circles: [], planes: [] };
-        }
-    }
     const response = await evaluateFeatureScript(
         client,
         source.path,
@@ -216,7 +289,37 @@ export async function scanStudio(
             HttpStatus.BAD_GATEWAY
         );
     }
-    const scan = parseStudioScan(decodeFeatureScriptValue(response.result));
-    await holeScans.put(kv, source.key, scan.parts);
-    return scan;
+    return parseStudioScan(decodeFeatureScriptValue(response.result));
+}
+
+/**
+ * A studio's holes and what each pick in it gave, from the cache where this
+ * edit of it was scanned before: only entities never scanned at it are
+ * evaluated, and nothing is when the holes and every pick are cached.
+ */
+export async function scanStudio(
+    client: OnshapeApi,
+    kv: KVNamespace,
+    source: StudioSource,
+    selection: StudioSelection
+): Promise<StudioScan> {
+    const id = scanId(source);
+    const [cachedParts, cachedPicks] = await Promise.all([
+        holeScans.get(kv, id),
+        isSelectionEmpty(selection) ? undefined : pickScans.get(kv, id)
+    ]);
+    const known = cachedPicks ?? { edges: {}, faces: {}, planes: {} };
+    const missing = unscanned(selection, known);
+    if (cachedParts && isSelectionEmpty(missing)) {
+        return toStudioScan(cachedParts, known, selection);
+    }
+    const scan = await evaluateScan(client, source, missing);
+    const found = withScanned(known, missing, scan);
+    if (!cachedParts) {
+        await putQuietly(holeScans, kv, id, scan.parts);
+    }
+    if (!isSelectionEmpty(missing)) {
+        await putQuietly(pickScans, kv, id, found);
+    }
+    return toStudioScan(scan.parts, found, selection);
 }

@@ -1,20 +1,16 @@
-/** Finding the insert location in an assembly, and working out where it sits. */
+/**
+ * Finding the insert location in an assembly, and working out where it sits,
+ * from the assembly as Auto Assembly reads and caches it, so asking again
+ * between its edits reads only the workspace's tabs.
+ */
 import { INSERT_LOCATION_SOURCE } from "./contract";
+import { readAssembly } from "../auto-assembly/assembly-read";
 import { OnshapeApi } from "../../lib/onshape/client";
-import { getAssembly } from "../../lib/onshape/endpoints/assemblies";
 import { type ElementPath } from "../../lib/onshape/path";
 import {
     type OnshapeAssemblyDefinition,
     type OnshapeAssemblyInstance
 } from "../../lib/onshape/types";
-
-/** Sketches aren't solids, so the marker needs `includeNonSolids`. */
-function getAssemblyWithMarkers(
-    onshapeApi: OnshapeApi,
-    assemblyPath: ElementPath
-): Promise<OnshapeAssemblyDefinition> {
-    return getAssembly(onshapeApi, assemblyPath, { includeNonSolids: true });
-}
 
 /** Whether something an assembly names came from the marker's tab. */
 function isFromSourceTab(reference: {
@@ -52,32 +48,64 @@ function findInsertLocationInstance(
     );
 }
 
-/** Undefined when the marker was deleted, so the insert lands at the origin. */
-function getInstanceTransform(
-    assembly: OnshapeAssemblyDefinition,
-    instanceId: string
-): number[] | undefined {
-    return assembly.rootAssembly.occurrences?.find(
-        (occurrence) =>
-            occurrence.path.length === 1 && occurrence.path[0] === instanceId
-    )?.transform;
+/** An assembly as it is now: its marker, and where each top-level instance sits. */
+interface Placement {
+    instanceId?: string;
+    /** By instance id; the marker's is among them. */
+    transforms: Record<string, number[]>;
+}
+
+/** Read through Auto Assembly's cache, so an insert and its fasten read the assembly once. */
+async function readPlacement(
+    onshapeApi: OnshapeApi,
+    kv: KVNamespace,
+    assemblyPath: ElementPath
+): Promise<Placement> {
+    const { definition } = await readAssembly(onshapeApi, kv, assemblyPath);
+    return {
+        instanceId: findInsertLocationInstance(definition)?.id,
+        transforms: Object.fromEntries(
+            (definition.rootAssembly.occurrences ?? [])
+                .filter((occurrence) => occurrence.path.length === 1)
+                .map((occurrence) => [occurrence.path[0], occurrence.transform])
+        )
+    };
 }
 
 /** The marker's instance id in the assembly as it is now. */
 export async function findInsertLocation(
     onshapeApi: OnshapeApi,
+    kv: KVNamespace,
     assemblyPath: ElementPath
 ): Promise<string | undefined> {
-    const assembly = await getAssemblyWithMarkers(onshapeApi, assemblyPath);
-    return findInsertLocationInstance(assembly)?.id;
+    return (await readPlacement(onshapeApi, kv, assemblyPath)).instanceId;
 }
 
-/** Asked of Onshape, since the marker moves whenever someone drags it. */
+/**
+ * The marker's instance id as the assembly was last read, which an insert does
+ * whenever it lands on the marker. Undefined when it has never been read.
+ */
+export async function findLastInsertLocation(
+    onshapeApi: OnshapeApi,
+    kv: KVNamespace,
+    assemblyPath: ElementPath
+): Promise<string | undefined> {
+    const { definition } = await readAssembly(onshapeApi, kv, assemblyPath, []);
+    return findInsertLocationInstance(definition)?.id;
+}
+
+/**
+ * At the assembly as it is now, since the marker moves whenever someone drags
+ * it. Undefined when the marker was deleted, so the insert lands at the origin.
+ */
 export async function getInsertLocationTransform(
     onshapeApi: OnshapeApi,
+    kv: KVNamespace,
     assemblyPath: ElementPath,
     instanceId: string
 ): Promise<number[] | undefined> {
-    const assembly = await getAssemblyWithMarkers(onshapeApi, assemblyPath);
-    return getInstanceTransform(assembly, instanceId);
+    const { transforms } = await readPlacement(onshapeApi, kv, assemblyPath);
+    return Object.hasOwn(transforms, instanceId)
+        ? transforms[instanceId]
+        : undefined;
 }

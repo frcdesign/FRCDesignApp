@@ -4,7 +4,7 @@
  */
 
 /** Bump when the columns' meaning changes. */
-export const EVENT_SCHEMA_VERSION = 3;
+export const EVENT_SCHEMA_VERSION = 4;
 
 /** Rows imported from the legacy app's log; see `scripts/migrate-analytics`. */
 export const LEGACY_SCHEMA_VERSION = 0;
@@ -19,7 +19,9 @@ export enum EventType {
     /** One report posted to Discord; see `features/feedback`. */
     REPORT = "report",
     /** One FeatureScript added to a Part Studio; see `features/featurescripts`. Not a use. */
-    FEATURE_ADD = "feature_add"
+    FEATURE_ADD = "feature_add",
+    /** A favorite's default configuration saved; see `features/favorites`. Not a use. */
+    DEFAULT_SELECTION = "default_selection"
 }
 
 /** A use is an insert or a download: each counts toward a part's usage. */
@@ -61,3 +63,25 @@ export const CLIENT_USE_SOURCES = [
     UseSource.FAVORITES,
     UseSource.RECENTS
 ] as const;
+
+/**
+ * A feature whose reach the dashboard charts: the share of a week's active
+ * users who used it that week. `featuresOf` says which events count.
+ */
+export enum AppFeature {
+    /** A use started from a search, the library's or a group's. */
+    SEARCH = "search",
+    FAVORITES = "favorites",
+    RECENTS = "recents",
+    QUICK_INSERT = "quick_insert",
+    FASTEN = "fasten",
+    /** Fastened to circular edges or faces picked in Onshape beforehand. */
+    PRESELECTION = "preselection",
+    INSERT_LOCATION = "insert_location",
+    AUTO_ASSEMBLY = "auto_assembly",
+    DOWNLOAD = "download",
+    DEFAULT_CONFIGURATION = "default_configuration",
+    VERSION_MANAGER = "version_manager",
+    FEATURESCRIPTS = "featurescripts",
+    REPORT = "report"
+}

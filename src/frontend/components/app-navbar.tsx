@@ -12,12 +12,9 @@ import {
     BooksIcon,
     CaretDownIcon,
     GearIcon,
-    GitBranchIcon,
-    ScrewdriverIcon,
     type Icon,
     MagnifyingGlassIcon,
     MoonIcon,
-    PuzzlePieceIcon,
     SunIcon
 } from "@phosphor-icons/react";
 import {
@@ -55,7 +52,7 @@ import { useNeedsSignIn } from "../features/auth/access-level";
 import { startSignIn } from "../features/auth/sign-in";
 import { getLibraryVersionQuery } from "../features/library/queries";
 import { LibraryId } from "@backend/features/library/library-id";
-import { AppColor, getLibraryColor, toShade } from "../theme";
+import { getLibraryColor, toShade } from "../theme";
 import { queryClient } from "../lib/query-client";
 import { ContextBar } from "./context-bar";
 import { useIsVersionManager } from "../features/version-manager/navigation";
@@ -68,7 +65,12 @@ import { useIsFeatureScripts } from "../features/featurescripts/navigation";
 import { FeatureScriptSearchBar } from "../features/featurescripts/components/featurescript-search-bar";
 import { type WorkspacePath } from "@backend/features/version-manager/contract";
 import { type AppTab, UtilityTab } from "../lib/app-tab";
-import { getTabName, useNavigateToTab } from "../lib/tabs";
+import {
+    getTabName,
+    getUtilityColor,
+    getUtilityIcon,
+    useNavigateToTab
+} from "../lib/tabs";
 import { useRefreshVersionManagerMutation } from "../features/version-manager/queries";
 import { RefreshButton } from "./refresh-button";
 
@@ -182,22 +184,18 @@ function useAppPages(): AppPage[] {
         )
     }));
 
-    // Needs no document: browsing works anywhere, and adding says why it can't.
-    const featureScripts: AppPage = {
-        tab: UtilityTab.FEATURESCRIPTS,
+    const utility = (tab: UtilityTab): AppPage => ({
+        tab,
         group: UTILITIES_GROUP,
-        icon: PuzzlePieceIcon,
-        color: AppColor.FEATURESCRIPTS
-    };
+        icon: getUtilityIcon(tab),
+        color: getUtilityColor(tab)
+    });
     // Listed while it is showing even without an element, so the picker never names a page it does not offer.
     const autoAssembly: AppPage[] =
         targetElement || isAutoAssembly
             ? [
                   {
-                      tab: UtilityTab.AUTO_ASSEMBLY,
-                      group: UTILITIES_GROUP,
-                      icon: ScrewdriverIcon,
-                      color: AppColor.AUTO_ASSEMBLY,
+                      ...utility(UtilityTab.AUTO_ASSEMBLY),
                       badge: isNew ? <NewBadge /> : undefined,
                       isNew
                   }
@@ -206,13 +204,9 @@ function useAppPages(): AppPage[] {
 
     return [
         ...libraries,
-        featureScripts,
-        {
-            tab: UtilityTab.VERSION_MANAGER,
-            group: UTILITIES_GROUP,
-            icon: GitBranchIcon,
-            color: AppColor.VERSION_MANAGER
-        },
+        // Needs no document: browsing works anywhere, and adding says why it can't.
+        utility(UtilityTab.FEATURESCRIPTS),
+        utility(UtilityTab.VERSION_MANAGER),
         ...autoAssembly
     ];
 }

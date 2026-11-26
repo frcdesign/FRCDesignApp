@@ -1,5 +1,4 @@
-import { ActionIcon, Button, Stack, Tooltip } from "@mantine/core";
-import { ArrowsDownUpIcon } from "@phosphor-icons/react";
+import { Button, Stack } from "@mantine/core";
 import { type ReactNode, useEffect, useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { Program } from "@backend/features/auto-assembly/catalog";
@@ -13,22 +12,23 @@ import {
 } from "@backend/features/auto-assembly/contract";
 import {
     type FastenerSet,
+    headForHole,
+    settleScrew,
     StudioInput
 } from "@backend/features/auto-assembly/studios";
 import { type ElementPath } from "@backend/lib/onshape/path";
 import {
-    SectionError,
-    SectionLoading,
-    SectionNotice
+    PageError,
+    PageLoading,
+    PageNotice
 } from "../../../components/app-notice";
 import { StatusIcon } from "../../../components/status-icon";
+import { Callout } from "../../../components/callout";
 import { Status } from "../../../lib/status";
-import { IconSize, StatusColor } from "../../../lib/style-constants";
-import {
-    ParameterGrid,
-    ParameterInput
-} from "../../../components/parameter-input";
+import { IconSize } from "../../../lib/style-constants";
+import { ParameterGrid } from "../../../components/parameter-input";
 import { PanelFooter } from "../../../components/panel-footer";
+import { showInfoToast } from "../../../lib/notifications";
 import { QueryList } from "../../../components/query-list";
 import {
     isBody,
@@ -36,7 +36,8 @@ import {
     isFace,
     type OnshapeSelection,
     selectionKey,
-    toSelectedEntities
+    toSelectedEntities,
+    useOnshapeSelection
 } from "../../../lib/selection";
 import {
     CIRCULAR_EDGES,
@@ -44,12 +45,13 @@ import {
     SOLID_BODIES
 } from "../../../lib/messages";
 import { fastenerOptions, selectionMode, settleChoices } from "../options";
-import { FLIP_SCREWS_PARAMETER, FormInput } from "../parameters";
+import { FormInput } from "../parameters";
 import {
     useAssemblyJobQuery,
     useFastenerSetQuery,
     useInsertMutation,
-    usePickProblems
+    usePickProblems,
+    usePrepareHoles
 } from "../queries";
 import { useAutoAssemblyStore } from "../store";
 import { FastenerOptionsForm, FormInputRow } from "./fastener-options-form";
@@ -67,26 +69,67 @@ interface AutoAssemblyPanelProps {
 /** The form, once the fasteners the library loaded are read. */
 export function AutoAssemblyPanel(props: AutoAssemblyPanelProps): ReactNode {
     const { assembly } = props;
-    const { data: set, isPending, isError } = useFastenerSetQuery();
+    const { data: set, isPending, isError, error } = useFastenerSetQuery();
+    usePrepareHoles(assembly);
 
     if (isPending) {
-        return <SectionLoading title={m.autoAssemblyFastenersLoading()} />;
+        return <PageLoading title={m.autoAssemblyFastenersLoading()} />;
     }
     if (isError) {
-        return <SectionError title={m.autoAssemblyFastenersFailed()} />;
+        return (
+            <PageError title={m.autoAssemblyFastenersFailed()} error={error} />
+        );
     }
     if (!set) {
         return (
-            <SectionNotice
+            <PageNotice
                 icon={
                     <StatusIcon status={Status.WARNING} size={IconSize.PAGE} />
                 }
                 title={m.autoAssemblyNoFastenersTitle()}
-                description={m.autoAssemblyNoFastenersDescription()}
             />
         );
     }
     return <AutoAssemblyForm assembly={assembly} set={set} />;
+}
+
+/** One toast at a time, the latest change's. */
+const SCREW_FOLLOWED_TOAST_ID = "auto-assembly-screw-followed";
+
+/** Follows what's picked, and says so where the screw's type or size changed. */
+function followAndAnnounce(
+    set: FastenerSet,
+    followScrew: (screw: Record<string, string>) => void,
+    changes: Record<string, string>
+): void {
+    const settledScrew = () =>
+        settleScrew(set, useAutoAssemblyStore.getState().screw);
+    const before = settledScrew();
+    followScrew(changes);
+    const after = settledScrew();
+    const message = screwFollowedMessage(
+        before.head !== after.head,
+        before.size !== after.size
+    );
+    if (message) {
+        showInfoToast(message, { id: SCREW_FOLLOWED_TOAST_ID });
+    }
+}
+
+function screwFollowedMessage(
+    isTypeChanged: boolean,
+    isSizeChanged: boolean
+): string | undefined {
+    if (isTypeChanged && isSizeChanged) {
+        return m.autoAssemblyScrewTypeAndSizeUpdated();
+    }
+    if (isTypeChanged) {
+        return m.autoAssemblyScrewTypeUpdated();
+    }
+    if (isSizeChanged) {
+        return m.autoAssemblyScrewSizeUpdated();
+    }
+    return undefined;
 }
 
 interface AutoAssemblyFormProps {
@@ -113,11 +156,9 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
     const setTargets = useAutoAssemblyStore((state) => state.setTargets);
     const setExcluded = useAutoAssemblyStore((state) => state.setExcluded);
     const setReplaced = useAutoAssemblyStore((state) => state.setReplaced);
-    const flipped = useAutoAssemblyStore((state) => state.flipped);
-    const flipScrews = useAutoAssemblyStore((state) => state.flipScrews);
-    const setFlipScrews = useAutoAssemblyStore((state) => state.setFlipScrews);
     const followScrew = useAutoAssemblyStore((state) => state.followScrew);
     const followParts = useAutoAssemblyStore((state) => state.followParts);
+    const open = useAutoAssemblyStore((state) => state.open);
     const finishRun = useAutoAssemblyStore((state) => state.finishRun);
     const { data: job } = useAssemblyJobQuery(assembly);
     const insertMutation = useInsertMutation(assembly);
@@ -125,7 +166,6 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
     const mode = selectionMode(settled);
     const isFaces = mode === SelectionMode.FACES;
     const isScrews = mode === SelectionMode.SCREWS;
-    const isLocations = mode === SelectionMode.LOCATIONS;
     const isStopFace =
         settled.mode === FastenerMode.AUTOMATIC &&
         settled.form[FormInput.STOP] === StopCondition.FACE;
@@ -137,28 +177,9 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
             replaced: isScrews ? toSelectedEntities(replaced) : [],
             ...(isStopFace && stopFace.length > 0
                 ? { stopFace: toSelectedEntities(stopFace)[0] }
-                : {}),
-            flipped: isLocations
-                ? toSelectedEntities(
-                      targets.filter((target) =>
-                          flipped.includes(selectionKey(target))
-                      )
-                  )
-                : [],
-            flipScrews: isScrews && flipScrews
+                : {})
         }),
-        [
-            isFaces,
-            isScrews,
-            isLocations,
-            isStopFace,
-            targets,
-            excluded,
-            replaced,
-            stopFace,
-            flipped,
-            flipScrews
-        ]
+        [isFaces, isScrews, isStopFace, targets, excluded, replaced, stopFace]
     );
     const pickCount =
         picks.targets.length + picks.excluded.length + picks.replaced.length;
@@ -175,22 +196,44 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
                   },
         [assembly, mode, isFtc, settled, picks, pickCount]
     );
-    const { problems, holeSize, existingScrew, isChecking } =
-        usePickProblems(checkBody);
+    const {
+        problems,
+        holeSize,
+        isHoleCountersunk,
+        existingScrew,
+        isChecking,
+        hold
+    } = usePickProblems(checkBody);
 
-    // The screw follows what's picked until chosen by hand, as an Onshape feature's editing logic does
+    // Opened afresh, as an Onshape feature dialog: nothing set by hand yet
+    useEffect(open, [open]);
+
+    // The screw follows the first hole picked, but for what's specified, as an Onshape feature's editing logic does
     useEffect(() => {
-        if (holeSize) {
-            followScrew({ [StudioInput.SIZE]: holeSize });
+        if (!holeSize) {
+            return;
         }
-    }, [holeSize, followScrew]);
+        const { screw } = useAutoAssemblyStore.getState();
+        const head =
+            isHoleCountersunk === undefined
+                ? undefined
+                : headForHole(
+                      set,
+                      settleScrew(set, screw).head,
+                      isHoleCountersunk
+                  );
+        followAndAnnounce(set, followScrew, {
+            [StudioInput.SIZE]: holeSize,
+            ...(head ? { [StudioInput.HEAD]: head } : {})
+        });
+    }, [holeSize, isHoleCountersunk, set, followScrew]);
     useEffect(() => {
         if (existingScrew) {
             // The screw first: a new vendor moves every part to it
-            followScrew(existingScrew.screw);
+            followAndAnnounce(set, followScrew, existingScrew.screw);
             followParts(existingScrew);
         }
-    }, [existingScrew, followScrew, followParts]);
+    }, [existingScrew, set, followScrew, followParts]);
 
     const isRunning = job?.state === AssemblyJobState.RUNNING;
     const problem = (entity: OnshapeSelection) =>
@@ -203,6 +246,7 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
             ...picks,
             options: fastenerOptions(settled)
         };
+        useOnshapeSelection.getState().finishSelecting();
         insertMutation.mutate(body, { onSuccess: finishRun });
     };
 
@@ -210,6 +254,7 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
         <>
             <Stack gap="md" p="md">
                 <LastRunCallout assembly={assembly} />
+                {hold && <Callout status={Status.ERROR} text={hold} />}
                 <ParameterGrid>
                     <ParameterGroup title={m.autoAssemblySelections()}>
                         <FormInputRow
@@ -257,9 +302,6 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
                                     filter={CIRCULAR_EDGES}
                                     problem={problem}
                                     isChecking={isChecking}
-                                    rowSection={(entity) => (
-                                        <FlipToggle entity={entity} />
-                                    )}
                                 />
                             </FullWidthRow>
                         )}
@@ -283,21 +325,6 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
                                 />
                             </FullWidthRow>
                         )}
-                        {mode === SelectionMode.SCREWS && (
-                            <ParameterInput
-                                inputId="flip-screws"
-                                parameter={FLIP_SCREWS_PARAMETER}
-                                value={String(flipScrews)}
-                                selection={{
-                                    [FLIP_SCREWS_PARAMETER.id]:
-                                        String(flipScrews)
-                                }}
-                                parameters={[FLIP_SCREWS_PARAMETER]}
-                                onValueChange={(value) =>
-                                    setFlipScrews(value === "true")
-                                }
-                            />
-                        )}
                     </ParameterGroup>
                     <FastenerOptionsForm
                         settled={settled}
@@ -314,6 +341,7 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
                         picks.targets.length + picks.replaced.length === 0 ||
                         (isStopFace && !picks.stopFace) ||
                         isRunning ||
+                        hold !== undefined ||
                         insertMutation.isPending
                     }
                     loading={insertMutation.isPending}
@@ -325,34 +353,5 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
                 </Button>
             </PanelFooter>
         </>
-    );
-}
-
-interface FlipToggleProps {
-    entity: OnshapeSelection;
-}
-
-/** On a circular edge's row: fastens it from the far end of its holes. */
-function FlipToggle(props: FlipToggleProps): ReactNode {
-    const { entity } = props;
-    const isFlipped = useAutoAssemblyStore((state) =>
-        state.flipped.includes(selectionKey(entity))
-    );
-    const toggleFlipped = useAutoAssemblyStore((state) => state.toggleFlipped);
-    return (
-        <Tooltip label={m.autoAssemblyFlip()}>
-            <ActionIcon
-                variant={isFlipped ? "filled" : "subtle"}
-                color={isFlipped ? undefined : StatusColor.NEUTRAL}
-                size="sm"
-                data-flipped={isFlipped || undefined}
-                onClick={(event) => {
-                    event.stopPropagation();
-                    toggleFlipped(entity);
-                }}
-            >
-                <ArrowsDownUpIcon size={IconSize.TINY} />
-            </ActionIcon>
-        </Tooltip>
     );
 }

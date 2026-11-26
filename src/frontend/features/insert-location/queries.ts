@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { skipToken, useMutation, useQuery } from "@tanstack/react-query";
 import { ElementType } from "@backend/lib/onshape/element-type";
 import { type InsertLocationOut } from "@backend/features/insert-location/contract";
@@ -10,6 +10,12 @@ import { useIsSignedIn } from "../auth/access-level";
 import { queryClient } from "../../lib/query-client";
 import { insertLocationQueryKey } from "../../lib/query-keys";
 import { m } from "../../paraglide/messages";
+import {
+    HoldScope,
+    isHeld,
+    unlessHeld,
+    useRateLimitHold
+} from "../../lib/rate-limit-holds";
 
 /** Only an assembly has one; a derive places itself. */
 export function useInsertLocationTarget(): TargetElement | undefined {
@@ -17,23 +23,54 @@ export function useInsertLocationTarget(): TargetElement | undefined {
     return target?.elementType === ElementType.ASSEMBLY ? target : undefined;
 }
 
-/** Asked once when the app opens; the add mutation updates it. */
+/** How old an answer has to be before the panel regaining focus asks again. */
+const REFETCH_ON_FOCUS_AFTER_MS = 30 * 1000;
+
+/**
+ * Asked when the app opens, and again when the panel regains focus, since the
+ * marker may have been deleted in Onshape meanwhile; the add mutation updates it.
+ */
 export function useInsertLocationQuery(target: TargetElement | undefined) {
     // Idle while signed out rather than answering 401.
     const isSignedIn = useIsSignedIn();
+    const hold = useRateLimitHold(HoldScope.INSERT_LOCATION);
+    const queryKey = useMemo(() => insertLocationQueryKey(target), [target]);
+
+    // TanStack refetches on visibility alone, which clicking from Onshape into the panel never changes
+    useEffect(() => {
+        const refetchIfOld = () => {
+            const state = queryClient.getQueryState(queryKey);
+            if (
+                !isHeld(HoldScope.INSERT_LOCATION) &&
+                state?.status === "success" &&
+                Date.now() - state.dataUpdatedAt > REFETCH_ON_FOCUS_AFTER_MS
+            ) {
+                void queryClient.refetchQueries(
+                    { queryKey, exact: true },
+                    { cancelRefetch: false }
+                );
+            }
+        };
+        window.addEventListener("focus", refetchIfOld);
+        return () => window.removeEventListener("focus", refetchIfOld);
+    }, [queryKey]);
+
     return useQuery<InsertLocationOut>({
-        queryKey: insertLocationQueryKey(target),
+        queryKey,
+        // Held, the last answer stands.
         queryFn:
-            target && isSignedIn
+            target && isSignedIn && !hold
                 ? () =>
-                      apiGet("/insert-location", {
-                          query: {
-                              documentId: target.documentId,
-                              instanceId: target.instanceId,
-                              instanceType: target.instanceType,
-                              elementId: target.elementId
-                          }
-                      })
+                      unlessHeld(HoldScope.INSERT_LOCATION, () =>
+                          apiGet("/insert-location", {
+                              query: {
+                                  documentId: target.documentId,
+                                  instanceId: target.instanceId,
+                                  instanceType: target.instanceType,
+                                  elementId: target.elementId
+                              }
+                          })
+                      )
                 : skipToken,
         refetchInterval: false
     });
@@ -70,9 +107,11 @@ export function useAddInsertLocationMutation(target: TargetElement) {
     return useMutation({
         mutationKey: ["add-insert-location"],
         mutationFn: () =>
-            apiPost<InsertLocationOut>("/insert-location", {
-                body: { targetPath: target }
-            }),
+            unlessHeld(HoldScope.INSERT_LOCATION, () =>
+                apiPost<InsertLocationOut>("/insert-location", {
+                    body: { targetPath: target }
+                })
+            ),
         // The button that added it shows it added
         onSuccess: (result) =>
             queryClient.setQueryData(insertLocationQueryKey(target), result),

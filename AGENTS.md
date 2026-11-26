@@ -100,7 +100,8 @@ migration another branch added, or one already applied to cert or production.
 KV is for what may expire or be lost: sessions, and caches that save Onshape
 calls. Every key belongs to a `kvStore` (`lib/kv-store.ts`) declared beside the
 code that owns it, with its prefix, value type and lifetime; don't read or
-write `KV` directly. Anything that must last goes in D1.
+write `KV` directly. Anything that must last goes in D1, but for the analytics
+event log, which goes to R2 through Pipelines (`event-log.ts`).
 
 ## Configurations
 
@@ -129,6 +130,12 @@ Anything that needs values compared or counted — analytics, "is this the
 default" — goes through `canonicalValue`/`canonicalValues`, never through a key.
 Don't add a third form: if something needs a different view of a selection, it
 wants a function in `selection.ts`, not a new shape.
+
+A part's vendor is the first thing asked of it, as in robot-code's lookup
+tables, dialogs and generated Part Studios (its FeatureScript style guide,
+"Vendor goes first"). Where the app lays a part's choices out itself — a form
+such as Auto Assembly's, a filter, a list of options — Vendor comes first; a
+configuration's own parameters keep the order Onshape gives them.
 
 # User-facing strings
 

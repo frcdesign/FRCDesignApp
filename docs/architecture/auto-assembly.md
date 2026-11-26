@@ -133,26 +133,24 @@ function fastenerOptions(settled: SettledChoices): FastenerOptions;
 interface AutoAssemblyState extends Choices {
     targets: OnshapeSelection[];
     excluded: OnshapeSelection[];
-    /** The screw's inputs chosen by hand since the last run; the rest follow what's picked. */
-    chosenScrewInputs: string[];
-    /** The washers and nut changed by hand since the last run; the rest follow the screw picked. */
-    chosenParts: Part[];
-    /** Keys (`selectionKey`) of the circular edges fastened from the far end of their holes. */
-    flipped: string[];
-    /** Every screw to update goes in from the other end of its holes. */
-    flipScrews: boolean;
+    /**
+     * The inputs set by hand since the panel opened or a run started
+     * (`specifiedKey`), as Onshape's editing logic calls them specified: what's
+     * picked, and the screw's vendor, set only the rest.
+     */
+    specified: string[];
+    /** The panel opened: nothing is specified yet. */
+    open: () => void;
     setForm: (id: FormInput, value: string) => void;
     setMode: (mode: FastenerMode) => void;
     setScrew: (id: string, value: string) => void;
-    /** The screw's inputs as the picks say, but those chosen by hand. */
+    /** The screw's inputs as the picks say, but those specified. */
     followScrew: (screw: Record<string, string>) => void;
-    /** Each washer and the nut added as the existing screw has it, configured as its own, but those chosen by hand. */
+    /** Each washer and the nut added as the existing screw has it, configured as its own, but for what's specified. */
     followParts: (existing: ExistingScrew) => void;
-    /** Updates this screw alone, with everything following it: how Edit parts hands a screw over. */
+    /** Updates this screw alone, with nothing specified, so everything follows it: how Edit parts hands a screw over. */
     updateScrew: (screw: OnshapeSelection) => void;
-    toggleFlipped: (entity: OnshapeSelection) => void;
-    setFlipScrews: (flipScrews: boolean) => void;
-    /** Picks and flips cleared, and the screw free to follow them again, after a run starts. */
+    /** Picks cleared, and nothing specified, after a run starts. */
     finishRun: () => void;
     setPart: (part: Part, id: string, value: string) => void;
     setAdded: (part: Part, added: boolean) => void;
@@ -229,16 +227,19 @@ interface ParameterGroupProps {
 `src/frontend/features/auto-assembly/queries.ts`
 
 ```ts
-// The fasteners the library loaded; null before it loads them.
+// The fasteners FRCDesignLib loaded, at its cache version; null before it loads them.
 function useFastenerSetQuery();
 function useInsertMutation(assembly: ElementPath);
+// Scans the assembly's Part Studios as the panel opens; nothing waits on it.
+function usePrepareHoles(assembly: ElementPath): void;
 function useAssemblyJobQuery(assembly: ElementPath | undefined);
 ```
 
 `src/backend/features/auto-assembly/routes.ts`, `jobs.ts` and `contract.ts`
 
 ```text
-GET  /api/auto-assembly/parts     the fasteners the library loaded, or null
+GET  /api/auto-assembly/parts?v=  the fasteners the library loaded, or null, immutable under FRCDesignLib's cache version
+POST /api/auto-assembly/prepare   scans the assembly's Part Studios, nothing picked, into the cache
 POST /api/auto-assembly/insert    starts a run fastening the picked holes
 GET  /api/auto-assembly/job?documentId=&instanceId=&elementId=    the run this assembly last started
 ```
@@ -361,6 +362,8 @@ interface PlannedHole {
     reason?: string;
     /** The screw size the hole is made for, where it's one the catalog has. */
     madeFor?: string;
+    /** Its circular edge is a countersink's rim: the hole is made for a flat head. */
+    isCountersunk?: boolean;
     /** What's off about how it's fastened, in words: a screw that doesn't fit as it should, or no nut. */
     warning?: string;
     end?: HoleEnd;
@@ -505,12 +508,13 @@ interface AssemblyJobParams {
 ```
 
 `src/backend/features/auto-assembly/index-holes.ts`,
+`src/backend/features/auto-assembly/assembly-read.ts`,
 `src/backend/features/auto-assembly/assembly.ts`,
 `src/backend/features/auto-assembly/scan.ts` and
 `src/backend/features/auto-assembly/hole-scan.fs`
 
 ```ts
-// Reads the assembly and scans every Part Studio it needs.
+// Reads the assembly and scans every Part Studio its scope needs.
 async function indexHoles(
     client: OnshapeApi,
     kv: KVNamespace,
@@ -519,8 +523,32 @@ async function indexHoles(
     excluded: SelectedEntity[],
     fasteners: FastenerSet | undefined,
     replaced: SelectedEntity[],
-    stopFace?: SelectedEntity
+    stopFace?: SelectedEntity,
+    flips?: Flips,
+    scope?: IndexScope
 ): Promise<IndexedHoles>;
+// The definition and its workspace's Part Studio microversions, from KV while the assembly tab is unchanged,
+// or, given `holding`, at the last read that has every one of those occurrences.
+async function readAssembly(
+    client: OnshapeApi,
+    kv: KVNamespace,
+    assembly: ElementPath,
+    holding?: string[][]
+): Promise<AssemblyRead>;
+
+enum IndexScope {
+    /** Planning: every Part Studio's holes, at the assembly as it is now. */
+    PLAN = "plan",
+    /** The picks' circular edges alone, from the Part Studios picked in. */
+    PICKS = "picks"
+}
+
+interface AssemblyRead {
+    definition: OnshapeAssemblyDefinition;
+    microversions: ElementMicroversions;
+    /** False when the definition is from an earlier edit, served for `holding`. */
+    isCurrent: boolean;
+}
 // Every part occurrence, through subassemblies, with the edit it's from.
 function partOccurrences(
     definition: OnshapeAssemblyDefinition,
@@ -535,7 +563,7 @@ function toStudioSource(
 ): StudioSource | undefined;
 // hole-scan.fs's fastenerHoleScan body, as the lambda Onshape evaluates.
 function holeScanLambda(source: string): string;
-// From the cache when nothing is picked in it, else by evaluating the scan.
+// The studio's holes and what each pick gave, evaluating only what isn't cached.
 async function scanStudio(
     client: OnshapeApi,
     kv: KVNamespace,
@@ -636,6 +664,12 @@ function getLengths(
 ): CatalogLength[];
 // Each studio input settled onto what's made: hidden and fixed ones from the catalog.
 function settleScrew(set: FastenerSet, choice: PartialSelection): ScrewChoice;
+// The head a hole asks for, where `head` doesn't suit it; undefined to leave it.
+function headForHole(
+    set: FastenerSet,
+    head: string,
+    isHoleCountersunk: boolean
+): string | undefined;
 // A part's overrides of its studio's defaults, as inserted.
 function studioConfiguration(
     set: FastenerSet,
@@ -691,6 +725,8 @@ interface AssemblyHole {
     closedAtEnd: boolean;
     threaded: boolean;
     majorDiameter?: number;
+    /** A Hole feature countersank it. */
+    countersunk?: boolean;
     edges: { id: string; at: number }[];
 }
 
@@ -934,6 +970,8 @@ function runFailure(message: string): Error;
 
 ```ts
 function runningHeadline(status: AssemblyJobStatus): string;
+// "Indexing holes. You can keep working.", or whichever step is going.
+function runningCallout(status: AssemblyJobStatus): string;
 function jobHeadline(
     status: AssemblyJobStatus,
     outcome: AssemblyJobOutcome
@@ -958,13 +996,32 @@ vectors, Onshape's 4×4 transforms and `LINEAR_TOLERANCE`.
 
 ## Storage
 
+- **HTTP cache** `GET /api/auto-assembly/parts?v=` — public and immutable for a
+  year, by FRCDesignLib's cache version and the build.
 - **D1** `generated_sets` (`fasteners` in FRCDesignLib) and the Fasteners
   group's insertables — the catalog and each kind's studio (its parameters and
   where it's released), as the group's last load stored them; read, never
   written, here (see [generated-parts.md](./generated-parts.md)).
-- **KV** `auto-assembly-scan:{key}` — a Part Studio's holes, by part id, for a
-  month. The key is what pins the Part Studio's geometry and its configuration
-  (`toStudioSource`): `{documentId}|v|{versionId}|…` for a part from a version,
+- **KV** `auto-assembly-assembly:{pin}|{options}` — the assembly's
+  definition, for a week (`definitions` in `assembly-read.ts`), with
+  non-solids so the insert location reads it too. The pin is the
+  version or microversion in the path, or for a workspace
+  `{documentId}|e|{elementMicroversionId}|{elementId}`, the assembly tab's own
+  microversion (`pinElement` in `src/backend/lib/onshape/pin.ts`). The options
+  are those the definition was asked with.
+- **KV** `auto-assembly-latest:{documentId}|w|{workspaceId}|{elementId}` —
+  the `auto-assembly-assembly` id a workspace assembly was last read under,
+  for a week (`latestReads`). Read by `IndexScope.PICKS` and by the insert
+  location's `GET`.
+- **KV** `auto-assembly-picks:v{n}|{key}` — what each entity picked in a Part
+  Studio gave, by its id: circles for an edge or a face, a plane for a face to
+  stop at, an empty list for one that gave nothing. For a month, under the
+  same id as the studio's holes (`pickScans`).
+- **KV** `auto-assembly-scan:v{n}|{key}` — a Part Studio's holes, by part id,
+  for a month. `n` is the scan's version (`SCAN_VERSION`), bumped when what it
+  answers changes. The key is what pins the Part Studio's geometry and its
+  configuration (`toStudioSource`): `{documentId}|v|{versionId}|…` for a part
+  from a version,
   `{documentId}|e|{elementMicroversionId}|…` for one from the assembly's own
   workspace, and `{documentId}|m|{documentMicroversionId}|…` otherwise.
 - **KV** `assembly-job:{documentId}|{instanceId}|{elementId}` — the run an
@@ -996,7 +1053,7 @@ closes the menu and switches to the page.
 
 **Edit** in Edit parts, on a library screw, switches to the page too
 ([edit-parts.md](./edit-parts.md)). Select by becomes Existing screws, with
-that screw the one to update (`updateScrew`). Nothing is chosen by hand yet, so
+that screw the one to update (`updateScrew`). Nothing is specified, so
 the screw, its washers and its nut all follow it.
 
 ### Picking
@@ -1046,21 +1103,22 @@ the screw, its washers and its nut all follow it.
    `stopRequest`. Every stop names the request it ends by its `messageId`,
    which Onshape answers as `stoppedRequestId`.
 
-    While a request is live (`filtering`), Mantine's `ActionBar` floats over
-    the bottom of the panel naming the list limiting picks
-    (`SelectingActionBar`, `listLabel`). Its **Stop selecting** button, and
-    its close button, unfocus the list (`finishSelecting`), which stops the
-    request.
+    While a request is live (`filtering`), a bar in Mantine's `ActionBar`
+    look names the list limiting picks (`SelectingBar`, `listLabel`). Its
+    **Stop selecting** button unfocuses the list (`finishSelecting`), which
+    stops the request. It sits in the page's flow, so the page scrolls clear
+    of it and nothing beside it is covered:
+    - On a page with a `PanelFooter`, it's in the footer, above its button.
+    - Elsewhere it's stuck to the bottom of the panel (`SelectingActionBar`).
 
 4. Hovering a row, in any list, lights its entity up alone
    (`requestSelectionHighlight`, which makes it what the Onshape window shows
    selected, each with its own message id). Moving between rows lights each
    alone. A highlight cancels a pending selection request in Onshape, so a
-   hover pauses selecting without ending it: the action bar stays, and
-   leaving the rows sends the focused list's request again
-   (`showFocused`, `resumeSelecting`). A focused list that isn't selecting has
-   its picks lit up instead, and nothing lights up with no list focused.
-   Removing a row lights the rest up.
+   hover pauses selecting without ending it: the action bar stays, and the
+   list still takes picks. Leaving the rows lights the focused list's picks up
+   (`showFocused`), and clicking the list limits picks again. Nothing lights up
+   with no list focused. Removing a row lights the rest up.
 5. While the window shows the app's highlight (`isHighlighted`), its
    selection messages never remove picks, and what the app highlighted since
    its last request (`highlightedKeys`) is never taken as a pick. Onshape can
@@ -1078,17 +1136,27 @@ the screw, its washers and its nut all follow it.
 
 The panel first reads the fasteners the library loaded (`useFastenerSetQuery`,
 `GET /api/auto-assembly/parts`). Until FRCDesignLib's Fasteners group has
-loaded them it says so, and offers nothing to insert.
+loaded them it says so, centered on the page, and offers nothing to insert.
+
+The request is pinned to FRCDesignLib's cache version (`?v=`, as
+`/library-data` is), and its answer is immutable:
+
+- A load that changes the library bumps the version, after it stores the set.
+- A new version is a new url and query key (`fastenerSetQueryKey`), so it
+  fetches. The last version's answer stays up meanwhile.
+- The version comes from `getLibraryVersionQuery(FASTENER_LIBRARY)`. A `LIBRARY`
+  push or a reconnect refreshes it in FRCDesignLib's pages. Elsewhere, it's
+  asked again as the panel or callout opens, at most once a minute.
 
 The panel is a `ParameterGrid` of the configuration dialog's own inputs
 (`ParameterInput`), in groups (`ParameterGroup`), as an Onshape feature
 dialog's are. A group is an unstyled accordion, like `AppSection`'s:
 
-- Its title and chevron are one control, which highlights on hover and folds
-  the group. They line up with the rows' edges.
+- Its title and chevron are one control across the group's width, which
+  highlights on hover and folds the group. They line up with the rows' edges.
 - A group driven by a checkbox has its title as the checkbox's label, so the
-  title ticks it. Its chevron is a control of its own at the far side, shown
-  while ticked.
+  title ticks it. Its chevron, at the far side, is a control of its own that
+  fills the row from the checkbox. It shows while ticked.
 - There's no line under a header.
 
 The groups:
@@ -1107,23 +1175,38 @@ The groups:
    red while empty.
 4. **Add screw washer**, **Add nut** and **Add nut washer**, each a group its
    checkbox drives, whose rows are there only while ticked: the washer or nut studio's parameters but its Size, which is
-   the screw's. A washer's Vendor offers those making it in that size, and is
-   left out under a Generic screw, whose washers are Generic; a nut has none,
-   since one vendor makes them all. Like every studio input, a washer's Type and
+   the screw's. A washer's Vendor offers those making it in that size; a nut
+   has none, since one vendor makes them all. Like every studio input, a washer's Type and
    Finish show only where there's a choice, so a Generic washer, one in each
    size, shows its checkbox alone. The screw washer is gone under a countersunk
    head, and the nut washer without a nut.
 
-The screw follows what's picked, as an Onshape feature's editing logic sets one
-input from another (`followScrew`):
+Inputs follow one another, as an Onshape feature's editing logic sets one
+input from another. An input set by hand is **specified** (`specified`), and
+nothing sets it but the person. Opening the panel, coming back to it, and
+clicking Insert each leave nothing specified (`open`, `finishRun`).
 
-- Size follows the size the first hole picked is made for (`holeSize`).
+- The screw's vendor, set by hand or followed, sets each washer's and the
+  nut's vendor that isn't specified, where it makes them (`withVendor`).
+- Every part is in the screw's size, whatever is specified.
+
+- The first hole picked made for a size sets the screw (`holeSize`,
+  `isHoleCountersunk`). Size follows its size. Head follows its countersink
+  where the head doesn't suit it (`headForHole`): a flat head in a countersink,
+  the studio's default head out of one. A head that suits it stays, so a socket
+  head over a plain hole stays a socket head.
+- Later picks never change the screw. A hole picked for another screw than the
+  one chosen gets a warning on its row and is fastened as asked (see the
+  planner's last step, under `planHoles`).
 - Every screw input follows the first existing screw picked (`existingScrew`).
 - Each washer and the nut follow that screw too (`followParts`). One it has is
-  added, configured as its own. One it doesn't have is unticked.
-- An input chosen by hand stops following (`chosenScrewInputs`). So does a
-  washer or nut whose checkbox or inputs are changed by hand (`chosenParts`). A run
-  starting frees them all again (`finishRun`).
+  added, configured as its own; one it doesn't have is unticked. A part's
+  checkbox ticked by hand is specified, as its inputs are.
+- What's picked sets only the screw inputs that aren't specified
+  (`followScrew`).
+- Where that changes the screw's settled head or size, a toast says so
+  ("Screw type updated", "Screw size updated", or both in one), each replacing
+  the last (`followAndAnnounce`).
 
 The studios' parameters are their configurations as Onshape answers them,
 parsed by `parseOnshapeConfiguration`, so their options show as the Part
@@ -1134,8 +1217,7 @@ selection through `normalizeSelection`, then each hidden or left-out input set
 to the one value made there, from the catalog, as the feature resolves it
 (`settle` in `studios.ts`); and each part into the screw's size from a vendor
 making it (`settlePart`: the one chosen, else the screw's, else Generic, else
-the first making it). Changing the screw's vendor moves every part to it, where
-it makes them.
+the first making it).
 
 ### Picking what to fasten
 
@@ -1149,18 +1231,15 @@ _Select by_ decides what the picks are:
   assembly, as whole solid parts (`SOLID_BODIES`), each row named "Screw {n}";
   the run decides which picks are screws.
 
-A circular edge's row has a flip toggle. A flipped edge is fastened from the
-far end of its holes, so the head goes there and the nut at the edge picked.
-Under existing screws, **Flip screws** does the same for every screw to update.
-Both go in the request (`flipped`, `flipScrews`). Changing Select by, or a run
-starting, clears them, and an edge picked again starts unflipped.
+The form offers no flipping for now. The insert route and the planner still
+take flipped holes (`flipped`, `flipScrews`), fastened from the far end of
+their holes, but the panel sends none.
 
 A run takes one kind: only the lists Select by shows are sent, and changing
 Select by clears every pick. The button sits in a footer stuck to the bottom of
-the panel (`PanelFooter`), so it's always in view. The selecting action bar
-floats above the footer, reading its height from the document
-(`PANEL_FOOTER_HEIGHT`). The button reads Replace for existing screws and
-Insert otherwise. It needs a pick, and, under the Face stop
+the panel (`PanelFooter`), so it's always in view, with the selecting bar
+above it while a list limits picks. The button reads Replace for existing
+screws and Insert otherwise. Clicking it stops selecting. It needs a pick, and, under the Face stop
 condition, a face to stop at; manual sizing sends **All holes**, whatever the
 hidden stop condition says.
 
@@ -1171,10 +1250,23 @@ to stop at without the Face stop condition or the other way round
 (`hasStopFace`), an edge to flip that isn't picked (`isFlipPicked`), and a
 part its studio doesn't make (`isMade`) or not in the screw's size.
 
+### Preparing — `POST /api/auto-assembly/prepare`
+
+As the panel opens, it has the server index the assembly with nothing picked
+(`usePrepareHoles`): the assembly read, and every Part Studio in it scanned.
+Both are cached by what pins them, so the checks that follow read them from
+KV. A check evaluates a Part Studio again only for picks in it never scanned
+at that edit. Nothing waits on the answer, and it
+isn't sent again for a minute (`PREPARE_STALE_MS`). It runs to the end even
+if the panel closes (`finishEvenIfDisconnected`).
+
 ### Checking picks — `POST /api/auto-assembly/check`
 
-Each list's rows are checked in the background (`usePickProblems`), 600 ms
-after the picks or options last changed. A row that won't do what it was
+Each list's rows are checked in the background (`usePickProblems`), 1.5 s
+after the picks or options last changed (`PICK_CHECK_DELAY_MS`), so picking
+edges one at a time checks once per pause. One check goes at a time: one
+that settles while another is going waits for it to answer. The rows show checking from the
+first change until the answer. A row that won't do what it was
 picked for turns red with why under it, and one that will, but not as well as
 it should, turns yellow (`QueryList`'s `problem`, from the problem's
 `ProblemSeverity`). The route
@@ -1198,18 +1290,59 @@ options (`planHoles`), and answers each pick's problem (`pickProblems` in
 
 It also answers what the screw follows in the form:
 
-- `holeSize`: the size the first hole picked is made for, from the targets,
-  then the screws to update (`pickedHoleSize`).
+- `holeSize` and `isHoleCountersunk`: the first hole picked made for a size,
+  from the targets, then the screws to update (`pickedHole`).
 - `existingScrew`: the first screw to update's configuration, and those of
   the washers and nut on it, each with its studio's defaults filled in
   (`firstScrew`). They're the parts a run would delete with it
   (`stackParts`). A washer facing the way the screw does is its screw washer;
   one facing back is its nut washer (`stackRoles`).
 
-Nothing picked asks Onshape nothing. FTC, or parts the catalog doesn't make,
-is checked without planning. The last check's marks stay while the next goes,
-and the same picks and options are checked once. Insert and fasten's lists use
+Nothing picked asks Onshape nothing. Otherwise a check lists the workspace's
+tabs, and asks nothing else while the assembly hasn't changed and every pick
+was scanned before (see
+[Caching Onshape's answers](#caching-onshapes-answers)). FTC, or parts the
+catalog doesn't make, is checked without planning. A check without options,
+and with no screws to update or face to stop at, needs only the picks' own
+edges. It indexes with `IndexScope.PICKS` (step 5 of the caching below). The
+last check's marks stay while the next goes, and the same picks and options
+are checked once. Insert and fasten's lists use
 the same route without options (see [fasten.md](./fasten.md)).
+
+### Caching Onshape's answers
+
+Running out of Onshape calls locks the user out of that endpoint for about a
+day ([ONSHAPE.md](../ONSHAPE.md#calling-the-api)), so every read on the
+prepare, check, insert and run paths is served from KV while what it depends
+on is unchanged:
+
+1. **Pin.** `pinElement` names the assembly's content. A version or
+   microversion path pins itself. In a workspace it lists the tabs
+   (`getElements`, all types) and takes the assembly tab's own microversion,
+   which moves when the assembly or a tab it depends on changes. That listing
+   is the one call a check always makes, and it gives the Part Studios'
+   microversions too.
+2. **Assembly.** `readAssembly` reads the definition under that pin. An edit
+   to a Part Studio the assembly references misses, since Onshape moves the
+   assembly's microversion with it. An edit to an unrelated tab, such as a
+   drawing, doesn't.
+3. **Holes.** Each Part Studio's holes are cached under its own pin
+   (`toStudioSource`), so an edit misses only for the studios it changed.
+4. **Picks.** Each picked entity's answer is cached under the same pin, so a
+   check evaluates a studio only for entities it never scanned there, and only
+   those. A studio whose holes and picks are all cached isn't evaluated.
+5. **Picks alone.** `IndexScope.PICKS` scans only the Part Studios picked
+   in. It takes the last definition read of the assembly (`latestReads`)
+   while that has every picked occurrence, however the assembly was edited
+   since. An insert, a mate or a drag moves the assembly tab, but not which
+   Part Studio a part is from. A pick on an occurrence it lacks reads the
+   assembly afresh. So does a pick that gives no circular edge from an
+   earlier read, as one on a part reconfigured since can.
+
+A write that fails, as a second write to a key within a second does, leaves a
+miss for later (`putQuietly`), not a failed request. The add-to-assembly
+fasten path and a run's index step read through the same caches, so an insert
+right after a check reads nothing from Onshape but the tab listing.
 
 ### Starting a run — `POST /api/auto-assembly/insert`
 
@@ -1237,13 +1370,14 @@ recorded with why, and the steps after it are skipped.
    uses even if the library reloads them meanwhile; with none, the run fails.
 1. **Index holes** (`index`):
     1. Reads the assembly definition, and, when any part is from the assembly's
-       own workspace, its Part Studios' microversions (one listing).
+       own workspace, its Part Studios' microversions (one listing), from the
+       cache when nothing in the document has changed (`readAssembly`).
     2. Walks each occurrence into subassemblies to its part instance, and pins
        its Part Studio (`partOccurrences`).
-    3. Scans each distinct pinned Part Studio once, six at a time: from the
-       cache unless something is picked in it, by evaluating the hole scan
-       otherwise, with the picked edges and faces, and the face to stop at, as
-       `qTransient` queries.
+    3. Scans each distinct pinned Part Studio once, six at a time. Its holes
+       and each pick come from the cache where scanned before. Otherwise it
+       evaluates the hole scan, with the picks not yet cached (edges, faces,
+       and the face to stop at) as `qTransient` queries.
        Fasteners of the catalog's own studios and standard content aren't
        scanned.
     4. Moves every part's holes, and the picked circular edges (an edge's own,
@@ -1266,7 +1400,11 @@ recorded with why, and the steps after it are skipped.
        edge at their far end, can't be flipped: **no fit**. Then:
         1. A library screw already on its axis, seated there: **fastened**.
         2. Every hole on the axis, nearest first. The first must start at the
-           circular edge (or within a flat head's countersink of it).
+           circular edge. Or, where a Hole feature countersank it in the same
+           part (its attribute's `C_SINK`, `countersunk`), below it within the
+           deepest flat head's countersink, whatever head is chosen: the edge is
+           then the countersink's rim (`isCountersunk`). A hole below the edge
+           otherwise is past a gap, and a countersink made by hand isn't one.
         3. The size the first hole is made for (`holeSize`): its threads'
            size, else the size it's a clearance of (from the major diameter to
            a little past free clearance), else the size it's a tap drill of.
@@ -1305,6 +1443,10 @@ recorded with why, and the steps after it are skipped.
               millimetres for FTC (`formatDistance`).
         8. The nut chosen, only out the far side, with the far side's circular
            edge and its radius.
+        9. A ready hole picked for another screw is fastened as asked, with a
+           warning: made for another size (it's no thread, clearance or tap
+           drill of the screw's, `isMadeFor`), a countersink under a head
+           that isn't flat, or a flat head over no countersink.
     7. Stores each hole's plan with the status, and each pick with the problem
        the check would mark it with (`runPicks`, from `pickProblems`). With any
        pick's problem, the step finishes with a warning saying how many.
@@ -1349,17 +1491,20 @@ recorded with why, and the steps after it are skipped.
 `reportJob` stores the status and pushes `ASSEMBLY_JOB` with the assembly's
 key, tagged with its workspace. A page on that assembly refetches
 `GET /api/auto-assembly/job`, and does on reconnecting too. A stored `RUNNING`
-is checked against its workflow run: once that has ended without reporting, the
-running step reads failed and the rest skipped.
+is checked against its workflow run. KV, read at the edge, can lag what the run
+wrote, so a run that finished answers with the status it returns
+(`finish-job`'s). One that errored or was terminated without reporting reads
+failed, at the running step, and the rest skipped.
 
 The page shows the run in a callout above the options — its step while it
-goes, saying the page can be left, then how it went — with a Details modal
+goes, saying the person can keep working, then how it went — with a Details modal
 (`JobDetails`). It lists **Index holes**, with its warning in yellow under it,
 then each screw ("Screw {n}") with its own steps: **Delete screw** for a screw
 it updates, then **Insert screw**, **Add screw washer**, **Add nut** and **Add
 nut washer**, as the screw has them. A part's step follows the run's insert and
 fasten steps, and finishes with a warning when the part sits unmated. A step
-that failed puts its reason in a notice at the top. Then come the run's picks
+that failed, or the run stopping, puts its reason in a notice at the top, with
+"Try again" and a button to send a report. Then come the run's picks
 under the lists they were made in, each named as its list names it, with a
 check, warning or error and its problem under it. Hovering a pick, or a step
 whose part is in the assembly, lights it up in Onshape (a part as its whole
@@ -1367,7 +1512,7 @@ occurrence), and leaving them puts back the focused list's picks. The headline
 counts parts inserted, or, for a run that updated screws, the screws ("Updated
 3 screws"). A run with a hole's warning reads as partly done
 (`assemblyJobOutcome`). `useAssemblyJobToasts`, in the app shell, shows a toast as
-a run starts ("Inserting fasteners..."), which becomes how it finished, from
+a run starts ("Inserting parts..."), which becomes how it finished, from
 any tab of the app. A step's failure shows in our words; Onshape's own message
 is logged to the console.
 
@@ -1402,6 +1547,15 @@ In [strings/auto-assembly.md](../strings/auto-assembly.md).
 - Every part is in the screw's size.
 - A scan is keyed by something that never changes, so a cached scan is never
   stale and nothing invalidates it.
+- An assembly read for planning is keyed by the assembly tab's own
+  microversion, which moves with every tab it depends on, so an edit to a tab
+  it references misses too.
+- A picks-only index (`IndexScope.PICKS`) may use an earlier edit's
+  definition, but only one with every picked occurrence, from which every
+  pick gives a circular edge. Anything else reads the assembly afresh.
+- A page sends one pick check at a time.
+- Between edits to the assembly, checking the same picks again asks Onshape
+  only for the workspace's tabs.
 - Fasteners are only ever inserted into an assembly in a workspace.
 - The plan inserted is the run's own, made in its index step; the client never
   sends one.
@@ -1421,10 +1575,17 @@ In [strings/auto-assembly.md](../strings/auto-assembly.md).
 | The insert fails                     | Nothing is inserted; fastening is skipped                             | Run it again                                           |
 | A mate fails partway                 | The parts so far stay, some unmated                                   | Mate the rest by hand, or undo and run again           |
 | Removing replaced parts fails        | Nothing is inserted; any parts and mates already deleted stay deleted | Undo in Onshape, or run again picking the holes' edges |
-| Onshape rate-limits                  | The step retries, then fails as above                                 | Run it again                                           |
-| The run dies without reporting       | The job reads failed once the run has ended                           | Run it again                                           |
+| Onshape rate-limits briefly          | The step waits its `Retry-After`, retries, then fails as above        | Run it again                                           |
+| Onshape locks the user out           | The step fails at once, saying how long the wait is                   | Run it again after the wait                            |
+| A check or prepare answers 429       | The panel stops checking until the wait is over, and says how long    | Wait; the panel resumes on its own                     |
+| The run dies without reporting       | The job reads failed once the run has errored or been terminated      | Run it again                                           |
 
 ## Decisions
+
+- **The fastener set is cached by FRCDesignLib's cache version.** It changes
+  only when a load changes the library, which bumps that version. So an
+  answer is cached forever, and a load reaches the panel as the library's own
+  data does, with nothing to invalidate.
 
 - **Stack depth is limited by one stop condition.** All holes, Max length and
   Face each say how far a screw may reach; a gap between parts never stops
@@ -1444,11 +1605,22 @@ In [strings/auto-assembly.md](../strings/auto-assembly.md).
 - **A hole with a screw already is a warning, not an error.** The run leaves
   it alone and fastens the rest of the face, so there's nothing to fix.
 - **Picks are checked as they're made, in Onshape.** Whether an edge is a
-  hole, and what would fit it, takes the scan and the planner, so a check
-  reads the assembly and scans each Part Studio holding a pick, under the
-  caller's session: a call or a few per check. Waiting for the picks to settle
-  and checking the same picks once keeps that to about one check per burst of
-  picking; the run checks again regardless.
+  hole, and what would fit it, takes the scan and the planner, under the
+  caller's session. A check reads through the caches, so it costs one listing
+  of the workspace's tabs plus one evaluation per studio with a new pick. Waiting
+  1.5 s for the picks to settle, and checking the same picks once, keeps checks
+  to about one per pause; the run checks again regardless.
+- **Running out of Onshape calls is our bug.** Onshape limits each user per
+  endpoint, and running out locks them out of it for about a day. So every
+  read is cached by what pins it, and a 429 stops the feature that got it from
+  calling until its `Retry-After`, rather than retrying into the lockout.
+- **A workspace assembly is pinned by its own tab's microversion.** Onshape
+  moves it when a tab it depends on changes ([ONSHAPE.md](../ONSHAPE.md)), so
+  it covers the Part Studios it references, and an edit elsewhere in the
+  document keeps the cache. The document's current microversion would also be
+  safe, but every edit to any tab moves it. The tab listing that gives the
+  pin is a documents call, which counts apart from the scarce assembly reads,
+  and it gives the studios' microversions in the same call.
 - **A screw that misses its hole is inserted, with a warning.** Into threads
   or a blind hole, a screw a little too long or too short still holds, and the
   person running it is the one to judge whether it's good enough; so the
@@ -1510,8 +1682,8 @@ In [strings/auto-assembly.md](../strings/auto-assembly.md).
   parameters are `ConfigurationParameter`s too, but without conditions: the
   form decides what shows, so a hidden choice keeps its value.
 - **Each part has its own vendor.** Not every vendor sells washers or nuts, and
-  someone using one vendor's screws may buy another's washers. Under a Generic
-  screw the washers are Generic, and their Vendor isn't asked.
+  someone using one vendor's screws may buy another's washers. A part's Vendor
+  is asked under any screw, a Generic one included.
 - **A hidden input is resolved from the catalog.** Onshape keeps a hidden input
   at whatever it last held, and `normalizeSelection` sets it to its default,
   which the vendor may not make; the feature takes the one value made there, and
@@ -1531,9 +1703,36 @@ In [strings/auto-assembly.md](../strings/auto-assembly.md).
   chosen.
 - **One size per run, set from the first hole.** A clearance hole fits more
   than one size, and a hole at 0.201" is both #10's clearance and 1/4-20's tap
-  drill, so a per-hole size can guess wrong. Size follows the first hole picked
-  until it's chosen by hand, the way Onshape's editing logic fills one input
-  from another. The person sees the guess and can change it.
+  drill, so a per-hole size can guess wrong. Size and head follow the first
+  hole picked unless specified, the way Onshape's editing logic fills one
+  input from another. The person sees the guess and can change it.
+- **Specified inputs, as Onshape's.** An input set by hand isn't overwritten
+  by another's editing logic, as in an Onshape feature dialog. Clicking Insert
+  or reopening the panel starts afresh, so a size chosen for one run doesn't
+  stop the next first hole from setting it.
+- **A countersink is the Hole feature's.** A hole's countersink is read from
+  the attribute its Hole feature puts on the hole's faces, not from where the
+  hole starts: a plate past a gap starts below the edge too. Countersinks are
+  almost always made with the Hole feature, so one made by hand is no
+  countersink here.
+- **Holes are scanned as the panel opens.** The first check otherwise waits on
+  every Part Studio's scan. Scanning them up front costs one Onshape call per
+  Part Studio not yet cached, which the first check would have spent anyway,
+  and a reading of the assembly.
+- **A later pick warns rather than steers.** A second hole of another size, or
+  countersunk differently, picked by accident must not change the screw under
+  the first. Picked on purpose, it must still be fastened. So only the first
+  hole sets the screw, and a hole that doesn't match it is fastened with a
+  warning on its row.
+- **Preselection reads the assembly as last read.** Every insert, mate and
+  drag moves the assembly tab, so pinning cost a definition read, the scarcest
+  count, after every insert. Fastening to a pick needs only which Part Studio
+  its part is from, and its mate names the edge, not where it sits. A part
+  reconfigured or replaced since can answer from its old Part Studio until a
+  pick on it fails to resolve; at worst its mate fails in Onshape.
+- **Checks go one at a time.** A check can take seconds, and overlapping ones
+  each evaluate what the other is evaluating. One lockout began with four
+  checks running at once.
 - **Every scan is sent the picked ids, not a `queries` body.** The lambda is
   wrapped to build its queries from `qTransient`, whose form std documents.
 

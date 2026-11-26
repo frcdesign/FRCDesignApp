@@ -18,11 +18,13 @@ interface DashboardStateProps {
     loading: string;
     /** The section's title, for a section whose content draws its own. */
     title?: string;
+    /** Beside the title, as the loaded section shows it. */
+    caption?: string;
 }
 
 /** What stands in for a dashboard section while its query has no `data`. */
 export function DashboardState(props: DashboardStateProps): ReactNode {
-    const { query, loading, title } = props;
+    const { query, loading, title, caption } = props;
     const state = query.isError ? (
         <SectionError
             title={m.dashboardLoadFailed()}
@@ -39,7 +41,9 @@ export function DashboardState(props: DashboardStateProps): ReactNode {
     return title === undefined ? (
         state
     ) : (
-        <Section title={title}>{state}</Section>
+        <Section title={title} caption={caption}>
+            {state}
+        </Section>
     );
 }
 

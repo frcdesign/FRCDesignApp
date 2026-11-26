@@ -18,8 +18,8 @@ import(path : "onshape/std/common.fs", version : "2960.0");
  *      @field parts {map} : By part id, its `holes`: each cylindrical hole's `origin` and `direction` (its axis), its
  *              `radius`, its `start` and `end` along the axis from `origin`, whether each end is `closedAtStart` or
  *              `closedAtEnd` (the part goes on past it, as at the bottom of a blind hole), its circular `edges` (each
- *              `id`, and where it is along the axis, `at`), and `threaded` with its `majorDiameter` if a Hole feature
- *              tapped it.
+ *              `id`, and where it is along the axis, `at`), `threaded` with its `majorDiameter` if a Hole feature
+ *              tapped it, and `countersunk` if a Hole feature countersank it.
  *      @field circles {array} : Each selected circle, and each circle bounding a selected face: its `id`, its `partId`,
  *              its `center`, `radius`, and `normal` (out of the part, along the hole), and `faceId` if it came from a
  *              selected face.
@@ -83,14 +83,24 @@ export function fastenerHoleScan(context is Context, queries is map) returns map
                 "end" : end / meter,
                 "closedAtStart" : closedAtStart,
                 "closedAtEnd" : closedAtEnd,
-                "threaded" : false
+                "threaded" : false,
+                "countersunk" : false
             };
+            // A Hole feature's attribute is on each face it makes, the hole's own included
             for (var attribute in getAttributes(context, { "entities" : face }))
             {
-                if (attribute is map && attribute.isTappedHole is boolean && attribute.isTappedHole && attribute.majorDiameter != undefined)
+                if (!(attribute is map))
+                {
+                    continue;
+                }
+                if (attribute.isTappedHole is boolean && attribute.isTappedHole && attribute.majorDiameter != undefined)
                 {
                     hole.threaded = true;
                     hole.majorDiameter = attribute.majorDiameter / meter;
+                }
+                if (attribute.holeType != undefined && toString(attribute.holeType) == "C_SINK")
+                {
+                    hole.countersunk = true;
                 }
             }
             return hole;

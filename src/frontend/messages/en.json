@@ -101,8 +101,8 @@
             ],
             "selectors": ["countPlural"],
             "match": {
-                "countPlural=one": "Showing element...",
-                "countPlural=other": "Showing elements..."
+                "countPlural=one": "Showing part...",
+                "countPlural=other": "Showing parts..."
             }
         }
     ],
@@ -114,8 +114,8 @@
             ],
             "selectors": ["countPlural"],
             "match": {
-                "countPlural=one": "Hiding element...",
-                "countPlural=other": "Hiding elements..."
+                "countPlural=one": "Hiding part...",
+                "countPlural=other": "Hiding parts..."
             }
         }
     ],
@@ -127,8 +127,8 @@
             ],
             "selectors": ["countPlural"],
             "match": {
-                "countPlural=one": "Element shown.",
-                "countPlural=other": "Elements shown."
+                "countPlural=one": "Part shown.",
+                "countPlural=other": "Parts shown."
             }
         }
     ],
@@ -140,8 +140,8 @@
             ],
             "selectors": ["countPlural"],
             "match": {
-                "countPlural=one": "Element hidden.",
-                "countPlural=other": "Elements hidden."
+                "countPlural=one": "Part hidden.",
+                "countPlural=other": "Parts hidden."
             }
         }
     ],
@@ -390,6 +390,144 @@
     "dashboardLoadingVersionManager": "Loading Version Manager runs...",
     "dashboardLoadingReports": "Loading reports...",
     "dashboardLoadingParts": "Loading parts...",
+    "dashboardRangeAllTime": "All time",
+    "dashboardRangeLastDays": [
+        {
+            "declarations": [
+                "input days",
+                "local daysPlural = days: plural",
+                "local formatted = days: number"
+            ],
+            "selectors": ["daysPlural"],
+            "match": {
+                "daysPlural=one": "Last day",
+                "daysPlural=other": "Last {formatted} days"
+            }
+        }
+    ],
+    "dashboardLoadingFeatureReach": "Loading feature usage...",
+    "dashboardFeatureReach": "Feature usage",
+    "dashboardFeatureReachNoData": "No recorded use yet.",
+    "dashboardFeatureReachLatest": "Latest week: {value}",
+    "dashboardFeatureReachLatestDay": "Latest day: {value}",
+    "dashboardFeatureReachWeekOf": "Week of {week}",
+    "dashboardFeatureReachUsers": [
+        {
+            "declarations": [
+                "input users",
+                "input activeUsers",
+                "local activePlural = activeUsers: plural",
+                "local usersFormatted = users: number",
+                "local activeFormatted = activeUsers: number"
+            ],
+            "selectors": ["activePlural"],
+            "match": {
+                "activePlural=one": "{usersFormatted} of {activeFormatted} active user",
+                "activePlural=other": "{usersFormatted} of {activeFormatted} active users"
+            }
+        }
+    ],
+    "dashboardFeatureReachExisting": "Existing users",
+    "dashboardFeatureReachNew": "New users",
+    "dashboardFeatureReachUses": [
+        {
+            "declarations": [
+                "input count",
+                "local countPlural = count: plural",
+                "local formatted = count: number"
+            ],
+            "selectors": ["countPlural"],
+            "match": {
+                "countPlural=one": "{formatted} use",
+                "countPlural=other": "{formatted} uses"
+            }
+        }
+    ],
+    "dashboardFeatureReachReports": [
+        {
+            "declarations": [
+                "input count",
+                "local countPlural = count: plural",
+                "local formatted = count: number"
+            ],
+            "selectors": ["countPlural"],
+            "match": {
+                "countPlural=one": "{formatted} report",
+                "countPlural=other": "{formatted} reports"
+            }
+        }
+    ],
+    "dashboardFeatureReachRuns": [
+        {
+            "declarations": [
+                "input count",
+                "local countPlural = count: plural",
+                "local formatted = count: number"
+            ],
+            "selectors": ["countPlural"],
+            "match": {
+                "countPlural=one": "{formatted} run",
+                "countPlural=other": "{formatted} runs"
+            }
+        }
+    ],
+    "dashboardFeatureReachAdds": [
+        {
+            "declarations": [
+                "input count",
+                "local countPlural = count: plural",
+                "local formatted = count: number"
+            ],
+            "selectors": ["countPlural"],
+            "match": {
+                "countPlural=one": "{formatted} add",
+                "countPlural=other": "{formatted} adds"
+            }
+        }
+    ],
+    "dashboardFeatureReachSaves": [
+        {
+            "declarations": [
+                "input count",
+                "local countPlural = count: plural",
+                "local formatted = count: number"
+            ],
+            "selectors": ["countPlural"],
+            "match": {
+                "countPlural=one": "{formatted} save",
+                "countPlural=other": "{formatted} saves"
+            }
+        }
+    ],
+    "dashboardFeatureReachExistingLine": "Existing users: {value}",
+    "dashboardFeatureReachNewLine": "New users: {value}",
+    "dashboardFeatureSearch": "Search",
+    "dashboardFeatureFavorites": "Favorites list",
+    "dashboardFeatureRecents": "Recently used list",
+    "dashboardFeatureQuickInsert": "Quick insert",
+    "dashboardFeatureFasten": "Insert and fasten",
+    "dashboardFeaturePreselection": "Fasten to preselected edges",
+    "dashboardFeatureAutoAssembly": "Auto Assembly",
+    "dashboardFeatureInsertLocation": "Insert location",
+    "dashboardFeatureDownload": "STEP download",
+    "dashboardFeatureDefaultConfiguration": "Default configuration",
+    "dashboardFeatureVersionManager": "Version Manager",
+    "dashboardFeatureFeatureScripts": "FeatureScripts",
+    "dashboardFeatureReport": "Report an issue",
+    "dashboardNudgeDotAdded": "Blue dot",
+    "dashboardNudgeDotRemoved": "Blue dot removed",
+    "dashboardNudgeTipAdded": "Tip",
+    "dashboardNudgeTipRemoved": "Tip removed",
+    "dashboardNudgeSuggestionAdded": "Suggestions",
+    "dashboardNudgeSuggestionRemoved": "Suggestions removed",
+    "dashboardNudgeSplashScreenAdded": "Splash screen",
+    "dashboardNudgeSplashScreenRemoved": "Splash screen removed",
+    "dashboardNudgeSuggestedLinks": "Suggested links",
+    "dashboardNudgeRemoved": "{name} removed",
+    "dashboardReleaseCreated": "Created",
+    "dashboardReleaseButton": "Button",
+    "dashboardReleasePreselection": "Preselection",
+    "dashboardReleaseContextMenu": "Context menu",
     "dashboardLoadingLibrary": "Loading library usage...",
     "dashboardLoadingHealth": "Loading library health...",
     "dashboardLoadingPart": "Loading part usage...",
@@ -568,8 +706,7 @@
     "autoAssemblySignIn": "Sign in",
     "autoAssemblyFastenersLoading": "Loading fasteners...",
     "autoAssemblyFastenersFailed": "Couldn't load the fasteners.",
-    "autoAssemblyNoFastenersTitle": "No fasteners are loaded yet.",
-    "autoAssemblyNoFastenersDescription": "Auto Assembly uses the fasteners in FRCDesignLib's Fasteners group, once they're loaded.",
+    "autoAssemblyNoFastenersTitle": "No fasteners are loaded yet",
     "autoAssemblySelections": "Selections",
     "autoAssemblySelectBy": "Select by",
     "autoAssemblyFaces": "Faces",
@@ -582,9 +719,10 @@
     "autoAssemblyScrewRow": "Screw {index}",
     "autoAssemblyInsert": "Insert",
     "autoAssemblyReplace": "Replace",
-    "autoAssemblyFlip": "Flip",
-    "autoAssemblyFlipScrews": "Flip screws",
     "autoAssemblyStartFailed": "Unexpectedly failed to start inserting.",
+    "autoAssemblyScrewTypeUpdated": "Screw type updated",
+    "autoAssemblyScrewSizeUpdated": "Screw size updated",
+    "autoAssemblyScrewTypeAndSizeUpdated": "Screw type and size updated",
     "autoAssemblyFastener": "Fastener",
     "autoAssemblyLength": "Length",
     "autoAssemblyProgram": "Program",
@@ -615,8 +753,11 @@
     "autoAssemblyTaskDeleteRunning": "Deleting screws...",
     "autoAssemblyTaskInsertRunning": "Inserting parts...",
     "autoAssemblyTaskFastenRunning": "Fastening parts...",
-    "autoAssemblyInserting": "Inserting fasteners...",
-    "autoAssemblyRunningCallout": "{step} You can leave this page.",
+    "autoAssemblyInserting": "Inserting parts...",
+    "autoAssemblyIndexingCallout": "Indexing holes. You can keep working.",
+    "autoAssemblyDeletingCallout": "Deleting screws. You can keep working.",
+    "autoAssemblyInsertingCallout": "Inserting parts. You can keep working.",
+    "autoAssemblyFasteningCallout": "Fastening parts. You can keep working.",
     "autoAssemblyInserted": [
         {
             "declarations": [
@@ -673,12 +814,12 @@
             }
         }
     ],
-    "autoAssemblyFailed": "Couldn't insert fasteners",
+    "autoAssemblyFailed": "Couldn't insert parts",
     "autoAssemblyFinishedCallout": "{headline} {timeAgo}.",
     "autoAssemblyFinishedToast": "{headline}.",
     "autoAssemblyDetails": "Details",
     "autoAssemblyNoRecentRun": "No recent run",
-    "autoAssemblyStoppedEarly": "Stopped early.",
+    "autoAssemblyTryAgain": "Try again. If the problem persists, send a report.",
     "fastenCircularEdges": "Circular edges",
     "fastenFaces": "Faces",
     "fastenEdgesToExclude": "Edges to exclude",
@@ -859,6 +1000,7 @@
     "insertQuickInsert": "Insert",
     "insertQuickDerive": "Derive",
     "insertCannotDeriveAssembly": "Assemblies can't be derived into a Part Studio.",
+    "insertInserting": "Inserting {name}...",
     "insertStillInserting": "Still inserting {name}. Onshape is taking longer than usual...",
     "versionManagerMenuPush": "Push",
     "versionManagerMenuPull": "Pull",
@@ -949,5 +1091,11 @@
     "versionManagerFormRecursivePushInfo": "Recursively push changes across multiple links.",
     "versionManagerFormRecursivePullInfo": "Also pulls into the parent from the documents linked above it first, saving a new version of each one along the way so the next can use it. Each is numbered from its own versions unless you name them above.",
     "versionManagerQuickRecursivePushTip": "Tip: Quick recursive push in a link's ⋯ menu does this in one click, without opening the form.",
-    "versionManagerQuickRecursivePullTip": "Tip: Quick recursive pull in a link's ⋯ menu does this in one click, without opening the form."
+    "versionManagerQuickRecursivePullTip": "Tip: Quick recursive pull in a link's ⋯ menu does this in one click, without opening the form.",
+    "splashScreenTitle": "Welcome to the FRCDesignApp!",
+    "splashScreenFrcDesignLibDescription": "Parts library for FRC®",
+    "splashScreenConfigLibDescription": "Parts library for FTC®",
+    "splashScreenFeatureScriptsDescription": "Add custom features to your Part Studios",
+    "splashScreenVersionManagerDescription": "Push and pull versions between linked documents",
+    "splashScreenAutoAssemblyDescription": "Quickly add hardware to an assembly"
 }

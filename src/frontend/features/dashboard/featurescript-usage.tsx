@@ -15,14 +15,17 @@ const SHARE_WIDTH = 160;
 
 interface FeatureScriptUsageSectionProps {
     usage: FeatureScriptUsageOut;
+    /** Beside the title: the window it covers, where the page doesn't pick one. */
+    caption?: string;
 }
 
 /** FeatureScripts added over the range, and each feature's part of them. */
 export function FeatureScriptUsageSection({
-    usage
+    usage,
+    caption
 }: FeatureScriptUsageSectionProps): ReactNode {
     return (
-        <Section title={m.dashboardFeatureScripts()}>
+        <Section title={m.dashboardFeatureScripts()} caption={caption}>
             <SimpleGrid cols={{ base: 1, sm: 2 }}>
                 <StatTile
                     label={m.dashboardFeatureScriptsAdded()}
