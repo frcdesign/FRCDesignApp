@@ -697,7 +697,7 @@ describe("analytics routes", () => {
             // From the Monday of the week the range starts in
             expect(body.buckets[0].start).toBe("2026-03-02");
             // Nobody here has a record, so everybody is existing
-            const none = { newActiveUsers: 0, newUsers: {} };
+            const none = { newActiveUsers: 0, newUsers: {}, newTimes: {} };
             expect(body.buckets.slice(-3)).toEqual([
                 {
                     start: "2026-06-01",
@@ -706,15 +706,23 @@ describe("analytics routes", () => {
                         [AppFeature.SEARCH]: 1,
                         [AppFeature.VERSION_MANAGER]: 1
                     },
+                    times: {},
                     ...none
                 },
                 {
                     start: "2026-06-08",
                     activeUsers: 1,
                     users: { [AppFeature.SEARCH]: 1 },
+                    times: {},
                     ...none
                 },
-                { start: "2026-06-15", activeUsers: 0, users: {}, ...none }
+                {
+                    start: "2026-06-15",
+                    activeUsers: 0,
+                    users: {},
+                    times: {},
+                    ...none
+                }
             ]);
             expect(body.firstUsed).toEqual(FIRST_USED);
         });
@@ -734,24 +742,90 @@ describe("analytics routes", () => {
             expect(body.buckets[0]).toEqual({
                 start: "2026-06-03",
                 activeUsers: 1,
-                users: {}
+                users: {},
+                times: {}
             });
             expect(on("2026-06-04")).toEqual({
                 start: "2026-06-04",
                 activeUsers: 1,
-                users: { [AppFeature.SEARCH]: 1 }
+                users: { [AppFeature.SEARCH]: 1 },
+                times: {}
             });
             expect(on("2026-06-05")).toEqual({
                 start: "2026-06-05",
                 activeUsers: 1,
-                users: { [AppFeature.VERSION_MANAGER]: 1 }
+                users: { [AppFeature.VERSION_MANAGER]: 1 },
+                times: {}
             });
             expect(on("2026-06-06")).toEqual({
                 start: "2026-06-06",
                 activeUsers: 0,
-                users: {}
+                users: {},
+                times: {}
             });
             expect(body.firstUsed).toEqual(FIRST_USED);
+        });
+        it("counts the times a feature was used, a report's from its own rollup", async () => {
+            await db
+                .insert(dailyAppOpens)
+                .values({ day: "2026-05-01", userId: "a", opens: 1 });
+            await db.insert(dailyFeatureUsers).values([
+                // Uncounted, so search is counted from the day after.
+                { day: "2026-06-02", feature: AppFeature.SEARCH, userId: "a" },
+                {
+                    day: "2026-06-03",
+                    feature: AppFeature.SEARCH,
+                    userId: "a",
+                    times: 3
+                },
+                {
+                    day: "2026-06-04",
+                    feature: AppFeature.SEARCH,
+                    userId: "b",
+                    times: 2
+                },
+                {
+                    day: "2026-06-04",
+                    feature: AppFeature.REPORT,
+                    userId: "b",
+                    times: 1
+                }
+            ]);
+            await db.insert(dailyReportMetrics).values(
+                (
+                    [
+                        ["2026-05-20", FeedbackTopic.APP, 1],
+                        ["2026-06-04", FeedbackTopic.APP, 4],
+                        ["2026-06-04", FeedbackTopic.MKCAD, 1]
+                    ] as const
+                ).map(([day, topic, count]) => ({
+                    day,
+                    topic,
+                    category: FeedbackCategory.BUG,
+                    source: FeedbackSource.GENERAL,
+                    count
+                }))
+            );
+
+            const res = await anonymousGet(
+                "/api/analytics/overview/feature-reach?from=2026-06-01&to=2026-06-07"
+            );
+            const body: FeatureReachOut = await res.json();
+
+            const on = (day: string) =>
+                body.buckets.find((bucket) => bucket.start === day);
+            expect(on("2026-06-02")?.times).toEqual({});
+            expect(on("2026-06-03")?.times).toEqual({
+                [AppFeature.SEARCH]: 3
+            });
+            expect(on("2026-06-04")?.times).toEqual({
+                [AppFeature.SEARCH]: 2,
+                [AppFeature.REPORT]: 5
+            });
+            expect(body.timesSince).toEqual({
+                [AppFeature.SEARCH]: "2026-06-03"
+            });
+            expect(body.firstUsed[AppFeature.REPORT]).toBe("2026-05-20");
         });
     });
 
@@ -788,12 +862,14 @@ describe("analytics routes", () => {
                 {
                     day: "2026-06-02",
                     feature: AppFeature.SEARCH,
-                    userId: "old"
+                    userId: "old",
+                    times: 2
                 },
                 {
                     day: "2026-06-03",
                     feature: AppFeature.SEARCH,
-                    userId: "edge-new"
+                    userId: "edge-new",
+                    times: 3
                 }
             ]);
 
@@ -807,8 +883,10 @@ describe("analytics routes", () => {
                 start: "2026-06-01",
                 activeUsers: 4,
                 users: { [AppFeature.SEARCH]: 2 },
+                times: { [AppFeature.SEARCH]: 5 },
                 newActiveUsers: 2,
-                newUsers: { [AppFeature.SEARCH]: 1 }
+                newUsers: { [AppFeature.SEARCH]: 1 },
+                newTimes: { [AppFeature.SEARCH]: 3 }
             });
 
             // A day's window is the four weeks ending with it: 2026-06-03's starts 2026-05-07
@@ -824,8 +902,10 @@ describe("analytics routes", () => {
                 start: "2026-06-03",
                 activeUsers: 1,
                 users: { [AppFeature.SEARCH]: 1 },
+                times: { [AppFeature.SEARCH]: 3 },
                 newActiveUsers: 1,
-                newUsers: { [AppFeature.SEARCH]: 1 }
+                newUsers: { [AppFeature.SEARCH]: 1 },
+                newTimes: { [AppFeature.SEARCH]: 3 }
             });
         });
 
@@ -842,7 +922,12 @@ describe("analytics routes", () => {
 
             expect(
                 body.buckets.find((bucket) => bucket.start === "2026-06-02")
-            ).toEqual({ start: "2026-06-02", activeUsers: 1, users: {} });
+            ).toEqual({
+                start: "2026-06-02",
+                activeUsers: 1,
+                users: {},
+                times: {}
+            });
         });
     });
 

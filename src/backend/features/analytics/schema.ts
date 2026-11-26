@@ -7,6 +7,7 @@ import {
     index,
     primaryKey
 } from "drizzle-orm/sqlite-core";
+import { sql } from "drizzle-orm";
 import { LibraryId } from "../library/library-id";
 import { VersionJobKind } from "../version-manager/contract";
 import {
@@ -279,8 +280,16 @@ export const dailyFeatureUsers = sqliteTable(
     {
         day: text("day").notNull(),
         feature: text("feature").notNull().$type<AppFeature>(),
-        userId: text("user_id").notNull()
+        userId: text("user_id").notNull(),
+        /** How many times they used it; null on a row from before times were counted. */
+        times: integer("times")
     },
-    // Feature first, so a feature's first recorded day is an index seek.
-    (t) => [primaryKey({ columns: [t.feature, t.day, t.userId] })]
+    (t) => [
+        // Feature first, so a feature's first recorded day is an index seek.
+        primaryKey({ columns: [t.feature, t.day, t.userId] }),
+        // Holds only the uncounted rows, so finding them skips the rest.
+        index("daily_feature_users_uncounted_idx")
+            .on(t.feature, t.day)
+            .where(sql`${t.times} is null`)
+    ]
 );

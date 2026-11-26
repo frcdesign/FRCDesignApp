@@ -490,7 +490,8 @@ async function getHealthCounts(
     libraryId?: LibraryId
 ): Promise<LibraryHealthCounts>;
 // `feature-reach.ts`: each day's or week's active users and each feature's
-// users among them, all and only the new, and each feature's first recorded use.
+// users and times used among them, all and only the new, each feature's first
+// recorded use, and the day its times are counted from.
 async function getFeatureReach(
     db: Db,
     range: DayRange,
@@ -742,19 +743,28 @@ interface FeatureReachBucket {
     activeUsers: number;
     /** Distinct users of each feature then; a feature nobody used is absent. */
     users: Partial<Record<AppFeature, number>>;
+    /** How many times each feature was used then, over its counted days; a report's counts signed-out reports. */
+    times: Partial<Record<AppFeature, number>>;
     /** Of `activeUsers`, the new; absent while the window reaches back to when tracking began. */
     newActiveUsers?: number;
     /** Of `users`, the new; set whenever `newActiveUsers` is. */
     newUsers?: Partial<Record<AppFeature, number>>;
+    /** Of `times`, the new users'; set whenever `newActiveUsers` is, never for a report. */
+    newTimes?: Partial<Record<AppFeature, number>>;
 }
 
 /** Each day or week of the range, oldest first, and where each feature's record starts. */
 interface FeatureReachOut {
     interval: ReachInterval;
     buckets: FeatureReachBucket[];
-    /** Each feature's first recorded use, all time; absent for one never used. */
+    /** Each feature's first recorded use, all time; absent for one never used. A report's is the first report. */
     firstUsed: Partial<Record<AppFeature, string>>;
+    /** The day after a feature's last uncounted row; absent where every row is counted. */
+    timesSince: Partial<Record<AppFeature, string>>;
 }
+
+// Reports have no new-user split: `daily_report_metrics` names nobody.
+function splitsNewUsers(feature: AppFeature): boolean;
 
 /** The overview's headline numbers, and the series its trends are drawn from. */
 interface OverviewUsageOut {
@@ -920,16 +930,16 @@ interface DashboardEmptyProps {
 ```
 
 `src/frontend/features/dashboard/nudges.ts`, every nudge toward a feature and
-the day it shipped; `feature-reach.ts` turns the route's days or weeks into each
-feature's line and places the nudges on it; `feature-reach-section.tsx` draws
-them
+every release of one, with the day each shipped; `feature-reach.ts` turns the
+route's days or weeks into each feature's line and marks both on it;
+`feature-reach-section.tsx` draws them
 
 ```ts
 const NUDGES: readonly Nudge[];
 
 interface Nudge {
     feature: AppFeature;
-    kind: NudgeKind; // a blue dot, a tip toast, or a suggestion on the feature's page
+    kind: NudgeKind; // a blue dot, a tip toast, a suggestion on the feature's page, or a splash screen card
     /** Which one, labelling its marker in place of its kind. */
     name?: NudgeName;
     change: NudgeChange; // added, or removed
@@ -937,22 +947,41 @@ interface Nudge {
     day?: string;
 }
 
-// Share of active users, or a count of users, per feature.
-function featureMeasure(feature: AppFeature): ReachMeasure;
+const RELEASES: readonly Release[];
+
+interface Release {
+    feature: AppFeature;
+    /** A new way to reach it ("Button"); absent where it created the feature. */
+    name?: ReleaseName;
+    day: string;
+}
+
+// A report's times used. Otherwise a share of active users, or the times used
+// once the range's share reaches TIMES_FROM_SHARE and every point is counted.
+function reachMeasure(out: FeatureReachOut, feature: AppFeature): ReachMeasure;
 // Values per week in that measure, of everybody, the new and the existing;
-// null before the feature's first recorded use, for a share of nobody, or
-// where new users can't be told apart.
+// null before the feature's first recorded use, before its times are counted,
+// for a share of nobody, or where new users can't be told apart.
 function toReachSeries(
     out: FeatureReachOut,
     feature: AppFeature,
     measure?: ReachMeasure
 ): ReachPoint[];
-// A marker per week the feature's nudges changed in, labelled by kind.
-function nudgeMarks(
+// A marker per day or week the feature's releases and nudges fell in.
+function featureMarks(
     feature: AppFeature,
     points: ReachPoint[],
+    interval: ReachInterval,
+    releases?: readonly Release[],
     nudges?: readonly Nudge[]
 ): { bucket: string; label: string }[];
+// Which side of its line each marker's label goes, and how many rows down,
+// so labels that would touch stack. `plotWidth` is the chart's in pixels.
+function placeMarks(
+    marks: { bucket: string; label: string }[],
+    buckets: string[],
+    plotWidth: number
+): PlacedMark[];
 ```
 
 `src/frontend/features/dashboard/metrics.ts`, what each trend tile and chart
@@ -1108,7 +1137,10 @@ no foreign key crosses between them):
   indexed on day and opens (`daily_app_opens_day_opens_idx`), so a range's
   opens sum from the index alone.
 - `daily_feature_users` is keyed by feature, day and user: who used each
-  `AppFeature` that day, as `featuresOf` decides from the event. Feature first,
+  `AppFeature` that day, as `featuresOf` decides from the event, and `times`,
+  how many times they did. `times` is null on a row from before migration
+  `0017_feature_times.sql`, and stays null as that day's events arrive. A
+  partial index, `daily_feature_users_uncounted_idx`, holds only those rows. Feature first,
   so a feature's first recorded day is an index seek. Any kind of event can
   write it: a use by where it started and its flags, a version run, a
   FeatureScript add, a signed-in report, a default configuration. An Auto
@@ -1265,23 +1297,39 @@ page; a library's sections only for the same library. The library, part and
 unused dashboards keep the range picker in the navbar, which the overview
 hides.
 
-**Feature usage** is one small chart per `AppFeature`, each saying under its
-title what counts as a use (`featureDescription`), a point a day over a
-range of 90 days or less after clamping (`REACH_DAILY_DAYS`, `reachInterval`),
-a point a week past it. For each point, the share of its active users who used
-the feature then, on a shared 0–100% axis, or for search, STEP downloads and
-reports the number of people who did, on an axis that fits it
-(`featureMeasure`). Active is `activeUserRows` unioned with the point's
+**Feature usage** is one small chart per `AppFeature` but the default
+configuration, which is recorded and not charted. A chart has a point a day
+over a range of 90 days or less after clamping (`REACH_DAILY_DAYS`,
+`reachInterval`), and a point a week past it. Each chart picks its measure
+from the range (`reachMeasure`):
+
+- for reports, how many were filed, signed out or not, from
+  `daily_report_metrics`, on one line with no new-user split;
+- for any other feature, the share of each point's active users who used it,
+  on a shared 0–100% axis;
+- the times it was used instead, once its share of the range's active users
+  reaches 85% (`TIMES_FROM_SHARE`) and its times are counted over the whole
+  range (`timesSince`). The axis fits the count.
+
+A chart of times reads "uses" for a use, "runs" for the Version Manager and
+"adds" for FeatureScripts. A week is charted only once all its days are
+counted.
+
+Active is `activeUserRows` unioned with the point's
 feature users, so a share never passes 100%. Weeks are Monday to Sunday; the
 first may begin before the range, and only its days inside it count. A
 feature's line starts at its first recorded use, all time, and a point with
 nobody about is left blank. A dashed line marks the day or week each of the
-feature's nudges (`NUDGES`) shipped or was withdrawn; features with a nudge
-come first. A nudge is something pointing people at the feature: a blue dot, a
-tip, or a suggestion on its page. A tip making one part of a feature faster
+feature's releases (`RELEASES`) and nudges (`NUDGES`) shipped, or a nudge was
+withdrawn; features with a nudge come first. A release reads "Created", or the
+new way to reach the feature it shipped ("Button", "Context menu",
+"Preselection"). A nudge added or withdrawn on the day of one of the
+feature's releases came with it, so that marker names the release alone. A nudge is something pointing people at the feature: a blue dot, a
+tip, a suggestion on its page, or a card on the splash screen. A tip making one part of a feature faster
 isn't one. A marker reads its nudge's name where it has one ("Suggested
 links"), else its kind. A nudge still on cert has no day and no marker until
-it reaches `main`. The tooltip gives a share's users and active users beside it.
+it reaches `main`. A label faces the middle of the chart, and one that would
+touch an earlier label drops a row. The tooltip gives a share's users and active users beside it.
 
 Each chart draws two lines, existing and new users. A person is new at a point
 when their first day (`users.created_at`) falls in the `NEW_USER_WEEKS` weeks
@@ -1331,7 +1379,8 @@ is withheld while its baseline reaches back before tracking began.
 - Everybody a rollup names has a record in `users`, dated no later than the
   first day it names them.
 - Every nudge toward a feature is in `NUDGES`, added in the change that ships
-  or withdraws it.
+  it, and its withdrawal where the chart should show one. Every release since tracking began is in `RELEASES`, the
+  same way.
 - An event's columns are decided in `logged-event.ts`; a new column fails to
   compile until each kind of event says what it holds.
 - Values are compared and counted canonically, never by configuration key.
@@ -1393,9 +1442,10 @@ is withheld while its baseline reaches back before tracking began.
   shows a nudge's effect the day it lands, which the owner asked for, though a
   quiet day's share swings. Past 90 days, a week a point keeps the chart
   readable.
-- **Feature usage always splits new from existing users.** Whether a feature
-  reaches newcomers or only the people who were already using the app is
-  what the chart is read for, so there's no view without it.
+- **Feature usage splits new from existing users, but for reports.** Whether a
+  feature reaches newcomers or only the people who were already using the app
+  is what the chart is read for. A report is counted from
+  `daily_report_metrics`, which names nobody, so its one line holds both.
 - **The Version Manager, FeatureScripts and reports are all time.** They're
   used rarely enough that a month of them says little.
 - **New means first seen in the last four weeks, across every rollup.** Four
@@ -1405,10 +1455,21 @@ is withheld while its baseline reaches back before tracking began.
   standalone users included, which allows new users and growth in users over
   time. Working first days out from the rollups on each request reads every
   person's days and holds D1 for seconds.
-- **Some features are counted, not shared.** Nobody should need to report an
-  issue or download a STEP file, so a share of everybody has no target to
-  reach; nearly everybody searches, so its share sits near the top and hides
-  growth. Their charts count the week's users instead.
+- **A chart is a share of users, on a fixed axis.** One 0–100% axis lets
+  every chart's height be compared. A few percent reads low, which is what it
+  is. A count of users is the same measure divided by nothing, so it isn't
+  shown.
+- **Reports are counted, not shared.** A report is an incident, not something
+  to adopt: 2% of a day's users reporting would be alarming, and a share
+  reads it as low.
+- **Past 85% a chart counts times used.** Near everybody, a share hides
+  growth, and how often people use the feature shows it. The switch waits for
+  the range to be counted throughout, so a chart doesn't go blank.
+- **Times used are counted from `0017_feature_times.sql` on.** Rows from
+  before hold `times` null. Filling them means replaying the event log, which
+  outlasts D1's 30-second limit, so it waits until a feature needs it. A
+  partial index holds the null rows, so finding where counting begins skips
+  the rest.
 - **A feature's line starts at its first recorded use.** `daily_feature_users`
   was filled from history once, outside any migration: replaying 2.8 million
   events outlasts D1's 30-second limit. Before a feature's first row nothing tells a week nobody used it
@@ -1420,6 +1481,10 @@ is withheld while its baseline reaches back before tracking began.
 - **A default configuration is not activity.** Saving one places nothing, so
   like a report it writes no library rollup; it counts only toward its
   feature's reach.
+- **Releases are listed in code, dated by production's deploys.** A feature
+  older than tracking has none, since its line could only start after it. A
+  release is dated by the first deploy that carried it, in the reporting
+  day's time zone.
 - **Nudges are listed in code, dated by `main`.** A push to `main` deploys to
   production, so the day a change reached it is the day people first saw the
   nudge. Nothing records that on its own, and a list beside the chart is

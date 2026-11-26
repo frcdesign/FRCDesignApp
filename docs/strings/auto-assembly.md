@@ -130,6 +130,8 @@ itself, "The {length} screw"; automatic, the length it chose.
 | "Couldn't insert the parts."                                                | A step's failure    | Insert failed                                               | **⚑** Was "fasteners"        |
 | "Couldn't fasten the inserted parts."                                       | A step's failure    | Fasten failed                                               |                              |
 | "You don't have permission to edit this assembly."                          | A step's failure    | Onshape answered 403                                        |                              |
+| "Onshape is limiting requests. Try again in {wait}."                        | A step's failure    | Onshape answered 429; `{wait}` is "about 23 hours" and such | **⚑** Was "in a few minutes" |
+| "Onshape is limiting requests. Try again in {wait}."                        | Error callout       | Top of the form, while a 429 holds checks and Insert        | **⚑** New                    |
 | "A fastener's studio has no mate connector to fasten by. Reload its group." | Fasten step failure | A studio's load found no mate connector                     |                              |
 | "The run stopped unexpectedly."                                             | The run's error     | The workflow errored or was terminated without reporting    |                              |
 | "Auto Assembly's parts aren't published yet."                               | Error, insert route | No fasteners loaded                                         |                              |

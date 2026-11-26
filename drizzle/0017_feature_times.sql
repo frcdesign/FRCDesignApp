@@ -1,0 +1,2 @@
+ALTER TABLE `daily_feature_users` ADD `times` integer;--> statement-breakpoint
+CREATE INDEX `daily_feature_users_uncounted_idx` ON `daily_feature_users` (`feature`,`day`) WHERE "daily_feature_users"."times" is null;

@@ -62,7 +62,13 @@ export function fromApiErrorBody(
             kind: kind ?? ApiErrorKind.INTERNAL,
             message: parsed?.message ?? "",
             errorId:
-                typeof parsed?.errorId === "string" ? parsed.errorId : undefined
+                typeof parsed?.errorId === "string"
+                    ? parsed.errorId
+                    : undefined,
+            retryAfterSeconds:
+                typeof parsed?.retryAfterSeconds === "number"
+                    ? parsed.retryAfterSeconds
+                    : undefined
         },
         request
     );

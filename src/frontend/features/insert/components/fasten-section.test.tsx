@@ -29,6 +29,7 @@ import { enumParam } from "../../../../__test_utils__/configuration-fixtures";
 import { FastenMark } from "./fasten-mark";
 import { InsertMenuContent } from "./insert-menu";
 import { FastenSection } from "./fasten-section";
+import { PICK_CHECK_DELAY_MS } from "../../auto-assembly/queries";
 
 vi.mock("../../auth/access-level", async (importOriginal) => ({
     ...(await importOriginal<object>()),
@@ -115,6 +116,9 @@ function renderInMenu(insertable: InsertableOut) {
 function renderBar() {
     return renderWithProviders(<ContextBar isLibrary />, queryClient);
 }
+
+/** Long enough for the picks to settle and the check to be sent. */
+const SETTLED = { timeout: PICK_CHECK_DELAY_MS + 1000 };
 
 const preselection = () => screen.getByRole("button", { name: /Preselection/ });
 
@@ -277,6 +281,33 @@ describe("fasten picks", () => {
             edge("JH2")
         ]);
         expect(preselection().textContent).toContain("2");
+    });
+
+    it("checks the picks one set at a time, the next once the last answers", async () => {
+        let answer: (value: unknown) => void = () => undefined;
+        vi.mocked(apiPost).mockImplementation((path) =>
+            path === "/auto-assembly/check"
+                ? new Promise((resolve) => {
+                      answer = resolve;
+                  })
+                : Promise.resolve({ instanceId: "marker" })
+        );
+        const checks = () =>
+            vi
+                .mocked(apiPost)
+                .mock.calls.filter(([path]) => path === "/auto-assembly/check");
+        renderBar();
+
+        selectInOnshape(edge("JH1"));
+        await waitFor(() => expect(checks()).toHaveLength(1), SETTLED);
+        selectInOnshape(edge("JH2"));
+        await new Promise((resolve) =>
+            setTimeout(resolve, PICK_CHECK_DELAY_MS + 200)
+        );
+        expect(checks()).toHaveLength(1);
+
+        act(() => answer({ problems: [] }));
+        await waitFor(() => expect(checks()).toHaveLength(2), SETTLED);
     });
 
     it("starts selecting from Preselection, keeps the picks on Done and drops them on Cancel", async () => {

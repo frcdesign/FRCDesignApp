@@ -141,8 +141,9 @@ revoked session.
 ### When a thumbnail isn't there yet
 
 How long the app keeps trying in each situation, and what the person sees
-meanwhile and when it gives up. Every call to Onshape gives up after 60 s, and
-a rate limit waits however long Onshape asks.
+meanwhile and when it gives up. Every call to Onshape gives up after 60 s. A
+rate limit waits however long Onshape asks, up to 10 minutes; a longer one
+fails the step at once (see [platform.md](./platform.md#rate-limits)).
 
 **A library loads a document.** Each part's default picture is read from the
 version, or from the document's own workspace when the version has none. A

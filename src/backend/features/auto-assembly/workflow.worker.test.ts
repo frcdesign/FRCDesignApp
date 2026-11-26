@@ -8,7 +8,8 @@ import {
     ASSEMBLY,
     BODY,
     DEFINITION,
-    plateScan
+    plateScan,
+    workspaceElements
 } from "../../../__test_utils__/auto-assembly-fixtures";
 import * as RequestAuth from "../auth/request-auth";
 import * as Assemblies from "../../lib/onshape/endpoints/assemblies";
@@ -74,20 +75,7 @@ beforeEach(async () => {
     vi.spyOn(RequestAuth, "getOnshapeApiFromSessionId").mockResolvedValue(
         {} as OAuthApi
     );
-    vi.spyOn(Documents, "getElements").mockResolvedValue([
-        {
-            id: "topStudio",
-            name: "Top",
-            elementType: "PARTSTUDIO",
-            microversionId: "t1"
-        },
-        {
-            id: "bottomStudio",
-            name: "Bottom",
-            elementType: "PARTSTUDIO",
-            microversionId: "b1"
-        }
-    ] as Awaited<ReturnType<typeof Documents.getElements>>);
+    vi.spyOn(Documents, "getElements").mockResolvedValue(workspaceElements());
     vi.spyOn(PartStudios, "evaluateFeatureScript").mockImplementation(
         (_client, path, script) =>
             Promise.resolve({

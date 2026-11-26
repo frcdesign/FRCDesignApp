@@ -1,15 +1,10 @@
 /** Indexes an assembly's holes: reads it and scans its Part Studios for everything the planner needs. */
 import { createLimiter } from "../../lib/limiter";
 import { type OnshapeApi } from "../../lib/onshape/client";
-import { getAssembly } from "../../lib/onshape/endpoints/assemblies";
-import { getElements } from "../../lib/onshape/endpoints/documents";
 import { type ElementPath } from "../../lib/onshape/path";
-import { OnshapeElementType } from "../../lib/onshape/types";
 import {
     type AssemblyPlane,
-    type ElementMicroversions,
     isFromStudio,
-    isLocal,
     partOccurrences,
     pathKey,
     placedScrew,
@@ -36,6 +31,11 @@ import {
 import { type Selection } from "../configurations/contract";
 import { decodeConfiguration } from "../configurations/utils";
 import { scanStudio, type StudioScan } from "./scan";
+import {
+    type AssemblyRead,
+    assemblyInstances,
+    readAssembly
+} from "./assembly-read";
 import { pickKey } from "./picked";
 import { type Replacement, screwLength, seatEdge, stackParts } from "./replace";
 
@@ -77,27 +77,26 @@ function isFastener(
     );
 }
 
-async function localMicroversions(
-    client: OnshapeApi,
-    assembly: ElementPath,
-    instances: { documentId?: string; documentVersion?: string }[]
-): Promise<ElementMicroversions> {
-    const anyLocal = instances.some(
-        (instance) =>
-            instance.documentVersion === undefined &&
-            instance.documentId === assembly.documentId
-    );
-    if (!anyLocal || assembly.instanceType !== "w") {
-        return new Map();
-    }
-    const elements = await getElements(
-        client,
-        assembly,
-        OnshapeElementType.PART_STUDIO
-    );
-    return new Map(
-        elements.map((element) => [element.id, element.microversionId])
-    );
+/** What an index is for, which decides what it reads. */
+export enum IndexScope {
+    /** Planning: every Part Studio's holes, at the assembly as it is now. */
+    PLAN = "plan",
+    /**
+     * The picks' circular edges alone, as insert and fasten needs them: only
+     * the Part Studios picked in are scanned, at the last assembly read that
+     * has every pick.
+     */
+    PICKS = "picks"
+}
+
+interface IndexRequest {
+    targets: SelectedEntity[];
+    excluded: SelectedEntity[];
+    fasteners: FastenerSet | undefined;
+    replaced: SelectedEntity[];
+    stopFace?: SelectedEntity;
+    flips: Flips;
+    scope: IndexScope;
 }
 
 export async function indexHoles(
@@ -112,23 +111,60 @@ export async function indexHoles(
     replaced: SelectedEntity[] = [],
     /** The planar face to stop at, scanned for its plane. */
     stopFace?: SelectedEntity,
-    flips: Flips = { flipped: [], flipScrews: false }
+    flips: Flips = { flipped: [], flipScrews: false },
+    scope: IndexScope = IndexScope.PLAN
 ): Promise<IndexedHoles> {
-    const definition = await getAssembly(client, assembly, {
-        excludeSuppressed: true
-    });
-    const instances = [
-        ...definition.rootAssembly.instances,
-        ...definition.subAssemblies.flatMap((sub) => sub.instances ?? [])
-    ];
-    const microversions = await localMicroversions(
+    const request: IndexRequest = {
+        targets,
+        excluded,
+        fasteners,
+        replaced,
+        stopFace,
+        flips,
+        scope
+    };
+    const picks = [...targets, ...excluded];
+    const read = await readAssembly(
         client,
+        kv,
         assembly,
-        instances.filter(
-            (instance) =>
-                instance.type === "Part" && isLocal(instance, assembly)
-        )
+        scope === IndexScope.PICKS
+            ? picks.map((pick) => pick.occurrencePath)
+            : undefined
     );
+    const indexed = await indexRead(client, kv, assembly, read, request);
+    // An earlier edit's configuration can lack a picked entity
+    const isResolved = picks.every(
+        (pick) => (indexed.pickEdges[pickKey(pick)] ?? []).length > 0
+    );
+    if (read.isCurrent || isResolved) {
+        return indexed;
+    }
+    return indexRead(
+        client,
+        kv,
+        assembly,
+        await readAssembly(client, kv, assembly),
+        request
+    );
+}
+
+async function indexRead(
+    client: OnshapeApi,
+    kv: KVNamespace,
+    assembly: ElementPath,
+    { definition, microversions }: AssemblyRead,
+    {
+        targets,
+        excluded,
+        fasteners,
+        replaced,
+        stopFace,
+        flips,
+        scope
+    }: IndexRequest
+): Promise<IndexedHoles> {
+    const instances = assemblyInstances(definition);
     const occurrences = partOccurrences(definition, assembly, microversions);
     const byPath = new Map(
         occurrences.map((occurrence) => [pathKey(occurrence.path), occurrence])
@@ -147,7 +183,7 @@ export async function indexHoles(
     );
     const sources = new Map(
         [
-            ...scanned,
+            ...(scope === IndexScope.PLAN ? scanned : []),
             ...byPathValues(byPath, [...targets, ...excluded, ...stopFaces])
         ].map((occurrence) => [occurrence.source.key, occurrence.source])
     );

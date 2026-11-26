@@ -123,13 +123,13 @@ export function updateReferences(
     );
 }
 
-/** A workspace's or version's tabs of one type, each with its microversion: anonymous for a public document. */
+/** A workspace's or version's tabs, of one type or all, each with its microversion: anonymous for a public document. */
 export function getElements(
     client: OnshapeApi,
     instancePath: InstancePath,
-    elementType: OnshapeElementType
+    elementType?: OnshapeElementType
 ): Promise<OnshapeElement[]> {
     return client.get(`/documents${toInstanceApiPath(instancePath)}/elements`, {
-        query: { elementType }
+        query: elementType ? { elementType } : {}
     });
 }

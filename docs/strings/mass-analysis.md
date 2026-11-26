@@ -6,9 +6,10 @@ page's strings are messages in `src/frontend/messages/en.json`, keyed
 
 ## Getting there
 
-| String          | Kind      | Where                  | When                               | Review    |
-| --------------- | --------- | ---------------------- | ---------------------------------- | --------- |
-| "Mass Analysis" | Menu item | Page picker, Utilities | The panel was opened on an element | **⚑** New |
+| String                                                                  | Kind                    | Where                  | When                                   | Review    |
+| ----------------------------------------------------------------------- | ----------------------- | ---------------------- | -------------------------------------- | --------- |
+| "Mass Analysis"                                                         | Menu item               | Page picker, Utilities | The panel was opened on an element     | **⚑** New |
+| "Mass Analysis" / "Visualize the distribution of weight in an assembly" | Card title, description | Splash screen          | Always; see [library.md](./library.md) | **⚑** New |
 
 ## The page
 

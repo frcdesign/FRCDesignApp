@@ -10,6 +10,12 @@ import { useIsSignedIn } from "../auth/access-level";
 import { queryClient } from "../../lib/query-client";
 import { insertLocationQueryKey } from "../../lib/query-keys";
 import { m } from "../../paraglide/messages";
+import {
+    HoldScope,
+    isHeld,
+    unlessHeld,
+    useRateLimitHold
+} from "../../lib/rate-limit-holds";
 
 /** Only an assembly has one; a derive places itself. */
 export function useInsertLocationTarget(): TargetElement | undefined {
@@ -27,6 +33,7 @@ const REFETCH_ON_FOCUS_AFTER_MS = 30 * 1000;
 export function useInsertLocationQuery(target: TargetElement | undefined) {
     // Idle while signed out rather than answering 401.
     const isSignedIn = useIsSignedIn();
+    const hold = useRateLimitHold(HoldScope.INSERT_LOCATION);
     const queryKey = useMemo(() => insertLocationQueryKey(target), [target]);
 
     // TanStack refetches on visibility alone, which clicking from Onshape into the panel never changes
@@ -34,6 +41,7 @@ export function useInsertLocationQuery(target: TargetElement | undefined) {
         const refetchIfOld = () => {
             const state = queryClient.getQueryState(queryKey);
             if (
+                !isHeld(HoldScope.INSERT_LOCATION) &&
                 state?.status === "success" &&
                 Date.now() - state.dataUpdatedAt > REFETCH_ON_FOCUS_AFTER_MS
             ) {
@@ -49,17 +57,20 @@ export function useInsertLocationQuery(target: TargetElement | undefined) {
 
     return useQuery<InsertLocationOut>({
         queryKey,
+        // Held, the last answer stands.
         queryFn:
-            target && isSignedIn
+            target && isSignedIn && !hold
                 ? () =>
-                      apiGet("/insert-location", {
-                          query: {
-                              documentId: target.documentId,
-                              instanceId: target.instanceId,
-                              instanceType: target.instanceType,
-                              elementId: target.elementId
-                          }
-                      })
+                      unlessHeld(HoldScope.INSERT_LOCATION, () =>
+                          apiGet("/insert-location", {
+                              query: {
+                                  documentId: target.documentId,
+                                  instanceId: target.instanceId,
+                                  instanceType: target.instanceType,
+                                  elementId: target.elementId
+                              }
+                          })
+                      )
                 : skipToken,
         refetchInterval: false
     });
@@ -96,9 +107,11 @@ export function useAddInsertLocationMutation(target: TargetElement) {
     return useMutation({
         mutationKey: ["add-insert-location"],
         mutationFn: () =>
-            apiPost<InsertLocationOut>("/insert-location", {
-                body: { targetPath: target }
-            }),
+            unlessHeld(HoldScope.INSERT_LOCATION, () =>
+                apiPost<InsertLocationOut>("/insert-location", {
+                    body: { targetPath: target }
+                })
+            ),
         // The button that added it shows it added
         onSuccess: (result) =>
             queryClient.setQueryData(insertLocationQueryKey(target), result),

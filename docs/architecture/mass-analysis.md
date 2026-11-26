@@ -194,6 +194,7 @@ read again on a refresh.
 
 1. The page picker lists Mass Analysis under Utilities whenever the panel was
    opened on an element, or the page is showing.
+   The splash screen offers it among the utilities.
 2. Outside an assembly the page is a notice saying to open it from one. Signed
    out, it is a notice with a sign-in button.
 3. `/` resumes into it only when the launch names an element, as for Auto

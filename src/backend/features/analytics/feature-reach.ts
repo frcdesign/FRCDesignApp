@@ -3,14 +3,21 @@ import {
     countDistinct,
     eq,
     gte,
+    isNull,
     lte,
+    max,
     min,
     sql,
+    sum,
     type SQL
 } from "drizzle-orm";
 import { type SQLiteColumn } from "drizzle-orm/sqlite-core";
 import { type Db } from "../../db/client";
-import { dailyFeatureUsers, type LoggedEvent } from "./schema";
+import {
+    dailyFeatureUsers,
+    dailyReportMetrics,
+    type LoggedEvent
+} from "./schema";
 import { users } from "../../db/schema";
 import {
     asFeatureAdd,
@@ -109,24 +116,29 @@ function lookbackDays(interval: ReachInterval): number {
 }
 
 /**
- * Distinct users first seen in the new-user window of the bucket starting
- * `start`. Compared at UTC midnight, hours from the reporting day's.
+ * Whether the joined user was first seen in the new-user window of the bucket
+ * starting `start`. Compared at UTC midnight, hours from the reporting day's.
  */
+function isNew(start: SQL<string>, interval: ReachInterval): SQL {
+    const window = `-${lookbackDays(interval)} days`;
+    return sql`${users.createdAt} >= strftime('%s', ${start}, ${window}) * 1000`;
+}
+
+/** Distinct users first seen in the new-user window. */
 function countNew(
     userId: SQLiteColumn | SQL.Aliased<string>,
     start: SQL<string>,
     interval: ReachInterval
 ): SQL<number> {
-    const window = `-${lookbackDays(interval)} days`;
-    return sql<number>`count(distinct case when ${users.createdAt} >= strftime('%s', ${start}, ${window}) * 1000 then ${userId} end)`.mapWith(
+    return sql<number>`count(distinct case when ${isNew(start, interval)} then ${userId} end)`.mapWith(
         Number
     );
 }
 
 /**
- * Each day or week's active users and each feature's users among them, all and
- * only the new. Everybody who used a feature counts as active, so a share
- * never passes 100%.
+ * Each day or week's active users, and each feature's users and times used
+ * among them, all and only the new. Everybody who used a feature counts as
+ * active, so a share never passes 100%.
  */
 export async function getFeatureReach(
     db: Db,
@@ -155,7 +167,16 @@ export async function getFeatureReach(
     const everyoneBucket = bucketOf(everyone.day, interval);
     const featureBucket = bucketOf(dailyFeatureUsers.day, interval);
 
-    const [activeRows, featureRows, firstRows] = await Promise.all([
+    const reportBucket = bucketOf(dailyReportMetrics.day, interval);
+
+    const [
+        activeRows,
+        featureRows,
+        firstRows,
+        reportRows,
+        firstReport,
+        uncountedRows
+    ] = await Promise.all([
         // Left joined: anybody without a record counts as existing.
         db
             .select({
@@ -176,7 +197,13 @@ export async function getFeatureReach(
                     dailyFeatureUsers.userId,
                     featureBucket,
                     interval
-                )
+                ),
+                // Null where none of the rows are counted.
+                times: sum(dailyFeatureUsers.times).mapWith(Number),
+                newTimes:
+                    sql<number>`sum(case when ${isNew(featureBucket, interval)} then ${dailyFeatureUsers.times} end)`.mapWith(
+                        Number
+                    )
             })
             .from(dailyFeatureUsers)
             .leftJoin(users, eq(users.id, dailyFeatureUsers.userId))
@@ -190,6 +217,34 @@ export async function getFeatureReach(
                 day: min(dailyFeatureUsers.day)
             })
             .from(dailyFeatureUsers)
+            .groupBy(dailyFeatureUsers.feature)
+            .all(),
+        db
+            .select({
+                start: reportBucket,
+                times: sum(dailyReportMetrics.count).mapWith(Number)
+            })
+            .from(dailyReportMetrics)
+            .where(
+                and(
+                    gte(dailyReportMetrics.day, range.from),
+                    lte(dailyReportMetrics.day, range.to)
+                )
+            )
+            .groupBy(reportBucket)
+            .all(),
+        db
+            .select({ day: min(dailyReportMetrics.day) })
+            .from(dailyReportMetrics)
+            .get(),
+        // From the partial index, which holds only these rows.
+        db
+            .select({
+                feature: dailyFeatureUsers.feature,
+                day: max(dailyFeatureUsers.day)
+            })
+            .from(dailyFeatureUsers)
+            .where(isNull(dailyFeatureUsers.times))
             .groupBy(dailyFeatureUsers.feature)
             .all()
     ]);
@@ -205,7 +260,8 @@ export async function getFeatureReach(
             start,
             activeUsers: 0,
             users: {},
-            ...(splits ? { newActiveUsers: 0, newUsers: {} } : {})
+            times: {},
+            ...(splits ? { newActiveUsers: 0, newUsers: {}, newTimes: {} } : {})
         });
     }
     for (const row of activeRows) {
@@ -223,14 +279,37 @@ export async function getFeatureReach(
         if (bucket.newUsers && row.newUsers > 0) {
             bucket.newUsers[row.feature] = row.newUsers;
         }
+        if (row.feature === AppFeature.REPORT) continue;
+        if (row.times) bucket.times[row.feature] = row.times;
+        if (bucket.newTimes && row.newTimes) {
+            bucket.newTimes[row.feature] = row.newTimes;
+        }
+    }
+    for (const row of reportRows) {
+        const bucket = byStart.get(row.start);
+        if (bucket && row.times) bucket.times[AppFeature.REPORT] = row.times;
     }
 
     const firstUsed: FeatureReachOut["firstUsed"] = {};
     for (const row of firstRows) {
         if (row.day) firstUsed[row.feature] = row.day;
     }
+    delete firstUsed[AppFeature.REPORT];
+    if (firstReport?.day) firstUsed[AppFeature.REPORT] = firstReport.day;
 
-    return { interval, buckets: [...byStart.values()], firstUsed };
+    const timesSince: FeatureReachOut["timesSince"] = {};
+    for (const row of uncountedRows) {
+        if (row.day && row.feature !== AppFeature.REPORT) {
+            timesSince[row.feature] = addDays(row.day, 1);
+        }
+    }
+
+    return {
+        interval,
+        buckets: [...byStart.values()],
+        firstUsed,
+        timesSince
+    };
 }
 
 /**

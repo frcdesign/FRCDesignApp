@@ -37,6 +37,7 @@ import {
     Part,
     settleChoices
 } from "../options";
+import { PICK_CHECK_DELAY_MS } from "../queries";
 import { useAutoAssemblyStore } from "../store";
 import * as Notifications from "../../../lib/notifications";
 import { useOnshapeLaunch } from "../../../lib/onshape-params";
@@ -128,6 +129,9 @@ beforeEach(() => {
 });
 
 afterEach(() => vi.restoreAllMocks());
+
+/** Long enough for the picks to settle and the check to answer. */
+const SETTLED = { timeout: PICK_CHECK_DELAY_MS + 1000 };
 
 describe("AutoAssemblyPanel", () => {
     it("says so until the library has loaded the fasteners, and shows them at the version its load bumps to", async () => {
@@ -359,10 +363,12 @@ describe("AutoAssemblyPanel", () => {
             }),
             { problems: [], holeSize: "QUARTER_20" }
         );
-        await waitFor(() =>
-            expect(useAutoAssemblyStore.getState().screw.size).toBe(
-                "QUARTER_20"
-            )
+        await waitFor(
+            () =>
+                expect(useAutoAssemblyStore.getState().screw.size).toBe(
+                    "QUARTER_20"
+                ),
+            SETTLED
         );
         expect(toast).toHaveBeenCalledWith("Screw size updated", {
             id: expect.any(String)
@@ -406,18 +412,22 @@ describe("AutoAssemblyPanel", () => {
         };
 
         answer(true);
-        await waitFor(() =>
-            expect(useAutoAssemblyStore.getState().screw.head).toBe("FLAT")
+        await waitFor(
+            () =>
+                expect(useAutoAssemblyStore.getState().screw.head).toBe("FLAT"),
+            SETTLED
         );
         // The size is the screw's already, so only its type changed
         expect(toast).toHaveBeenLastCalledWith("Screw type updated", {
             id: expect.any(String)
         });
         answer(false);
-        await waitFor(() =>
-            expect(useAutoAssemblyStore.getState().screw.head).toBe(
-                studioDefault
-            )
+        await waitFor(
+            () =>
+                expect(useAutoAssemblyStore.getState().screw.head).toBe(
+                    studioDefault
+                ),
+            SETTLED
         );
 
         // Chosen by hand, the head stays whatever the hole
@@ -495,8 +505,12 @@ describe("AutoAssemblyPanel", () => {
                 existingScrew: { size: "NO_8_32", head: "BUTTON" }
             }
         );
-        await waitFor(() =>
-            expect(useAutoAssemblyStore.getState().screw.size).toBe("NO_8_32")
+        await waitFor(
+            () =>
+                expect(useAutoAssemblyStore.getState().screw.size).toBe(
+                    "NO_8_32"
+                ),
+            SETTLED
         );
         expect(useAutoAssemblyStore.getState().screw.head).toBe("SOCKET");
     });

@@ -19,6 +19,8 @@ interface ApiErrorOf<K extends ApiErrorKind> {
     message: string;
     /** Set when the server logged the error; a report quotes it to carry what was logged. */
     errorId?: string;
+    /** Set on a rate limit: Onshape's `Retry-After`, which the client holds off for. */
+    retryAfterSeconds?: number;
 }
 
 export type ApiErrorBody =
@@ -49,6 +51,17 @@ export function handledError(
     status: ContentfulStatusCode
 ): ApiError {
     return new ApiError({ kind: ApiErrorKind.HANDLED, message }, status);
+}
+
+/** Onshape is limiting the caller, for `retryAfterSeconds`; the message says how long. */
+export function rateLimitedError(
+    message: string,
+    retryAfterSeconds: number
+): ApiError {
+    return new ApiError(
+        { kind: ApiErrorKind.HANDLED, message, retryAfterSeconds },
+        HttpStatus.TOO_MANY_REQUESTS
+    );
 }
 
 /** The client will show its own wording; this text is only for the logs. */

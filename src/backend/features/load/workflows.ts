@@ -48,6 +48,7 @@ import { flagFailedLoads } from "./flag";
 import { releaseHold } from "./holds";
 import { loadGroup } from "./load-group";
 import { ONSHAPE_STEP_RETRIES, prefixSteps } from "./steps";
+import { failFastOnLongLimits } from "../../lib/workflow-steps";
 import { ensureWebhook } from "../webhooks/registration";
 
 /**
@@ -80,7 +81,7 @@ export class ReloadLibraryWorkflow extends WorkflowEntrypoint<
             this.env,
             params.libraryId,
             params.sessionId,
-            step
+            failFastOnLongLimits(step)
         );
         // A throw past loadDocument's own handling may have written too.
         let changed = true;

@@ -19,6 +19,7 @@ import { getOnshapeApiFromSessionId } from "../auth/request-auth";
 import { ONSHAPE_STEP_RETRIES } from "../load/steps";
 import { getDb } from "../../db/client";
 import { isRateLimited, isTransient } from "../../lib/onshape/failures";
+import { isLongRateLimit } from "../../lib/workflow-steps";
 import {
     AssemblyJobState,
     AssemblyTaskAction,
@@ -428,7 +429,11 @@ async function runTask<T>(
                 );
             } catch (error) {
                 // Our own errors carry a status too, but say the same thing every time
-                if (!(error instanceof ApiError) && retryable(error)) {
+                if (
+                    !(error instanceof ApiError) &&
+                    retryable(error) &&
+                    !isLongRateLimit(error)
+                ) {
                     console.warn(
                         `Auto Assembly step ${name} will retry`,
                         error

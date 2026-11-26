@@ -458,6 +458,7 @@ In [strings/version-manager.md](../strings/version-manager.md).
 | A linked document is unshared or deleted | The row shows "Missing access" and no name     | Remove the link                                    |
 | The caller cannot write to a child       | The push is refused before it starts           | The child's owner shares write access              |
 | Onshape rate-limits the run              | The step waits its `Retry-After` and resumes   | None needed                                        |
+| Onshape locks the caller out             | The step fails at once, saying how long        | Run it again after the wait                        |
 | Onshape errors or times out on a tab     | The step retries                               | None needed                                        |
 | Onshape refuses a document mid-run       | Its step fails at once; the run goes on        | Details names the step and why; run it again       |
 | A step runs out of retries               | It fails; the run goes on                      | Details names the step and why; run it again       |

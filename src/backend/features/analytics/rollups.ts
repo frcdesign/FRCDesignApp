@@ -119,12 +119,19 @@ function kindWrites(
     ];
 }
 
-/** Idempotent: one row per user per feature per day. */
+/** One row per user per feature per day; an uncounted row stays uncounted. */
 function markFeatureUsed(db: Db, event: LoggedEvent, feature: AppFeature) {
     return db
         .insert(dailyFeatureUsers)
-        .values({ day: event.day, feature, userId: event.userId })
-        .onConflictDoNothing();
+        .values({ day: event.day, feature, userId: event.userId, times: 1 })
+        .onConflictDoUpdate({
+            target: [
+                dailyFeatureUsers.feature,
+                dailyFeatureUsers.day,
+                dailyFeatureUsers.userId
+            ],
+            set: { times: increment(dailyFeatureUsers.times) }
+        });
 }
 
 function countFeatureAdd(db: Db, add: LoggedFeatureAdd) {

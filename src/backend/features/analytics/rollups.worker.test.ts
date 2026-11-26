@@ -289,6 +289,35 @@ describe("rollupWrites", () => {
             );
         });
 
+        it("counts how many times each user used a feature, leaving an uncounted day uncounted", async () => {
+            const today = toDayKey(Date.now());
+            await db.insert(dailyFeatureUsers).values({
+                day: today,
+                feature: AppFeature.FAVORITES,
+                userId: "fan"
+            });
+            for (const userId of ["searcher", "searcher", "fan"]) {
+                const source =
+                    userId === "fan" ? UseSource.FAVORITES : UseSource.SEARCH;
+                await trackInsert(fakeContext(userId), insertEvent({ source }));
+            }
+
+            const rows = await db
+                .select({
+                    feature: dailyFeatureUsers.feature,
+                    times: dailyFeatureUsers.times
+                })
+                .from(dailyFeatureUsers)
+                .all();
+            expect(rows).toEqual(
+                expect.arrayContaining([
+                    { feature: AppFeature.SEARCH, times: 2 },
+                    { feature: AppFeature.FAVORITES, times: null }
+                ])
+            );
+            expect(rows).toHaveLength(2);
+        });
+
         it("doesn't count a default configuration as activity", async () => {
             await trackDefaultSelection(fakeContext(), {
                 libraryId: TEST_LIBRARY_ID,
