@@ -778,6 +778,27 @@
     "autoAssemblyNoDeclaredParts": "No FeatureScript parts to place",
     "autoAssemblyDeclaredParts": "FeatureScript parts",
     "autoAssemblyPartPlaced": "Already placed.",
+    "autoAssemblyAssembleTitle": "Assemble FeatureScript parts",
+    "autoAssemblyFindPartsFailed": "Couldn't find FeatureScript parts",
+    "autoAssemblyNoDeclaredPartsTitle": "No FeatureScript parts",
+    "autoAssemblyNoDeclaredPartsDescription": "Add a feature that declares parts, such as Robot bearing, to a Part Studio in this assembly.",
+    "autoAssemblyFlip": "Flip",
+    "autoAssemblyFlipDescription": "Seat the part on the other side of its hole.",
+    "autoAssemblyAssembleCancel": "Cancel",
+    "autoAssemblyAssemble": [
+        {
+            "declarations": [
+                "input count",
+                "local countPlural = count: plural",
+                "local countFormatted = count: number"
+            ],
+            "selectors": ["countPlural"],
+            "match": {
+                "countPlural=one": "Assemble 1 part",
+                "countPlural=other": "Assemble {countFormatted} parts"
+            }
+        }
+    ],
     "autoAssemblyDeletingCallout": "Deleting screws. You can keep working.",
     "autoAssemblyInsertingCallout": "Inserting parts. You can keep working.",
     "autoAssemblyFasteningCallout": "Fastening parts. You can keep working.",

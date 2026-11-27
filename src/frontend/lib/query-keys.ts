@@ -179,6 +179,10 @@ export function assemblyJobQueryKey(assembly: ElementPath | undefined) {
     return ["assembly-job", assembly && assemblyKey(assembly)];
 }
 
+export function declaredPartsQueryKey(assembly: ElementPath) {
+    return ["declared-parts", assemblyKey(assembly)];
+}
+
 /** Not library-scoped: FeatureScripts are their own area. */
 export function featureScriptsVersionQueryKey() {
     return ["featurescripts", "version"];

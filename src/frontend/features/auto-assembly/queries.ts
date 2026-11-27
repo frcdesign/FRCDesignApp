@@ -11,6 +11,8 @@ import { useMemo } from "react";
 import {
     type AssemblyJobStatus,
     type AutoAssemblyIn,
+    type DeclaredCheckIn,
+    type DeclaredCheckOut,
     type DeclaredPartsIn,
     type ExistingScrew,
     type PickCheckIn,
@@ -28,6 +30,7 @@ import { getAppErrorHandler } from "../../lib/errors";
 import { queryClient } from "../../lib/query-client";
 import {
     assemblyJobQueryKey,
+    declaredPartsQueryKey,
     fastenerSetQueryKey,
     pickCheckQueryKey,
     pickChecksQueryKey,
@@ -128,14 +131,33 @@ export function useInsertMutation(assembly: ElementPath) {
     });
 }
 
-/** Starts a run placing every part the assembly's FeatureScripts declared. */
+/** The parts the assembly's FeatureScripts declared, found afresh each time the dialog opens. */
+export function useDeclaredPartsQuery(assembly: ElementPath) {
+    const hold = useRateLimitHold(HoldScope.AUTO_ASSEMBLY);
+    return useQuery<DeclaredCheckOut>({
+        queryKey: declaredPartsQueryKey(assembly),
+        queryFn: hold
+            ? skipToken
+            : () =>
+                  unlessHeld(HoldScope.AUTO_ASSEMBLY, () =>
+                      apiPost("/auto-assembly/declared/check", {
+                          body: { assembly } satisfies DeclaredCheckIn
+                      })
+                  ),
+        staleTime: 0,
+        gcTime: 0,
+        retry: false
+    });
+}
+
+/** Starts a run placing the parts chosen of those the assembly's FeatureScripts declared. */
 export function useAssembleDeclaredMutation(assembly: ElementPath) {
     return useMutation({
         mutationKey: ["auto-assembly-declared", assembly],
-        mutationFn: () =>
+        mutationFn: (choices: Omit<DeclaredPartsIn, "assembly">) =>
             unlessHeld(HoldScope.AUTO_ASSEMBLY, () =>
                 apiPost<AssemblyJobStatus>("/auto-assembly/declared", {
-                    body: { assembly } satisfies DeclaredPartsIn
+                    body: { assembly, ...choices } satisfies DeclaredPartsIn
                 })
             ),
         onSuccess: (status) =>

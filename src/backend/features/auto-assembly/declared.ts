@@ -11,6 +11,7 @@ import { ElementType } from "../../lib/onshape/element-type";
 import { PartType } from "../../lib/onshape/endpoints/documents";
 import {
     fastenMate,
+    fastenMateToCircularEdge,
     partStudioMateConnectorQuery
 } from "../../lib/onshape/objects/assembly-features";
 import { type LibraryId } from "../library/library-id";
@@ -31,6 +32,7 @@ import {
     coordinateTransform,
     LINEAR_TOLERANCE,
     norm,
+    scale,
     subtract,
     transformDirection,
     transformPoint,
@@ -51,6 +53,8 @@ export interface AssemblyConnector {
     origin: Vec3;
     xAxis: Vec3;
     zAxis: Vec3;
+    /** The far side of its hole, in the assembly. */
+    flip?: { edgeId: string; origin: Vec3 };
     declaration: Declaration;
 }
 
@@ -75,6 +79,17 @@ export function assemblyConnectors(
                     occurrence.transform,
                     connector.zAxis
                 ),
+                ...(connector.flip
+                    ? {
+                          flip: {
+                              edgeId: connector.flip.edgeId,
+                              origin: transformPoint(
+                                  occurrence.transform,
+                                  connector.flip.origin
+                              )
+                          }
+                      }
+                    : {}),
                 declaration: connector.declaration
             }))
     );
@@ -171,6 +186,8 @@ export interface DeclaredPlan {
     connector: AssemblyConnector;
     status: DeclaredPartStatus;
     reason?: string;
+    /** Seated on the far side of its hole. */
+    isFlipped?: boolean;
     product?: DeclaredProduct;
     /** The Part Studio's overrides, as inserted. */
     configuration?: Selection;
@@ -193,21 +210,30 @@ function isOffered(
     });
 }
 
-/** A part of the product with its origin on the connector, as a run inserts it. */
+/** A part of the product with its origin on either side of the connector's hole, as a run inserts it. */
 function isPlaced(
     connector: AssemblyConnector,
     occurrences: PartOccurrence[]
 ): boolean {
-    return occurrences.some(
-        (occurrence) =>
-            productKey(occurrence) === productKey(connector.declaration) &&
-            norm(
-                subtract(
-                    transformPoint(occurrence.transform, [0, 0, 0]),
-                    connector.origin
-                )
-            ) < LINEAR_TOLERANCE
-    );
+    const seats = [
+        connector.origin,
+        ...(connector.flip ? [connector.flip.origin] : [])
+    ];
+    return occurrences.some((occurrence) => {
+        if (productKey(occurrence) !== productKey(connector.declaration)) {
+            return false;
+        }
+        const origin = transformPoint(occurrence.transform, [0, 0, 0]);
+        return seats.some(
+            (seat) => norm(subtract(origin, seat)) < LINEAR_TOLERANCE
+        );
+    });
+}
+
+/** Which parts a run places, and which flipped; every part, none flipped, by default. */
+export interface DeclaredChoices {
+    parts?: string[];
+    flipped?: string[];
 }
 
 /** Why a declaration can't be placed; undefined when it can. */
@@ -244,10 +270,16 @@ export const MAX_DECLARED_PARTS = 200;
 export function planDeclared(
     connectors: AssemblyConnector[],
     products: Map<string, DeclaredProduct>,
-    occurrences: PartOccurrence[]
+    occurrences: PartOccurrence[],
+    choices: DeclaredChoices = {}
 ): DeclaredPlan[] {
+    const chosen = choices.parts && new Set(choices.parts);
+    const flipped = new Set(choices.flipped ?? []);
     let ready = 0;
-    return connectors.map((connector): DeclaredPlan => {
+    const planned = chosen
+        ? connectors.filter((connector) => chosen.has(connector.key))
+        : connectors;
+    return planned.map((connector): DeclaredPlan => {
         const { declaration } = connector;
         const product = products.get(productKey(declaration));
         const reason = unplaceable(declaration, product);
@@ -271,6 +303,9 @@ export function planDeclared(
         return {
             connector,
             status: DeclaredPartStatus.READY,
+            ...(flipped.has(connector.key) && connector.flip
+                ? { isFlipped: true }
+                : {}),
             product,
             configuration: partStudioInsertOverrides(
                 toSelection(declaration.configuration, product.parameters),
@@ -287,7 +322,9 @@ export function declaredPart(plan: DeclaredPlan): DeclaredPart {
         name: plan.connector.declaration.name,
         status: plan.status,
         ...(plan.reason ? { reason: plan.reason } : {}),
-        hostPath: plan.connector.hostPath
+        hostPath: plan.connector.hostPath,
+        canFlip: plan.connector.flip !== undefined,
+        ...(plan.isFlipped ? { isFlipped: true } : {})
     };
 }
 
@@ -312,23 +349,42 @@ export function declaredInsertGroups(
                         includePartTypes: [PartType.PARTS]
                     }
                 ],
-                transform: coordinateTransform(
-                    connector.origin,
-                    connector.xAxis,
-                    connector.zAxis
-                )
+                transform:
+                    plan.isFlipped && connector.flip
+                        ? coordinateTransform(
+                              connector.flip.origin,
+                              connector.xAxis,
+                              scale(connector.zAxis, -1)
+                          )
+                        : coordinateTransform(
+                              connector.origin,
+                              connector.xAxis,
+                              connector.zAxis
+                          )
             }
         ];
     });
 }
 
-/** The fasten mate holding an inserted part on its connector; the host second, so it stays put. */
+/**
+ * The fasten mate holding an inserted part on its connector, the host second
+ * so it stays put. A flipped part is fastened to the far rim's implicit
+ * connector, which points out of the far face.
+ */
 export function declaredMate(plan: DeclaredPlan, path: string[]): object {
-    return fastenMate(plan.connector.declaration.name, [
-        partStudioMateConnectorQuery(plan.product?.mateConnectorId ?? "", path),
-        partStudioMateConnectorQuery(
-            plan.connector.connectorId,
-            plan.connector.hostPath
-        )
+    const { connector } = plan;
+    const own = partStudioMateConnectorQuery(
+        plan.product?.mateConnectorId ?? "",
+        path
+    );
+    if (plan.isFlipped && connector.flip) {
+        return fastenMateToCircularEdge(connector.declaration.name, own, {
+            deterministicId: connector.flip.edgeId,
+            path: connector.hostPath
+        });
+    }
+    return fastenMate(connector.declaration.name, [
+        own,
+        partStudioMateConnectorQuery(connector.connectorId, connector.hostPath)
     ]);
 }

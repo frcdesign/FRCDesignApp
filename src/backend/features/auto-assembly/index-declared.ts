@@ -7,6 +7,7 @@ import { partOccurrences } from "./assembly";
 import { readAssembly } from "./assembly-read";
 import {
     assemblyConnectors,
+    type DeclaredChoices,
     type DeclaredPlan,
     findProducts,
     planDeclared
@@ -20,7 +21,8 @@ export async function indexDeclared(
     client: OnshapeApi,
     kv: KVNamespace,
     db: Db,
-    assembly: ElementPath
+    assembly: ElementPath,
+    choices: DeclaredChoices = {}
 ): Promise<DeclaredPlan[]> {
     const { definition, microversions } = await readAssembly(
         client,
@@ -51,5 +53,5 @@ export async function indexDeclared(
         db,
         connectors.map((connector) => connector.declaration)
     );
-    return planDeclared(connectors, products, occurrences);
+    return planDeclared(connectors, products, occurrences, choices);
 }

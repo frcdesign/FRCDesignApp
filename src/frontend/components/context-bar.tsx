@@ -11,10 +11,8 @@ import {
 import { AssemblyJobState } from "@backend/features/auto-assembly/contract";
 import { type ElementPath } from "@backend/lib/onshape/path";
 import { useIsSignedIn } from "../features/auth/access-level";
-import {
-    useAssembleDeclaredMutation,
-    useAssemblyJobQuery
-} from "../features/auto-assembly/queries";
+import { openAssembleDialog } from "../features/auto-assembly/open-assemble-dialog";
+import { useAssemblyJobQuery } from "../features/auto-assembly/queries";
 import { EditPartsPicker } from "../features/edit-parts/components/edit-parts-picker";
 import {
     EDIT_PARTS_LIST,
@@ -239,7 +237,6 @@ interface AutoAssemblyActionsProps {
 /** Auto Assembly's runs that act on the whole assembly. */
 function AutoAssemblyActions(props: AutoAssemblyActionsProps): ReactNode {
     const { assembly } = props;
-    const assembleMutation = useAssembleDeclaredMutation(assembly);
     const { data: job } = useAssemblyJobQuery(assembly);
     const isRunning = job?.state === AssemblyJobState.RUNNING;
     return (
@@ -248,9 +245,8 @@ function AutoAssemblyActions(props: AutoAssemblyActionsProps): ReactNode {
                 size="compact-sm"
                 variant="light"
                 leftSection={<PuzzlePieceIcon />}
-                loading={assembleMutation.isPending}
                 disabled={isRunning}
-                onClick={() => assembleMutation.mutate()}
+                onClick={() => openAssembleDialog(assembly)}
             >
                 {m.contextBarAssembleFeatureScriptParts()}
             </Button>

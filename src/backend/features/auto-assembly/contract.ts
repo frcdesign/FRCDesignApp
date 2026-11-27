@@ -185,9 +185,22 @@ export interface PlannedHole {
     nutWasher?: PartChoice;
 }
 
-/** Places the parts FeatureScripts in the assembly declared: every one, nothing picked. */
+/** Places the parts FeatureScripts in the assembly declared. */
 export interface DeclaredPartsIn {
     assembly: ElementPath;
+    /** The parts to place, by key; every one when absent. */
+    parts?: string[];
+    /** Parts seated on the far side of their hole, facing the other way. */
+    flipped?: string[];
+}
+
+/** Which parts the assembly's FeatureScripts declared, as a run would find them. */
+export interface DeclaredCheckIn {
+    assembly: ElementPath;
+}
+
+export interface DeclaredCheckOut {
+    parts: DeclaredPart[];
 }
 
 /** What a run does: fasten picked holes, or place declared parts. Absent on a status means fasteners. */
@@ -215,6 +228,10 @@ export interface DeclaredPart {
     reason?: string;
     /** The part it attaches to. */
     hostPath: string[];
+    /** Whether it can be flipped: its hole has a far side. */
+    canFlip: boolean;
+    /** Seated on the far side of its hole. */
+    isFlipped?: boolean;
     /** Its occurrence path in the assembly, once inserted. */
     path?: string[];
     /** Whether it's mated on its connector. */

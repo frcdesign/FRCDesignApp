@@ -15,6 +15,7 @@ import {
     AssemblyRunKind,
     FastenerMode,
     type AssemblyJobStatus,
+    type DeclaredCheckOut,
     pendingTasks,
     type PickCheckOut,
     SelectedEntityType,
@@ -23,6 +24,8 @@ import {
 } from "./contract";
 import { getFastenerSet } from "./fastener-set";
 import { getJobStatus, reportJob } from "./jobs";
+import { declaredPart, MAX_DECLARED_PARTS } from "./declared";
+import { indexDeclared } from "./index-declared";
 import { IndexScope, indexHoles } from "./index-holes";
 import { planHoles } from "./planner";
 import { pickedHole, pickProblems } from "./check";
@@ -312,14 +315,48 @@ autoAssemblyRoutes.post(
     }
 );
 
+const declaredKeys = z
+    .array(z.string().min(1).max(512))
+    .max(MAX_DECLARED_PARTS);
+
 /**
- * POST /api/auto-assembly/declared — starts a run placing every part the
- * assembly's FeatureScripts declared.
+ * POST /api/auto-assembly/declared/check — the parts the assembly's
+ * FeatureScripts declared, as a run would find them, for the person to choose
+ * from before starting one.
+ */
+autoAssemblyRoutes.post(
+    "/auto-assembly/declared/check",
+    requireSignInMiddleware,
+    validate("json", z.object({ assembly: assemblySchema })),
+    async (c) => {
+        const { assembly } = c.req.valid("json");
+        const plans = await indexDeclared(
+            await c.var.getOnshapeApi(),
+            c.env.KV,
+            getDb(c.env.DB),
+            assembly
+        );
+        return c.json({
+            parts: plans.map(declaredPart)
+        } satisfies DeclaredCheckOut);
+    }
+);
+
+/**
+ * POST /api/auto-assembly/declared — starts a run placing the parts chosen of
+ * those the assembly's FeatureScripts declared, every one by default.
  */
 autoAssemblyRoutes.post(
     "/auto-assembly/declared",
     requireSignInMiddleware,
-    validate("json", z.object({ assembly: assemblySchema })),
+    validate(
+        "json",
+        z.object({
+            assembly: assemblySchema,
+            parts: declaredKeys.optional(),
+            flipped: declaredKeys.default([])
+        })
+    ),
     async (c) => {
         const request = c.req.valid("json");
         await refuseWhileRunning(c.env, request.assembly);

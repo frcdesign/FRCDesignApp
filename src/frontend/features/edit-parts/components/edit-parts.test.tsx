@@ -28,10 +28,14 @@ import { useAutoAssemblyStore } from "../../auto-assembly/store";
 import { setEditParts, useEditPicks } from "../edit-picks";
 import { ContextBar } from "../../../components/context-bar";
 import { openEditMenu } from "../open-edit-menu";
+import { openAssembleDialog } from "../../auto-assembly/open-assemble-dialog";
 import { EditMenuContent } from "./edit-menu";
 
 vi.mock("../../auth/access-level", () => ({ useIsSignedIn: () => true }));
 vi.mock("../open-edit-menu", () => ({ openEditMenu: vi.fn() }));
+vi.mock("../../auto-assembly/open-assemble-dialog", () => ({
+    openAssembleDialog: vi.fn()
+}));
 const { navigateToTab } = vi.hoisted(() => ({ navigateToTab: vi.fn() }));
 vi.mock("../../../lib/tabs", () => ({ useNavigateToTab: () => navigateToTab }));
 vi.mock("../../../lib/api-client", () => ({
@@ -172,7 +176,7 @@ describe("edit parts", () => {
         expect(screen.queryByText("Part to edit")).toBeNull();
     });
 
-    it("has Auto Assembly's page assemble FeatureScript parts in place of the library's actions", async () => {
+    it("has Auto Assembly's page open the FeatureScript parts dialog in place of the library's actions", async () => {
         renderWithProviders(
             <ContextBar isLibrary={false} isAutoAssembly />,
             queryClient
@@ -182,15 +186,13 @@ describe("edit parts", () => {
         await userEvent.click(
             screen.getByRole("button", { name: "Assemble FeatureScript parts" })
         );
-        expect(apiPost).toHaveBeenCalledWith("/auto-assembly/declared", {
-            body: {
-                assembly: expect.objectContaining({
-                    documentId: "doc",
-                    instanceId: "ws",
-                    elementId: "asm"
-                })
-            }
-        });
+        expect(openAssembleDialog).toHaveBeenCalledWith(
+            expect.objectContaining({
+                documentId: "doc",
+                instanceId: "ws",
+                elementId: "asm"
+            })
+        );
     });
 
     it("updates a library screw in Auto Assembly", async () => {

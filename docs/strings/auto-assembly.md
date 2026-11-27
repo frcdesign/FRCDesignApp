@@ -76,24 +76,32 @@ name, and the page shows them as they come.
 
 ## FeatureScript parts
 
-| String                                                   | Kind             | Where                              | When                                            | Review    |
-| -------------------------------------------------------- | ---------------- | ---------------------------------- | ----------------------------------------------- | --------- |
-| "Assemble FeatureScript parts"                           | Button           | The context bar under the header   | Auto Assembly's page, in an assembly, signed in | **⚑** New |
-| "Finding parts..."                                       | Status           | Details title                      | Find parts is going                             | **⚑** New |
-| "Finding parts. You can keep working."                   | Callout          | Above the form                     | Find parts is going                             | **⚑** New |
-| "Find parts"                                             | Step name        | Details                            | A declared-parts run                            | **⚑** New |
-| "FeatureScript parts"                                    | Group label      | Details, the parts' steps          | The run found declared parts                    | **⚑** New |
-| "{name}"                                                 | Step name        | Details, under FeatureScript parts | Each part, as its FeatureScript names it        | **⚑** New |
-| "Already placed."                                        | Step note        | Under a part's step                | The part is already on its connector            | **⚑** New |
-| "No FeatureScript parts to place"                        | Headline         | Callout, toast, details title      | Finished with nothing to insert                 | **⚑** New |
-| "{n} part(s) can't be placed."                           | Step warning     | Under Find parts, in Details       | A part is unplaceable                           | **⚑** New |
-| "FRCDesign's library doesn't have this part."            | Step error       | Under a part's step                | No loaded insertable is its tab                 | **⚑** New |
-| "Only Part Studios can be placed."                       | Step error       | Under a part's step                | Its tab is an assembly                          | **⚑** New |
-| "This part has no mate connector."                       | Step error       | Under a part's step                | Its load found none                             | **⚑** New |
-| "This part's configuration isn't in the library."        | Step error       | Under a part's step                | Its studio doesn't offer the declared options   | **⚑** New |
-| "Screws of automatic length aren't placed yet."          | Step error       | Under a part's step                | Robot bearing's screws, with Automatic length   | **⚑** New |
-| "Too many parts for one run. Run it again for the rest." | Step error       | Under a part's step                | Past 200 parts                                  | **⚑** New |
-| "Couldn't find the assembly's FeatureScript parts."      | A step's failure | Details notice                     | Find parts failed                               | **⚑** New |
+| String                                                                                                                    | Kind                      | Where                              | When                                            | Review    |
+| ------------------------------------------------------------------------------------------------------------------------- | ------------------------- | ---------------------------------- | ----------------------------------------------- | --------- |
+| "Assemble FeatureScript parts"                                                                                            | Button                    | The context bar under the header   | Auto Assembly's page, in an assembly, signed in | **⚑** New |
+| "Assemble FeatureScript parts"                                                                                            | Dialog title              | Over the panel                     | The button is clicked                           | **⚑** New |
+| "Finding parts..."                                                                                                        | Loading                   | The dialog                         | The parts are found                             | **⚑** New |
+| "Couldn't find FeatureScript parts"                                                                                       | Error                     | The dialog                         | Finding them failed                             | **⚑** New |
+| "No FeatureScript parts" / "Add a feature that declares parts, such as Robot bearing, to a Part Studio in this assembly." | Notice title, description | The dialog                         | The assembly has none                           | **⚑** New |
+| "{name}"                                                                                                                  | Checkbox                  | The dialog, a row per part         | Ticked while it's ready and chosen              | **⚑** New |
+| "Flip"                                                                                                                    | Checkbox                  | Beside a ready part                | Its hole has a far side                         | **⚑** New |
+| "Seat the part on the other side of its hole."                                                                            | Tooltip                   | Over Flip                          | Hovered                                         | **⚑** New |
+| "Cancel" / "Assemble {n} part(s)"                                                                                         | Buttons                   | The dialog's footer                | Parts found; Assemble disabled with none ticked | **⚑** New |
+| "Finding parts..."                                                                                                        | Status                    | Details title                      | Find parts is going                             | **⚑** New |
+| "Finding parts. You can keep working."                                                                                    | Callout                   | Above the form                     | Find parts is going                             | **⚑** New |
+| "Find parts"                                                                                                              | Step name                 | Details                            | A declared-parts run                            | **⚑** New |
+| "FeatureScript parts"                                                                                                     | Group label               | Details, the parts' steps          | The run found declared parts                    | **⚑** New |
+| "{name}"                                                                                                                  | Step name                 | Details, under FeatureScript parts | Each part, as its FeatureScript names it        | **⚑** New |
+| "Already placed."                                                                                                         | Step note                 | Under a part's step                | The part is already on its connector            | **⚑** New |
+| "No FeatureScript parts to place"                                                                                         | Headline                  | Callout, toast, details title      | Finished with nothing to insert                 | **⚑** New |
+| "{n} part(s) can't be placed."                                                                                            | Step warning              | Under Find parts, in Details       | A part is unplaceable                           | **⚑** New |
+| "FRCDesign's library doesn't have this part."                                                                             | Step error                | Under a part's step                | No loaded insertable is its tab                 | **⚑** New |
+| "Only Part Studios can be placed."                                                                                        | Step error                | Under a part's step                | Its tab is an assembly                          | **⚑** New |
+| "This part has no mate connector."                                                                                        | Step error                | Under a part's step                | Its load found none                             | **⚑** New |
+| "This part's configuration isn't in the library."                                                                         | Step error                | Under a part's step                | Its studio doesn't offer the declared options   | **⚑** New |
+| "Screws of automatic length aren't placed yet."                                                                           | Step error                | Under a part's step                | Robot bearing's screws, with Automatic length   | **⚑** New |
+| "Too many parts for one run. Run it again for the rest."                                                                  | Step error                | Under a part's step                | Past 200 parts                                  | **⚑** New |
+| "Couldn't find the assembly's FeatureScript parts."                                                                       | A step's failure          | Details notice                     | Find parts failed                               | **⚑** New |
 
 ## A pick's problem
 

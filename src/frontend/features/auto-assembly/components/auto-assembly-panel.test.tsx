@@ -45,6 +45,7 @@ import * as Notifications from "../../../lib/notifications";
 import { useOnshapeLaunch } from "../../../lib/onshape-params";
 import { AutoAssemblyPanel } from "./auto-assembly-panel";
 import { JobDetails, JobDetailsTitle } from "./job-details";
+import { AssembleDialog } from "./assemble-dialog";
 import { AutoAssemblyCallout } from "./auto-assembly-callout";
 import { UtilityTab } from "../../../lib/app-tab";
 import {
@@ -707,6 +708,66 @@ describe("AutoAssemblyCallout", () => {
         expect(
             screen.queryByText(/also available via Auto Assembly/)
         ).toBeNull();
+    });
+});
+
+describe("AssembleDialog", () => {
+    const part = (key: string, status: DeclaredPartStatus, more = {}) => ({
+        key,
+        name: `Part ${key}`,
+        status,
+        hostPath: ["plate"],
+        canFlip: false,
+        ...more
+    });
+    const answer = (parts: object[]) =>
+        vi
+            .mocked(apiPost)
+            .mockImplementation((path) =>
+                Promise.resolve(
+                    path === "/auto-assembly/declared/check"
+                        ? { parts }
+                        : { state: AssemblyJobState.RUNNING, tasks: [] }
+                )
+            );
+
+    it("says so when the assembly has no FeatureScript parts", async () => {
+        answer([]);
+        renderWithProviders(<AssembleDialog assembly={ASSEMBLY} />);
+        expect(await screen.findByText("No FeatureScript parts")).toBeTruthy();
+        expect(screen.queryByRole("button", { name: /Assemble/ })).toBeNull();
+    });
+
+    it("assembles the parts left ticked, flipping those asked, and only those that can be", async () => {
+        answer([
+            part("a", DeclaredPartStatus.READY, { canFlip: true }),
+            part("b", DeclaredPartStatus.READY),
+            part("c", DeclaredPartStatus.PLACED),
+            part("d", DeclaredPartStatus.UNPLACEABLE, {
+                reason: "FRCDesign's library doesn't have this part."
+            })
+        ]);
+        renderWithProviders(<AssembleDialog assembly={ASSEMBLY} />);
+
+        expect(await screen.findByText("Already placed.")).toBeTruthy();
+        expect(
+            screen.getByText("FRCDesign's library doesn't have this part.")
+        ).toBeTruthy();
+        expect(screen.getByLabelText("Part c")).toHaveProperty(
+            "disabled",
+            true
+        );
+        // Only the part whose hole has a far side can flip
+        expect(screen.getAllByLabelText("Flip")).toHaveLength(1);
+
+        await userEvent.click(screen.getByLabelText("Flip"));
+        await userEvent.click(screen.getByLabelText("Part b"));
+        await userEvent.click(
+            screen.getByRole("button", { name: "Assemble 1 part" })
+        );
+        expect(apiPost).toHaveBeenCalledWith("/auto-assembly/declared", {
+            body: { assembly: ASSEMBLY, parts: ["a"], flipped: ["a"] }
+        });
     });
 });
 

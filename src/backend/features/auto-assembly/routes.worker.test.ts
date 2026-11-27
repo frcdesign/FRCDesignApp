@@ -13,6 +13,7 @@ import { Program } from "./catalog";
 import {
     AssemblyJobState,
     AssemblyRunKind,
+    DeclaredPartStatus,
     AssemblyTaskAction,
     AssemblyTaskState,
     HoleStatus,
@@ -25,6 +26,7 @@ import {
 } from "./contract";
 import { reportJob } from "./jobs";
 import * as IndexHoles from "./index-holes";
+import * as IndexDeclared from "./index-declared";
 
 const app = createTestApp();
 
@@ -231,6 +233,49 @@ describe("POST /api/auto-assembly/insert", () => {
     });
 });
 
+describe("POST /api/auto-assembly/declared/check", () => {
+    it("answers the parts a run would find, each with whether it can flip", async () => {
+        vi.spyOn(IndexDeclared, "indexDeclared").mockResolvedValue([
+            {
+                connector: {
+                    key: "top|Fa.place.mateConnector",
+                    hostPath: ["top"],
+                    connectorId: "Fa.place.mateConnector",
+                    origin: [0, 0, 0],
+                    xAxis: [1, 0, 0],
+                    zAxis: [0, 0, 1],
+                    flip: { edgeId: "rim", origin: [0, 0, -0.01] },
+                    declaration: {
+                        version: 1,
+                        kind: "BEARING",
+                        documentId: "lib",
+                        elementId: "bearings",
+                        configuration: {},
+                        name: "Bearing",
+                        connector: "mateConnector",
+                        spec: {}
+                    }
+                },
+                status: DeclaredPartStatus.READY
+            }
+        ]);
+        const res = await post("/auto-assembly/declared/check", {
+            assembly: ASSEMBLY
+        });
+        expect(await res.json()).toEqual({
+            parts: [
+                {
+                    key: "top|Fa.place.mateConnector",
+                    name: "Bearing",
+                    status: DeclaredPartStatus.READY,
+                    hostPath: ["top"],
+                    canFlip: true
+                }
+            ]
+        });
+    });
+});
+
 describe("POST /api/auto-assembly/declared", () => {
     it("starts a declared-parts run, with no fasteners loaded", async () => {
         const create = vi
@@ -238,12 +283,18 @@ describe("POST /api/auto-assembly/declared", () => {
             .mockResolvedValue({ id: "run-1" } as WorkflowInstance);
 
         const res = await post("/auto-assembly/declared", {
-            assembly: ASSEMBLY
+            assembly: ASSEMBLY,
+            parts: ["top|Fa.place.mateConnector"],
+            flipped: ["top|Fa.place.mateConnector"]
         });
         expect(res.status).toBe(200);
         expect(create.mock.calls[0][0]?.params).toMatchObject({
             kind: AssemblyRunKind.DECLARED_PARTS,
-            request: { assembly: ASSEMBLY }
+            request: {
+                assembly: ASSEMBLY,
+                parts: ["top|Fa.place.mateConnector"],
+                flipped: ["top|Fa.place.mateConnector"]
+            }
         });
         expect((await res.json<AssemblyJobStatus>()).kind).toBe(
             AssemblyRunKind.DECLARED_PARTS

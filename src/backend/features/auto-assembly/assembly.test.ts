@@ -355,6 +355,39 @@ describe("declared parts", () => {
         ]);
     });
 
+    it("flips a part to the far rim of its hole, and places only the parts chosen", () => {
+        const flippable = assemblyConnectors(
+            occurrences,
+            new Map([
+                [
+                    plate?.source.key ?? "",
+                    [
+                        {
+                            ...connector,
+                            flip: { edgeId: "farRim", origin: [0, 0, -0.25] }
+                        },
+                        { ...connector, connectorId: "Fother.mateConnector" }
+                    ]
+                ]
+            ])
+        );
+        const plans = planDeclared(flippable, products, occurrences, {
+            parts: [flippable[0].key],
+            flipped: [flippable[0].key]
+        });
+        expect(plans).toHaveLength(1);
+        const [plan] = plans;
+        expect(plan.isFlipped).toBe(true);
+        const [group] = declaredInsertGroups([plan]);
+        // On the far rim, its Z turned back into the hole; `+ 0` makes -0 0
+        expect(group.transform.slice(0, 12).map((each) => each + 0)).toEqual([
+            1, 0, 0, 0, 0, -1, 0, 0, 0, 0, -1, 0.75
+        ]);
+        const mate = JSON.stringify(declaredMate(plan, ["new"]));
+        expect(mate).toContain('"deterministicIds":["farRim"]');
+        expect(mate).toContain('"featureId":"Fset.mateConnector"');
+    });
+
     it("leaves a connector whose part is already on it", () => {
         const placed = [
             ...occurrences,

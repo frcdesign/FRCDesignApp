@@ -527,7 +527,8 @@ async function indexDeclared(
     client: OnshapeApi,
     kv: KVNamespace,
     db: Db,
-    assembly: ElementPath
+    assembly: ElementPath,
+    choices?: DeclaredChoices
 ): Promise<DeclaredPlan[]>;
 // A Part Studio's declaring connectors, from KV where this edit was scanned before.
 async function scanDeclaredParts(
@@ -547,9 +548,15 @@ async function findProducts(
 function planDeclared(
     connectors: AssemblyConnector[],
     products: Map<string, DeclaredProduct>,
-    occurrences: PartOccurrence[]
+    occurrences: PartOccurrence[],
+    choices?: DeclaredChoices
 ): DeclaredPlan[];
 function declaredInsertGroups(plans: DeclaredPlan[]): object[];
+// Which parts a run places, and which flipped; every part, none flipped, by default.
+interface DeclaredChoices {
+    parts?: string[];
+    flipped?: string[];
+}
 // The part's connector first, the host's second, so the host stays put.
 function declaredMate(plan: DeclaredPlan, path: string[]): object;
 
@@ -1047,8 +1054,10 @@ interface JobDetailsProps {
 ```
 
 `src/frontend/components/context-bar.tsx` holds the **Assemble FeatureScript
-parts** button (`AutoAssemblyActions`), which starts a run with
-`useAssembleDeclaredMutation`.
+parts** button (`AutoAssemblyActions`), which opens
+`src/frontend/features/auto-assembly/components/assemble-dialog.tsx`
+(`openAssembleDialog`). The dialog reads the parts with
+`useDeclaredPartsQuery` and starts a run with `useAssembleDeclaredMutation`.
 
 `src/frontend/routes/app/auto-assembly.tsx` is the route, with a notice
 outside an assembly. `src/backend/features/auto-assembly/geometry.ts` holds
@@ -1554,14 +1563,36 @@ recorded with why, and the steps after it are skipped.
 6. **Finish** (`finish-job`): stores `COMPLETE` or `FAILED`, with how many parts
    were inserted and fastened and screws updated, and when.
 
-### Placing FeatureScript parts — `POST /api/auto-assembly/declared`
+### Choosing FeatureScript parts — `POST /api/auto-assembly/declared/check`
 
 On Auto Assembly's page in an assembly, the context bar under the header shows
 **Assemble FeatureScript parts**, in the library's context bar's row
-(`BarRow`). Clicking it posts the assembly. It's disabled while a run goes.
+(`BarRow`). It's disabled while a run goes. Clicking it opens a dialog
+(`AssembleDialog`).
 
-The route answers 409 while a run in the same assembly is still going. It
-needs no fasteners loaded. It creates an `AutoAssemblyWorkflow` run of kind
+The dialog asks the check route for the parts, afresh each time it opens
+(`useDeclaredPartsQuery`). The route finds them as a run's first step does
+(`indexDeclared`, below) and answers each part's plan, writing nothing. Then
+the dialog shows one of:
+
+- "Finding parts...", while it asks;
+- a notice that the assembly has no FeatureScript parts, when it has none;
+- each part, by its declaration's name, with a checkbox to place it.
+
+A part that's ready starts ticked. One already placed, or that can't be
+placed, is unticked and disabled, with why under it. A ready part whose hole
+has a far side also has **Flip**: placed on the far side, facing the other
+way. That's for a plate mirrored in the assembly, whose bearings an assembly
+mirror doesn't turn. Hovering a part lights up the part it goes on.
+
+**Assemble {n} parts** starts a run with the ticked parts and those flipped,
+and closes the dialog.
+
+### Placing FeatureScript parts — `POST /api/auto-assembly/declared`
+
+The route takes the parts to place and those to flip, by key. It answers 409
+while a run in the same assembly is still going. It needs no fasteners
+loaded. It creates an `AutoAssemblyWorkflow` run of kind
 `AssemblyRunKind.DECLARED_PARTS`, stores it as `RUNNING`, and answers that
 status.
 
@@ -1576,27 +1607,34 @@ it skips:
        `part-scan.fs`, which answers each mate connector carrying robot-code's
        `frcAutoAssembly` attribute on a part. A connector on an Auto Assembly
        body is left out. Each connector's id is the id of the operation that
-       made it, joined with `.`, as a fasten mate names it.
+       made it, joined with `.`, as a fasten mate names it. Each connector's
+       far side is the host's circular edge on its axis farthest behind it:
+       the other rim of its hole.
     3. Moves each connector into the assembly with its part
        (`assemblyConnectors`). A Part Studio inserted twice gives each
        instance its own.
     4. Looks each declaration's document and tab up among the loaded
        insertables (`findProducts`). Of a tab loaded more than once, the
        latest load is taken, at its version.
-    5. Plans each connector (`planDeclared`). It is **unplaceable**, with
+    5. Plans each connector chosen (`planDeclared`). It is **unplaceable**, with
        why, when the library has no such part, the part isn't a Part Studio,
        its load found no mate connector, it doesn't offer the declared
        configuration, or it's a screw of automatic length. It is **placed**
-       when a part of the same tab has its origin on the connector. Past 200
+       when a part of the same tab has its origin on the connector, or on
+       its far side. A part chosen to flip is flipped when it has a far side.
+       Past 200
        parts, the rest are unplaceable until a run again.
     6. Stores each part with its plan (`declared`). With any unplaceable, the
        step finishes with a warning saying how many.
 2. **Insert parts** (`insert`): every ready part in one
    `transformedinstances` call, from its product's version, with the declared
-   configuration. Each part's origin and axes land on its connector's.
+   configuration. Each part's origin and axes land on its connector's; a
+   flipped part's land on its far side, Z turned back into the hole.
 3. **Fasten parts**: one fasten mate per part, one at a time (`mate-{n}`),
    from the part's mate connector (its load's fasten info) to its host
-   connector (`declaredMate`).
+   connector (`declaredMate`). A flipped part is fastened to the implicit
+   connector at the center of its hole's far rim, which points out of the far
+   face, as a fastener's nut is.
 4. **Record inserts**: each part inserted is a use of its product, with
    `UseSource.FEATURESCRIPT_PARTS`.
 5. **Finish**, as a fastener run does.
@@ -1678,8 +1716,10 @@ In [strings/auto-assembly.md](../strings/auto-assembly.md).
 - A declared part is inserted only from a tab the library loaded, at the
   version it loaded last, and only fastened to the connector that declared
   it. Nothing a run does edits a Part Studio.
-- A declared part already on its connector is never inserted again, so
-  running it twice places nothing the second time.
+- A declared part already on its connector, on either side of its hole, is
+  never inserted again, so running it twice places nothing the second time.
+- A run places only the parts the dialog left ticked, and flips only those
+  whose hole has a far side.
 - The plan inserted is the run's own, made in its index step; the client never
   sends one.
 - One run at a time in an assembly.
@@ -1713,6 +1753,10 @@ In [strings/auto-assembly.md](../strings/auto-assembly.md).
   simple stand-ins a feature can also draw, are left where they are.
   Swapping one for its part, keeping its mates, is for later
   (robot-code's Auto Assembly design doc).
+- **Flipping fastens to the hole's far rim.** A flipped part needs a seat on
+  the host's other face, which no FeatureScript declares. The rim's implicit
+  connector is one, and fastening to it is what places a fastener's nut, so a
+  flip needs nothing from robot-code.
 - **A declaration names a tab, not a version.** The run inserts from the
   version the library loaded last, so a library fix reaches every declaration
   without a FeatureScript release.

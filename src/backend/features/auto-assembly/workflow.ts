@@ -147,7 +147,7 @@ export class AutoAssemblyWorkflow extends WorkflowEntrypoint<
         let error: unknown;
         try {
             if (payload.kind === AssemblyRunKind.DECLARED_PARTS) {
-                await runDeclaredSteps(ctx);
+                await runDeclaredSteps(ctx, payload.request);
             } else {
                 await runSteps(ctx, payload.request);
             }
@@ -304,11 +304,17 @@ async function runSteps(ctx: RunContext, request: AutoAssemblyIn) {
  * Places the parts FeatureScripts declared: finds every declaring connector,
  * inserts each part it names in one call, then fastens each on its connector.
  */
-async function runDeclaredSteps(ctx: RunContext): Promise<void> {
+async function runDeclaredSteps(
+    ctx: RunContext,
+    request: DeclaredPartsIn
+): Promise<void> {
     skipTask(ctx, AssemblyTaskAction.REMOVE);
     const plans = await runTask(ctx, AssemblyTaskAction.INDEX, (run) =>
         run("index", isTransient, (client) =>
-            indexDeclared(client, ctx.env.KV, getDb(ctx.env.DB), ctx.assembly)
+            indexDeclared(client, ctx.env.KV, getDb(ctx.env.DB), ctx.assembly, {
+                parts: request.parts,
+                flipped: request.flipped
+            })
         )
     );
     if (!plans) {

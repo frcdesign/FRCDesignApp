@@ -310,6 +310,7 @@ describe("AutoAssemblyWorkflow", () => {
                 name: "Bearing",
                 status: DeclaredPartStatus.READY,
                 hostPath: ["top"],
+                canFlip: false,
                 path: ["part0"],
                 isFastened: true
             },
@@ -318,7 +319,8 @@ describe("AutoAssemblyWorkflow", () => {
                 name: "Elsewhere",
                 status: DeclaredPartStatus.UNPLACEABLE,
                 reason: "FRCDesign's library doesn't have this part.",
-                hostPath: ["top"]
+                hostPath: ["top"],
+                canFlip: false
             }
         ]);
         expect(status.result).toEqual({

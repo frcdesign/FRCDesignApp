@@ -38,6 +38,8 @@ const connectorSchema = z.object({
     origin: vec3,
     xAxis: vec3,
     zAxis: vec3,
+    /** The far side of its hole, where a flipped part seats. */
+    flip: z.object({ edgeId: z.string(), origin: vec3 }).optional(),
     declaration: declarationSchema
 });
 
@@ -53,6 +55,8 @@ const declaredScanSchema = z.object({
 
 /** robot-code's `AutoAssemblyKind`s this app knows. */
 export enum DeclaredKind {
+    MOTOR = "MOTOR",
+    GEARBOX = "GEARBOX",
     BEARING = "BEARING",
     BUSHING = "BUSHING",
     BEARING_HAT = "BEARING_HAT",
@@ -68,7 +72,7 @@ export function parseDeclaredScan(value: unknown): ScannedConnector[] {
 }
 
 /** Bumped when what the scan answers changes, so no cached scan is read in an older shape. */
-const DECLARED_SCAN_VERSION = 1;
+const DECLARED_SCAN_VERSION = 2;
 
 /** A month, as the hole scan's: a key is never stale. */
 const DECLARED_SCAN_TTL_SECONDS = 30 * 24 * 60 * 60;

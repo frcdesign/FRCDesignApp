@@ -13,7 +13,9 @@ import(path : "onshape/std/common.fs", version : "2960.0");
  * @returns {{
  *      @field connectors {array} : Each declaring connector: its `partId`, its `connectorId` as a fasten mate names
  *              it (the id of the operation that made it, joined with "."), its `origin`, `xAxis` and `zAxis`, and its
- *              `declaration`: the attribute, with `kind` as its name and each length in `spec` in meters.
+ *              `declaration`: the attribute, with `kind` as its name and each length in `spec` in meters. With `flip`,
+ *              the far side of its hole: the part's circular edge on its axis farthest behind it (its `edgeId`, and
+ *              its center as `origin`), where a part flipped to the other side seats.
  * }}
  */
 export function declaredPartScan(context is Context, queries is map) returns map
@@ -39,6 +41,28 @@ export function declaredPartScan(context is Context, queries is map) returns map
                 return value;
             }
             return toString(value);
+        };
+
+    // The farthest circle of the part on the connector's axis, behind it
+    const farSide = function(body is Query, coordSystem is CoordSystem)
+        {
+            const tolerance = 1e-5 * meter;
+            var found = undefined;
+            var farthest = -tolerance;
+            for (var edge in evaluateQuery(context, qOwnedByBody(body, EntityType.EDGE)->qGeometry(GeometryType.CIRCLE)))
+            {
+                const circle = evCurveDefinition(context, { "edge" : edge }).coordSystem;
+                const offset = circle.origin - coordSystem.origin;
+                const along = dot(offset, coordSystem.zAxis);
+                if (along > farthest || norm(offset - coordSystem.zAxis * along) > tolerance ||
+                    !parallelVectors(circle.zAxis, coordSystem.zAxis))
+                {
+                    continue;
+                }
+                farthest = along;
+                found = { "edgeId" : transientQueriesToStrings(edge), "origin" : toMeters(circle.origin) };
+            }
+            return found;
         };
 
     var connectors = [];
@@ -74,6 +98,7 @@ export function declaredPartScan(context is Context, queries is map) returns map
             const coordSystem = evMateConnector(context, { "mateConnector" : connector });
             connectors = append(connectors, {
                         "partId" : partId,
+                        "flip" : farSide(body, coordSystem),
                         "connectorId" : connectorId,
                         "origin" : toMeters(coordSystem.origin),
                         "xAxis" : toArray(coordSystem.xAxis),
