@@ -16,7 +16,8 @@ import {
     PageLoading,
     PageNotice
 } from "../../components/app-notice";
-import { IconSize } from "../../lib/style-constants";
+import { AppIcon } from "../../components/app-icon";
+import { IconSize, PrimaryColor } from "../../lib/style-constants";
 import {
     SectionId,
     setSectionOpened,
@@ -54,6 +55,14 @@ export const Route = createFileRoute("/app/version-manager")({
     }
 });
 
+const PAGE_ICON = (
+    <AppIcon
+        icon={GitBranchIcon}
+        size={IconSize.PAGE}
+        color={PrimaryColor.FILLED}
+    />
+);
+
 function VersionManagerPage(): ReactNode {
     const workspace = useTargetWorkspace();
     const isConnected = useIsConnectedToOnshape();
@@ -62,7 +71,7 @@ function VersionManagerPage(): ReactNode {
     if (!workspace) {
         return (
             <PageNotice
-                icon={<GitBranchIcon size={IconSize.SECTION} />}
+                icon={PAGE_ICON}
                 title={
                     isConnected
                         ? m.versionManagerWorkspaceOnlyTitle()
@@ -79,7 +88,7 @@ function VersionManagerPage(): ReactNode {
     if (needsSignIn) {
         return (
             <PageNotice
-                icon={<GitBranchIcon size={IconSize.SECTION} />}
+                icon={PAGE_ICON}
                 title={m.versionManagerSignInTitle()}
                 description={m.versionManagerSignInDescription()}
                 action={

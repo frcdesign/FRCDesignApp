@@ -7,7 +7,10 @@ import { PageNotice } from "../../components/app-notice";
 import { AppIcon } from "../../components/app-icon";
 import { UtilityTab } from "../../lib/app-tab";
 import { updateUiState } from "../../lib/ui-state";
-import { useTargetElement } from "../../lib/onshape-params";
+import {
+    useIsConnectedToOnshape,
+    useTargetElement
+} from "../../lib/onshape-params";
 import { IconSize, PrimaryColor } from "../../lib/style-constants";
 import { useNeedsSignIn } from "../../features/auth/access-level";
 import { startSignIn } from "../../features/auth/sign-in";
@@ -34,6 +37,7 @@ const PAGE_ICON = (
 
 function AutoAssemblyPage(): ReactNode {
     const target = useTargetElement();
+    const isConnected = useIsConnectedToOnshape();
     const needsSignIn = useNeedsSignIn();
     const markOpened = useMarkHintSeen(Hint.OPENED_AUTO_ASSEMBLY);
 
@@ -43,8 +47,16 @@ function AutoAssemblyPage(): ReactNode {
         return (
             <PageNotice
                 icon={PAGE_ICON}
-                title={m.autoAssemblyOpenAssemblyTitle()}
-                description={m.autoAssemblyOpenAssemblyDescription()}
+                title={
+                    isConnected
+                        ? m.autoAssemblyOpenAssemblyTitle()
+                        : m.autoAssemblyOnshapeOnlyTitle()
+                }
+                description={
+                    isConnected
+                        ? m.autoAssemblyOpenAssemblyDescription()
+                        : m.autoAssemblyOnshapeOnlyDescription()
+                }
             />
         );
     }

@@ -8,19 +8,21 @@ page's strings are messages in `src/frontend/messages/en.json`, keyed
 
 | String                                                                  | Kind                    | Where                  | When                                   | Review    |
 | ----------------------------------------------------------------------- | ----------------------- | ---------------------- | -------------------------------------- | --------- |
-| "Mass Analysis"                                                         | Menu item               | Page picker, Utilities | The panel was opened on an element     | **⚑** New |
+| "Mass Analysis"                                                         | Menu item               | Page picker, Utilities | Always                                 | **⚑** New |
 | "Mass Analysis" / "Visualize the distribution of weight in an assembly" | Card title, description | Splash screen          | Always; see [library.md](./library.md) | **⚑** New |
 
 ## The page
 
-| String                                                                               | Kind                 | Where              | When                       | Review    |
-| ------------------------------------------------------------------------------------ | -------------------- | ------------------ | -------------------------- | --------- |
-| "Open an assembly to weigh it"                                                       | Notice title         | In place of a page | Opened outside an assembly | **⚑** New |
-| "Mass Analysis shows where an assembly's mass is. Open it from an assembly's panel." | Notice description   | In place of a page | Opened outside an assembly | **⚑** New |
-| "Sign in to weigh your assembly" / "Sign in"                                         | Notice title, button | In place of a page | Signed out                 | **⚑** New |
-| "Mass Analysis reads your assembly's parts and their masses."                        | Notice description   | In place of a page | Signed out                 | **⚑** New |
-| "Loading masses..."                                                                  | Loading              | In place of a page | The BOM is read            | **⚑** New |
-| "Failed to read the assembly's masses"                                               | Error                | In place of a page | That read failed           | **⚑** New |
+| String                                                                               | Kind                 | Where              | When                                | Review    |
+| ------------------------------------------------------------------------------------ | -------------------- | ------------------ | ----------------------------------- | --------- |
+| "Mass Analysis is not available"                                                     | Notice title         | In place of a page | Standalone                          | **⚑** New |
+| "To use Mass Analysis, open FRCDesignApp in an Onshape assembly."                    | Notice description   | In place of a page | Standalone                          | **⚑** New |
+| "Open an assembly to weigh it"                                                       | Notice title         | In place of a page | Inside Onshape, outside an assembly | **⚑** New |
+| "Mass Analysis shows where an assembly's mass is. Open it from an assembly's panel." | Notice description   | In place of a page | Inside Onshape, outside an assembly | **⚑** New |
+| "Sign in to weigh your assembly" / "Sign in"                                         | Notice title, button | In place of a page | Signed out                          | **⚑** New |
+| "Mass Analysis reads your assembly's parts and their masses."                        | Notice description   | In place of a page | Signed out                          | **⚑** New |
+| "Loading masses..."                                                                  | Loading              | In place of a page | The BOM is read                     | **⚑** New |
+| "Failed to read the assembly's masses"                                               | Error                | In place of a page | That read failed                    | **⚑** New |
 
 ## The chart
 

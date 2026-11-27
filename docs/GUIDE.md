@@ -1,6 +1,6 @@
 # FRCDesignApp — Developer Guide
 
-Step-by-step recipes for common development tasks. This guide assumes you've read [REFERENCE.md](./REFERENCE.md) and understand the overall system.
+Step-by-step recipes for common development tasks. This guide assumes you've read [REFERENCE.md](./REFERENCE.md) and understand the overall system. Adding a utility tab has a guide of its own, [UTILITIES.md](./UTILITIES.md).
 
 ## Resources
 

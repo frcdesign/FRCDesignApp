@@ -16,15 +16,17 @@ page shows them as they come.
 
 ## The page
 
-| String                                                                                                               | Kind                 | Where              | When                               | Review |
-| -------------------------------------------------------------------------------------------------------------------- | -------------------- | ------------------ | ---------------------------------- | ------ |
-| "Open an assembly to fasten parts"                                                                                   | Notice title         | In place of a page | Opened outside an assembly         |        |
-| "Auto Assembly puts screws, washers and nuts in the holes of an assembly's parts. Open it from an assembly's panel." | Notice description   | In place of a page | Opened outside an assembly         |        |
-| "Sign in to fasten parts" / "Sign in"                                                                                | Notice title, button | In place of a page | Signed out                         |        |
-| "Auto Assembly reads your assembly's holes and inserts fasteners into it."                                           | Notice description   | In place of a page | Signed out                         |        |
-| "Loading fasteners..."                                                                                               | Loading              | In place of a form | The loaded fasteners are read      |        |
-| "Couldn't load the fasteners."                                                                                       | Error                | In place of a form | That read failed                   |        |
-| "No fasteners are loaded yet"                                                                                        | Notice title         | In place of a form | The library hasn't loaded them yet |        |
+| String                                                                                                               | Kind                 | Where              | When                                | Review    |
+| -------------------------------------------------------------------------------------------------------------------- | -------------------- | ------------------ | ----------------------------------- | --------- |
+| "Auto Assembly is not available"                                                                                     | Notice title         | In place of a page | Standalone                          | **⚑** New |
+| "To use Auto Assembly, open FRCDesignApp in an Onshape assembly."                                                    | Notice description   | In place of a page | Standalone                          | **⚑** New |
+| "Open an assembly to fasten parts"                                                                                   | Notice title         | In place of a page | Inside Onshape, outside an assembly |           |
+| "Auto Assembly puts screws, washers and nuts in the holes of an assembly's parts. Open it from an assembly's panel." | Notice description   | In place of a page | Inside Onshape, outside an assembly |           |
+| "Sign in to fasten parts" / "Sign in"                                                                                | Notice title, button | In place of a page | Signed out                          |           |
+| "Auto Assembly reads your assembly's holes and inserts fasteners into it."                                           | Notice description   | In place of a page | Signed out                          |           |
+| "Loading fasteners..."                                                                                               | Loading              | In place of a form | The loaded fasteners are read       |           |
+| "Couldn't load the fasteners."                                                                                       | Error                | In place of a form | That read failed                    |           |
+| "No fasteners are loaded yet"                                                                                        | Notice title         | In place of a form | The library hasn't loaded them yet  |           |
 
 ## The form
 

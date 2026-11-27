@@ -57,7 +57,7 @@ import { getLibraryColor, toShade } from "../theme";
 import { queryClient } from "../lib/query-client";
 import { ContextBar } from "./context-bar";
 import { useIsVersionManager } from "../features/version-manager/navigation";
-import { useTargetElement, useTargetWorkspace } from "../lib/onshape-params";
+import { useTargetWorkspace } from "../lib/onshape-params";
 import {
     useIsAutoAssembly,
     useIsAutoAssemblyNew
@@ -174,10 +174,7 @@ interface AppPage {
 }
 
 function useAppPages(): AppPage[] {
-    const targetElement = useTargetElement();
-    const isAutoAssembly = useIsAutoAssembly();
     const isNew = useIsAutoAssemblyNew();
-    const isMassAnalysis = useIsMassAnalysis();
 
     const libraries = Object.values(LibraryId).map((libraryId) => ({
         tab: libraryId,
@@ -198,29 +195,18 @@ function useAppPages(): AppPage[] {
         icon: getUtilityIcon(tab),
         color: getUtilityColor(tab)
     });
-    // Listed while it is showing even without an element, so the picker never names a page it does not offer.
-    const autoAssembly: AppPage[] =
-        targetElement || isAutoAssembly
-            ? [
-                  {
-                      ...utility(UtilityTab.AUTO_ASSEMBLY),
-                      badge: isNew ? <NewBadge /> : undefined,
-                      isNew
-                  }
-              ]
-            : [];
-    const massAnalysis: AppPage[] =
-        targetElement || isMassAnalysis
-            ? [utility(UtilityTab.MASS_ANALYSIS)]
-            : [];
 
     return [
         ...libraries,
-        // Needs no document: browsing works anywhere, and adding says why it can't.
+        // Listed everywhere: a page without what it acts on says what it needs.
         utility(UtilityTab.FEATURESCRIPTS),
         utility(UtilityTab.VERSION_MANAGER),
-        ...autoAssembly,
-        ...massAnalysis
+        {
+            ...utility(UtilityTab.AUTO_ASSEMBLY),
+            badge: isNew ? <NewBadge /> : undefined,
+            isNew
+        },
+        utility(UtilityTab.MASS_ANALYSIS)
     ];
 }
 
