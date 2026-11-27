@@ -14,6 +14,7 @@ import { DeclaredPartStatus, SelectedEntityType } from "./contract";
 import {
     assemblyConnectors,
     declaredInsertGroups,
+    declaredInserts,
     declaredMate,
     type DeclaredProduct,
     planDeclared
@@ -282,7 +283,8 @@ describe("declared parts", () => {
     it("inserts the library's part on the connector and fastens it there, the host second", () => {
         const [plan] = planDeclared(connectors, products, occurrences);
         expect(plan.status).toBe(DeclaredPartStatus.READY);
-        const [group] = declaredInsertGroups([plan]);
+        const [insert] = declaredInserts([plan]);
+        const [group] = declaredInsertGroups([insert]);
         expect(group.instances).toEqual([
             expect.objectContaining({
                 documentId: "lib",
@@ -294,7 +296,7 @@ describe("declared parts", () => {
         expect(group.transform.slice(0, 12)).toEqual([
             1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1
         ]);
-        expect(JSON.stringify(declaredMate(plan, ["new"]))).toContain(
+        expect(JSON.stringify(declaredMate(insert, ["new"]))).toContain(
             JSON.stringify([
                 {
                     btType: "BTMPartStudioMateConnectorQuery-1324",
@@ -350,9 +352,16 @@ describe("declared parts", () => {
                 ])
             )
         ).toEqual(["This part has no mate connector."]);
-        expect(reasons({ kind: "SCREW" })).toEqual([
-            "Screws of automatic length aren't placed yet."
-        ]);
+        expect(
+            reasons({
+                nut: {
+                    documentId: "lib",
+                    elementId: "nuts",
+                    configuration: { type: "NYLOCK" },
+                    name: "#10-32 Nut"
+                }
+            })
+        ).toEqual(["FRCDesign's library doesn't have this screw's nut."]);
     });
 
     it("flips a part to the far rim of its hole, and places only the parts chosen", () => {
@@ -378,12 +387,13 @@ describe("declared parts", () => {
         expect(plans).toHaveLength(1);
         const [plan] = plans;
         expect(plan.isFlipped).toBe(true);
-        const [group] = declaredInsertGroups([plan]);
+        const [insert] = declaredInserts([plan]);
+        const [group] = declaredInsertGroups([insert]);
         // On the far rim, its Z turned back into the hole; `+ 0` makes -0 0
         expect(group.transform.slice(0, 12).map((each) => each + 0)).toEqual([
             1, 0, 0, 0, 0, -1, 0, 0, 0, 0, -1, 0.75
         ]);
-        const mate = JSON.stringify(declaredMate(plan, ["new"]));
+        const mate = JSON.stringify(declaredMate(insert, ["new"]));
         expect(mate).toContain('"deterministicIds":["farRim"]');
         expect(mate).toContain('"featureId":"Fset.mateConnector"');
     });

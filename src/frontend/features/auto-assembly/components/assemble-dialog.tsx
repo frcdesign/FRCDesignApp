@@ -192,12 +192,22 @@ interface PartNoteProps {
     part: DeclaredPart;
 }
 
-/** Why a part can't be chosen: it's placed already, or can't be placed. */
+/** What goes with a part, and what's off about it; or why it can't be chosen. */
 function PartNote(props: PartNoteProps): ReactNode {
     const { part } = props;
     switch (part.status) {
         case DeclaredPartStatus.READY:
-            return null;
+            return part.nut || part.warning ? (
+                <>
+                    {part.nut && m.autoAssemblyWithNut({ nut: part.nut.name })}
+                    {part.nut && part.warning && " "}
+                    {part.warning && (
+                        <Text span inherit c={STATUS_COLOR[Status.WARNING]}>
+                            {part.warning}
+                        </Text>
+                    )}
+                </>
+            ) : null;
         case DeclaredPartStatus.PLACED:
             return m.autoAssemblyPartPlaced();
         case DeclaredPartStatus.UNPLACEABLE:

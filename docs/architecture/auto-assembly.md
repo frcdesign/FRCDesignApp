@@ -551,14 +551,34 @@ function planDeclared(
     occurrences: PartOccurrence[],
     choices?: DeclaredChoices
 ): DeclaredPlan[];
-function declaredInsertGroups(plans: DeclaredPlan[]): object[];
+// Each ready part, then its screw's nut.
+function declaredInserts(plans: DeclaredPlan[]): DeclaredInsert[];
+function declaredInsertGroups(inserts: DeclaredInsert[]): object[];
 // Which parts a run places, and which flipped; every part, none flipped, by default.
 interface DeclaredChoices {
     parts?: string[];
     flipped?: string[];
 }
 // The part's connector first, the host's second, so the host stays put.
-function declaredMate(plan: DeclaredPlan, path: string[]): object;
+function declaredMate(insert: DeclaredInsert, path: string[]): object;
+```
+
+`src/backend/features/auto-assembly/declared-screws.ts`
+
+```ts
+// Each ready declared screw planned as a picked hole is: its length and nut, or why not.
+function planScrews(
+    plans: DeclaredPlan[],
+    context: ScrewContext
+): DeclaredPlan[];
+
+interface ScrewContext {
+    catalog: Catalog;
+    holes: AssemblyHole[];
+    placed: PlacedScrew[];
+    /** The declared nuts' studios, by `productKey`. */
+    products: Map<string, DeclaredProduct>;
+}
 
 enum DeclaredPartStatus {
     READY = "ready",
@@ -1616,25 +1636,52 @@ it skips:
     4. Looks each declaration's document and tab up among the loaded
        insertables (`findProducts`). Of a tab loaded more than once, the
        latest load is taken, at its version.
-    5. Plans each connector chosen (`planDeclared`). It is **unplaceable**, with
-       why, when the library has no such part, the part isn't a Part Studio,
-       its load found no mate connector, it doesn't offer the declared
-       configuration, or it's a screw of automatic length. It is **placed**
-       when a part of the same tab has its origin on the connector, or on
-       its far side. A part chosen to flip is flipped when it has a far side.
-       Past 200
-       parts, the rest are unplaceable until a run again.
-    6. Stores each part with its plan (`declared`). With any unplaceable, the
+    5. Plans each connector chosen (`planDeclared`). It is **unplaceable**,
+       with why, when:
+        - the library has no such part, or it isn't a Part Studio;
+        - its load found no mate connector;
+        - it doesn't offer the declared configuration;
+        - it's a screw whose declared nut the library doesn't have, or offer.
+
+        It is **placed** when a part of the same tab has its origin on the
+        connector, or on its far side. A part chosen to flip is flipped when it
+        has a far side; a screw never is. Past 200 parts, the rest are
+        unplaceable until a run again.
+
+    6. With any screw ready, plans each as a picked hole is (`planScrews`),
+       with the loaded fasteners (`getFastenerSet`) and every Part Studio's
+       holes (`indexHoles`, read from the caches the prepare fills):
+        - from its connector, Z out of its holes, into the holes behind it;
+        - through a hole as deep as its `seatHeight` first, as wide as its
+          `seatHoleDiameter`: a COTS hat placed in the same run, which no
+          scan has;
+        - at its declared length, or with none, the length its holes need;
+        - with its declared nut's type where it comes out the far side, in its
+          size, from its own vendor where it makes that nut, else from one
+          that does;
+        - into threads, with none.
+
+        A screw whose holes don't fit is unplaceable, with the planner's
+        reason; one with a library screw already in its hole is placed. A
+        warning is kept on the part. Without fasteners loaded, every screw is
+        unplaceable.
+
+    7. Names each screw and nut as its studio's records name its
+       configuration (`nameParts`).
+    8. Stores each part with its plan (`declared`). With any unplaceable, the
        step finishes with a warning saying how many.
-2. **Insert parts** (`insert`): every ready part in one
-   `transformedinstances` call, from its product's version, with the declared
-   configuration. Each part's origin and axes land on its connector's; a
-   flipped part's land on its far side, Z turned back into the hole.
+
+2. **Insert parts** (`insert`): every ready part, each screw's nut after it,
+   in one `transformedinstances` call (`declaredInserts`), from its product's
+   version, with the declared configuration or a screw's planned one. Each
+   part's origin and axes land on its connector's; a flipped part's land on
+   its far side, Z turned back into the hole; a nut on its holes' far side,
+   facing back.
 3. **Fasten parts**: one fasten mate per part, one at a time (`mate-{n}`),
    from the part's mate connector (its load's fasten info) to its host
    connector (`declaredMate`). A flipped part is fastened to the implicit
    connector at the center of its hole's far rim, which points out of the far
-   face, as a fastener's nut is.
+   face; a nut to its holes' far edge's, as a fastener run's nut is.
 4. **Record inserts**: each part inserted is a use of its product, with
    `UseSource.FEATURESCRIPT_PARTS`.
 5. **Finish**, as a fastener run does.
@@ -1720,6 +1767,9 @@ In [strings/auto-assembly.md](../strings/auto-assembly.md).
   never inserted again, so running it twice places nothing the second time.
 - A run places only the parts the dialog left ticked, and flips only those
   whose hole has a far side.
+- A declared screw is planned by the same planner as a picked hole, so it gets
+  only lengths and nuts the catalog says its vendor makes, and none where its
+  holes don't fit.
 - The plan inserted is the run's own, made in its index step; the client never
   sends one.
 - One run at a time in an assembly.
@@ -1753,6 +1803,11 @@ In [strings/auto-assembly.md](../strings/auto-assembly.md).
   simple stand-ins a feature can also draw, are left where they are.
   Swapping one for its part, keeping its mates, is for later
   (robot-code's Auto Assembly design doc).
+- **Declared screws go through the hole planner.** A FeatureScript knows
+  where a screw seats, but not what's behind it in the assembly. The planner
+  does, so "automatic length", a nut out the far side, and none into threads
+  come from it as they do for a picked hole. A part placed in the same run, a
+  COTS hat, is a stand-in hole of the thickness the hats part set gives.
 - **Flipping fastens to the hole's far rim.** A flipped part needs a seat on
   the host's other face, which no FeatureScript declares. The rim's implicit
   connector is one, and fastening to it is what places a fastener's nut, so a

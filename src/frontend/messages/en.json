@@ -782,6 +782,7 @@
     "autoAssemblyFindPartsFailed": "Couldn't find FeatureScript parts",
     "autoAssemblyNoDeclaredPartsTitle": "No FeatureScript parts",
     "autoAssemblyNoDeclaredPartsDescription": "Add a feature that declares parts, such as Robot bearing, to a Part Studio in this assembly.",
+    "autoAssemblyWithNut": "With a {nut}.",
     "autoAssemblyFlip": "Flip",
     "autoAssemblyFlipDescription": "Seat the part on the other side of its hole.",
     "autoAssemblyAssembleCancel": "Cancel",

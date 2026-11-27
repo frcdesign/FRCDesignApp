@@ -61,9 +61,9 @@ import { reportJob } from "./jobs";
 import { recordDeclaredInserts, recordRunInserts } from "./track-inserts";
 import {
     declaredInsertGroups,
+    declaredInserts,
     declaredMate,
-    declaredPart,
-    type DeclaredPlan
+    declaredPart
 } from "./declared";
 import { indexDeclared } from "./index-declared";
 import { orphanedMates, type Replacement } from "./replace";
@@ -335,25 +335,39 @@ async function runDeclaredSteps(
                 : `${unplaceable} parts can't be placed.`
         );
     }
-    // Each ready plan with its entry in `declared`, in the order they're inserted
-    const ready = plans.flatMap((plan, index) =>
-        plan.status === DeclaredPartStatus.READY
-            ? [{ plan, part: declared[index] }]
-            : []
-    );
-    if (ready.length === 0) {
+    // Each part to insert, a screw's nut after it, with its entry in `declared` to mark as it goes
+    const byKey = new Map(declared.map((part) => [part.key, part]));
+    const inserts = declaredInserts(plans).map((insert) => ({
+        insert,
+        part: byKey.get(insert.plan.connector.key)
+    }));
+    if (inserts.length === 0) {
         skipRest(ctx);
         return;
     }
+    const mark = (
+        index: number,
+        update: { path?: string[]; isFastened?: boolean }
+    ) => {
+        const { insert, part } = inserts[index];
+        if (!part) {
+            return;
+        }
+        if (insert.isNut && part.nut) {
+            Object.assign(part.nut, update);
+        } else if (!insert.isNut) {
+            Object.assign(part, update);
+        }
+    };
 
     const paths = await runTask(ctx, AssemblyTaskAction.INSERT, (run) =>
         run("insert", isRateLimited, async (client) => {
             const response = await insertTransformedInstances(
                 client,
                 ctx.assembly,
-                declaredInsertGroups(plans)
+                declaredInsertGroups(inserts.map(({ insert }) => insert))
             );
-            return ready.map(
+            return inserts.map(
                 (_, index) =>
                     response.insertInstanceResponses?.[index]?.occurrences?.[0]
                         ?.path ?? null
@@ -367,13 +381,13 @@ async function runDeclaredSteps(
     ctx.result.inserted += paths.filter((path) => path !== null).length;
     for (const [index, path] of paths.entries()) {
         if (path) {
-            ready[index].part.path = path;
+            mark(index, { path });
         }
     }
 
     const mated = new Set<number>();
     await runTask(ctx, AssemblyTaskAction.FASTEN, async (run) => {
-        for (const [index, { plan, part }] of ready.entries()) {
+        for (const [index, { insert }] of inserts.entries()) {
             const path = paths[index];
             if (!path) {
                 continue;
@@ -382,12 +396,12 @@ async function runDeclaredSteps(
                 await addAssemblyFeature(
                     client,
                     ctx.assembly,
-                    declaredMate(plan, path)
+                    declaredMate(insert, path)
                 );
                 return true;
             });
             mated.add(index);
-            part.isFastened = true;
+            mark(index, { isFastened: true });
             ctx.result.fastened++;
         }
     });
@@ -403,7 +417,7 @@ async function runDeclaredSteps(
         recordDeclaredInserts(
             ctx.env,
             ctx.userId,
-            ready.map(({ plan }): DeclaredPlan => plan),
+            inserts.map(({ insert }) => insert),
             paths,
             mated
         ).catch((error: unknown) =>

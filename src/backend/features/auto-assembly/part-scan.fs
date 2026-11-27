@@ -13,7 +13,8 @@ import(path : "onshape/std/common.fs", version : "2960.0");
  * @returns {{
  *      @field connectors {array} : Each declaring connector: its `partId`, its `connectorId` as a fasten mate names
  *              it (the id of the operation that made it, joined with "."), its `origin`, `xAxis` and `zAxis`, and its
- *              `declaration`: the attribute, with `kind` as its name and each length in `spec` in meters. With `flip`,
+ *              `declaration`: the attribute, with `kind` as its name, each length in `spec` in meters, and a screw's
+ *              `nut`, its configuration's values as their names. With `flip`,
  *              the far side of its hole: the part's circular edge on its axis farthest behind it (its `edgeId`, and
  *              its center as `origin`), where a part flipped to the other side seats.
  * }}
@@ -95,6 +96,21 @@ export function declaredPartScan(context is Context, queries is map) returns map
             {
                 spec[key] = plain(value);
             }
+            var nut = undefined;
+            if (attribute.nut is map)
+            {
+                var nutConfiguration = {};
+                for (var key, value in attribute.nut.configuration)
+                {
+                    nutConfiguration[key] = toString(value);
+                }
+                nut = {
+                        "documentId" : attribute.nut.documentId,
+                        "elementId" : attribute.nut.elementId,
+                        "configuration" : nutConfiguration,
+                        "name" : attribute.nut.name
+                    };
+            }
             const coordSystem = evMateConnector(context, { "mateConnector" : connector });
             connectors = append(connectors, {
                         "partId" : partId,
@@ -111,7 +127,8 @@ export function declaredPartScan(context is Context, queries is map) returns map
                             "configuration" : configuration,
                             "name" : attribute.name,
                             "connector" : attribute.connector,
-                            "spec" : spec
+                            "spec" : spec,
+                            "nut" : nut
                         }
                     });
         }

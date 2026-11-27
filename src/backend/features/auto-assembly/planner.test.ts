@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { Program } from "./catalog";
 import { FASTENER_SET } from "../../../__test_utils__/fastener-set";
 import {
+    DeclaredPartStatus,
     DEFAULT_MAX_LENGTH,
     DEFAULT_MAX_THREAD_DEPTH,
     FastenerMode,
@@ -17,7 +18,11 @@ import {
     planHoles,
     type PlacedScrew
 } from "./planner";
-import { type PartChoice, type ScrewChoice } from "./studios";
+import { FastenerKind, type PartChoice, type ScrewChoice } from "./studios";
+import { type DeclaredPlan, type DeclaredProduct } from "./declared";
+import { planScrews } from "./declared-screws";
+import { ElementType } from "../../lib/onshape/element-type";
+import { LibraryId } from "../library/library-id";
 
 const INCH = 0.0254;
 
@@ -587,5 +592,112 @@ describe("planHoles", () => {
             plan(TWO_PLATES, { screw: { vendor: "WCP", head: "FLAT" } }).planned
                 .status
         ).toBe(HoleStatus.NO_FIT);
+    });
+});
+
+describe("planScrews", () => {
+    const product = (kind: FastenerKind): DeclaredProduct => ({
+        insertableId: `${kind}-row`,
+        libraryId: LibraryId.FRC_DESIGN_LIB,
+        documentId: "lib",
+        versionId: "libv",
+        elementId: `${kind}Studio`,
+        elementType: ElementType.PART_STUDIO,
+        parameters: FASTENER_SET.studios[kind].parameters,
+        mateConnectorId: `${kind}MC`
+    });
+    const NUT = {
+        documentId: "lib",
+        elementId: "nutStudio",
+        configuration: { type: "NYLOCK" },
+        name: "#10-32 Nut"
+    };
+    /** Robot bearing's screw, on a connector at the origin, Z up, out of its holes. */
+    const declared = (
+        configuration: Record<string, string>,
+        more: Partial<DeclaredPlan["connector"]["declaration"]> = {}
+    ): DeclaredPlan => ({
+        connector: {
+            key: "top|Fa.screws.screw1",
+            hostPath: ["top"],
+            connectorId: "Fa.screws.screw1",
+            origin: [0, 0, 0],
+            xAxis: [1, 0, 0],
+            zAxis: [0, 0, 1],
+            declaration: {
+                version: 1,
+                kind: "SCREW",
+                documentId: "lib",
+                elementId: "screwStudio",
+                configuration: {
+                    vendor: "GENERIC",
+                    size: "NO_10_32",
+                    head: "BUTTON",
+                    finish: "BLACK",
+                    ...configuration
+                },
+                name: "#10-32 Screw",
+                connector: "mateConnector",
+                spec: {},
+                ...more
+            }
+        },
+        status: DeclaredPartStatus.READY,
+        product: product(FastenerKind.SCREW),
+        configuration: {}
+    });
+    const context = (holes: AssemblyHole[]) => ({
+        catalog: FASTENER_SET.catalog,
+        holes,
+        placed: [],
+        products: new Map([["lib|nutStudio", product(FastenerKind.NUT)]])
+    });
+
+    it("sizes a screw through a hat placed in the same run and its plate, with its nut out the far side", () => {
+        // A COTS hat's 0.09 in., then a 1/4 in. plate: 0.34 in. and a 0.234 in. nylock
+        const [plan] = planScrews(
+            [
+                declared(
+                    {},
+                    {
+                        spec: {
+                            seatHeight: 0.09 * INCH,
+                            seatHoleDiameter: 0.201 * INCH
+                        },
+                        nut: NUT
+                    }
+                )
+            ],
+            context([hole("plate", 0.09, 0.34, 0.201)])
+        );
+        expect(plan.status).toBe(DeclaredPartStatus.READY);
+        expect(plan.configuration?.length).toBe("IN_0_625");
+        expect(plan.nut?.name).toBe("#10-32 Nut");
+        expect(plan.nut?.edge).toEqual({
+            occurrencePath: ["plate"],
+            edgeId: "plate-bottom"
+        });
+        // Under the plate, facing back up the hole
+        expect(plan.nut?.transform[11]).toBeCloseTo(-0.34 * INCH);
+        expect(plan.nut?.transform[10]).toBeCloseTo(-1);
+    });
+
+    it("screws into tapped holes with no nut, and leaves out a declared length that can't reach", () => {
+        const tapped = hole("plate", 0, 0.5, 0.19, {
+            threaded: true,
+            majorDiameter: 0.19 * INCH,
+            closedAtEnd: true
+        });
+        const [into] = planScrews([declared({})], context([tapped]));
+        expect(into.reason).toBeUndefined();
+        expect(into.status).toBe(DeclaredPartStatus.READY);
+        expect(into.nut).toBeUndefined();
+
+        const [short] = planScrews(
+            [declared({ length: "IN_0_25" }, { nut: NUT })],
+            context(TWO_PLATES)
+        );
+        expect(short.status).toBe(DeclaredPartStatus.UNPLACEABLE);
+        expect(short.reason).toContain("too short");
     });
 });

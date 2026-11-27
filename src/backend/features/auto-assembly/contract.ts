@@ -226,6 +226,10 @@ export interface DeclaredPart {
     status: DeclaredPartStatus;
     /** Why it can't be placed, in words. */
     reason?: string;
+    /** What's off about how it's placed, in words: a screw that doesn't fit its holes as it should. */
+    warning?: string;
+    /** A screw's nut, where it comes out the far side of its holes. */
+    nut?: { name: string; path?: string[]; isFastened?: boolean };
     /** The part it attaches to. */
     hostPath: string[];
     /** Whether it can be flipped: its hole has a far side. */

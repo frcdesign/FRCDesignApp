@@ -17,6 +17,13 @@ import PART_SCAN_SOURCE from "./part-scan.fs?raw";
 
 const vec3 = z.tuple([z.number(), z.number(), z.number()]);
 
+const productSchema = z.object({
+    documentId: z.string(),
+    elementId: z.string(),
+    configuration: z.record(z.string(), z.string()),
+    name: z.string()
+});
+
 /** What robot-code's `autoAssemblyDeclaration` writes; version 1 is the only one so far. */
 const declarationSchema = z.object({
     version: z.literal(1),
@@ -29,7 +36,9 @@ const declarationSchema = z.object({
     /** What the feature cut for the part: lengths in metres, enums by name. */
     spec: z
         .record(z.string(), z.union([z.number(), z.string(), z.boolean()]))
-        .default({})
+        .default({}),
+    /** A screw's nut, where it comes out the far side of its holes. */
+    nut: productSchema.optional()
 });
 
 const connectorSchema = z.object({
@@ -72,7 +81,7 @@ export function parseDeclaredScan(value: unknown): ScannedConnector[] {
 }
 
 /** Bumped when what the scan answers changes, so no cached scan is read in an older shape. */
-const DECLARED_SCAN_VERSION = 2;
+const DECLARED_SCAN_VERSION = 3;
 
 /** A month, as the hole scan's: a key is never stale. */
 const DECLARED_SCAN_TTL_SECONDS = 30 * 24 * 60 * 60;

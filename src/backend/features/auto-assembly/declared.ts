@@ -27,6 +27,7 @@ import {
 } from "../configurations/selection";
 import { encodeConfiguration } from "../configurations/utils";
 import { type PartOccurrence, pathKey } from "./assembly";
+import { type MateEdge } from "./planner";
 import { DeclaredPartStatus, type DeclaredPart } from "./contract";
 import {
     coordinateTransform,
@@ -116,10 +117,10 @@ export function productKey(product: {
     return `${product.documentId}|${product.elementId}`;
 }
 
-/** The declarations' products the library has, by `productKey`: of a tab loaded more than once, the latest load. */
+/** The products the library has, by `productKey`: of a tab loaded more than once, the latest load. */
 export async function findProducts(
     db: Db,
-    declarations: Declaration[]
+    declarations: { documentId: string; elementId: string }[]
 ): Promise<Map<string, DeclaredProduct>> {
     const wanted = new Map(
         declarations.map((declaration) => [
@@ -186,11 +187,25 @@ export interface DeclaredPlan {
     connector: AssemblyConnector;
     status: DeclaredPartStatus;
     reason?: string;
+    warning?: string;
+    /** Its name as its studio's records name its configuration, where they do. */
+    name?: string;
     /** Seated on the far side of its hole. */
     isFlipped?: boolean;
     product?: DeclaredProduct;
     /** The Part Studio's overrides, as inserted. */
     configuration?: Selection;
+    /** A screw's nut, out the far side of its holes. */
+    nut?: DeclaredNut;
+}
+
+/** A screw's nut: from which studio, configured how, placed where, and fastened to which edge. */
+export interface DeclaredNut {
+    product: DeclaredProduct;
+    configuration: Selection;
+    name: string;
+    transform: number[];
+    edge: MateEdge;
 }
 
 /** Each option the declaration names is one its studio offers. */
@@ -239,8 +254,9 @@ export interface DeclaredChoices {
 /** Why a declaration can't be placed; undefined when it can. */
 function unplaceable(
     declaration: Declaration,
-    product: DeclaredProduct | undefined
+    products: Map<string, DeclaredProduct>
 ): string | undefined {
+    const product = products.get(productKey(declaration));
     if (!product) {
         return "FRCDesign's library doesn't have this part.";
     }
@@ -253,12 +269,14 @@ function unplaceable(
     if (!isOffered(declaration.configuration, product.parameters)) {
         return "This part's configuration isn't in the library.";
     }
-    // A screw sized by what its hole goes through is for the hole planner
-    if (
-        declaration.kind === DeclaredKind.SCREW &&
-        declaration.configuration.length === undefined
-    ) {
-        return "Screws of automatic length aren't placed yet.";
+    if (declaration.nut) {
+        const nut = products.get(productKey(declaration.nut));
+        if (!nut?.mateConnectorId) {
+            return "FRCDesign's library doesn't have this screw's nut.";
+        }
+        if (!isOffered(declaration.nut.configuration, nut.parameters)) {
+            return "This screw's nut isn't in the library.";
+        }
     }
     return undefined;
 }
@@ -282,7 +300,7 @@ export function planDeclared(
     return planned.map((connector): DeclaredPlan => {
         const { declaration } = connector;
         const product = products.get(productKey(declaration));
-        const reason = unplaceable(declaration, product);
+        const reason = unplaceable(declaration, products);
         if (reason || !product) {
             return {
                 connector,
@@ -303,7 +321,7 @@ export function planDeclared(
         return {
             connector,
             status: DeclaredPartStatus.READY,
-            ...(flipped.has(connector.key) && connector.flip
+            ...(flipped.has(connector.key) && canFlip(connector)
                 ? { isFlipped: true }
                 : {}),
             product,
@@ -319,71 +337,120 @@ export function planDeclared(
 export function declaredPart(plan: DeclaredPlan): DeclaredPart {
     return {
         key: plan.connector.key,
-        name: plan.connector.declaration.name,
+        name: plan.name ?? plan.connector.declaration.name,
         status: plan.status,
         ...(plan.reason ? { reason: plan.reason } : {}),
+        ...(plan.warning ? { warning: plan.warning } : {}),
+        ...(plan.nut ? { nut: { name: plan.nut.name } } : {}),
         hostPath: plan.connector.hostPath,
-        canFlip: plan.connector.flip !== undefined,
+        canFlip: canFlip(plan.connector),
         ...(plan.isFlipped ? { isFlipped: true } : {})
     };
 }
 
-/** `transformedinstances`' groups: each ready part, its origin on its connector. */
-export function declaredInsertGroups(
-    plans: DeclaredPlan[]
-): { instances: object[]; transform: number[] }[] {
-    return plans.flatMap((plan) => {
-        const { product, connector } = plan;
+/** A part whose hole has a far side, but a screw, which goes in only from where it's declared. */
+function canFlip(connector: AssemblyConnector): boolean {
+    return (
+        connector.flip !== undefined &&
+        connector.declaration.kind !== DeclaredKind.SCREW
+    );
+}
+
+/** One part a run inserts: a declared part, or a screw's nut. */
+export interface DeclaredInsert {
+    plan: DeclaredPlan;
+    isNut: boolean;
+    product: DeclaredProduct;
+    configuration: Selection;
+    transform: number[];
+}
+
+/** What a run inserts, in order: each ready part, its origin on its connector, then its screw's nut. */
+export function declaredInserts(plans: DeclaredPlan[]): DeclaredInsert[] {
+    return plans.flatMap((plan): DeclaredInsert[] => {
+        const { product, connector, nut } = plan;
         if (plan.status !== DeclaredPartStatus.READY || !product) {
             return [];
         }
-        return [
-            {
-                instances: [
-                    {
-                        documentId: product.documentId,
-                        versionId: product.versionId,
-                        elementId: product.elementId,
-                        configuration: encodeConfiguration(plan.configuration),
-                        isWholePartStudio: true,
-                        includePartTypes: [PartType.PARTS]
-                    }
-                ],
-                transform:
-                    plan.isFlipped && connector.flip
-                        ? coordinateTransform(
-                              connector.flip.origin,
-                              connector.xAxis,
-                              scale(connector.zAxis, -1)
-                          )
-                        : coordinateTransform(
-                              connector.origin,
-                              connector.xAxis,
-                              connector.zAxis
-                          )
-            }
-        ];
+        const part: DeclaredInsert = {
+            plan,
+            isNut: false,
+            product,
+            configuration: plan.configuration ?? {},
+            transform:
+                plan.isFlipped && connector.flip
+                    ? coordinateTransform(
+                          connector.flip.origin,
+                          connector.xAxis,
+                          scale(connector.zAxis, -1)
+                      )
+                    : coordinateTransform(
+                          connector.origin,
+                          connector.xAxis,
+                          connector.zAxis
+                      )
+        };
+        return nut
+            ? [
+                  part,
+                  {
+                      plan,
+                      isNut: true,
+                      product: nut.product,
+                      configuration: nut.configuration,
+                      transform: nut.transform
+                  }
+              ]
+            : [part];
     });
 }
 
+/** `transformedinstances`' groups, one per insert. */
+export function declaredInsertGroups(
+    inserts: DeclaredInsert[]
+): { instances: object[]; transform: number[] }[] {
+    return inserts.map(({ product, configuration, transform }) => ({
+        instances: [
+            {
+                documentId: product.documentId,
+                versionId: product.versionId,
+                elementId: product.elementId,
+                configuration: encodeConfiguration(configuration),
+                isWholePartStudio: true,
+                includePartTypes: [PartType.PARTS]
+            }
+        ],
+        transform
+    }));
+}
+
 /**
- * The fasten mate holding an inserted part on its connector, the host second
- * so it stays put. A flipped part is fastened to the far rim's implicit
- * connector, which points out of the far face.
+ * The fasten mate holding an inserted part where it goes, the host second so
+ * it stays put: on its connector, or a flipped part on its hole's far rim's
+ * implicit connector, which points out of the far face. A nut is fastened to
+ * its holes' far edge, as a fastener run's is.
  */
-export function declaredMate(plan: DeclaredPlan, path: string[]): object {
-    const { connector } = plan;
+export function declaredMate(insert: DeclaredInsert, path: string[]): object {
+    const { plan, product } = insert;
+    const { connector, nut } = plan;
     const own = partStudioMateConnectorQuery(
-        plan.product?.mateConnectorId ?? "",
+        product.mateConnectorId ?? "",
         path
     );
+    if (insert.isNut && nut) {
+        return fastenMateToCircularEdge(nut.name, own, {
+            deterministicId: nut.edge.edgeId,
+            path: nut.edge.occurrencePath
+        });
+    }
+    const name = plan.name ?? connector.declaration.name;
     if (plan.isFlipped && connector.flip) {
-        return fastenMateToCircularEdge(connector.declaration.name, own, {
+        return fastenMateToCircularEdge(name, own, {
             deterministicId: connector.flip.edgeId,
             path: connector.hostPath
         });
     }
-    return fastenMate(connector.declaration.name, [
+    return fastenMate(name, [
         own,
         partStudioMateConnectorQuery(connector.connectorId, connector.hostPath)
     ]);

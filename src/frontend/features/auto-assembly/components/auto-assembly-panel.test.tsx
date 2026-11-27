@@ -741,7 +741,10 @@ describe("AssembleDialog", () => {
     it("assembles the parts left ticked, flipping those asked, and only those that can be", async () => {
         answer([
             part("a", DeclaredPartStatus.READY, { canFlip: true }),
-            part("b", DeclaredPartStatus.READY),
+            part("b", DeclaredPartStatus.READY, {
+                nut: { name: "#10-32 Nylock Nut" },
+                warning: "The closest screw, 1/2 in, is too long."
+            }),
             part("c", DeclaredPartStatus.PLACED),
             part("d", DeclaredPartStatus.UNPLACEABLE, {
                 reason: "FRCDesign's library doesn't have this part."
@@ -757,6 +760,10 @@ describe("AssembleDialog", () => {
             "disabled",
             true
         );
+        expect(screen.getByText("With a #10-32 Nylock Nut.")).toBeTruthy();
+        expect(
+            screen.getByText("The closest screw, 1/2 in, is too long.")
+        ).toBeTruthy();
         // Only the part whose hole has a far side can flip
         expect(screen.getAllByLabelText("Flip")).toHaveLength(1);
 

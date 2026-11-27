@@ -43,6 +43,7 @@ import { getJobStatus } from "./jobs";
 import type { AssemblyJobParams } from "./workflow";
 import { getDb } from "../../db/client";
 import { dailyMetrics } from "../analytics/schema";
+import { configurations } from "../../db/schema";
 import { UseSource } from "../analytics/usage";
 import { seedGroup, seedInsertable } from "../../../__test_utils__/seed";
 
@@ -343,6 +344,98 @@ describe("AutoAssemblyWorkflow", () => {
                 event.fasten
             ])
         ).toEqual([["bearings", UseSource.FEATURESCRIPT_PARTS, true]]);
+    });
+
+    it("sizes a declared screw through what's under it, with its declared nut, and fastens both", async () => {
+        const db = getDb(env.DB);
+        await seedGroup(db);
+        for (const kind of [FastenerKind.SCREW, FastenerKind.NUT]) {
+            await seedInsertable(db, {
+                id: `${kind}-row`,
+                documentId: "lib",
+                versionId: "libv",
+                elementId: `${kind}Studio`,
+                fastenInfo: {
+                    mateConnectorId: `${kind}MC`,
+                    mateLocation: MateLocation.Feature,
+                    path: []
+                }
+            });
+            await db
+                .insert(configurations)
+                .values({
+                    insertableId: `${kind}-row`,
+                    parameters: FASTENER_SET.studios[kind].parameters
+                })
+                .onConflictDoNothing();
+        }
+        const screw = fs.map({
+            partId: fs.string("TOP"),
+            connectorId: fs.string("Fhat.screws.screw1"),
+            origin: fs.vector([0, 0, 0]),
+            xAxis: fs.vector([1, 0, 0]),
+            zAxis: fs.vector([0, 0, 1]),
+            declaration: fs.map({
+                version: fs.number(1),
+                kind: fs.string("SCREW"),
+                documentId: fs.string("lib"),
+                elementId: fs.string("screwStudio"),
+                configuration: fs.map({
+                    vendor: fs.string("GENERIC"),
+                    size: fs.string("NO_10_32"),
+                    head: fs.string("BUTTON"),
+                    finish: fs.string("BLACK")
+                }),
+                name: fs.string("#10-32 Screw"),
+                connector: fs.string("mateConnector"),
+                spec: fs.map({}),
+                nut: fs.map({
+                    documentId: fs.string("lib"),
+                    elementId: fs.string("nutStudio"),
+                    configuration: fs.map({ type: fs.string("NYLOCK") }),
+                    name: fs.string("#10-32 Nut")
+                })
+            })
+        });
+        vi.mocked(PartStudios.evaluateFeatureScript).mockImplementation(
+            (_client, path, script) =>
+                Promise.resolve({
+                    result: script.includes('"connectors" : connectors')
+                        ? fs.map({
+                              connectors: fs.array(
+                                  path.elementId === "topStudio" ? [screw] : []
+                              )
+                          })
+                        : path.elementId === "topStudio"
+                          ? plateScan("TOP")
+                          : plateScan("BOTTOM")
+                })
+        );
+
+        const status = await run("declared-screw", {
+            sessionId: "session",
+            userId: "user",
+            kind: AssemblyRunKind.DECLARED_PARTS,
+            request: { assembly: ASSEMBLY }
+        });
+
+        expect(status.declared).toEqual([
+            expect.objectContaining({
+                status: DeclaredPartStatus.READY,
+                path: ["part0"],
+                isFastened: true,
+                nut: expect.objectContaining({
+                    path: ["part1"],
+                    isFastened: true
+                })
+            })
+        ]);
+        expect(status.result).toMatchObject({ inserted: 2, fastened: 2 });
+        // The screw on its connector, the nut under both plates
+        expect(mates[0]).toContain(
+            '"featureId":"Fhat.screws.screw1","path":["top"]'
+        );
+        expect(mates[1]).toContain('"deterministicIds":["BOTTOM-bottom"]');
     });
 
     it("says why a pick gave no circular edge", async () => {

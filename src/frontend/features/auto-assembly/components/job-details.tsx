@@ -1,6 +1,6 @@
 import { Center, Group, Loader, Stack, Text } from "@mantine/core";
 import { CircleIcon, MinusCircleIcon } from "@phosphor-icons/react";
-import { type ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import {
     assemblyJobOutcome,
     AssemblyJobState,
@@ -404,16 +404,42 @@ function DeclaredSteps(props: DeclaredStepsProps): ReactNode {
             <Text size="xs" c={StatusColor.DIMMED}>
                 {m.autoAssemblyDeclaredParts()}
             </Text>
-            {parts.map((part) => (
-                <StepRow
-                    key={part.key}
-                    step={declaredStep(part, insert, fasten)}
-                    label={part.name}
-                    onHover={() =>
-                        show([{ occurrencePath: part.path ?? part.hostPath }])
-                    }
-                />
-            ))}
+            {parts.map((part) => {
+                const { nut } = part;
+                return (
+                    <Fragment key={part.key}>
+                        <StepRow
+                            step={declaredStep(part, insert, fasten)}
+                            label={part.name}
+                            onHover={() =>
+                                show([
+                                    {
+                                        occurrencePath:
+                                            part.path ?? part.hostPath
+                                    }
+                                ])
+                            }
+                        />
+                        {nut && part.status === DeclaredPartStatus.READY && (
+                            <StepRow
+                                step={partStep(nut, insert, fasten)}
+                                label={nut.name}
+                                onHover={
+                                    nut.path
+                                        ? () =>
+                                              show([
+                                                  {
+                                                      occurrencePath:
+                                                          nut.path ?? []
+                                                  }
+                                              ])
+                                        : undefined
+                                }
+                            />
+                        )}
+                    </Fragment>
+                );
+            })}
         </Stack>
     );
 }
