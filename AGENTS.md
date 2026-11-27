@@ -254,6 +254,16 @@ observed or unverified; build on an unverified one only knowing it may be
 wrong. When you learn something new, or find an entry wrong, update the file
 in the same change.
 
+# Checking a change
+
+`npm run check` runs everything CI does: type-check, lint, every test, the docs
+check and the migrations check. A pull request and every deploy run that same
+script, so it passing locally means CI's checks pass. Run it before pushing.
+
+Type-check with `npm run tsc`, which is `tsc -b`. The root `tsconfig.json` only
+references the frontend, backend, test and tooling projects, so `tsc -p .`
+checks no files and passes whatever is wrong.
+
 # Tests
 
 `npm test` runs three Vitest projects. A backend test that needs bindings (D1,

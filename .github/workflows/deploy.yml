@@ -9,7 +9,7 @@ concurrency:
     cancel-in-progress: false
 
 jobs:
-    # Gate: run the same checks as ci.yml before any deploy.
+    # The same check as ci.yml, before any deploy.
     ci:
         runs-on: ubuntu-latest
         steps:
@@ -23,24 +23,18 @@ jobs:
             - name: Install dependencies
               run: npm ci
 
-            - name: Type-check
-              run: npm run tsc
+            - name: Check
+              run: npm run check
 
-            - name: Lint
-              run: npm run lint
-
-            - name: Test
-              run: npm test
-
-            # A migration that only passes on an empty database will break cert.
-            - name: Check migrations against a populated database
-              run: npm run check:migrations
-
-    deploy-cert:
+    # One job for both targets, so cert deploys exactly as production does.
+    # `environment` can't read `env`, so it repeats the choice. Production's
+    # GitHub Environment can require a reviewer.
+    deploy:
         needs: ci
-        if: github.ref == 'refs/heads/cert'
         runs-on: ubuntu-latest
-        environment: cert
+        environment: ${{ github.ref_name == 'main' && 'production' || 'cert' }}
+        env:
+            TARGET: ${{ github.ref_name == 'main' && 'production' || 'cert' }}
         steps:
             - uses: actions/checkout@v4
 
@@ -52,13 +46,12 @@ jobs:
             - name: Install dependencies
               run: npm ci
 
-            # The @cloudflare/vite-plugin selects the target environment at BUILD time
-            # via CLOUDFLARE_ENV and writes a redirected config that `wrangler deploy`
-            # then uses (deploying the `frc-design-app-cert` Worker).
-            - name: Build (cert)
+            # The @cloudflare/vite-plugin picks the Worker at build time from
+            # CLOUDFLARE_ENV, and writes the config `wrangler deploy` reads.
+            - name: Build
               run: npm run build
               env:
-                  CLOUDFLARE_ENV: cert
+                  CLOUDFLARE_ENV: ${{ env.TARGET }}
 
             # Cloudflare's advice for version skew: a tab open on the last
             # release still finds the chunks it lazy-loads.
@@ -69,8 +62,8 @@ jobs:
               uses: actions/cache/restore@v4
               with:
                   path: .release-assets
-                  key: release-assets-cert-${{ github.sha }}
-                  restore-keys: release-assets-cert-
+                  key: release-assets-${{ env.TARGET }}-${{ github.sha }}
+                  restore-keys: release-assets-${{ env.TARGET }}-
 
             - name: Ship the previous release's assets beside this one's
               run: |
@@ -78,12 +71,12 @@ jobs:
                       cp -Rn .release-assets/. dist/client/assets/
                   fi
 
-            - name: Apply migrations & deploy (cert)
+            - name: Apply migrations & deploy
               uses: cloudflare/wrangler-action@v3
               with:
                   apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
                   accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-                  preCommands: wrangler d1 migrations apply DB --remote --env cert
+                  preCommands: wrangler d1 migrations apply DB --remote --env ${{ env.TARGET }}
                   command: deploy
 
             - name: Remember this release's assets for the next deploy
@@ -92,61 +85,4 @@ jobs:
             - uses: actions/cache/save@v4
               with:
                   path: .release-assets
-                  key: release-assets-cert-${{ github.sha }}
-
-    # Dormant until a `main` branch exists (the `if` never matches otherwise).
-    # Runs in a protected `production` GitHub Environment (add a required reviewer).
-    deploy-production:
-        needs: ci
-        if: github.ref == 'refs/heads/main'
-        runs-on: ubuntu-latest
-        environment: production
-        steps:
-            - uses: actions/checkout@v4
-
-            - uses: actions/setup-node@v4
-              with:
-                  node-version: 22
-                  cache: npm
-
-            - name: Install dependencies
-              run: npm ci
-
-            - name: Build (production)
-              run: npm run build
-              env:
-                  CLOUDFLARE_ENV: production
-
-            # Cloudflare's advice for version skew: a tab open on the last
-            # release still finds the chunks it lazy-loads.
-            - name: Keep this release's assets apart
-              run: cp -R dist/client/assets .own-assets
-
-            - name: Restore the previous release's assets
-              uses: actions/cache/restore@v4
-              with:
-                  path: .release-assets
-                  key: release-assets-production-${{ github.sha }}
-                  restore-keys: release-assets-production-
-
-            - name: Ship the previous release's assets beside this one's
-              run: |
-                  if [ -d .release-assets ]; then
-                      cp -Rn .release-assets/. dist/client/assets/
-                  fi
-
-            - name: Apply migrations & deploy (production)
-              uses: cloudflare/wrangler-action@v3
-              with:
-                  apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-                  accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-                  preCommands: wrangler d1 migrations apply DB --remote --env production
-                  command: deploy
-
-            - name: Remember this release's assets for the next deploy
-              run: rm -rf .release-assets && mv .own-assets .release-assets
-
-            - uses: actions/cache/save@v4
-              with:
-                  path: .release-assets
-                  key: release-assets-production-${{ github.sha }}
+                  key: release-assets-${{ env.TARGET }}-${{ github.sha }}

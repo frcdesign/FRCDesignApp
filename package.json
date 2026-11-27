@@ -26,6 +26,7 @@
         "test:backend": "vitest run --project backend",
         "check:migrations": "node --disable-warning=ExperimentalWarning scripts/check-migrations.js",
         "check:docs": "node scripts/check-docs.js",
+        "check": "npm run tsc && npm run lint && npm test && npm run check:docs && npm run check:migrations",
         "test:watch": "vitest",
         "prepare": "husky",
         "postinstall": "npm run messages"

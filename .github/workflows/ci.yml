@@ -1,35 +1,23 @@
 name: CI
 
 on:
-  pull_request:
-  # Push builds (cert, main) run their checks in the `ci` job of deploy.yml.
+    pull_request:
+    # Pushes to cert and main run the same check as the gate in deploy.yml.
 
 jobs:
-  build-and-test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+    build-and-test:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: npm
 
-      - name: Install dependencies
-        run: npm ci
+            - name: Install dependencies
+              run: npm ci
 
-      - name: Type-check
-        run: npm run tsc
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Test
-        run: npm test
-
-      - name: Check the docs name only paths that exist
-        run: npm run check:docs
-
-      # A migration that only passes on an empty database will break cert.
-      - name: Check migrations against a populated database
-        run: npm run check:migrations
+            # Everything a change must pass, defined once in package.json.
+            - name: Check
+              run: npm run check
