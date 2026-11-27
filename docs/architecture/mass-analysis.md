@@ -18,8 +18,8 @@ It reads masses; it doesn't compute or change them. A part's mass is what the
 assembly's bill of materials says, which Onshape works out from the part's
 material, or takes from its mass override.
 
-It is not a library feature. It stores nothing, and its tab is listed only
-where there is an element to act on, as Auto Assembly's is.
+It is not a library feature, and it stores nothing. Its tab is listed
+everywhere; without an assembly to act on, the page says what it needs.
 
 ## Code map
 
@@ -282,3 +282,5 @@ read again on a refresh.
   as a configuration's quantities do.
 - **No server cache.** A cache keyed by the workspace would need a call to find
   its microversion, which saves nothing over reading the BOM again.
+
+_Last reviewed: 2026-11-27_
