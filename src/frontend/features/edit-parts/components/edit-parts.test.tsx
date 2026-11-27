@@ -172,6 +172,27 @@ describe("edit parts", () => {
         expect(screen.queryByText("Part to edit")).toBeNull();
     });
 
+    it("has Auto Assembly's page assemble FeatureScript parts in place of the library's actions", async () => {
+        renderWithProviders(
+            <ContextBar isLibrary={false} isAutoAssembly />,
+            queryClient
+        );
+        expect(screen.queryByRole("button", { name: "Edit parts" })).toBeNull();
+
+        await userEvent.click(
+            screen.getByRole("button", { name: "Assemble FeatureScript parts" })
+        );
+        expect(apiPost).toHaveBeenCalledWith("/auto-assembly/declared", {
+            body: {
+                assembly: expect.objectContaining({
+                    documentId: "doc",
+                    instanceId: "ws",
+                    elementId: "asm"
+                })
+            }
+        });
+    });
+
     it("updates a library screw in Auto Assembly", async () => {
         const picked = {
             assembly: ASSEMBLY,

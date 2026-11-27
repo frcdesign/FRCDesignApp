@@ -2,10 +2,17 @@
 
 ## Purpose
 
-Assembling parts into an assembly automatically. Today that's fasteners:
-putting a screw, and a washer and nut where they're wanted, in each hole picked
-in an assembly: sized to the hole, and long enough to go through everything on
-its axis. It acts on whatever assembly Onshape launched the app from, under the
+Assembling parts into an assembly automatically. It does two things:
+
+- **Fasteners**: putting a screw, and a washer and nut where they're wanted,
+  in each hole picked in an assembly. Each screw is sized to its hole, and long
+  enough to go through everything on its axis.
+- **FeatureScript parts**: putting in the parts robot-code's FeatureScripts
+  declared, such as Robot bearing's bearing and Robot bushing's bushing, each
+  fastened on the connector its feature made for it. The **Assemble
+  FeatureScript parts** button starts it, with nothing picked.
+
+It acts on whatever assembly Onshape launched the app from, under the
 caller's own Onshape permissions; the library's access levels have no say over
 it.
 
@@ -498,12 +505,60 @@ class AutoAssemblyWorkflow extends WorkflowEntrypoint<
     AssemblyJobParams
 > {}
 
-interface AssemblyJobParams {
+type AssemblyJobParams = {
     /** Whose Onshape session the run borrows; see the load workflow. */
     sessionId: string;
     /** Who started it, whom its inserts are recorded for. */
     userId: string;
-    request: AutoAssemblyIn;
+} & (
+    | { kind?: AssemblyRunKind.FASTENERS; request: AutoAssemblyIn }
+    | { kind: AssemblyRunKind.DECLARED_PARTS; request: DeclaredPartsIn }
+);
+```
+
+`src/backend/features/auto-assembly/index-declared.ts`,
+`src/backend/features/auto-assembly/declared.ts`,
+`src/backend/features/auto-assembly/part-scan.ts` and
+`src/backend/features/auto-assembly/part-scan.fs`
+
+```ts
+// Reads the assembly, scans every Part Studio in it for declaring connectors, and plans each.
+async function indexDeclared(
+    client: OnshapeApi,
+    kv: KVNamespace,
+    db: Db,
+    assembly: ElementPath
+): Promise<DeclaredPlan[]>;
+// A Part Studio's declaring connectors, from KV where this edit was scanned before.
+async function scanDeclaredParts(
+    client: OnshapeApi,
+    kv: KVNamespace,
+    source: StudioSource
+): Promise<ScannedConnector[]>;
+function assemblyConnectors(
+    occurrences: PartOccurrence[],
+    scans: Map<string, ScannedConnector[]>
+): AssemblyConnector[];
+// Of a tab loaded more than once, the latest load.
+async function findProducts(
+    db: Db,
+    declarations: Declaration[]
+): Promise<Map<string, DeclaredProduct>>;
+function planDeclared(
+    connectors: AssemblyConnector[],
+    products: Map<string, DeclaredProduct>,
+    occurrences: PartOccurrence[]
+): DeclaredPlan[];
+function declaredInsertGroups(plans: DeclaredPlan[]): object[];
+// The part's connector first, the host's second, so the host stays put.
+function declaredMate(plan: DeclaredPlan, path: string[]): object;
+
+enum DeclaredPartStatus {
+    READY = "ready",
+    /** The part is already on its connector. */
+    PLACED = "placed",
+    /** The library has no such part, or it can't be fastened; `reason` says which. */
+    UNPLACEABLE = "unplaceable"
 }
 ```
 
@@ -958,7 +1013,8 @@ interface EntityReference {
 // Why a step failed, in our words; Onshape's are for developers.
 function describeStepFailure(
     error: unknown,
-    action: AssemblyTaskAction
+    action: AssemblyTaskAction,
+    kind?: AssemblyRunKind
 ): string;
 function runFailure(message: string): Error;
 ```
@@ -989,6 +1045,10 @@ interface JobDetailsProps {
     assembly: ElementPath;
 }
 ```
+
+`src/frontend/components/context-bar.tsx` holds the **Assemble FeatureScript
+parts** button (`AutoAssemblyActions`), which starts a run with
+`useAssembleDeclaredMutation`.
 
 `src/frontend/routes/app/auto-assembly.tsx` is the route, with a notice
 outside an assembly. `src/backend/features/auto-assembly/geometry.ts` holds
@@ -1024,6 +1084,9 @@ vectors, Onshape's 4×4 transforms and `LINEAR_TOLERANCE`.
   from a version,
   `{documentId}|e|{elementMicroversionId}|…` for one from the assembly's own
   workspace, and `{documentId}|m|{documentMicroversionId}|…` otherwise.
+- **KV** `auto-assembly-declared:v{n}|{key}` — a Part Studio's declaring
+  connectors, for a month, under the same key as its holes
+  (`declaredScans` in `part-scan.ts`).
 - **KV** `assembly-job:{documentId}|{instanceId}|{elementId}` — the run an
   assembly last started (`AssemblyJobStatus`), for six hours: `RUNNING` with
   its workflow run id and each step's state, then how it ended, with each
@@ -1491,6 +1554,53 @@ recorded with why, and the steps after it are skipped.
 6. **Finish** (`finish-job`): stores `COMPLETE` or `FAILED`, with how many parts
    were inserted and fastened and screws updated, and when.
 
+### Placing FeatureScript parts — `POST /api/auto-assembly/declared`
+
+On Auto Assembly's page in an assembly, the context bar under the header shows
+**Assemble FeatureScript parts**, in the library's context bar's row
+(`BarRow`). Clicking it posts the assembly. It's disabled while a run goes.
+
+The route answers 409 while a run in the same assembly is still going. It
+needs no fasteners loaded. It creates an `AutoAssemblyWorkflow` run of kind
+`AssemblyRunKind.DECLARED_PARTS`, stores it as `RUNNING`, and answers that
+status.
+
+The run takes the same steps a fastener run does, but **Delete screws**, which
+it skips:
+
+1. **Find parts** (`index`, `indexDeclared`):
+    1. Reads the assembly as a fastener run does (`readAssembly`), and walks
+       it to its part occurrences.
+    2. Scans each distinct pinned Part Studio once, six at a time, but
+       standard content (`scanDeclaredParts`). The scan evaluates
+       `part-scan.fs`, which answers each mate connector carrying robot-code's
+       `frcAutoAssembly` attribute on a part. A connector on an Auto Assembly
+       body is left out. Each connector's id is the id of the operation that
+       made it, joined with `.`, as a fasten mate names it.
+    3. Moves each connector into the assembly with its part
+       (`assemblyConnectors`). A Part Studio inserted twice gives each
+       instance its own.
+    4. Looks each declaration's document and tab up among the loaded
+       insertables (`findProducts`). Of a tab loaded more than once, the
+       latest load is taken, at its version.
+    5. Plans each connector (`planDeclared`). It is **unplaceable**, with
+       why, when the library has no such part, the part isn't a Part Studio,
+       its load found no mate connector, it doesn't offer the declared
+       configuration, or it's a screw of automatic length. It is **placed**
+       when a part of the same tab has its origin on the connector. Past 200
+       parts, the rest are unplaceable until a run again.
+    6. Stores each part with its plan (`declared`). With any unplaceable, the
+       step finishes with a warning saying how many.
+2. **Insert parts** (`insert`): every ready part in one
+   `transformedinstances` call, from its product's version, with the declared
+   configuration. Each part's origin and axes land on its connector's.
+3. **Fasten parts**: one fasten mate per part, one at a time (`mate-{n}`),
+   from the part's mate connector (its load's fasten info) to its host
+   connector (`declaredMate`).
+4. **Record inserts**: each part inserted is a use of its product, with
+   `UseSource.FEATURESCRIPT_PARTS`.
+5. **Finish**, as a fastener run does.
+
 ### Reporting
 
 `reportJob` stores the status and pushes `ASSEMBLY_JOB` with the assembly's
@@ -1503,8 +1613,11 @@ failed, at the running step, and the rest skipped.
 
 The page shows the run in a callout above the options — its step while it
 goes, saying the person can keep working, then how it went — with a Details modal
-(`JobDetails`). It lists **Index holes**, with its warning in yellow under it,
-then each screw ("Screw {n}") with its own steps: **Delete screw** for a screw
+(`JobDetails`). A declared-parts run lists **Find parts**, then each part
+under **FeatureScript parts**, by its declaration's name: inserted and
+fastened, already placed, or why it can't be. Hovering one lights up the
+part, or the part it goes on. A fastener run lists **Index holes**, with its
+warning in yellow under it, then each screw ("Screw {n}") with its own steps: **Delete screw** for a screw
 it updates, then **Insert screw**, **Add screw washer**, **Add nut** and **Add
 nut washer**, as the screw has them. A part's step follows the run's insert and
 fasten steps, and finishes with a warning when the part sits unmated. A step
@@ -1562,6 +1675,11 @@ In [strings/auto-assembly.md](../strings/auto-assembly.md).
 - Between edits to the assembly, checking the same picks again asks Onshape
   only for the workspace's tabs.
 - Fasteners are only ever inserted into an assembly in a workspace.
+- A declared part is inserted only from a tab the library loaded, at the
+  version it loaded last, and only fastened to the connector that declared
+  it. Nothing a run does edits a Part Studio.
+- A declared part already on its connector is never inserted again, so
+  running it twice places nothing the second time.
 - The plan inserted is the run's own, made in its index step; the client never
   sends one.
 - One run at a time in an assembly.
@@ -1584,8 +1702,20 @@ In [strings/auto-assembly.md](../strings/auto-assembly.md).
 | Onshape locks the user out           | The step fails at once, saying how long the wait is                   | Run it again after the wait                            |
 | A check or prepare answers 429       | The panel stops checking until the wait is over, and says how long    | Wait; the panel resumes on its own                     |
 | The run dies without reporting       | The job reads failed once the run has errored or been terminated      | Run it again                                           |
+| The part scan fails in a Part Studio | Find parts fails, naming Onshape's notice; the rest is skipped        | Fix the Part Studio                                    |
+| A declared part isn't in the library | That part is unplaceable, with why; the rest are placed               | Load its group, or release its part set                |
 
 ## Decisions
+
+- **FeatureScript parts go on their host connectors, with nothing picked.**
+  A feature puts a connector carrying its part's declaration on the part it
+  cut, so the part goes there with no mates to make. Auto Assembly bodies, the
+  simple stand-ins a feature can also draw, are left where they are.
+  Swapping one for its part, keeping its mates, is for later
+  (robot-code's Auto Assembly design doc).
+- **A declaration names a tab, not a version.** The run inserts from the
+  version the library loaded last, so a library fix reaches every declaration
+  without a FeatureScript release.
 
 - **The fastener set is cached by FRCDesignLib's cache version.** It changes
   only when a load changes the library, which bumps that version. So an

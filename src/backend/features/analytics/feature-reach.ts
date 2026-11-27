@@ -54,7 +54,10 @@ export function featuresOf(event: LoggedEvent): AppFeature[] {
     const use = asUse(event);
     if (!use) return [];
     // A run's planner fastens its parts; nobody chose to.
-    if (use.source === UseSource.AUTO_ASSEMBLY) {
+    if (
+        use.source === UseSource.AUTO_ASSEMBLY ||
+        use.source === UseSource.FEATURESCRIPT_PARTS
+    ) {
         return [AppFeature.AUTO_ASSEMBLY];
     }
 
@@ -80,6 +83,7 @@ function sourceFeature(source: UseSource): AppFeature | undefined {
             return AppFeature.RECENTS;
         case UseSource.BROWSE:
         case UseSource.AUTO_ASSEMBLY:
+        case UseSource.FEATURESCRIPT_PARTS:
         case UseSource.UNKNOWN:
             return undefined;
     }

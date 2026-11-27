@@ -8,6 +8,7 @@ import {
     ASSEMBLY,
     BODY,
     DEFINITION,
+    fs,
     plateScan,
     workspaceElements
 } from "../../../__test_utils__/auto-assembly-fixtures";
@@ -19,12 +20,15 @@ import { OnshapeApiError, type OAuthApi } from "../../lib/onshape/client";
 import * as Planner from "./planner";
 import * as IndexHoles from "./index-holes";
 import { FastenerKind } from "./studios";
+import { MateLocation } from "../library/insertables/fasten";
 
 const WASHER = { vendor: "GENERIC", size: "NO_10_32", type: "OD_1_2_X_0_049" };
 import {
     AssemblyJobOutcome,
     assemblyJobOutcome,
     AssemblyJobState,
+    AssemblyRunKind,
+    DeclaredPartStatus,
     AssemblyTaskAction,
     AssemblyTaskState,
     HoleEnd,
@@ -235,6 +239,108 @@ describe("AutoAssemblyWorkflow", () => {
             autoAssemblyCount: 3,
             preselectedCount: 0
         });
+    });
+
+    it("places each declared part on its connector, and records it as a FeatureScript part", async () => {
+        const db = getDb(env.DB);
+        await seedGroup(db);
+        await seedInsertable(db, {
+            id: "bearing-row",
+            documentId: "lib",
+            versionId: "libv",
+            elementId: "bearings",
+            fastenInfo: {
+                mateConnectorId: "Fset.mateConnector",
+                mateLocation: MateLocation.Feature,
+                path: []
+            }
+        });
+        const declaring = (name: string, documentId: string) =>
+            fs.map({
+                partId: fs.string("TOP"),
+                connectorId: fs.string(`F${name}.place.mateConnector`),
+                origin: fs.vector([0, 0, 0]),
+                xAxis: fs.vector([1, 0, 0]),
+                zAxis: fs.vector([0, 0, 1]),
+                declaration: fs.map({
+                    version: fs.number(1),
+                    kind: fs.string("BEARING"),
+                    documentId: fs.string(documentId),
+                    elementId: fs.string("bearings"),
+                    configuration: fs.map({}),
+                    name: fs.string(name),
+                    connector: fs.string("mateConnector"),
+                    spec: fs.map({})
+                })
+            });
+        vi.mocked(PartStudios.evaluateFeatureScript).mockImplementation(
+            (_client, path) =>
+                Promise.resolve({
+                    result: fs.map({
+                        connectors: fs.array(
+                            path.elementId === "topStudio"
+                                ? [
+                                      declaring("Bearing", "lib"),
+                                      declaring("Elsewhere", "other")
+                                  ]
+                                : []
+                        )
+                    })
+                })
+        );
+
+        const status = await run("declared", {
+            sessionId: "session",
+            userId: "user",
+            kind: AssemblyRunKind.DECLARED_PARTS,
+            request: { assembly: ASSEMBLY }
+        });
+
+        expect(status.kind).toBe(AssemblyRunKind.DECLARED_PARTS);
+        expect(status.tasks?.map((task) => task.state)).toEqual([
+            AssemblyTaskState.DONE,
+            AssemblyTaskState.SKIPPED,
+            AssemblyTaskState.DONE,
+            AssemblyTaskState.DONE
+        ]);
+        expect(status.tasks?.[0].warning).toBe("1 part can't be placed.");
+        expect(status.declared).toEqual([
+            {
+                key: "top|FBearing.place.mateConnector",
+                name: "Bearing",
+                status: DeclaredPartStatus.READY,
+                hostPath: ["top"],
+                path: ["part0"],
+                isFastened: true
+            },
+            {
+                key: "top|FElsewhere.place.mateConnector",
+                name: "Elsewhere",
+                status: DeclaredPartStatus.UNPLACEABLE,
+                reason: "FRCDesign's library doesn't have this part.",
+                hostPath: ["top"]
+            }
+        ]);
+        expect(status.result).toEqual({
+            inserted: 1,
+            fastened: 1,
+            replaced: 0
+        });
+        expect(assemblyJobOutcome(status)).toBe(AssemblyJobOutcome.PARTIAL);
+        expect(mates).toHaveLength(1);
+        expect(mates[0]).toContain(
+            '"featureId":"Fset.mateConnector","path":["part0"]'
+        );
+        expect(mates[0]).toContain(
+            '"featureId":"FBearing.place.mateConnector","path":["top"]'
+        );
+        expect(
+            loggedEvents().map((event) => [
+                event.elementId,
+                event.source,
+                event.fasten
+            ])
+        ).toEqual([["bearings", UseSource.FEATURESCRIPT_PARTS, true]]);
     });
 
     it("says why a pick gave no circular edge", async () => {

@@ -10,7 +10,18 @@ import {
     toAssemblyPlane,
     withoutExcluded
 } from "./assembly";
-import { SelectedEntityType } from "./contract";
+import { DeclaredPartStatus, SelectedEntityType } from "./contract";
+import {
+    assemblyConnectors,
+    declaredInsertGroups,
+    declaredMate,
+    type DeclaredProduct,
+    planDeclared
+} from "./declared";
+import { ElementType } from "../../lib/onshape/element-type";
+import { ParameterType } from "../configurations/contract";
+import { LibraryId } from "../library/library-id";
+import { type ScannedConnector } from "./part-scan";
 import { toTranslation } from "../../lib/onshape/objects/transform";
 
 const ASSEMBLY: ElementPath = {
@@ -206,5 +217,159 @@ describe("withoutExcluded", () => {
                 [circularEdge("b")]
             ).map((each) => each.key)
         ).toEqual(["a"]);
+    });
+});
+
+describe("declared parts", () => {
+    const occurrences = partOccurrences(DEFINITION, ASSEMBLY, MICROVERSIONS);
+    const plate = occurrences.find((each) => each.partId === "JHD");
+    const connector: ScannedConnector = {
+        partId: "JHD",
+        connectorId: "Fabc.place.mateConnector",
+        origin: [0, 0, 0],
+        xAxis: [1, 0, 0],
+        zAxis: [0, 0, 1],
+        declaration: {
+            version: 1,
+            kind: "BEARING",
+            documentId: "lib",
+            elementId: "bearings",
+            configuration: { size: "IN_1_2" },
+            name: "1/2 in. Hex Bearing",
+            connector: "mateConnector",
+            spec: {}
+        }
+    };
+    const product: DeclaredProduct = {
+        insertableId: "bearing-studio",
+        libraryId: LibraryId.FRC_DESIGN_LIB,
+        documentId: "lib",
+        versionId: "libv",
+        elementId: "bearings",
+        elementType: ElementType.PART_STUDIO,
+        parameters: [
+            {
+                id: "size",
+                name: "Size",
+                type: ParameterType.ENUM,
+                default: "IN_3_8",
+                options: [
+                    { id: "IN_3_8", name: "3/8 in." },
+                    { id: "IN_1_2", name: "1/2 in." }
+                ],
+                optionConditions: []
+            }
+        ],
+        mateConnectorId: "Fset.mateConnector"
+    };
+    const connectors = assemblyConnectors(
+        occurrences,
+        new Map([[plate?.source.key ?? "", [connector]]])
+    );
+    const products = new Map([["lib|bearings", product]]);
+
+    it("moves each connector into the assembly with its part", () => {
+        expect(connectors).toEqual([
+            expect.objectContaining({
+                key: "plate|Fabc.place.mateConnector",
+                hostPath: ["plate"],
+                origin: [0, 0, 1],
+                zAxis: [0, 0, 1]
+            })
+        ]);
+    });
+
+    it("inserts the library's part on the connector and fastens it there, the host second", () => {
+        const [plan] = planDeclared(connectors, products, occurrences);
+        expect(plan.status).toBe(DeclaredPartStatus.READY);
+        const [group] = declaredInsertGroups([plan]);
+        expect(group.instances).toEqual([
+            expect.objectContaining({
+                documentId: "lib",
+                versionId: "libv",
+                elementId: "bearings",
+                configuration: "size=IN_1_2"
+            })
+        ]);
+        expect(group.transform.slice(0, 12)).toEqual([
+            1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1
+        ]);
+        expect(JSON.stringify(declaredMate(plan, ["new"]))).toContain(
+            JSON.stringify([
+                {
+                    btType: "BTMPartStudioMateConnectorQuery-1324",
+                    featureId: "Fset.mateConnector",
+                    path: ["new"]
+                },
+                {
+                    btType: "BTMPartStudioMateConnectorQuery-1324",
+                    featureId: "Fabc.place.mateConnector",
+                    path: ["plate"]
+                }
+            ])
+        );
+    });
+
+    it("says why a part can't be placed", () => {
+        const reasons = (
+            declaration: Partial<ScannedConnector["declaration"]>,
+            found = products
+        ) =>
+            planDeclared(
+                assemblyConnectors(
+                    occurrences,
+                    new Map([
+                        [
+                            plate?.source.key ?? "",
+                            [
+                                {
+                                    ...connector,
+                                    declaration: {
+                                        ...connector.declaration,
+                                        ...declaration
+                                    }
+                                }
+                            ]
+                        ]
+                    ])
+                ),
+                found,
+                occurrences
+            ).map((plan) => plan.reason);
+        expect(reasons({}, new Map())).toEqual([
+            "FRCDesign's library doesn't have this part."
+        ]);
+        expect(reasons({ configuration: { size: "IN_5_8" } })).toEqual([
+            "This part's configuration isn't in the library."
+        ]);
+        expect(
+            reasons(
+                {},
+                new Map([
+                    ["lib|bearings", { ...product, mateConnectorId: undefined }]
+                ])
+            )
+        ).toEqual(["This part has no mate connector."]);
+        expect(reasons({ kind: "SCREW" })).toEqual([
+            "Screws of automatic length aren't placed yet."
+        ]);
+    });
+
+    it("leaves a connector whose part is already on it", () => {
+        const placed = [
+            ...occurrences,
+            {
+                ...occurrences[0],
+                path: ["bearing"],
+                documentId: "lib",
+                elementId: "bearings",
+                transform: toTranslation([0, 0, 1])
+            }
+        ];
+        expect(
+            planDeclared(connectors, products, placed).map(
+                (plan) => plan.status
+            )
+        ).toEqual([DeclaredPartStatus.PLACED]);
     });
 });

@@ -5,10 +5,16 @@ import {
     PencilSimpleIcon,
     PlugsConnectedIcon,
     PlusIcon,
+    PuzzlePieceIcon,
     TargetIcon
 } from "@phosphor-icons/react";
+import { AssemblyJobState } from "@backend/features/auto-assembly/contract";
 import { type ElementPath } from "@backend/lib/onshape/path";
 import { useIsSignedIn } from "../features/auth/access-level";
+import {
+    useAssembleDeclaredMutation,
+    useAssemblyJobQuery
+} from "../features/auto-assembly/queries";
 import { EditPartsPicker } from "../features/edit-parts/components/edit-parts-picker";
 import {
     EDIT_PARTS_LIST,
@@ -38,18 +44,27 @@ const BAR_HEIGHT = 40;
 interface ContextBarProps {
     /** Inserting is a library page's; a utility's page places nothing from a row. */
     isLibrary: boolean;
+    /** Auto Assembly's page, whose runs that need no picks start here. */
+    isAutoAssembly?: boolean;
 }
 
 /**
- * The header's last row, on a library page in an assembly: the actions that
+ * The header's last row, in an assembly: on a library page, the actions that
  * work with the Onshape window, each opening its query lists under the bar and
- * starting to select. Nothing elsewhere.
+ * starting to select; on Auto Assembly's, its runs that need no picks. Nothing
+ * elsewhere.
  */
 export function ContextBar(props: ContextBarProps): ReactNode {
     const assembly = useTargetAssembly();
     const isSignedIn = useIsSignedIn();
-    return props.isLibrary && assembly && isSignedIn ? (
-        <LibraryActions assembly={assembly} />
+    if (!assembly || !isSignedIn) {
+        return null;
+    }
+    if (props.isLibrary) {
+        return <LibraryActions assembly={assembly} />;
+    }
+    return props.isAutoAssembly ? (
+        <AutoAssemblyActions assembly={assembly} />
     ) : null;
 }
 
@@ -214,6 +229,32 @@ function LibraryActions(props: LibraryActionsProps): ReactNode {
                 </Collapse>
             )}
         </>
+    );
+}
+
+interface AutoAssemblyActionsProps {
+    assembly: ElementPath;
+}
+
+/** Auto Assembly's runs that act on the whole assembly. */
+function AutoAssemblyActions(props: AutoAssemblyActionsProps): ReactNode {
+    const { assembly } = props;
+    const assembleMutation = useAssembleDeclaredMutation(assembly);
+    const { data: job } = useAssemblyJobQuery(assembly);
+    const isRunning = job?.state === AssemblyJobState.RUNNING;
+    return (
+        <BarRow>
+            <Button
+                size="compact-sm"
+                variant="light"
+                leftSection={<PuzzlePieceIcon />}
+                loading={assembleMutation.isPending}
+                disabled={isRunning}
+                onClick={() => assembleMutation.mutate()}
+            >
+                {m.contextBarAssembleFeatureScriptParts()}
+            </Button>
+        </BarRow>
     );
 }
 

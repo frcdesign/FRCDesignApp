@@ -1,6 +1,7 @@
 /** How a run is going or went, in the few words the callout, the toast and the details share. */
 import {
     AssemblyJobOutcome,
+    AssemblyRunKind,
     AssemblyTaskAction,
     AssemblyTaskState,
     type AssemblyJobStatus,
@@ -15,10 +16,20 @@ export const OUTCOME_STATUS: Record<AssemblyJobOutcome, Status> = {
     [AssemblyJobOutcome.FAILED]: Status.ERROR
 };
 
-function taskRunning(action: AssemblyTaskAction): string {
+/** Whether a run places declared parts rather than fastening holes. */
+export function isDeclaredRun(status: AssemblyJobStatus): boolean {
+    return status.kind === AssemblyRunKind.DECLARED_PARTS;
+}
+
+function taskRunning(
+    action: AssemblyTaskAction,
+    status: AssemblyJobStatus
+): string {
     switch (action) {
         case AssemblyTaskAction.INDEX:
-            return m.autoAssemblyTaskIndexRunning();
+            return isDeclaredRun(status)
+                ? m.autoAssemblyTaskFindRunning()
+                : m.autoAssemblyTaskIndexRunning();
         case AssemblyTaskAction.REMOVE:
             return m.autoAssemblyTaskDeleteRunning();
         case AssemblyTaskAction.INSERT:
@@ -37,14 +48,16 @@ function runningTask(status: AssemblyJobStatus): AssemblyTask | undefined {
 /** "Indexing holes...", or whichever step is going. */
 export function runningHeadline(status: AssemblyJobStatus): string {
     const task = runningTask(status);
-    return task ? taskRunning(task.action) : m.autoAssemblyInserting();
+    return task ? taskRunning(task.action, status) : m.autoAssemblyInserting();
 }
 
 /** "Indexing holes. You can keep working.", or whichever step is going. */
 export function runningCallout(status: AssemblyJobStatus): string {
     switch (runningTask(status)?.action) {
         case AssemblyTaskAction.INDEX:
-            return m.autoAssemblyIndexingCallout();
+            return isDeclaredRun(status)
+                ? m.autoAssemblyFindingCallout()
+                : m.autoAssemblyIndexingCallout();
         case AssemblyTaskAction.REMOVE:
             return m.autoAssemblyDeletingCallout();
         case AssemblyTaskAction.FASTEN:
@@ -64,6 +77,9 @@ export function jobHeadline(
     const updated = status.result?.replaced ?? 0;
     switch (outcome) {
         case AssemblyJobOutcome.SUCCESS:
+            if (isDeclaredRun(status) && inserted === 0) {
+                return m.autoAssemblyNoDeclaredParts();
+            }
             return updated > 0
                 ? m.autoAssemblyUpdated({ count: updated })
                 : m.autoAssemblyInserted({ count: inserted });

@@ -11,6 +11,7 @@ import { useMemo } from "react";
 import {
     type AssemblyJobStatus,
     type AutoAssemblyIn,
+    type DeclaredPartsIn,
     type ExistingScrew,
     type PickCheckIn,
     type PickCheckOut,
@@ -120,6 +121,22 @@ export function useInsertMutation(assembly: ElementPath) {
         mutationFn: (body: AutoAssemblyIn) =>
             unlessHeld(HoldScope.AUTO_ASSEMBLY, () =>
                 apiPost<AssemblyJobStatus>("/auto-assembly/insert", { body })
+            ),
+        onSuccess: (status) =>
+            queryClient.setQueryData(assemblyJobQueryKey(assembly), status),
+        onError: getAppErrorHandler(m.autoAssemblyStartFailed())
+    });
+}
+
+/** Starts a run placing every part the assembly's FeatureScripts declared. */
+export function useAssembleDeclaredMutation(assembly: ElementPath) {
+    return useMutation({
+        mutationKey: ["auto-assembly-declared", assembly],
+        mutationFn: () =>
+            unlessHeld(HoldScope.AUTO_ASSEMBLY, () =>
+                apiPost<AssemblyJobStatus>("/auto-assembly/declared", {
+                    body: { assembly } satisfies DeclaredPartsIn
+                })
             ),
         onSuccess: (status) =>
             queryClient.setQueryData(assemblyJobQueryKey(assembly), status),

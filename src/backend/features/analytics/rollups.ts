@@ -248,7 +248,11 @@ function countDay(db: Db, event: LoggedEvent, libraryId: LibraryId) {
             ? 1
             : 0;
     const preselected = event.preselected ? 1 : 0;
-    const autoAssembly = event.source === UseSource.AUTO_ASSEMBLY ? 1 : 0;
+    const autoAssembly =
+        event.source === UseSource.AUTO_ASSEMBLY ||
+        event.source === UseSource.FEATURESCRIPT_PARTS
+            ? 1
+            : 0;
 
     return db
         .insert(dailyMetrics)

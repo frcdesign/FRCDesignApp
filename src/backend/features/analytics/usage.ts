@@ -51,6 +51,8 @@ export enum UseSource {
     RECENTS = "recents",
     /** An Auto Assembly run, which inserts a part per fastener it places. */
     AUTO_ASSEMBLY = "auto_assembly",
+    /** An Auto Assembly run placing the parts FeatureScripts declared. */
+    FEATURESCRIPT_PARTS = "featurescript_parts",
     /** Imported from the legacy app's log, which never recorded where a use started. */
     UNKNOWN = "unknown",
     /** An edit, which inserts each copy it changes again; see `features/edit-parts`. */

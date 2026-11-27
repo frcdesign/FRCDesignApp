@@ -185,6 +185,42 @@ export interface PlannedHole {
     nutWasher?: PartChoice;
 }
 
+/** Places the parts FeatureScripts in the assembly declared: every one, nothing picked. */
+export interface DeclaredPartsIn {
+    assembly: ElementPath;
+}
+
+/** What a run does: fasten picked holes, or place declared parts. Absent on a status means fasteners. */
+export enum AssemblyRunKind {
+    FASTENERS = "fasteners",
+    DECLARED_PARTS = "declared-parts"
+}
+
+export enum DeclaredPartStatus {
+    READY = "ready",
+    /** The part is already on its connector. */
+    PLACED = "placed",
+    /** The library has no such part, or it can't be fastened; `reason` says which. */
+    UNPLACEABLE = "unplaceable"
+}
+
+/** A part a FeatureScript declared, and what a run did with it. */
+export interface DeclaredPart {
+    /** Its host's occurrence path and its connector's id, joined. */
+    key: string;
+    /** As its declaration names it. */
+    name: string;
+    status: DeclaredPartStatus;
+    /** Why it can't be placed, in words. */
+    reason?: string;
+    /** The part it attaches to. */
+    hostPath: string[];
+    /** Its occurrence path in the assembly, once inserted. */
+    path?: string[];
+    /** Whether it's mated on its connector. */
+    isFastened?: boolean;
+}
+
 /** The assembly a run fastens in, as its status is keyed. */
 export function assemblyKey(assembly: ElementPath): string {
     return `${assembly.documentId}|${assembly.instanceId}|${assembly.elementId}`;
@@ -271,6 +307,8 @@ export interface RunScrew {
 
 export interface AssemblyJobStatus {
     state: AssemblyJobState;
+    /** Absent on a fastener run. */
+    kind?: AssemblyRunKind;
     jobId?: string;
     tasks?: AssemblyTask[];
     /** Each screw the run puts in, once its parts are known. */
@@ -279,6 +317,8 @@ export interface AssemblyJobStatus {
     holes?: PlannedHole[];
     /** Each pick, with its problem, once indexed. */
     picks?: RunPick[];
+    /** Each declared part a declared-parts run found, once indexed. */
+    declared?: DeclaredPart[];
     result?: AssemblyJobResult;
     /** Why the whole run stopped, when it did. Written for the user. */
     error?: string;
@@ -307,9 +347,13 @@ export function assemblyJobOutcome(
     const anyFailed = (status.tasks ?? []).some(
         (task) => task.state === AssemblyTaskState.FAILED
     );
-    const allReady = (status.holes ?? []).every(
-        (hole) => hole.status !== HoleStatus.NO_FIT && !hole.warning
-    );
+    const allReady =
+        (status.holes ?? []).every(
+            (hole) => hole.status !== HoleStatus.NO_FIT && !hole.warning
+        ) &&
+        (status.declared ?? []).every(
+            (part) => part.status !== DeclaredPartStatus.UNPLACEABLE
+        );
     const allFastened = (status.result?.fastened ?? 0) === inserted;
     if (
         status.state === AssemblyJobState.COMPLETE &&

@@ -22,12 +22,16 @@ import { isRateLimited, isTransient } from "../../lib/onshape/failures";
 import { isLongRateLimit } from "../../lib/workflow-steps";
 import {
     AssemblyJobState,
+    AssemblyRunKind,
     AssemblyTaskAction,
     AssemblyTaskState,
     HoleStatus,
     type AssemblyJobResult,
     type AssemblyJobStatus,
     type AssemblyTask,
+    type DeclaredPart,
+    type DeclaredPartsIn,
+    DeclaredPartStatus,
     PickList,
     type PickProblem,
     type PlannedHole,
@@ -54,19 +58,28 @@ import {
     placements
 } from "./insert";
 import { reportJob } from "./jobs";
-import { recordRunInserts } from "./track-inserts";
+import { recordDeclaredInserts, recordRunInserts } from "./track-inserts";
+import {
+    declaredInsertGroups,
+    declaredMate,
+    declaredPart,
+    type DeclaredPlan
+} from "./declared";
+import { indexDeclared } from "./index-declared";
 import { orphanedMates, type Replacement } from "./replace";
 import { planHoles } from "./planner";
 import { pickProblems } from "./check";
 import { pickKey } from "./picked";
 
-export interface AssemblyJobParams {
+export type AssemblyJobParams = {
     /** Whose Onshape session the run borrows; see the load workflow. */
     sessionId: string;
     /** Who started it, whom its inserts are recorded for. */
     userId: string;
-    request: AutoAssemblyIn;
-}
+} & (
+    | { kind?: AssemblyRunKind.FASTENERS; request: AutoAssemblyIn }
+    | { kind: AssemblyRunKind.DECLARED_PARTS; request: DeclaredPartsIn }
+);
 
 /** One run, shared by the steps that report on it. */
 interface RunContext {
@@ -75,10 +88,12 @@ interface RunContext {
     sessionId: string;
     userId: string;
     assembly: ElementPath;
+    kind: AssemblyRunKind;
     tasks: AssemblyTask[];
     holes?: PlannedHole[];
     picks?: RunPick[];
     screws?: RunScrew[];
+    declared?: DeclaredPart[];
     result: AssemblyJobResult;
     status: (state: AssemblyJobState) => AssemblyJobStatus;
 }
@@ -103,7 +118,9 @@ export class AutoAssemblyWorkflow extends WorkflowEntrypoint<
         event: WorkflowEvent<AssemblyJobParams>,
         step: WorkflowStep
     ): Promise<AssemblyJobStatus> {
-        const { sessionId, userId, request } = event.payload;
+        const { payload } = event;
+        const { sessionId, userId, request } = payload;
+        const kind = payload.kind ?? AssemblyRunKind.FASTENERS;
         const tasks: AssemblyTask[] = pendingTasks();
         const ctx: RunContext = {
             env: this.env,
@@ -111,22 +128,29 @@ export class AutoAssemblyWorkflow extends WorkflowEntrypoint<
             sessionId,
             userId,
             assembly: request.assembly,
+            kind,
             tasks,
             result: { inserted: 0, fastened: 0, replaced: 0 },
             status: (state) => ({
                 state,
+                ...(kind === AssemblyRunKind.DECLARED_PARTS ? { kind } : {}),
                 jobId: event.instanceId,
                 tasks,
                 ...(ctx.holes ? { holes: ctx.holes } : {}),
                 ...(ctx.picks ? { picks: ctx.picks } : {}),
                 ...(ctx.screws ? { screws: ctx.screws } : {}),
+                ...(ctx.declared ? { declared: ctx.declared } : {}),
                 result: ctx.result
             })
         };
 
         let error: unknown;
         try {
-            await runSteps(ctx, request);
+            if (payload.kind === AssemblyRunKind.DECLARED_PARTS) {
+                await runDeclaredSteps(ctx);
+            } else {
+                await runSteps(ctx, payload.request);
+            }
         } catch (thrown) {
             error = thrown;
         }
@@ -272,6 +296,112 @@ async function runSteps(ctx: RunContext, request: AutoAssemblyIn) {
         recordRunInserts(ctx.env, ctx.userId, set, parts, paths, mated).catch(
             (error: unknown) =>
                 console.error("Failed to record Auto Assembly's inserts", error)
+        )
+    );
+}
+
+/**
+ * Places the parts FeatureScripts declared: finds every declaring connector,
+ * inserts each part it names in one call, then fastens each on its connector.
+ */
+async function runDeclaredSteps(ctx: RunContext): Promise<void> {
+    skipTask(ctx, AssemblyTaskAction.REMOVE);
+    const plans = await runTask(ctx, AssemblyTaskAction.INDEX, (run) =>
+        run("index", isTransient, (client) =>
+            indexDeclared(client, ctx.env.KV, getDb(ctx.env.DB), ctx.assembly)
+        )
+    );
+    if (!plans) {
+        skipRest(ctx);
+        return;
+    }
+    const declared = plans.map(declaredPart);
+    ctx.declared = declared;
+    const unplaceable = plans.filter(
+        (plan) => plan.status === DeclaredPartStatus.UNPLACEABLE
+    ).length;
+    if (unplaceable > 0) {
+        warnTask(
+            ctx,
+            AssemblyTaskAction.INDEX,
+            unplaceable === 1
+                ? "1 part can't be placed."
+                : `${unplaceable} parts can't be placed.`
+        );
+    }
+    // Each ready plan with its entry in `declared`, in the order they're inserted
+    const ready = plans.flatMap((plan, index) =>
+        plan.status === DeclaredPartStatus.READY
+            ? [{ plan, part: declared[index] }]
+            : []
+    );
+    if (ready.length === 0) {
+        skipRest(ctx);
+        return;
+    }
+
+    const paths = await runTask(ctx, AssemblyTaskAction.INSERT, (run) =>
+        run("insert", isRateLimited, async (client) => {
+            const response = await insertTransformedInstances(
+                client,
+                ctx.assembly,
+                declaredInsertGroups(plans)
+            );
+            return ready.map(
+                (_, index) =>
+                    response.insertInstanceResponses?.[index]?.occurrences?.[0]
+                        ?.path ?? null
+            );
+        })
+    );
+    if (!paths) {
+        skipRest(ctx);
+        return;
+    }
+    ctx.result.inserted += paths.filter((path) => path !== null).length;
+    for (const [index, path] of paths.entries()) {
+        if (path) {
+            ready[index].part.path = path;
+        }
+    }
+
+    const mated = new Set<number>();
+    await runTask(ctx, AssemblyTaskAction.FASTEN, async (run) => {
+        for (const [index, { plan, part }] of ready.entries()) {
+            const path = paths[index];
+            if (!path) {
+                continue;
+            }
+            await run(`mate-${index}`, isRateLimited, async (client) => {
+                await addAssemblyFeature(
+                    client,
+                    ctx.assembly,
+                    declaredMate(plan, path)
+                );
+                return true;
+            });
+            mated.add(index);
+            part.isFastened = true;
+            ctx.result.fastened++;
+        }
+    });
+    const unmated = ctx.result.inserted - ctx.result.fastened;
+    if (unmated > 0) {
+        warnTask(
+            ctx,
+            AssemblyTaskAction.FASTEN,
+            `${unmated} of ${ctx.result.inserted} parts weren't fastened, so they sit unmated.`
+        );
+    }
+    await ctx.step.do("record-inserts", () =>
+        recordDeclaredInserts(
+            ctx.env,
+            ctx.userId,
+            ready.map(({ plan }): DeclaredPlan => plan),
+            paths,
+            mated
+        ).catch((error: unknown) =>
+            console.error("Failed to record Auto Assembly's inserts", error)
         )
     );
 }
@@ -442,7 +572,9 @@ async function runTask<T>(
                 }
                 // The job reports it in our words, so this is the only record of Onshape's
                 console.error(`Auto Assembly step ${name} failed`, error);
-                throw new NonRetryableError(describeStepFailure(error, action));
+                throw new NonRetryableError(
+                    describeStepFailure(error, action, ctx.kind)
+                );
             }
         });
 

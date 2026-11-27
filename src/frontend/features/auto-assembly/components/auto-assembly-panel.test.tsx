@@ -3,6 +3,8 @@ import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
     AssemblyJobState,
+    AssemblyRunKind,
+    DeclaredPartStatus,
     FastenerMode,
     AssemblyTaskAction,
     AssemblyTaskState,
@@ -795,6 +797,67 @@ describe("JobDetails", () => {
         ).toBeTruthy();
         expect(
             screen.getByRole("button", { name: "Send a report" })
+        ).toBeTruthy();
+    });
+
+    it("lists each FeatureScript part with how it went", () => {
+        const queryClient = createTestQueryClient();
+        const done = (action: AssemblyTaskAction) => ({
+            action,
+            state: AssemblyTaskState.DONE
+        });
+        queryClient.setQueryData(assemblyJobQueryKey(ASSEMBLY), {
+            state: AssemblyJobState.COMPLETE,
+            kind: AssemblyRunKind.DECLARED_PARTS,
+            tasks: [
+                done(AssemblyTaskAction.INDEX),
+                {
+                    action: AssemblyTaskAction.REMOVE,
+                    state: AssemblyTaskState.SKIPPED
+                },
+                done(AssemblyTaskAction.INSERT),
+                done(AssemblyTaskAction.FASTEN)
+            ],
+            declared: [
+                {
+                    key: "plate|Fa.mateConnector",
+                    name: "1/2 in. Hex Bearing",
+                    status: DeclaredPartStatus.READY,
+                    hostPath: ["plate"],
+                    path: ["bearing1"],
+                    isFastened: true
+                },
+                {
+                    key: "plate|Fb.mateConnector",
+                    name: "3/8 in. Bushing",
+                    status: DeclaredPartStatus.PLACED,
+                    hostPath: ["plate"]
+                },
+                {
+                    key: "plate|Fc.mateConnector",
+                    name: "Custom bearing",
+                    status: DeclaredPartStatus.UNPLACEABLE,
+                    reason: "FRCDesign's library doesn't have this part.",
+                    hostPath: ["plate"]
+                }
+            ],
+            result: { inserted: 1, fastened: 1, replaced: 0 }
+        });
+        renderWithProviders(
+            <>
+                <JobDetailsTitle assembly={ASSEMBLY} />
+                <JobDetails assembly={ASSEMBLY} />
+            </>,
+            queryClient
+        );
+
+        expect(screen.getByText("Inserted 1 part with problems")).toBeTruthy();
+        expect(screen.getByText("Find parts")).toBeTruthy();
+        expect(screen.getByText("FeatureScript parts")).toBeTruthy();
+        expect(screen.getByText("1/2 in. Hex Bearing")).toBeTruthy();
+        expect(screen.getByText("Already placed.")).toBeTruthy();
+        expect(
+            screen.getByText("FRCDesign's library doesn't have this part.")
         ).toBeTruthy();
     });
 

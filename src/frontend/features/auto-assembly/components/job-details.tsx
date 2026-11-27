@@ -6,6 +6,8 @@ import {
     AssemblyJobState,
     AssemblyTaskAction,
     AssemblyTaskState,
+    type DeclaredPart,
+    DeclaredPartStatus,
     PickList,
     type AssemblyTask,
     type RunPart,
@@ -31,7 +33,12 @@ import { type OnshapeSelection } from "../../../lib/selection";
 import { Status, STATUS_COLOR } from "../../../lib/status";
 import { IconSize, StatusColor } from "../../../lib/style-constants";
 import { m } from "../../../paraglide/messages";
-import { jobHeadline, OUTCOME_STATUS, runningHeadline } from "../job-report";
+import {
+    isDeclaredRun,
+    jobHeadline,
+    OUTCOME_STATUS,
+    runningHeadline
+} from "../job-report";
 import { toRowProblem, useAssemblyJobQuery } from "../queries";
 
 /** Mantine's `sm` gap, between a row's icon and its text. */
@@ -78,9 +85,9 @@ interface JobDetailsProps {
 }
 
 /**
- * The run this assembly last started: indexing, then each screw's steps, then
- * each pick with what went wrong with it. Hovering a step that put a part in
- * the assembly, or a pick, lights it up in Onshape.
+ * The run this assembly last started: indexing, then each screw's steps or
+ * each declared part, then each pick with what went wrong with it. Hovering a
+ * step that put a part in the assembly, or a pick, lights it up in Onshape.
  */
 export function JobDetails(props: JobDetailsProps): ReactNode {
     const { data: status } = useAssemblyJobQuery(props.assembly);
@@ -118,7 +125,19 @@ export function JobDetails(props: JobDetailsProps): ReactNode {
                 {index && (
                     <StepRow
                         step={stepOf(index)}
-                        label={m.autoAssemblyTaskIndex()}
+                        label={
+                            isDeclaredRun(status)
+                                ? m.autoAssemblyTaskFindParts()
+                                : m.autoAssemblyTaskIndex()
+                        }
+                    />
+                )}
+                {status.declared && status.declared.length > 0 && (
+                    <DeclaredSteps
+                        parts={status.declared}
+                        insert={task(AssemblyTaskAction.INSERT)}
+                        fasten={task(AssemblyTaskAction.FASTEN)}
+                        show={show}
                     />
                 )}
                 {(status.screws ?? []).map((screw, screwIndex) => (
@@ -276,7 +295,7 @@ function partLabel(role: RunPartRole): string {
 
 /** A part's step: inserted with the rest, then fastened where it sits. */
 function partStep(
-    part: RunPart,
+    part: Pick<RunPart, "path" | "isFastened">,
     insert: AssemblyTask | undefined,
     fasten: AssemblyTask | undefined
 ): Step {
@@ -347,6 +366,54 @@ function ScrewSteps(props: ScrewStepsProps): ReactNode {
                     />
                 );
             })}
+        </Stack>
+    );
+}
+
+/** A declared part's step: placed already, or why it can't be, or inserted and fastened. */
+function declaredStep(
+    part: DeclaredPart,
+    insert: AssemblyTask | undefined,
+    fasten: AssemblyTask | undefined
+): Step {
+    switch (part.status) {
+        case DeclaredPartStatus.PLACED:
+            return {
+                state: AssemblyTaskState.SKIPPED,
+                detail: m.autoAssemblyPartPlaced()
+            };
+        case DeclaredPartStatus.UNPLACEABLE:
+            return { state: AssemblyTaskState.FAILED, detail: part.reason };
+        case DeclaredPartStatus.READY:
+            return partStep(part, insert, fasten);
+    }
+}
+
+interface DeclaredStepsProps {
+    parts: DeclaredPart[];
+    insert: AssemblyTask | undefined;
+    fasten: AssemblyTask | undefined;
+    show: (shown: HighlightedEntity[]) => void;
+}
+
+/** Each declared part, named as its FeatureScript names it. Hovering one lights it up, or the part it goes on. */
+function DeclaredSteps(props: DeclaredStepsProps): ReactNode {
+    const { parts, insert, fasten, show } = props;
+    return (
+        <Stack gap={6}>
+            <Text size="xs" c={StatusColor.DIMMED}>
+                {m.autoAssemblyDeclaredParts()}
+            </Text>
+            {parts.map((part) => (
+                <StepRow
+                    key={part.key}
+                    step={declaredStep(part, insert, fasten)}
+                    label={part.name}
+                    onHover={() =>
+                        show([{ occurrencePath: part.path ?? part.hostPath }])
+                    }
+                />
+            ))}
         </Stack>
     );
 }

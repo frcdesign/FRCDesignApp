@@ -139,7 +139,7 @@ export function AppNavbar(): ReactNode {
                     <FeatureScriptSearchBar />
                 </Group>
             )}
-            <ContextBar isLibrary={isLibrary} />
+            <ContextBar isLibrary={isLibrary} isAutoAssembly={isAutoAssembly} />
         </Stack>
     );
 }

@@ -368,6 +368,15 @@ errors.
   [edit-parts.md](./architecture/edit-parts.md) inserts and deletes instead.
 - **A fasten mate** between two instances, neither of them fixed, tends to
   move the first onto the second — _observed_.
+- **A mate connector a custom feature made** is named in a fasten mate's
+  `BTMPartStudioMateConnectorQuery` as `<featureId>.<id>` — _observed_ for
+  the fasteners' generated studios, whose connector is at the feature's own
+  `id + "mateConnector"`. For one made deeper, as Robot bearing's is, the
+  name being its whole operation id joined with `.` is _unverified_. So is the evaluated
+  `lastModifyingOperationId` of the connector giving that id, and
+  `qMateConnectorsOfParts` answering connectors a feature attached to a part
+  with `owner`. Auto Assembly's FeatureScript parts rely on all three
+  ([auto-assembly.md](./architecture/auto-assembly.md)).
 
 ## Selection messages
 

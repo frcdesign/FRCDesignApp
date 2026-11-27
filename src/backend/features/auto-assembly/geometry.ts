@@ -86,3 +86,19 @@ export function frameTransform(origin: Vec3, zAxis: Vec3): number[] {
         0, 0, 0, 1
     ];
 }
+
+/** The transform putting a part's origin at `origin`, its X axis along unit `xAxis` and its Z along unit `zAxis`. */
+export function coordinateTransform(
+    origin: Vec3,
+    xAxis: Vec3,
+    zAxis: Vec3
+): number[] {
+    const yAxis = cross(zAxis, xAxis);
+    // prettier-ignore
+    return [
+        xAxis[0], yAxis[0], zAxis[0], origin[0],
+        xAxis[1], yAxis[1], zAxis[1], origin[1],
+        xAxis[2], yAxis[2], zAxis[2], origin[2],
+        0, 0, 0, 1
+    ];
+}

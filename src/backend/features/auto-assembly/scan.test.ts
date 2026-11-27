@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { DECLARED_SCAN, parseDeclaredScan } from "./part-scan";
 import {
     decodeFeatureScriptValue,
     DETERMINISTIC_ID,
@@ -152,5 +153,43 @@ describe("holeScanLambda", () => {
         expect(() => holeScanLambda("export function other() {}\n")).toThrow(
             "fastenerHoleScan"
         );
+    });
+});
+
+describe("the declared-part scan", () => {
+    it("is part-scan.fs's function body, as a lambda", () => {
+        expect(DECLARED_SCAN).toContain(
+            "const scan = function(context is Context, queries is map)\n{\n"
+        );
+        expect(DECLARED_SCAN).toContain(
+            'return { "connectors" : connectors };'
+        );
+    });
+
+    it("leaves out a connector whose declaration it can't read", () => {
+        const connector = {
+            partId: "JHD",
+            connectorId: "Fabc.place.mateConnector",
+            origin: [0, 0, 0],
+            xAxis: [1, 0, 0],
+            zAxis: [0, 0, 1],
+            declaration: {
+                version: 1,
+                kind: "BEARING",
+                documentId: "lib",
+                elementId: "bearings",
+                configuration: { size: "IN_1_2" },
+                name: "1/2 in. Hex Bearing",
+                connector: "mateConnector",
+                spec: { outerDiameter: 0.028575 }
+            }
+        };
+        const later = {
+            ...connector,
+            declaration: { ...connector.declaration, version: 2 }
+        };
+        expect(parseDeclaredScan({ connectors: [connector, later] })).toEqual([
+            connector
+        ]);
     });
 });

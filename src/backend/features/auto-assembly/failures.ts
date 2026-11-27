@@ -2,7 +2,7 @@
 import { ApiError, ApiErrorKind } from "../../lib/api-error";
 import { describeOnshapeFailure } from "../../lib/onshape/failures";
 import { runFailures } from "../../lib/run-failures";
-import { AssemblyTaskAction } from "./contract";
+import { AssemblyRunKind, AssemblyTaskAction } from "./contract";
 
 const failures = runFailures("Auto Assembly stopped: ");
 
@@ -13,10 +13,21 @@ const ACTION_FAILURE = {
     [AssemblyTaskAction.FASTEN]: "Couldn't fasten the inserted parts."
 } as const;
 
+function actionFailure(
+    action: AssemblyTaskAction,
+    kind: AssemblyRunKind
+): string {
+    return action === AssemblyTaskAction.INDEX &&
+        kind === AssemblyRunKind.DECLARED_PARTS
+        ? "Couldn't find the assembly's FeatureScript parts."
+        : ACTION_FAILURE[action];
+}
+
 /** Why a step failed, as the message of the error it leaves its step with. */
 export function describeStepFailure(
     error: unknown,
-    action: AssemblyTaskAction
+    action: AssemblyTaskAction,
+    kind: AssemblyRunKind = AssemblyRunKind.FASTENERS
 ): string {
     // An internal error's message is for the logs, which the step writes
     if (
@@ -26,12 +37,12 @@ export function describeStepFailure(
         return failures.word(error.body.message);
     }
     if (error instanceof ApiError) {
-        return failures.word(ACTION_FAILURE[action]);
+        return failures.word(actionFailure(action, kind));
     }
     return failures.word(
         describeOnshapeFailure(error, {
             forbidden: "You don't have permission to edit this assembly."
-        }) ?? ACTION_FAILURE[action]
+        }) ?? actionFailure(action, kind)
     );
 }
 

@@ -3,7 +3,8 @@ import { z } from "zod";
 import { handledError } from "../../lib/api-error";
 import { finishEvenIfDisconnected } from "../../lib/background";
 import { CachePolicy, cacheMiddleware } from "../../lib/cache";
-import { getApp } from "../../lib/context";
+import { type AppBindings, getApp } from "../../lib/context";
+import { type ElementPath } from "../../lib/onshape/path";
 import { validate } from "../../lib/validate";
 import { requireSignInMiddleware } from "../auth/guards";
 import { getSessionId } from "../auth/session";
@@ -11,6 +12,7 @@ import { type Db, getDb } from "../../db/client";
 import { Program } from "./catalog";
 import {
     AssemblyJobState,
+    AssemblyRunKind,
     FastenerMode,
     type AssemblyJobStatus,
     pendingTasks,
@@ -290,13 +292,7 @@ autoAssemblyRoutes.post(
                 HttpStatus.BAD_REQUEST
             );
         }
-        const current = await getJobStatus(c.env, request.assembly);
-        if (current.state === AssemblyJobState.RUNNING) {
-            throw handledError(
-                "Fasteners are already being inserted in this assembly.",
-                HttpStatus.CONFLICT
-            );
-        }
+        await refuseWhileRunning(c.env, request.assembly);
 
         const run = await c.env.AUTO_ASSEMBLY_WORKFLOW.create({
             params: {
@@ -315,6 +311,51 @@ autoAssemblyRoutes.post(
         return c.json(status);
     }
 );
+
+/**
+ * POST /api/auto-assembly/declared — starts a run placing every part the
+ * assembly's FeatureScripts declared.
+ */
+autoAssemblyRoutes.post(
+    "/auto-assembly/declared",
+    requireSignInMiddleware,
+    validate("json", z.object({ assembly: assemblySchema })),
+    async (c) => {
+        const request = c.req.valid("json");
+        await refuseWhileRunning(c.env, request.assembly);
+        const run = await c.env.AUTO_ASSEMBLY_WORKFLOW.create({
+            params: {
+                sessionId: getSessionId(c),
+                userId: await c.var.getUserId(),
+                kind: AssemblyRunKind.DECLARED_PARTS,
+                request
+            }
+        });
+        const status: AssemblyJobStatus = {
+            state: AssemblyJobState.RUNNING,
+            kind: AssemblyRunKind.DECLARED_PARTS,
+            jobId: run.id,
+            tasks: pendingTasks(),
+            result: { inserted: 0, fastened: 0, replaced: 0 }
+        };
+        await reportJob(c.env, request.assembly, status);
+        return c.json(status);
+    }
+);
+
+/** One run at a time in an assembly. */
+async function refuseWhileRunning(
+    env: AppBindings,
+    assembly: ElementPath
+): Promise<void> {
+    const current = await getJobStatus(env, assembly);
+    if (current.state === AssemblyJobState.RUNNING) {
+        throw handledError(
+            "Auto Assembly is already running in this assembly.",
+            HttpStatus.CONFLICT
+        );
+    }
+}
 
 async function requireFastenerSet(db: Db): Promise<FastenerSet> {
     const set = await getFastenerSet(db);

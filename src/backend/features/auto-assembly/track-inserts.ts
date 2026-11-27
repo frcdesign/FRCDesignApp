@@ -8,6 +8,8 @@ import { toElementPath } from "../../lib/onshape/path";
 import { type InsertEvent, recordInserts } from "../analytics/tracking";
 import { UseSource } from "../analytics/usage";
 import { toSelection } from "../configurations/selection";
+import { DeclaredPartStatus } from "./contract";
+import { type DeclaredPlan } from "./declared";
 import { type PartPlacement } from "./insert";
 import { type FastenerSet } from "./studios";
 
@@ -57,6 +59,46 @@ export async function recordRunInserts(
                 isFavorite: false,
                 isQuickInsert: false,
                 source: UseSource.AUTO_ASSEMBLY,
+                fasten: mated.has(index),
+                fastenable: true,
+                preselected: false,
+                atInsertLocation: false
+            }
+        ];
+    });
+    await recordInserts(env, userId, inserts);
+}
+
+/** Each declared part inserted is a use of its product, fastened once its mate is in. */
+export async function recordDeclaredInserts(
+    env: Pick<AppBindings, "DB" | "EVENT_LOG">,
+    userId: string,
+    plans: DeclaredPlan[],
+    paths: (string[] | null)[],
+    mated: Set<number>
+): Promise<void> {
+    const ready = plans.filter(
+        (plan) => plan.status === DeclaredPartStatus.READY
+    );
+    const inserts = ready.flatMap((plan, index): InsertEvent[] => {
+        const { product } = plan;
+        if (!paths[index] || !product) {
+            return [];
+        }
+        return [
+            {
+                libraryId: product.libraryId,
+                path: toElementPath(product),
+                insertableId: product.insertableId,
+                targetElementType: ElementType.ASSEMBLY,
+                selection: toSelection(
+                    plan.connector.declaration.configuration,
+                    product.parameters
+                ),
+                parameters: product.parameters,
+                isFavorite: false,
+                isQuickInsert: false,
+                source: UseSource.FEATURESCRIPT_PARTS,
                 fasten: mated.has(index),
                 fastenable: true,
                 preselected: false,

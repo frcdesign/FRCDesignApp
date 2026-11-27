@@ -67,6 +67,8 @@ enum UseSource {
     RECENTS = "recents",
     /** An Auto Assembly run, which inserts a part per fastener it places. */
     AUTO_ASSEMBLY = "auto_assembly",
+    /** An Auto Assembly run placing the parts FeatureScripts declared. */
+    FEATURESCRIPT_PARTS = "featurescript_parts",
     /** Imported from the legacy app's log, which never recorded where a use started. */
     UNKNOWN = "unknown",
     /** An edit, which inserts each copy it changes again; see `features/edit-parts`. */
@@ -1077,7 +1079,8 @@ table, `analytics.events`, to the R2 bucket `frc-design-app-<env>-events`:
   an insert also its target tab type and the quick-insert, fasten, fastenable
   (the part offered insert and fasten), preselected (fastened to picks made
   beforehand) and insert-location flags, which a download leaves null; an Auto
-  Assembly run's inserts have source `auto_assembly`, and an edit's `edit`; a version run adds its kind,
+  Assembly run's inserts have source `auto_assembly`, a FeatureScript parts
+  run's `featurescript_parts`, and an edit's `edit`; a version run adds its kind,
   scope, whether it was update-only, its outcome, and how many steps failed,
   versions it created and tabs it updated. A report adds its topic, category,
   source and the team number the reporter gave, a part report the element
@@ -1115,7 +1118,8 @@ no foreign key crosses between them):
   `insert` and `download` rows and either can be read alone. Beside its
   favorite, fasten and quick-insert counts it keeps, of inserts into an
   assembly of a part offering insert and fasten, `fastenable_count`, with the
-  `preselected_count` and `auto_assembly_count` inside it.
+  `preselected_count` and `auto_assembly_count` inside it. Both of Auto
+  Assembly's sources count toward `auto_assembly_count`, and toward its reach.
   `daily_target_metrics` and `daily_insertable_metrics` split by `UseTarget`:
   an insert's target tab type (`PARTSTUDIO`, `ASSEMBLY`, the same strings as
   `ElementType`), or `DOWNLOAD`. The targets sum to the uses.
@@ -1180,7 +1184,9 @@ no foreign key crosses between them):
    their replacements are inserts like any other. An edit
    ([edit-parts.md](./edit-parts.md)) calls `recordInserts` with an insert per
    copy it replaced, source `edit`, which the dashboard's source mix lists as
-   **Edit parts**;
+   **Edit parts**; a FeatureScript parts run calls `recordDeclaredInserts`,
+   an insert per part it placed, source `featurescript_parts`, which the
+   source mix lists as **FeatureScript parts**;
    `POST /api/step-export` calls `trackDownload` once Onshape accepts the
    export (see [download.md](./download.md)); `/init`'s
    handoff calls `POST /api/app-open`, which calls `trackAppOpen`; the

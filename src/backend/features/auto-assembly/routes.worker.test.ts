@@ -12,6 +12,7 @@ import {
 import { Program } from "./catalog";
 import {
     AssemblyJobState,
+    AssemblyRunKind,
     AssemblyTaskAction,
     AssemblyTaskState,
     HoleStatus,
@@ -227,6 +228,40 @@ describe("POST /api/auto-assembly/insert", () => {
                 })
             ).status
         ).toBe(400);
+    });
+});
+
+describe("POST /api/auto-assembly/declared", () => {
+    it("starts a declared-parts run, with no fasteners loaded", async () => {
+        const create = vi
+            .spyOn(env.AUTO_ASSEMBLY_WORKFLOW, "create")
+            .mockResolvedValue({ id: "run-1" } as WorkflowInstance);
+
+        const res = await post("/auto-assembly/declared", {
+            assembly: ASSEMBLY
+        });
+        expect(res.status).toBe(200);
+        expect(create.mock.calls[0][0]?.params).toMatchObject({
+            kind: AssemblyRunKind.DECLARED_PARTS,
+            request: { assembly: ASSEMBLY }
+        });
+        expect((await res.json<AssemblyJobStatus>()).kind).toBe(
+            AssemblyRunKind.DECLARED_PARTS
+        );
+    });
+
+    it("refuses a second run in an assembly while one goes", async () => {
+        await reportJob(env, ASSEMBLY, {
+            state: AssemblyJobState.RUNNING,
+            jobId: "running"
+        });
+        vi.spyOn(env.AUTO_ASSEMBLY_WORKFLOW, "get").mockResolvedValue({
+            status: () => Promise.resolve({ status: "running" })
+        } as unknown as WorkflowInstance);
+        expect(
+            (await post("/auto-assembly/declared", { assembly: ASSEMBLY }))
+                .status
+        ).toBe(409);
     });
 });
 

@@ -116,22 +116,27 @@ function scanId(source: StudioSource): string {
 /** Deterministic ids are letters, digits and a few marks; anything else can't reach the script. */
 export const DETERMINISTIC_ID = /^[A-Za-z0-9_.+/-]+$/;
 
-const SIGNATURE =
-    /export function fastenerHoleScan\(context is Context, queries is map\) returns map\n\{\n([\s\S]*?)\n\}\n/;
-
 /**
- * `fastenerHoleScan`'s body, as the lambda Onshape's FeatureScript evaluation
+ * A scan function's body, as the lambda Onshape's FeatureScript evaluation
  * takes: only std's common.fs is in scope there, so the function uses nothing
  * else and keeps its helpers inside it.
  */
-export function holeScanLambda(source: string): string {
-    const body = SIGNATURE.exec(source)?.[1];
+export function scanLambda(source: string, name: string): string {
+    const signature = new RegExp(
+        `export function ${name}\\(context is Context, queries is map\\) returns map\\n\\{\\n([\\s\\S]*?)\\n\\}\\n`
+    );
+    const body = signature.exec(source)?.[1];
     if (body === undefined) {
         throw new Error(
-            "hole-scan.fs has no fastenerHoleScan(context is Context, queries is map)"
+            `The scan has no ${name}(context is Context, queries is map)`
         );
     }
     return `function(context is Context, queries is map)\n{\n${body}\n}`;
+}
+
+/** `fastenerHoleScan`'s body, as a lambda. */
+export function holeScanLambda(source: string): string {
+    return scanLambda(source, "fastenerHoleScan");
 }
 
 const HOLE_SCAN = holeScanLambda(HOLE_SCAN_SOURCE);

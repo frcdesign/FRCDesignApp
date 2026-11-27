@@ -4,8 +4,8 @@ What [auto-assembly.md](../architecture/auto-assembly.md) shows a person. The
 page's own strings are messages in `src/frontend/messages/en.json`, keyed
 `autoAssembly…`. A pick's and a hole's problems, and a run's failures, are
 written by the backend (`planner.ts`, `check.ts`, `index-holes.ts`,
-`failures.ts`, `workflow.ts`, `routes.ts`) with the values they name, and the
-page shows them as they come.
+`failures.ts`, `workflow.ts`, `routes.ts`, `declared.ts`) with the values they
+name, and the page shows them as they come.
 
 ## Getting there
 
@@ -74,6 +74,27 @@ page shows them as they come.
 | "{n} pick(s) has/have problems."                                                                             | Step warning                      | Under Index holes, in Details | A pick has an error or a warning                                           | **⚑** New                        |
 | "Faces" / "Circular edges" / "Edges to exclude" / "Screws to update" / "Face to stop at"                     | Group labels                      | Details, under the steps      | The run had picks in that list                                             |                                  |
 
+## FeatureScript parts
+
+| String                                                   | Kind             | Where                              | When                                            | Review    |
+| -------------------------------------------------------- | ---------------- | ---------------------------------- | ----------------------------------------------- | --------- |
+| "Assemble FeatureScript parts"                           | Button           | The context bar under the header   | Auto Assembly's page, in an assembly, signed in | **⚑** New |
+| "Finding parts..."                                       | Status           | Details title                      | Find parts is going                             | **⚑** New |
+| "Finding parts. You can keep working."                   | Callout          | Above the form                     | Find parts is going                             | **⚑** New |
+| "Find parts"                                             | Step name        | Details                            | A declared-parts run                            | **⚑** New |
+| "FeatureScript parts"                                    | Group label      | Details, the parts' steps          | The run found declared parts                    | **⚑** New |
+| "{name}"                                                 | Step name        | Details, under FeatureScript parts | Each part, as its FeatureScript names it        | **⚑** New |
+| "Already placed."                                        | Step note        | Under a part's step                | The part is already on its connector            | **⚑** New |
+| "No FeatureScript parts to place"                        | Headline         | Callout, toast, details title      | Finished with nothing to insert                 | **⚑** New |
+| "{n} part(s) can't be placed."                           | Step warning     | Under Find parts, in Details       | A part is unplaceable                           | **⚑** New |
+| "FRCDesign's library doesn't have this part."            | Step error       | Under a part's step                | No loaded insertable is its tab                 | **⚑** New |
+| "Only Part Studios can be placed."                       | Step error       | Under a part's step                | Its tab is an assembly                          | **⚑** New |
+| "This part has no mate connector."                       | Step error       | Under a part's step                | Its load found none                             | **⚑** New |
+| "This part's configuration isn't in the library."        | Step error       | Under a part's step                | Its studio doesn't offer the declared options   | **⚑** New |
+| "Screws of automatic length aren't placed yet."          | Step error       | Under a part's step                | Robot bearing's screws, with Automatic length   | **⚑** New |
+| "Too many parts for one run. Run it again for the rest." | Step error       | Under a part's step                | Past 200 parts                                  | **⚑** New |
+| "Couldn't find the assembly's FeatureScript parts."      | A step's failure | Details notice                     | Find parts failed                               | **⚑** New |
+
 ## A pick's problem
 
 Under a row, in red for an error and yellow for a warning: in the form as the
@@ -124,24 +145,24 @@ itself, "The {length} screw"; automatic, the length it chose.
 
 ## A run's failures
 
-| String                                                                      | Kind                | When                                                        | Review                       |
-| --------------------------------------------------------------------------- | ------------------- | ----------------------------------------------------------- | ---------------------------- |
-| "Auto Assembly stopped: {why}"                                              | The run's error     | The run stopped                                             |                              |
-| "Couldn't read the assembly's holes."                                       | A step's failure    | Index failed                                                |                              |
-| "Couldn't delete the screws to update."                                     | A step's failure    | Delete failed                                               | **⚑** Renamed                |
-| "Couldn't insert the parts."                                                | A step's failure    | Insert failed                                               | **⚑** Was "fasteners"        |
-| "Couldn't fasten the inserted parts."                                       | A step's failure    | Fasten failed                                               |                              |
-| "You don't have permission to edit this assembly."                          | A step's failure    | Onshape answered 403                                        |                              |
-| "Onshape is limiting requests. Try again in {wait}."                        | A step's failure    | Onshape answered 429; `{wait}` is "about 23 hours" and such | **⚑** Was "in a few minutes" |
-| "Onshape is limiting requests. Try again in {wait}."                        | Error callout       | Top of the form, while a 429 holds checks and Insert        | **⚑** New                    |
-| "A fastener's studio has no mate connector to fasten by. Reload its group." | Fasten step failure | A studio's load found no mate connector                     |                              |
-| "The run stopped unexpectedly."                                             | The run's error     | The workflow errored or was terminated without reporting    |                              |
-| "Auto Assembly's parts aren't published yet."                               | Error, insert route | No fasteners loaded                                         |                              |
-| "Auto Assembly doesn't have FTC fasteners yet."                             | Error, insert route | FTC chosen                                                  | **⚑** FTC's are now released |
-| "Fasteners are already being inserted in this assembly."                    | Error, insert route | A run is going                                              |                              |
-| "Select holes to fasten or screws to update."                               | Error, insert route | Nothing picked                                              | **⚑** Renamed                |
-| "Select only what Select by asks for."                                      | Error, insert route | Picks Select by doesn't ask for                             |                              |
-| "Every part must be one its vendor makes, in the screw's size."             | Error, insert route | A part the catalog doesn't make                             |                              |
-| "A nut washer goes under a nut."                                            | Error, insert route | A nut washer without a nut                                  |                              |
-| "Select a face to stop at, with the Face stop condition."                   | Error, insert route | A face to stop at without Face, or Face without one         | **⚑** New                    |
-| "A maximum length goes with the Max length stop condition."                 | Error, insert route | A maximum length without Max length, or the other way round | **⚑** New                    |
+| String                                                                      | Kind                              | When                                                        | Review                                           |
+| --------------------------------------------------------------------------- | --------------------------------- | ----------------------------------------------------------- | ------------------------------------------------ |
+| "Auto Assembly stopped: {why}"                                              | The run's error                   | The run stopped                                             |                                                  |
+| "Couldn't read the assembly's holes."                                       | A step's failure                  | Index failed                                                |                                                  |
+| "Couldn't delete the screws to update."                                     | A step's failure                  | Delete failed                                               | **⚑** Renamed                                    |
+| "Couldn't insert the parts."                                                | A step's failure                  | Insert failed                                               | **⚑** Was "fasteners"                            |
+| "Couldn't fasten the inserted parts."                                       | A step's failure                  | Fasten failed                                               |                                                  |
+| "You don't have permission to edit this assembly."                          | A step's failure                  | Onshape answered 403                                        |                                                  |
+| "Onshape is limiting requests. Try again in {wait}."                        | A step's failure                  | Onshape answered 429; `{wait}` is "about 23 hours" and such | **⚑** Was "in a few minutes"                     |
+| "Onshape is limiting requests. Try again in {wait}."                        | Error callout                     | Top of the form, while a 429 holds checks and Insert        | **⚑** New                                        |
+| "A fastener's studio has no mate connector to fasten by. Reload its group." | Fasten step failure               | A studio's load found no mate connector                     |                                                  |
+| "The run stopped unexpectedly."                                             | The run's error                   | The workflow errored or was terminated without reporting    |                                                  |
+| "Auto Assembly's parts aren't published yet."                               | Error, insert route               | No fasteners loaded                                         |                                                  |
+| "Auto Assembly doesn't have FTC fasteners yet."                             | Error, insert route               | FTC chosen                                                  | **⚑** FTC's are now released                     |
+| "Auto Assembly is already running in this assembly."                        | Error, insert and declared routes | A run is going                                              | **⚑** Was "Fasteners are already being inserted" |
+| "Select holes to fasten or screws to update."                               | Error, insert route               | Nothing picked                                              | **⚑** Renamed                                    |
+| "Select only what Select by asks for."                                      | Error, insert route               | Picks Select by doesn't ask for                             |                                                  |
+| "Every part must be one its vendor makes, in the screw's size."             | Error, insert route               | A part the catalog doesn't make                             |                                                  |
+| "A nut washer goes under a nut."                                            | Error, insert route               | A nut washer without a nut                                  |                                                  |
+| "Select a face to stop at, with the Face stop condition."                   | Error, insert route               | A face to stop at without Face, or Face without one         | **⚑** New                                        |
+| "A maximum length goes with the Max length stop condition."                 | Error, insert route               | A maximum length without Max length, or the other way round | **⚑** New                                        |
