@@ -36,18 +36,28 @@ const ASSEMBLY_PATH: ElementPath = {
     elementId: "asm"
 };
 
-/** A client whose every request is answered with `assembly`. */
+/** A client answering `assembly`, and no tabs, so nothing is cached. */
 function answering(assembly: OnshapeAssemblyDefinition): MockOnshapeApi {
     const api = new MockOnshapeApi();
-    vi.spyOn(api, "get").mockResolvedValue(assembly);
+    vi.spyOn(api, "get").mockImplementation((path) =>
+        Promise.resolve(path.endsWith("/elements") ? [] : assembly)
+    );
     return api;
 }
 
+/** Never reached without a microversion to pin the assembly by. */
+const NO_KV = {} as KVNamespace;
+
 const findIn = (assembly: OnshapeAssemblyDefinition) =>
-    findInsertLocation(answering(assembly), ASSEMBLY_PATH);
+    findInsertLocation(answering(assembly), NO_KV, ASSEMBLY_PATH);
 
 const transformIn = (assembly: OnshapeAssemblyDefinition, instanceId: string) =>
-    getInsertLocationTransform(answering(assembly), ASSEMBLY_PATH, instanceId);
+    getInsertLocationTransform(
+        answering(assembly),
+        NO_KV,
+        ASSEMBLY_PATH,
+        instanceId
+    );
 
 describe("findInsertLocation", () => {
     it("finds the sketch the app inserts, among other instances", async () => {
@@ -61,9 +71,7 @@ describe("findInsertLocation", () => {
 
     // An assembly can hold a marker inserted before the sketch was revised.
     it("matches whatever version the marker was inserted from", async () => {
-        const assembly = toAssembly([
-            { ...MARKER, documentVersion: "older" } as OnshapeAssemblyInstance
-        ]);
+        const assembly = toAssembly([{ ...MARKER, documentVersion: "older" }]);
         expect(await findIn(assembly)).toBe("marker");
     });
 

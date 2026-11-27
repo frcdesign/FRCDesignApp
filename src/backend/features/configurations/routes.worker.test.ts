@@ -149,7 +149,10 @@ describe("configuration routes", () => {
             lengthUnit: Unit.MILLIMETER,
             anglePrecision: 3,
             lengthPrecision: 4,
-            realPrecision: 3
+            realPrecision: 3,
+            // Kilograms: the mock names no mass unit.
+            massUnit: Unit.KILOGRAM,
+            massPrecision: 3
         });
     });
 });

@@ -4,6 +4,7 @@ import { type ElementPath } from "../../lib/onshape/path";
 import { getAssembly } from "../../lib/onshape/endpoints/assemblies";
 import { getFeatures } from "../../lib/onshape/endpoints/part-studios";
 import { type BuildIssue, BuildIssueType } from "../build-checker/issues";
+import { type GeneratedFeature } from "../generated-parts/manifest";
 
 import { OnshapeApi } from "../../lib/onshape/client";
 import {
@@ -42,14 +43,17 @@ export function decideFasten(found: MateConnector | undefined): FastenResult {
     };
 }
 
+/** `generatedFeatures`: every loaded generated set's studio features (`generatedFeatures`). */
 export async function findMateConnector(
     onshapeApi: OnshapeApi,
     elementPath: ElementPath,
-    elementType: ElementType
+    elementType: ElementType,
+    generatedFeatures: GeneratedFeature[] = []
 ): Promise<MateConnector | undefined> {
     if (elementType === ElementType.PART_STUDIO) {
         return findPartStudioMateConnector(
-            await getFeatures(onshapeApi, elementPath)
+            await getFeatures(onshapeApi, elementPath),
+            generatedFeatures
         );
     }
     const fastenInfo = findAssemblyMateConnector(
@@ -62,17 +66,26 @@ export async function findMateConnector(
 }
 
 /**
- * The first mate connector the default configuration regenerates. It is unstable
- * when a configuration decides its suppression, or that of one before it, since
- * either changes which connector comes first.
+ * The first mate connector the default configuration regenerates: Onshape's
+ * own, named by its id, or a generated studio's feature's, named
+ * `<featureId>.<mateConnector>` as a fasten mate names what a feature made. It
+ * is unstable when a configuration decides its suppression, or that of one
+ * before it, since either changes which connector comes first.
  */
 export function findPartStudioMateConnector(
-    response: OnshapeFeatureListResponse
+    response: OnshapeFeatureListResponse,
+    generatedFeatures: GeneratedFeature[] = []
 ): MateConnector | undefined {
+    const subIds = new Map(
+        generatedFeatures.flatMap((feature) =>
+            feature.mateConnector ? [[feature.type, feature.mateConnector]] : []
+        )
+    );
     // One suppressed outright is off in every configuration, so it never counts.
     const candidates = response.features.filter(
         (feature) =>
-            feature.featureType === "mateConnector" &&
+            (feature.featureType === "mateConnector" ||
+                subIds.has(feature.featureType)) &&
             (!feature.suppressed || feature.suppressionConfigured === true)
     );
     const index = candidates.findIndex((feature) => !feature.suppressed);
@@ -81,9 +94,12 @@ export function findPartStudioMateConnector(
     }
     const first = candidates[index];
     const status = response.featureStates?.[first.featureId]?.featureStatus;
+    const subId = subIds.get(first.featureType);
     return {
         fastenInfo: {
-            mateConnectorId: first.featureId,
+            mateConnectorId: subId
+                ? `${first.featureId}.${subId}`
+                : first.featureId,
             mateLocation: MateLocation.Feature,
             path: []
         },

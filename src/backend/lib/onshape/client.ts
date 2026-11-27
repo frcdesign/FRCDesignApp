@@ -52,30 +52,48 @@ export class OnshapeTimeoutError extends Error {
     }
 }
 
+/** Which Onshape call was limited, and the limit headers exactly as it sent them. */
+export interface RateLimitDetail {
+    method: string;
+    path: string;
+    retryAfterHeader?: string;
+    /** `x-rate-limit-remaining`, the only count Onshape sends. */
+    remaining?: string;
+}
+
+/** Ids as `:id`, so the same endpoint groups together in Workers Logs. */
+export function endpointOf(path: string): string {
+    return path.replace(/[0-9a-f]{24}/g, ":id");
+}
+
+function describeLimit(detail: RateLimitDetail): string {
+    const retryAfter =
+        detail.retryAfterHeader === undefined
+            ? "no Retry-After"
+            : `Retry-After ${detail.retryAfterHeader}`;
+    const remaining =
+        detail.remaining === undefined
+            ? "no x-rate-limit-remaining"
+            : `x-rate-limit-remaining ${detail.remaining}`;
+    return ` on ${detail.method} ${detail.path}, ${retryAfter}, ${remaining}`;
+}
+
 /**
- * The wait is also in the message, since that's all that survives Workflows
- * rebuilding the error; {@link readRetryAfterSeconds} reads it back.
+ * The wait and the call are also in the message, since that's all that survives
+ * Workflows rebuilding the error; `readRetryAfterSeconds` in `failures.ts` reads it back.
  */
 export class OnshapeRateLimitError extends OnshapeApiError {
     constructor(
         text: string,
-        public readonly retryAfterSeconds: number
+        public readonly retryAfterSeconds: number,
+        detail?: RateLimitDetail
     ) {
         super(
-            `Onshape API error 429 (retry after ${retryAfterSeconds}s): ${text}`,
+            `Onshape API error 429 (retry after ${retryAfterSeconds}s)${detail ? describeLimit(detail) : ""}: ${text}`,
             HttpStatus.TOO_MANY_REQUESTS
         );
         this.name = "OnshapeRateLimitError";
     }
-}
-
-/** Matches what {@link OnshapeRateLimitError} spells into its message. */
-const RETRY_AFTER_PATTERN = /Onshape API error 429 \(retry after (\d+)s\)/;
-
-/** Reads the message, so it works on an error Workflows rebuilt. */
-export function readRetryAfterSeconds(error: Error): number | undefined {
-    const match = RETRY_AFTER_PATTERN.exec(error.message);
-    return match ? Number.parseInt(match[1], 10) : undefined;
 }
 
 export abstract class OnshapeApi {
@@ -178,15 +196,24 @@ export abstract class OnshapeApi {
         if (!res.ok) {
             const text = await res.text();
             if (res.status === HttpStatus.TOO_MANY_REQUESTS) {
-                const retryAfter = parseInt(
-                    res.headers.get("Retry-After") ?? "",
-                    10
-                );
+                const retryAfterHeader =
+                    res.headers.get("Retry-After") ?? undefined;
+                const remaining =
+                    res.headers.get("x-rate-limit-remaining") ?? undefined;
+                const retryAfter = parseInt(retryAfterHeader ?? "", 10);
+                // Fields, so Workers Logs can group and chart every 429, workflow or route.
+                console.warn(`Onshape 429 on ${method} ${endpointOf(path)}`, {
+                    onshapeMethod: method,
+                    onshapeEndpoint: endpointOf(path),
+                    retryAfterHeader,
+                    rateLimitRemaining: remaining
+                });
                 throw new OnshapeRateLimitError(
                     text,
                     Number.isFinite(retryAfter)
                         ? retryAfter
-                        : DEFAULT_RETRY_AFTER_SECONDS
+                        : DEFAULT_RETRY_AFTER_SECONDS,
+                    { method, path, retryAfterHeader, remaining }
                 );
             }
             throw new OnshapeApiError(

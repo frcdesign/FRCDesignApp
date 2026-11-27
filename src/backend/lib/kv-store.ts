@@ -51,3 +51,20 @@ export function kvStore<T>(
         }
     };
 }
+
+/**
+ * For a cache of Onshape's answers: a write that fails, as a second write to a
+ * key within a second does, is a miss later rather than a failed request.
+ */
+export async function putQuietly<T>(
+    store: KvStore<T>,
+    kv: KVNamespace,
+    id: string,
+    value: T
+): Promise<void> {
+    try {
+        await store.put(kv, id, value);
+    } catch (error) {
+        console.warn(`Failed to cache ${id}`, error);
+    }
+}

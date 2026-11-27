@@ -14,7 +14,8 @@ import {
     rem,
     Table,
     Text,
-    Tooltip
+    Tooltip,
+    Select
 } from "@mantine/core";
 import {
     useDashboardLibraryId,
@@ -22,7 +23,9 @@ import {
 } from "./features/dashboard/dashboard-nav";
 import { LibraryId } from "@backend/features/library/library-id";
 import { useIsVersionManager } from "./features/version-manager/navigation";
+import { useIsAutoAssembly } from "./features/auto-assembly/navigation";
 import { useIsFeatureScripts } from "./features/featurescripts/navigation";
+import { useIsMassAnalysis } from "./features/mass-analysis/navigation";
 import {
     FILLED_SHADE,
     FontWeight,
@@ -75,8 +78,12 @@ export const AppColor = {
     DASHBOARD: "frcGreen",
     /** The Version Manager acts on the open document, which is no library's. */
     VERSION_MANAGER: "blue",
+    /** Auto Assembly's parts are FRCDesign's, but it acts on the open assembly. */
+    AUTO_ASSEMBLY: "blue",
     /** FeatureScripts are their own area, released apart from any library. */
-    FEATURESCRIPTS: "blue"
+    FEATURESCRIPTS: "blue",
+    /** Mass Analysis acts on the open assembly, which is no library's. */
+    MASS_ANALYSIS: "blue"
 } as const;
 
 /**
@@ -87,7 +94,9 @@ export function useAppColor(libraryId: string): string {
     const isDashboard = useIsDashboard();
     const dashboardLibraryId = useDashboardLibraryId();
     const isVersionManager = useIsVersionManager();
+    const isAutoAssembly = useIsAutoAssembly();
     const isFeatureScripts = useIsFeatureScripts();
+    const isMassAnalysis = useIsMassAnalysis();
 
     if (isDashboard) {
         return dashboardLibraryId
@@ -97,8 +106,14 @@ export function useAppColor(libraryId: string): string {
     if (isVersionManager) {
         return AppColor.VERSION_MANAGER;
     }
+    if (isAutoAssembly) {
+        return AppColor.AUTO_ASSEMBLY;
+    }
     if (isFeatureScripts) {
         return AppColor.FEATURESCRIPTS;
+    }
+    if (isMassAnalysis) {
+        return AppColor.MASS_ANALYSIS;
     }
     return getLibraryColor(libraryId);
 }
@@ -163,6 +178,10 @@ export function createAppTheme(primaryColor: string) {
             }),
             Input: Input.extend({ styles: { section: ICON_SECTION } }),
             Modal: Modal.extend({ defaultProps: { centered: true } }),
+            // Its list opens against the field, with no arrow between them
+            Select: Select.extend({
+                defaultProps: { comboboxProps: { withArrow: false } }
+            }),
             Table: Table.extend({
                 defaultProps: { highlightOnHover: true },
                 // Headings the weight of other labels, not Mantine's bold.

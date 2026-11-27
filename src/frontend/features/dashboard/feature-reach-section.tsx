@@ -3,33 +3,31 @@ import {
     type LineChartProps,
     type LineChartSeries
 } from "@mantine/charts";
-import {
-    Card,
-    Group,
-    Paper,
-    SegmentedControl,
-    SimpleGrid,
-    Text
-} from "@mantine/core";
+import { Box, Card, Group, Paper, SimpleGrid, Text } from "@mantine/core";
+import { useElementSize } from "@mantine/hooks";
 import { type UseQueryResult } from "@tanstack/react-query";
-import { useNavigate, useSearch } from "@tanstack/react-router";
 import { type ReactNode } from "react";
-import type { FeatureReachOut } from "@backend/features/analytics/contract";
-import { type AppFeature } from "@backend/features/analytics/usage";
+import {
+    ReachInterval,
+    splitsNewUsers,
+    type FeatureReachOut
+} from "@backend/features/analytics/contract";
+import { AppFeature } from "@backend/features/analytics/usage";
 import { Section } from "../../components/section";
-import { MUTED_MARK, PrimaryColor } from "../../lib/style-constants";
+import { MUTED_MARK } from "../../lib/style-constants";
 import { formatCount, formatPercent } from "./format";
 import { DashboardEmpty, DashboardState } from "./dashboard-state";
 import { ChartRangeControl } from "./range-control";
 import {
     evenTicks,
     featureLabel,
-    featureMeasure,
+    featureMarks,
     featureOrder,
     latestPoint,
-    nudgeMarks,
+    MarkSide,
+    placeMarks,
+    reachMeasure,
     ReachMeasure,
-    ReachView,
     toReachSeries,
     type ReachCount,
     type ReachPoint
@@ -47,11 +45,23 @@ const PERCENT_TICKS = [0, 50, 100];
 /** A count's axis climbs to fit, in about this many steps. */
 const COUNT_TICK_COUNT = 3;
 
-/** As many week labels as fit under a panel without crowding. */
+/** As many labels as fit under a panel without crowding. */
 const MAX_TICKS = 5;
 
+/** Recharts' default y axis width, which the plot starts after. */
+const Y_AXIS_WIDTH = 60;
+
+/** Room right of the plot for half the last date, which is centered on its tick. */
+const RIGHT_MARGIN = 20;
+
+/** Recharts' own, on the sides it is not widened. */
+const CHART_MARGIN = { top: 5, right: RIGHT_MARGIN, bottom: 5, left: 5 };
+
+/** A 12px label's line, the step between stacked marker labels. */
+const LABEL_ROW_HEIGHT = 14;
+
 /** A year of weeks still reads with dots; past that they crowd. */
-const MAX_DOTTED_WEEKS = 60;
+const MAX_DOTTED_POINTS = 60;
 
 /**
  * Checked apart in both themes and for color blindness; the dash tells them
@@ -60,45 +70,45 @@ const MAX_DOTTED_WEEKS = 60;
 const EXISTING_COLOR = "frcGreen.7";
 const NEW_COLOR = "blue.6";
 const NEW_DASH = "5 3";
-
-function useReachView(): ReachView {
-    const search = useSearch({ from: "/dashboard" });
-    return search.reach ?? ReachView.ALL;
-}
+/** Neither group's color, for a feature whose users aren't split. */
+const ALL_COLOR = "gray.6";
 
 interface FeatureReachSectionProps {
     query: UseQueryResult<FeatureReachOut>;
 }
 
 /**
- * One panel per feature, each with its own nudges marked, over the section's
- * own range. Its controls stay while a new range loads.
+ * One panel per feature, existing and new users apart, each with its own
+ * nudges marked, over the section's own range. Its controls stay while a new
+ * range loads.
  */
 export function FeatureReachSection({
     query
 }: FeatureReachSectionProps): ReactNode {
-    const view = useReachView();
     return (
         <Section
             title={m.dashboardFeatureReach()}
-            aside={
-                <Group gap="sm" wrap="wrap" preventGrowOverflow={false}>
-                    <ReachViewControl view={view} />
-                    <ChartRangeControl searchKey="featureRange" />
-                </Group>
-            }
+            aside={<ChartRangeControl searchKey="featureRange" />}
         >
-            {view === ReachView.NEW_VS_EXISTING && <SplitLegend />}
+            <SplitLegend />
             {query.data ? (
                 <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }}>
-                    {featureOrder().map((feature) => (
-                        <FeatureReachPanel
-                            key={feature}
-                            feature={feature}
-                            points={toReachSeries(query.data, feature)}
-                            view={view}
-                        />
-                    ))}
+                    {featureOrder().map((feature) => {
+                        const measure = reachMeasure(query.data, feature);
+                        return (
+                            <FeatureReachPanel
+                                key={feature}
+                                feature={feature}
+                                measure={measure}
+                                points={toReachSeries(
+                                    query.data,
+                                    feature,
+                                    measure
+                                )}
+                                interval={query.data.interval}
+                            />
+                        );
+                    })}
                 </SimpleGrid>
             ) : (
                 <DashboardState
@@ -110,37 +120,7 @@ export function FeatureReachSection({
     );
 }
 
-interface ReachViewControlProps {
-    view: ReachView;
-}
-
-function ReachViewControl({ view }: ReachViewControlProps): ReactNode {
-    const navigate = useNavigate();
-    return (
-        <SegmentedControl
-            size="xs"
-            value={view}
-            onChange={(value) =>
-                void navigate({
-                    to: ".",
-                    search: (search) => ({ ...search, reach: value })
-                })
-            }
-            data={[
-                {
-                    value: ReachView.ALL,
-                    label: m.dashboardFeatureReachViewAll()
-                },
-                {
-                    value: ReachView.NEW_VS_EXISTING,
-                    label: m.dashboardFeatureReachViewSplit()
-                }
-            ]}
-        />
-    );
-}
-
-/** One legend for every panel, since they all draw the same two lines. */
+/** One legend for the panels that split their users. */
 function SplitLegend(): ReactNode {
     return (
         <Group gap="lg">
@@ -182,124 +162,136 @@ function LegendItem({ color, dash, label }: LegendItemProps): ReactNode {
     );
 }
 
-function seriesFor(view: ReachView, feature: AppFeature): LineChartSeries[] {
-    switch (view) {
-        case ReachView.ALL:
-            return [
-                {
-                    name: "value",
-                    label: featureLabel(feature),
-                    color: PrimaryColor.FILLED
-                }
-            ];
-        case ReachView.NEW_VS_EXISTING:
-            return [
-                {
-                    name: "existingValue",
-                    label: m.dashboardFeatureReachExisting(),
-                    color: EXISTING_COLOR
-                },
-                {
-                    name: "newValue",
-                    label: m.dashboardFeatureReachNew(),
-                    color: NEW_COLOR,
-                    strokeDasharray: NEW_DASH
-                }
-            ];
+const SERIES: LineChartSeries[] = [
+    {
+        name: "existingValue",
+        label: m.dashboardFeatureReachExisting(),
+        color: EXISTING_COLOR
+    },
+    {
+        name: "newValue",
+        label: m.dashboardFeatureReachNew(),
+        color: NEW_COLOR,
+        strokeDasharray: NEW_DASH
     }
+];
+
+function seriesOf(feature: AppFeature): LineChartSeries[] {
+    if (splitsNewUsers(feature)) return SERIES;
+    return [{ name: "value", label: featureLabel(feature), color: ALL_COLOR }];
 }
 
 interface FeatureReachPanelProps {
     feature: AppFeature;
+    measure: ReachMeasure;
     points: ReachPoint[];
-    view: ReachView;
+    interval: ReachInterval;
 }
 
 function FeatureReachPanel({
     feature,
+    measure,
     points,
-    view
+    interval
 }: FeatureReachPanelProps): ReactNode {
+    const { ref, width } = useElementSize();
     const latest = latestPoint(points);
-    const measure = featureMeasure(feature);
-    const middle = points[Math.floor(points.length / 2)]?.bucket ?? "";
+    const marks = placeMarks(
+        featureMarks(feature, points, interval),
+        points.map((point) => point.bucket),
+        width - Y_AXIS_WIDTH - CHART_MARGIN.left - RIGHT_MARGIN
+    );
     return (
         <Card>
-            <Group justify="space-between" mb="xs">
+            <Group justify="space-between" align="flex-start" mb="xs">
                 <Text fw={700}>{featureLabel(feature)}</Text>
                 {latest?.value != null && (
                     <Text c="dimmed">
-                        {m.dashboardFeatureReachLatest({
-                            value: formatHeadline(latest.value, measure)
-                        })}
+                        {latestLabel(
+                            interval,
+                            formatHeadline(latest.value, measure, feature)
+                        )}
                     </Text>
                 )}
             </Group>
-            {latest ? (
-                <LineChart
-                    h={PANEL_HEIGHT}
-                    data={points}
-                    dataKey="bucket"
-                    xAxisProps={{
-                        ticks: evenTicks(
-                            points.map((point) => point.bucket),
-                            MAX_TICKS
-                        ),
-                        interval: 0,
-                        tickFormatter: toLabel(points)
-                    }}
-                    yAxisProps={axisFor(measure)}
-                    valueFormatter={(value) => formatValue(value, measure)}
-                    curveType="monotone"
-                    withDots={points.length <= MAX_DOTTED_WEEKS}
-                    tooltipProps={{
-                        content: ({ payload }) => (
-                            <ReachTooltip
-                                point={
-                                    payload?.[0]?.payload as
-                                        | ReachPoint
-                                        | undefined
-                                }
-                                view={view}
-                                measure={measure}
-                            />
-                        )
-                    }}
-                    referenceLines={nudgeMarks(feature, points).map((mark) => ({
-                        x: mark.bucket,
-                        color: MUTED_MARK,
-                        strokeDasharray: "4 4",
-                        label: mark.label,
-                        // Toward the middle, so a label at either end stays on the card.
-                        labelPosition:
-                            mark.bucket > middle
-                                ? "insideTopRight"
-                                : "insideTopLeft"
-                    }))}
-                    series={seriesFor(view, feature)}
-                />
-            ) : (
-                <DashboardEmpty title={m.dashboardFeatureReachNoData()} />
-            )}
+            <Box ref={ref}>
+                {latest ? (
+                    <LineChart
+                        h={PANEL_HEIGHT}
+                        data={points}
+                        dataKey="bucket"
+                        lineChartProps={{ margin: CHART_MARGIN }}
+                        xAxisProps={{
+                            ticks: evenTicks(
+                                points.map((point) => point.bucket),
+                                MAX_TICKS
+                            ),
+                            interval: 0,
+                            tickFormatter: toLabel(points)
+                        }}
+                        yAxisProps={axisFor(measure)}
+                        valueFormatter={(value) => formatValue(value, measure)}
+                        curveType="monotone"
+                        withDots={points.length <= MAX_DOTTED_POINTS}
+                        tooltipProps={{
+                            content: ({ payload }) => (
+                                <ReachTooltip
+                                    point={
+                                        payload?.[0]?.payload as
+                                            | ReachPoint
+                                            | undefined
+                                    }
+                                    interval={interval}
+                                    measure={measure}
+                                    feature={feature}
+                                />
+                            )
+                        }}
+                        referenceLines={marks.map((mark) => ({
+                            x: mark.bucket,
+                            color: MUTED_MARK,
+                            strokeDasharray: "4 4",
+                            label: {
+                                value: mark.label,
+                                dy: mark.row * LABEL_ROW_HEIGHT
+                            },
+                            labelPosition:
+                                mark.side === MarkSide.LEFT
+                                    ? "insideTopRight"
+                                    : "insideTopLeft"
+                        }))}
+                        series={seriesOf(feature)}
+                    />
+                ) : (
+                    <DashboardEmpty title={m.dashboardFeatureReachNoData()} />
+                )}
+            </Box>
         </Card>
     );
 }
 
 interface ReachTooltipProps {
     point: ReachPoint | undefined;
-    view: ReachView;
+    interval: ReachInterval;
     measure: ReachMeasure;
+    feature: AppFeature;
 }
 
-/** The value with what it's a share of, since a small week swings it. */
-function ReachTooltip({ point, view, measure }: ReachTooltipProps): ReactNode {
+/** The value with what it's a share of, since a small day or week swings it. */
+function ReachTooltip({
+    point,
+    interval,
+    measure,
+    feature
+}: ReachTooltipProps): ReactNode {
     if (point?.value == null) return null;
-    const newCount =
-        view === ReachView.NEW_VS_EXISTING ? point.newCount : undefined;
+    const newCount = point.newCount;
     return (
         <Paper px="md" py="sm" withBorder shadow="md">
             <Text fw={700}>
-                {m.dashboardFeatureReachWeekOf({ week: point.label })}
+                {interval === ReachInterval.WEEK
+                    ? m.dashboardFeatureReachWeekOf({ week: point.label })
+                    : point.label}
             </Text>
             {newCount ? (
                 <>
@@ -320,7 +312,7 @@ function ReachTooltip({ point, view, measure }: ReachTooltipProps): ReactNode {
                 </>
             ) : (
                 <TooltipLine
-                    value={formatHeadline(point.value, measure)}
+                    value={formatHeadline(point.value, measure, feature)}
                     count={point}
                     measure={measure}
                 />
@@ -335,7 +327,7 @@ interface TooltipLineProps {
     measure: ReachMeasure;
 }
 
-/** A share says what it's of; a count already is the number of people. */
+/** A share says what it's of. */
 function TooltipLine({ value, count, measure }: TooltipLineProps): ReactNode {
     return (
         <>
@@ -361,7 +353,7 @@ function axisFor(measure: ReachMeasure): LineChartProps["yAxisProps"] {
                 ticks: PERCENT_TICKS,
                 tickFormatter: (value: number) => `${value}%`
             };
-        case ReachMeasure.USERS:
+        case ReachMeasure.TIMES:
             return {
                 domain: [0, "auto"],
                 allowDecimals: false,
@@ -371,23 +363,62 @@ function axisFor(measure: ReachMeasure): LineChartProps["yAxisProps"] {
     }
 }
 
+function latestLabel(interval: ReachInterval, value: string): string {
+    switch (interval) {
+        case ReachInterval.DAY:
+            return m.dashboardFeatureReachLatestDay({ value });
+        case ReachInterval.WEEK:
+            return m.dashboardFeatureReachLatest({ value });
+    }
+}
+
 /** As an axis or a line in a list shows it: "18.0%", "37". */
 function formatValue(value: number, measure: ReachMeasure): string {
     switch (measure) {
         case ReachMeasure.SHARE:
             return formatPercent(value);
-        case ReachMeasure.USERS:
+        case ReachMeasure.TIMES:
             return formatCount(value);
     }
 }
 
-/** On its own: "18.0%", "37 users". */
-function formatHeadline(value: number, measure: ReachMeasure): string {
+/** On its own: "18.0%", "37 reports". */
+function formatHeadline(
+    value: number,
+    measure: ReachMeasure,
+    feature: AppFeature
+): string {
     switch (measure) {
         case ReachMeasure.SHARE:
             return formatPercent(value);
-        case ReachMeasure.USERS:
-            return m.dashboardFeatureReachUserCount({ count: value });
+        case ReachMeasure.TIMES:
+            return formatTimes(value, feature);
+    }
+}
+
+/** In what one use of the feature is. */
+function formatTimes(count: number, feature: AppFeature): string {
+    switch (feature) {
+        case AppFeature.REPORT:
+            return m.dashboardFeatureReachReports({ count });
+        case AppFeature.VERSION_MANAGER:
+            return m.dashboardFeatureReachRuns({ count });
+        case AppFeature.FEATURESCRIPTS:
+            return m.dashboardFeatureReachAdds({ count });
+        case AppFeature.DEFAULT_CONFIGURATION:
+            return m.dashboardFeatureReachSaves({ count });
+        case AppFeature.MASS_ANALYSIS:
+            return m.dashboardFeatureReachViews({ count });
+        case AppFeature.SEARCH:
+        case AppFeature.FAVORITES:
+        case AppFeature.RECENTS:
+        case AppFeature.QUICK_INSERT:
+        case AppFeature.FASTEN:
+        case AppFeature.PRESELECTION:
+        case AppFeature.AUTO_ASSEMBLY:
+        case AppFeature.INSERT_LOCATION:
+        case AppFeature.DOWNLOAD:
+            return m.dashboardFeatureReachUses({ count });
     }
 }
 

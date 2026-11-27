@@ -1,0 +1,182 @@
+/** Why each pick won't do what it was picked for, from a run's own indexing and plans. Pure. */
+import {
+    HoleStatus,
+    type PickCheckIn,
+    type PickCheckOut,
+    type PickProblem,
+    type PlannedHole,
+    ProblemSeverity
+} from "./contract";
+import { type IndexedHoles } from "./index-holes";
+import { pickKey } from "./picked";
+
+const ALREADY_FASTENED = "This hole already has a screw and will be ignored.";
+const SOME_FASTENED = "Some holes already have screws and will be ignored.";
+const NO_HOLE_OF_SIZE = "No holes in this face fit the screw.";
+
+type Problem = Omit<PickProblem, "key">;
+
+const error = (message: string): Problem => ({
+    message,
+    severity: ProblemSeverity.ERROR
+});
+
+/** What's wrong with a hole's plan, if anything: an error where it won't be fastened, a warning where it will be, poorly. A hole with a screw already is left out. */
+function holeProblem(planned: PlannedHole | undefined): Problem | undefined {
+    if (!planned) {
+        return undefined;
+    }
+    switch (planned.status) {
+        case HoleStatus.READY:
+            return planned.warning
+                ? {
+                      message: planned.warning,
+                      severity: ProblemSeverity.WARNING
+                  }
+                : undefined;
+        case HoleStatus.FASTENED:
+        case HoleStatus.SKIPPED:
+            return undefined;
+        case HoleStatus.NO_FIT:
+            return error(planned.reason ?? "This hole can't be fastened.");
+    }
+}
+
+/**
+ * Every hole a pick gave must plan ready, without a warning; a face says how
+ * many of its holes don't, errors first, then that some have screws already.
+ */
+function plannedProblem(
+    edges: string[],
+    plans: Map<string, PlannedHole> | undefined
+): Problem | undefined {
+    if (!plans) {
+        return undefined;
+    }
+    // A face's holes made for another size are left out
+    const all = edges;
+    edges = all.filter(
+        (edge) => plans.get(edge)?.status !== HoleStatus.SKIPPED
+    );
+    if (all.length > 0 && edges.length === 0) {
+        return error(NO_HOLE_OF_SIZE);
+    }
+    const problems = edges.flatMap((edge) => {
+        const problem = holeProblem(plans.get(edge));
+        return problem ? [problem] : [];
+    });
+    const errors = problems.filter(
+        (problem) => problem.severity === ProblemSeverity.ERROR
+    );
+    const worst = errors.length > 0 ? errors : problems;
+    if (worst.length === 0) {
+        const isFastened = edges.some(
+            (edge) => plans.get(edge)?.status === HoleStatus.FASTENED
+        );
+        return isFastened
+            ? {
+                  message:
+                      edges.length === 1 ? ALREADY_FASTENED : SOME_FASTENED,
+                  severity: ProblemSeverity.WARNING
+              }
+            : undefined;
+    }
+    if (edges.length === 1) {
+        return worst[0];
+    }
+    const counted =
+        worst === errors
+            ? `${worst.length} of ${edges.length} holes can't be fastened`
+            : `${worst.length} of ${edges.length} holes have a warning`;
+    return { ...worst[0], message: `${counted}: ${worst[0].message}` };
+}
+
+/**
+ * The first hole picked made for a size, in the order picked: a target's, else
+ * a screw's to update. Its size and countersink are what the screw follows.
+ */
+export function pickedHole(
+    request: Pick<PickCheckIn, "targets" | "replaced">,
+    indexed: IndexedHoles,
+    planned: PlannedHole[]
+): Pick<PickCheckOut, "holeSize" | "isHoleCountersunk"> {
+    const plans = new Map(planned.map((hole) => [hole.key, hole]));
+    const first = [...request.targets, ...request.replaced]
+        .flatMap((pick) => indexed.pickEdges[pickKey(pick)] ?? [])
+        .map((edge) => plans.get(edge))
+        .find((plan) => plan?.madeFor !== undefined);
+    return first
+        ? {
+              holeSize: first.madeFor,
+              isHoleCountersunk: first.isCountersunk ?? false
+          }
+        : {};
+}
+
+/** Plans are left out when there are no options to plan with. */
+export function pickProblems(
+    request: Pick<
+        PickCheckIn,
+        "targets" | "excluded" | "replaced" | "stopFace"
+    >,
+    indexed: IndexedHoles,
+    planned?: PlannedHole[]
+): PickProblem[] {
+    const unfound = new Map(
+        indexed.unfound.map((hole) => [hole.key, hole.reason])
+    );
+    const plans = planned && new Map(planned.map((hole) => [hole.key, hole]));
+    const targetEdges = new Set(
+        request.targets.flatMap(
+            (pick) => indexed.pickEdges[pickKey(pick)] ?? []
+        )
+    );
+    const problem = (key: string, found: Problem | undefined) =>
+        found ? [{ key, ...found }] : [];
+    const unfoundProblem = (key: string) => {
+        const reason = unfound.get(key);
+        return reason === undefined ? undefined : error(reason);
+    };
+
+    return [
+        ...request.targets.flatMap((pick) => {
+            const key = pickKey(pick);
+            return problem(
+                key,
+                unfoundProblem(key) ??
+                    plannedProblem(indexed.pickEdges[key] ?? [], plans)
+            );
+        }),
+        ...request.excluded.flatMap((pick) => {
+            const key = pickKey(pick);
+            const edges = indexed.pickEdges[key] ?? [];
+            return problem(
+                key,
+                edges.some((edge) => targetEdges.has(edge))
+                    ? undefined
+                    : error("Not a hole in the faces picked.")
+            );
+        }),
+        ...(request.stopFace
+            ? problem(
+                  pickKey(request.stopFace),
+                  indexed.stopFaceProblem === undefined
+                      ? undefined
+                      : error(indexed.stopFaceProblem)
+              )
+            : []),
+        ...request.replaced.flatMap((pick) => {
+            const key = pickKey(pick);
+            const planned = plannedProblem(indexed.pickEdges[key] ?? [], plans);
+            return problem(
+                key,
+                unfoundProblem(key) ??
+                    (planned?.severity === ProblemSeverity.ERROR
+                        ? error(
+                              `Its hole can't be fastened again, so it stays: ${planned.message}`
+                          )
+                        : planned)
+            );
+        })
+    ];
+}

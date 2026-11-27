@@ -21,7 +21,9 @@ export enum EventType {
     /** One FeatureScript added to a Part Studio; see `features/featurescripts`. Not a use. */
     FEATURE_ADD = "feature_add",
     /** A favorite's default configuration saved; see `features/favorites`. Not a use. */
-    DEFAULT_SELECTION = "default_selection"
+    DEFAULT_SELECTION = "default_selection",
+    /** An assembly's masses read; see `features/mass-analysis`. Not a use. */
+    MASS_REPORT = "mass_report"
 }
 
 /** A use is an insert or a download: each counts toward a part's usage. */
@@ -47,8 +49,12 @@ export enum UseSource {
     BROWSE = "browse",
     FAVORITES = "favorites",
     RECENTS = "recents",
+    /** An Auto Assembly run, which inserts a part per fastener it places. */
+    AUTO_ASSEMBLY = "auto_assembly",
     /** Imported from the legacy app's log, which never recorded where a use started. */
-    UNKNOWN = "unknown"
+    UNKNOWN = "unknown",
+    /** An edit, which inserts each copy it changes again; see `features/edit-parts`. */
+    EDIT = "edit"
 }
 
 /** What a client may send: the import is the only writer of `UNKNOWN`. */
@@ -71,10 +77,14 @@ export enum AppFeature {
     RECENTS = "recents",
     QUICK_INSERT = "quick_insert",
     FASTEN = "fasten",
+    /** Fastened to circular edges or faces picked in Onshape beforehand. */
+    PRESELECTION = "preselection",
     INSERT_LOCATION = "insert_location",
+    AUTO_ASSEMBLY = "auto_assembly",
     DOWNLOAD = "download",
     DEFAULT_CONFIGURATION = "default_configuration",
     VERSION_MANAGER = "version_manager",
     FEATURESCRIPTS = "featurescripts",
+    MASS_ANALYSIS = "mass_analysis",
     REPORT = "report"
 }

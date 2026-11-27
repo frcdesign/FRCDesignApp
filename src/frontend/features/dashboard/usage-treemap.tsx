@@ -2,7 +2,8 @@ import type { PartUsageOut } from "@backend/features/analytics/contract";
 import { useNavigate } from "@tanstack/react-router";
 import { useMemo, useState, type ReactNode } from "react";
 import { getLibraryName } from "../../lib/library";
-import { AppTreemap } from "./treemap-chart";
+import { AppTreemap } from "../../components/app-treemap";
+import { formatCount } from "./format";
 import { DashboardEmpty } from "./dashboard-state";
 import { AppBreadcrumbs } from "../../components/breadcrumbs";
 import { SectionCard } from "../../components/section";
@@ -58,7 +59,12 @@ export function UsageTreemap({
             {nodes.length === 0 ? (
                 <DashboardEmpty title={m.dashboardTreemapEmpty()} />
             ) : (
-                <AppTreemap nodes={nodes} h={CHART_HEIGHT} onSelect={select} />
+                <AppTreemap
+                    nodes={nodes}
+                    h={CHART_HEIGHT}
+                    valueFormatter={formatCount}
+                    onSelect={select}
+                />
             )}
         </SectionCard>
     );

@@ -81,10 +81,7 @@ export function useHeldGroupCount(): number {
         .length;
 }
 
-export function useSetVisibilityMutation(
-    insertableIds: string[],
-    isVisible: boolean
-) {
+export function useSetVisibilityMutation(insertableIds: string[]) {
     const libraryId = useLibraryId();
     const key = useBuildStatusKey();
     const settle = useSettleBuildStatus();
@@ -92,7 +89,7 @@ export function useSetVisibilityMutation(
 
     const mutation = useMutation({
         mutationKey: ["set-insertable-visibility", ...insertableIds],
-        mutationFn: async () => {
+        mutationFn: async (isVisible: boolean) => {
             return apiPost(
                 "/set-insertable-visibility" + toLibraryPath(libraryId),
                 {
@@ -103,7 +100,7 @@ export function useSetVisibilityMutation(
                 }
             );
         },
-        onMutate: () => {
+        onMutate: (isVisible) => {
             showLoadingToast(
                 isVisible
                     ? m.adminCardShowing({ count })
@@ -117,7 +114,8 @@ export function useSetVisibilityMutation(
                 }
             });
         },
-        onSuccess: () => {
+        // Read the target from the variables: the optimistic patch has already flipped the caller's prop
+        onSuccess: (_result, isVisible) => {
             showSuccessToast(
                 isVisible
                     ? m.adminCardShown({ count })
@@ -132,22 +130,25 @@ export function useSetVisibilityMutation(
         onSettled: settle
     });
 
-    const mutate = useCallback(() => {
-        if (isVisible) {
-            mutation.mutate();
-            return;
-        }
-        modals.openConfirmModal({
-            title: m.adminCardHideTitle(),
-            children: m.adminCardHideBody(),
-            labels: {
-                confirm: m.adminCardHideConfirm(),
-                cancel: m.adminCardHideCancel()
-            },
-            confirmProps: { color: "red" },
-            onConfirm: () => mutation.mutate()
-        });
-    }, [isVisible, mutation]);
+    const mutate = useCallback(
+        (isVisible: boolean) => {
+            if (isVisible) {
+                mutation.mutate(true);
+                return;
+            }
+            modals.openConfirmModal({
+                title: m.adminCardHideTitle(),
+                children: m.adminCardHideBody(),
+                labels: {
+                    confirm: m.adminCardHideConfirm(),
+                    cancel: m.adminCardHideCancel()
+                },
+                confirmProps: { color: "red" },
+                onConfirm: () => mutation.mutate(false)
+            });
+        },
+        [mutation]
+    );
 
     return { mutate, isPending: mutation.isPending };
 }

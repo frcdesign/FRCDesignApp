@@ -1,0 +1,591 @@
+import { describe, expect, it } from "vitest";
+import { Program } from "./catalog";
+import { FASTENER_SET } from "../../../__test_utils__/fastener-set";
+import {
+    DEFAULT_MAX_LENGTH,
+    DEFAULT_MAX_THREAD_DEPTH,
+    FastenerMode,
+    type FastenerOptions,
+    HoleEnd,
+    HoleStatus,
+    StopCondition
+} from "./contract";
+import {
+    type AssemblyCircularEdge,
+    type AssemblyHole,
+    holeSize,
+    planHoles,
+    type PlacedScrew
+} from "./planner";
+import { type PartChoice, type ScrewChoice } from "./studios";
+
+const INCH = 0.0254;
+
+/** Holes along -Z from the origin, as plates stack under a circular edge on top: depths in inches. */
+function hole(
+    part: string,
+    top: number,
+    bottom: number,
+    diameter: number,
+    extra: Partial<AssemblyHole> = {}
+): AssemblyHole {
+    return {
+        occurrencePath: [part],
+        origin: [0, 0, 0],
+        direction: [0, 0, -1],
+        radius: (diameter * INCH) / 2,
+        start: top * INCH,
+        end: bottom * INCH,
+        closedAtStart: false,
+        closedAtEnd: false,
+        threaded: false,
+        edges: [
+            { id: `${part}-top`, at: top * INCH },
+            { id: `${part}-bottom`, at: bottom * INCH }
+        ],
+        ...extra
+    };
+}
+
+const CIRCULAR_EDGE: AssemblyCircularEdge = {
+    key: "top|edge",
+    occurrencePath: ["top"],
+    edgeId: "top-top",
+    center: [0, 0, 0],
+    normal: [0, 0, 1],
+    radius: 0.1
+};
+
+const WASHER: PartChoice = {
+    vendor: "GENERIC",
+    size: "NO_10_32",
+    type: "OD_1_2_X_0_049"
+};
+
+const NYLOCK: PartChoice = {
+    vendor: "MCMASTER",
+    size: "NO_10_32",
+    type: "NYLOCK"
+};
+
+interface ExtraOptions extends Partial<Omit<FastenerOptions, "screw">> {
+    screw?: Partial<ScrewChoice>;
+}
+
+function options(extra: ExtraOptions = {}): FastenerOptions {
+    const { screw, ...rest } = extra;
+    return {
+        program: Program.FRC,
+        mode: FastenerMode.AUTOMATIC,
+        screw: {
+            vendor: "GENERIC",
+            size: "NO_10_32",
+            head: "BUTTON",
+            finish: "BLACK",
+            length: "IN_0_5",
+            fullyThreaded: "false",
+            ...screw
+        },
+        nut: NYLOCK,
+        stop: StopCondition.MAX_LENGTH,
+        maxLength: DEFAULT_MAX_LENGTH,
+        maxThreadDepth: DEFAULT_MAX_THREAD_DEPTH,
+        ...rest
+    };
+}
+
+function plan(
+    holes: AssemblyHole[],
+    extra: ExtraOptions = {},
+    placed: PlacedScrew[] = []
+) {
+    const [only] = planHoles(
+        [CIRCULAR_EDGE],
+        holes,
+        placed,
+        options(extra),
+        FASTENER_SET.catalog
+    );
+    return only;
+}
+
+const TWO_PLATES = [
+    hole("top", 0, 0.25, 0.201),
+    hole("bottom", 0.25, 0.5, 0.201)
+];
+
+describe("planHoles", () => {
+    it("takes a screw just through a nut, not past it", () => {
+        // A 1/4 in. plate and a 0.234 in. nylock: WCP's 1/2 in. reaches through
+        const { planned } = plan([hole("top", 0, 0.25, 0.201)], {
+            screw: { vendor: "WCP" }
+        });
+        expect(planned.screw?.length).toBe("IN_0_5");
+    });
+
+    it("bolts through two plates, long enough for a nylock", () => {
+        const { planned, exit } = plan(TWO_PLATES);
+        expect(planned.status).toBe(HoleStatus.READY);
+        expect(planned.end).toBe(HoleEnd.THROUGH);
+        expect(planned.depth).toBeCloseTo(0.5 * INCH);
+        // 1/2 in. of plate and a 0.234 in. nut, through to its far face: 0.734 in.
+        expect(planned.screw).toEqual({
+            vendor: "GENERIC",
+            size: "NO_10_32",
+            head: "BUTTON",
+            finish: "BLACK",
+            length: "IN_0_75",
+            fullyThreaded: "false"
+        });
+        expect(planned.nut).toEqual({
+            vendor: "MCMASTER",
+            size: "NO_10_32",
+            type: "NYLOCK"
+        });
+        expect(exit?.edge).toEqual({
+            occurrencePath: ["bottom"],
+            edgeId: "bottom-bottom"
+        });
+        expect(exit?.point[2]).toBeCloseTo(-0.5 * INCH);
+    });
+
+    it("fastens a flipped edge from the far end of its holes, its head there and its nut here", () => {
+        const [flipped] = planHoles(
+            [{ ...CIRCULAR_EDGE, isFlipped: true }],
+            TWO_PLATES,
+            [],
+            options(),
+            FASTENER_SET.catalog
+        );
+        expect(flipped.planned.key).toBe(CIRCULAR_EDGE.key);
+        expect(flipped.planned.status).toBe(HoleStatus.READY);
+        expect(flipped.planned.screw?.length).toBe("IN_0_75");
+        expect(flipped.circularEdge).toMatchObject({
+            occurrencePath: ["bottom"],
+            edgeId: "bottom-bottom"
+        });
+        // Out of the bottom plate: the head goes in against it
+        expect(flipped.circularEdge.normal[2]).toBe(-1);
+        expect(flipped.circularEdge.center[2]).toBeCloseTo(-0.5 * INCH);
+        expect(flipped.exit?.edge).toEqual({
+            occurrencePath: ["top"],
+            edgeId: "top-top"
+        });
+
+        const [blind] = planHoles(
+            [{ ...CIRCULAR_EDGE, isFlipped: true }],
+            [hole("top", 0, 0.25, 0.201, { closedAtEnd: true })],
+            [],
+            options(),
+            FASTENER_SET.catalog
+        );
+        expect(blind.planned).toMatchObject({
+            status: HoleStatus.NO_FIT,
+            reason: "The hole doesn't go through, so it can't be flipped."
+        });
+    });
+
+    it("warns of a flat head over a hole with no countersink", () => {
+        const flat = plan(TWO_PLATES, { screw: { head: "FLAT" } }).planned;
+        expect(flat.status).toBe(HoleStatus.READY);
+        expect(flat.warning).toContain(
+            "The hole isn't countersunk for a flat head."
+        );
+        // Countersunk: the first hole starts below the circular edge
+        const sunk = plan(
+            [
+                hole("top", 0.1, 0.25, 0.201, { countersunk: true }),
+                hole("bottom", 0.25, 0.5, 0.201)
+            ],
+            { screw: { head: "FLAT" } }
+        ).planned;
+        expect(sunk.warning ?? "").not.toContain("countersunk");
+        expect(plan(TWO_PLATES).planned.warning ?? "").not.toContain(
+            "countersunk"
+        );
+    });
+
+    it("fastens a countersunk hole under another head, warning it's made for a flat head", () => {
+        const sunk = [
+            hole("top", 0.1, 0.25, 0.201, { countersunk: true }),
+            hole("bottom", 0.25, 0.5, 0.201)
+        ];
+        const button = plan(sunk).planned;
+        expect(button.status).toBe(HoleStatus.READY);
+        expect(button.isCountersunk).toBe(true);
+        expect(button.madeFor).toBe("NO_10_32");
+        expect(button.warning).toContain(
+            "The hole is countersunk for a flat head."
+        );
+        expect(
+            plan(sunk, { screw: { head: "FLAT" } }).planned.isCountersunk
+        ).toBe(true);
+        expect(plan(TWO_PLATES).planned.isCountersunk).toBeUndefined();
+    });
+
+    // Only a Hole feature's countersink counts: a hole below the circular edge is otherwise past a gap
+    it("takes a countersink only from a Hole feature's countersunk hole in the picked part", () => {
+        const noHole = "No hole goes into the part from this circular edge.";
+        expect(plan([hole("top", 0.1, 0.35, 0.201)]).planned.reason).toBe(
+            noHole
+        );
+        expect(
+            plan([hole("bottom", 0.1, 0.35, 0.201, { countersunk: true })])
+                .planned.reason
+        ).toBe(noHole);
+    });
+
+    it("fastens a hole made for another size with the screw chosen, saying what it's made for", () => {
+        const quarter = [
+            hole("top", 0, 0.25, 0.257),
+            hole("bottom", 0.25, 0.5, 0.257)
+        ];
+        const planned = plan(quarter).planned;
+        expect(planned.status).toBe(HoleStatus.READY);
+        expect(planned.warning).toContain("Made for a 1/4-20 screw.");
+        expect(plan(TWO_PLATES).planned.warning ?? "").not.toContain(
+            "Made for"
+        );
+    });
+
+    it("counts the screw and nut washers chosen", () => {
+        const { planned } = plan(TWO_PLATES, {
+            screwWasher: WASHER,
+            nutWasher: WASHER
+        });
+        // Two 0.049 in. washers more: 0.832 in.
+        expect(planned.screw?.length).toBe("IN_0_875");
+        expect(planned.screwWasher).toEqual(WASHER);
+        expect(planned.nutWasher).toEqual(WASHER);
+    });
+
+    it("takes each part from its own vendor", () => {
+        const mcmaster = {
+            ...WASHER,
+            vendor: "MCMASTER",
+            type: "OD_7_16_X_0_03"
+        };
+        const { planned } = plan(TWO_PLATES, {
+            screw: { vendor: "REV" },
+            screwWasher: mcmaster
+        });
+        expect(planned.screw?.vendor).toBe("REV");
+        expect(planned.screwWasher).toEqual(mcmaster);
+        expect(planned.nut).toEqual(NYLOCK);
+    });
+
+    it("leaves the nut and its washer off without a nut", () => {
+        const { planned, exit } = plan(TWO_PLATES, {
+            nut: undefined,
+            nutWasher: WASHER
+        });
+        expect(planned.screw?.length).toBe("IN_0_5");
+        expect(planned.nut).toBeUndefined();
+        expect(planned.nutWasher).toBeUndefined();
+        expect(exit).toBeUndefined();
+    });
+
+    it("ends in a tapped hole drawn at its tap drill, without a nut", () => {
+        const { planned } = plan([
+            hole("top", 0, 0.25, 0.201),
+            hole("block", 0.25, 1.25, 0.159, { closedAtEnd: true })
+        ]);
+        expect(planned.end).toBe(HoleEnd.TAPPED);
+        expect(planned.nut).toBeUndefined();
+        // Half an inch into the threads, which start at 1/4 in.
+        expect(planned.screw?.length).toBe("IN_0_75");
+    });
+
+    it("goes as deep into threads as the maximum thread depth lets it, short of the bottom", () => {
+        const block = [
+            hole("top", 0, 0.25, 0.201),
+            hole("block", 0.25, 1.25, 0.159, { closedAtEnd: true })
+        ];
+        // Short of the bottom by a thread: at most 1.21875 in.
+        expect(
+            plan(block, { maxThreadDepth: 2 * INCH }).planned.screw?.length
+        ).toBe("IN_1_125");
+        expect(
+            plan(block, { maxThreadDepth: 0.25 * INCH }).planned.screw?.length
+        ).toBe("IN_0_5");
+    });
+
+    it("ends in a Hole feature's threads of its size", () => {
+        const { planned } = plan(
+            [
+                hole("top", 0, 0.25, 0.266),
+                hole("block", 0.25, 1, 0.201, {
+                    threaded: true,
+                    majorDiameter: 0.25 * INCH
+                })
+            ],
+            { screw: { size: "QUARTER_20" } }
+        );
+        expect(planned.end).toBe(HoleEnd.TAPPED);
+        expect(planned.screw?.length).toBe("IN_0_75");
+    });
+
+    it("isn't fooled by a clearance hole the size of a bigger screw's tap drill", () => {
+        // 0.201 in. is #10's free clearance and 1/4-20's tap drill
+        expect(plan(TWO_PLATES).planned.end).toBe(HoleEnd.THROUGH);
+    });
+
+    it("ends at the bottom of a blind hole", () => {
+        const { planned } = plan([
+            hole("top", 0, 0.25, 0.201),
+            hole("block", 0.25, 0.75, 0.201, { closedAtEnd: true })
+        ]);
+        expect(planned.end).toBe(HoleEnd.BLIND);
+        expect(planned.nut).toBeUndefined();
+        // At most 0.75 - 1/32 in.
+        expect(planned.screw?.length).toBe("IN_0_625");
+    });
+
+    describe("stopping", () => {
+        const gapped = (gap: number) => [
+            hole("top", 0, 0.25, 0.201),
+            hole("far", 0.25 + gap, 0.5 + gap, 0.201)
+        ];
+
+        it("reaches across any gap up to the maximum length", () => {
+            expect(plan(gapped(0.25)).planned.depth).toBeCloseTo(0.75 * INCH);
+            // The far plate starts past 0.4 in.
+            const short = plan(gapped(0.25), {
+                maxLength: 0.4 * INCH,
+                nut: undefined
+            });
+            expect(short.planned.depth).toBeCloseTo(0.25 * INCH);
+            expect(short.planned.screw?.length).toBe("IN_0_25");
+        });
+
+        it("reaches as far as the longest screw made under All holes", () => {
+            const unlimited = plan(gapped(3), {
+                stop: StopCondition.ALL_HOLES,
+                maxLength: undefined
+            });
+            expect(unlimited.planned.depth).toBeCloseTo(3.5 * INCH);
+            // Within a 3 in. limit, the far plate is out of reach
+            expect(plan(gapped(3)).planned.depth).toBeCloseTo(0.25 * INCH);
+        });
+
+        it("stops at the face picked, taking in only the plates before it", () => {
+            const atFace = (depth: number) => {
+                const [only] = planHoles(
+                    [CIRCULAR_EDGE],
+                    gapped(0.25),
+                    [],
+                    options({ stop: StopCondition.FACE }),
+                    FASTENER_SET.catalog,
+                    {
+                        stopPlane: {
+                            point: [1, 1, -depth * INCH],
+                            normal: [0, 0, 1]
+                        }
+                    }
+                );
+                return only.planned;
+            };
+            // The far plate's top face, and its bottom face
+            expect(atFace(0.5).depth).toBeCloseTo(0.25 * INCH);
+            expect(atFace(0.75).depth).toBeCloseTo(0.75 * INCH);
+            const behind = atFace(-0.5);
+            expect(behind.status).toBe(HoleStatus.NO_FIT);
+            expect(behind.reason).toMatch(/isn't past this hole/);
+        });
+
+        it("says no screw reaches past the maximum length", () => {
+            const deep = [
+                hole("top", 0, 2, 0.201),
+                hole("bottom", 2, 3, 0.201)
+            ];
+            const { planned } = plan(deep);
+            expect(planned.status).toBe(HoleStatus.NO_FIT);
+            expect(planned.reason).toMatch(/maximum length/);
+        });
+    });
+
+    describe("hole sizes", () => {
+        const sizeOf = (diameter: number, extra: Partial<AssemblyHole> = {}) =>
+            holeSize(
+                hole("top", 0, 0.25, diameter, extra),
+                FASTENER_SET.catalog
+            )?.id;
+
+        it("takes a hole for the size it's a clearance, threads or tap drill of", () => {
+            expect(sizeOf(0.201)).toBe("NO_10_32");
+            expect(sizeOf(0.196)).toBe("NO_10_32");
+            expect(sizeOf(0.257)).toBe("QUARTER_20");
+            // #10-32's tap drill, which is too small for a #6's clearance
+            expect(sizeOf(0.159)).toBe("NO_10_32");
+            expect(
+                sizeOf(0.15, { threaded: true, majorDiameter: 0.19 * INCH })
+            ).toBe("NO_10_32");
+            expect(sizeOf(0.5)).toBeUndefined();
+        });
+
+        const fromFace = (holes: AssemblyHole[]) => {
+            const [only] = planHoles(
+                [{ ...CIRCULAR_EDGE, isFromFace: true }],
+                holes,
+                [],
+                options(),
+                FASTENER_SET.catalog
+            );
+            return only.planned;
+        };
+        const quarter = [
+            hole("top", 0, 0.25, 0.257),
+            hole("bottom", 0.25, 0.5, 0.257)
+        ];
+
+        it("skips a face's hole made for another size", () => {
+            expect(fromFace(quarter).status).toBe(HoleStatus.SKIPPED);
+            expect(fromFace(TWO_PLATES).status).toBe(HoleStatus.READY);
+            expect(fromFace([hole("top", 0, 0.25, 0.5)]).status).toBe(
+                HoleStatus.SKIPPED
+            );
+        });
+
+        it("tags each plan with the size its hole is made for", () => {
+            expect(fromFace(quarter).madeFor).toBe("QUARTER_20");
+            expect(fromFace(TWO_PLATES).madeFor).toBe("NO_10_32");
+            expect(fromFace([hole("top", 0, 0.25, 0.5)]).madeFor).toBe(
+                undefined
+            );
+        });
+    });
+
+    it("leaves a hole alone that already has a screw", () => {
+        const placed: PlacedScrew[] = [{ origin: [0, 0, 0], axis: [0, 0, 1] }];
+        expect(plan(TWO_PLATES, {}, placed).planned.status).toBe(
+            HoleStatus.FASTENED
+        );
+        const elsewhere: PlacedScrew[] = [
+            { origin: [0.01, 0, 0], axis: [0, 0, 1] }
+        ];
+        expect(plan(TWO_PLATES, {}, elsewhere).planned.status).toBe(
+            HoleStatus.READY
+        );
+    });
+
+    it("refuses a circular edge with no hole under it, or too small a hole", () => {
+        expect(plan([hole("other", 0.5, 1, 0.201)]).planned.status).toBe(
+            HoleStatus.NO_FIT
+        );
+        const small = plan([hole("top", 0, 0.25, 0.15)]);
+        expect(small.planned.status).toBe(HoleStatus.NO_FIT);
+        expect(small.planned.reason).toMatch(/too small for a #10-32/);
+    });
+
+    describe("lengths that don't fit", () => {
+        const preset = (length: string) => ({
+            mode: FastenerMode.PRESET,
+            screw: { length }
+        });
+        const tapped = (bottom: number, closedAtEnd: boolean) => [
+            hole("top", 0, 0.25, 0.201),
+            hole("block", 0.25, bottom, 0.159, { closedAtEnd })
+        ];
+
+        it("refuses a screw too short to reach through the nut, across a gap, naming its length", () => {
+            const gapped = [
+                hole("top", 0, 0.25, 0.201),
+                hole("far", 0.375, 0.625, 0.201)
+            ];
+            const { planned } = plan(gapped, preset("IN_0_375"));
+            expect(planned.status).toBe(HoleStatus.NO_FIT);
+            expect(planned.reason).toMatch(
+                /^The 3\/8 in screw is [\d.]+ in too short to reach through the nut\.$/
+            );
+        });
+
+        it("warns of a screw that bottoms out in a tapped hole, and fastens it", () => {
+            const { planned } = plan(tapped(0.5, true), preset("IN_0_5"));
+            expect(planned.status).toBe(HoleStatus.READY);
+            expect(planned.screw?.length).toBe("IN_0_5");
+            // A thread short of the bottom, at 0.46875 in.
+            expect(planned.warning).toBe(
+                "The 1/2 in screw is 0.031 in too long, so it bottoms out in the hole."
+            );
+        });
+
+        it("lets a screw come out the far side of threads with no bottom", () => {
+            const { planned } = plan(tapped(0.5, false), preset("IN_0_5"));
+            expect(planned.status).toBe(HoleStatus.READY);
+            expect(planned.warning).toBeUndefined();
+        });
+
+        it("warns of a screw too short to go far enough into the threads", () => {
+            const { planned } = plan(tapped(1.25, true), preset("IN_0_25"));
+            expect(planned.status).toBe(HoleStatus.READY);
+            expect(planned.warning).toBe(
+                "The 1/4 in screw is 0.19 in too short: it goes only 0 in into the threads."
+            );
+        });
+
+        it("fastens the closest automatic screw where none fits, saying how it misses", () => {
+            const { planned } = plan(tapped(1.25, true), {
+                maxThreadDepth: 0.01 * INCH
+            });
+            expect(planned.status).toBe(HoleStatus.READY);
+            expect(planned.warning).toMatch(/^The closest screw, [^,]+ in,/);
+        });
+    });
+
+    it("puts a preset screw where it fits", () => {
+        const preset = {
+            mode: FastenerMode.PRESET,
+            screw: { length: "IN_1_5" }
+        };
+        expect(plan(TWO_PLATES, preset).planned.screw?.length).toBe("IN_1_5");
+    });
+
+    it("sizes an automatic screw in its finish, partly threaded", () => {
+        const { planned } = plan(TWO_PLATES, {
+            screw: {
+                vendor: "MCMASTER",
+                finish: "ZINC_PLATED",
+                fullyThreaded: "true"
+            }
+        });
+        expect(planned.screw).toMatchObject({
+            finish: "ZINC_PLATED",
+            fullyThreaded: "false"
+        });
+    });
+
+    it("keeps a preset screw fully threaded where it's sold so", () => {
+        const { planned } = plan(TWO_PLATES, {
+            mode: FastenerMode.PRESET,
+            screw: {
+                vendor: "MCMASTER",
+                head: "SOCKET",
+                length: "IN_2",
+                fullyThreaded: "true"
+            }
+        });
+        expect(planned.screw).toMatchObject({
+            length: "IN_2",
+            fullyThreaded: "true"
+        });
+    });
+
+    it("lets a flat head's hole start below its countersink, with no washer under it", () => {
+        const { planned } = plan(
+            [
+                hole("top", 0.12, 0.25, 0.201, { countersunk: true }),
+                hole("bottom", 0.25, 0.5, 0.201)
+            ],
+            { screw: { head: "FLAT" }, screwWasher: WASHER }
+        );
+        expect(planned.status).toBe(HoleStatus.READY);
+        expect(planned.screwWasher).toBeUndefined();
+    });
+
+    it("only offers what the vendor makes", () => {
+        expect(
+            plan(TWO_PLATES, { screw: { vendor: "WCP", head: "FLAT" } }).planned
+                .status
+        ).toBe(HoleStatus.NO_FIT);
+    });
+});

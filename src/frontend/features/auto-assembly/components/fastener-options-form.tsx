@@ -1,0 +1,292 @@
+import { Text } from "@mantine/core";
+import { type ReactNode } from "react";
+import {
+    type ConfigurationParameter,
+    ParameterType,
+    type Selection
+} from "@backend/features/configurations/contract";
+import { Program } from "@backend/features/auto-assembly/catalog";
+import {
+    FastenerMode,
+    StopCondition
+} from "@backend/features/auto-assembly/contract";
+import {
+    FastenerKind,
+    isCountersunk,
+    partVendors,
+    StudioInput
+} from "@backend/features/auto-assembly/studios";
+import { ParameterInput } from "../../../components/parameter-input";
+import { QueryList, type RowProblem } from "../../../components/query-list";
+import { PLANAR_FACES } from "../../../lib/messages";
+import {
+    isFace as isFaceSelection,
+    type OnshapeSelection
+} from "../../../lib/selection";
+import { StatusColor } from "../../../lib/style-constants";
+import { Part, PART_KIND, type SettledChoices } from "../options";
+import {
+    FORM_PARAMETERS,
+    FormInput,
+    formParameter,
+    SIZING_PARAMETER
+} from "../parameters";
+import { useAutoAssemblyStore } from "../store";
+import {
+    FullWidthRow,
+    ParameterGroup
+} from "../../../components/parameter-group";
+import { m } from "../../../paraglide/messages";
+
+interface FormInputRowProps {
+    id: FormInput;
+    settled: SettledChoices;
+}
+
+/** One of Auto Assembly's own parameters. */
+export function FormInputRow(props: FormInputRowProps): ReactNode {
+    const { id, settled } = props;
+    const setForm = useAutoAssemblyStore((state) => state.setForm);
+    return (
+        <ParameterInput
+            parameter={formParameter(id)}
+            value={settled.form[id]}
+            selection={settled.form}
+            parameters={FORM_PARAMETERS}
+            onValueChange={(value) => value !== undefined && setForm(id, value)}
+        />
+    );
+}
+
+interface FastenerOptionsFormProps {
+    settled: SettledChoices;
+    /** A pick's problem, from the background check, for the face to stop at. */
+    problem: (entity: OnshapeSelection) => RowProblem | undefined;
+    isChecking: boolean;
+}
+
+/**
+ * Which fastener goes in each hole, in a `ParameterGrid`: the screw, where an
+ * automatic screw stops, then a group for each washer and the nut.
+ */
+export function FastenerOptionsForm(
+    props: FastenerOptionsFormProps
+): ReactNode {
+    const { settled, problem, isChecking } = props;
+    const isFtc = settled.form[FormInput.PROGRAM] === Program.FTC;
+
+    return (
+        <>
+            <ParameterGroup title={m.autoAssemblyFastener()}>
+                <FormInputRow id={FormInput.PROGRAM} settled={settled} />
+                {isFtc ? (
+                    <FullWidthRow>
+                        <Text size="sm" c={StatusColor.DIMMED}>
+                            {m.autoAssemblyFtcUnavailable()}
+                        </Text>
+                    </FullWidthRow>
+                ) : (
+                    <ScrewInputs settled={settled} />
+                )}
+            </ParameterGroup>
+            {!isFtc && (
+                <>
+                    {settled.mode === FastenerMode.AUTOMATIC && (
+                        <StopGroup
+                            settled={settled}
+                            problem={problem}
+                            isChecking={isChecking}
+                        />
+                    )}
+                    {!isCountersunk(settled.set, settled.screw.head) && (
+                        <PartGroup
+                            part={Part.SCREW_WASHER}
+                            title={m.autoAssemblyAddScrewWasher()}
+                            settled={settled}
+                        />
+                    )}
+                    <PartGroup
+                        part={Part.NUT}
+                        title={m.autoAssemblyAddNut()}
+                        settled={settled}
+                    />
+                    {settled.added[Part.NUT] && (
+                        <PartGroup
+                            part={Part.NUT_WASHER}
+                            title={m.autoAssemblyAddNutWasher()}
+                            settled={settled}
+                        />
+                    )}
+                </>
+            )}
+        </>
+    );
+}
+
+interface ScrewInputsProps {
+    settled: SettledChoices;
+}
+
+/**
+ * The screw studio's inputs, with Sizing in place of its Length, which shows
+ * only when sized by hand. So does Fully threaded, since an automatic screw is
+ * partly threaded, the standard.
+ */
+function ScrewInputs(props: ScrewInputsProps): ReactNode {
+    const { settled } = props;
+    const setScrew = useAutoAssemblyStore((state) => state.setScrew);
+    const setMode = useAutoAssemblyStore((state) => state.setMode);
+
+    const { parameters } = settled.set.studios[FastenerKind.SCREW];
+    const selection: Selection = { ...settled.screw };
+
+    return (
+        <>
+            {parameters.map((parameter) => {
+                const sizing = parameter.id === StudioInput.LENGTH && (
+                    <ParameterInput
+                        key={SIZING_PARAMETER.id}
+                        inputId="screw-sizing"
+                        parameter={SIZING_PARAMETER}
+                        value={settled.mode}
+                        selection={{ [SIZING_PARAMETER.id]: settled.mode }}
+                        parameters={[SIZING_PARAMETER]}
+                        onValueChange={(value) =>
+                            value !== undefined &&
+                            setMode(value as FastenerMode)
+                        }
+                    />
+                );
+                if (
+                    (parameter.id === StudioInput.LENGTH ||
+                        parameter.id === StudioInput.FULLY_THREADED) &&
+                    settled.mode === FastenerMode.AUTOMATIC
+                ) {
+                    return sizing;
+                }
+                return [
+                    sizing,
+                    <ParameterInput
+                        key={parameter.id}
+                        inputId={`screw-${parameter.id}`}
+                        parameter={parameter}
+                        value={selection[parameter.id]}
+                        selection={selection}
+                        parameters={parameters}
+                        onValueChange={(value) =>
+                            value !== undefined && setScrew(parameter.id, value)
+                        }
+                    />
+                ];
+            })}
+        </>
+    );
+}
+
+interface PartGroupProps {
+    part: Part;
+    title: string;
+    settled: SettledChoices;
+}
+
+/**
+ * A washer or the nut, ticked to add it: its studio's parameters but its
+ * Size, which is the screw's. Its Vendor offers those making it in that size.
+ */
+function PartGroup(props: PartGroupProps): ReactNode {
+    const { part, title, settled } = props;
+    const added = useAutoAssemblyStore((state) => state.added[part]);
+    const setAdded = useAutoAssemblyStore((state) => state.setAdded);
+    const setPart = useAutoAssemblyStore((state) => state.setPart);
+
+    const choice = settled.parts[part];
+    if (!choice) {
+        return null;
+    }
+    const kind = PART_KIND[part];
+    const { parameters } = settled.set.studios[kind];
+    const selection: Selection = { ...choice };
+    const shown = parameters.flatMap((parameter): ConfigurationParameter[] => {
+        if (parameter.id === StudioInput.SIZE) {
+            return [];
+        }
+        if (parameter.id !== StudioInput.VENDOR) {
+            return [parameter];
+        }
+        if (parameter.type !== ParameterType.ENUM) {
+            return [];
+        }
+        const vendors = partVendors(settled.set, kind, settled.screw.size);
+        return [
+            {
+                ...parameter,
+                options: parameter.options.filter((option) =>
+                    vendors.includes(option.id)
+                )
+            }
+        ];
+    });
+
+    return (
+        <ParameterGroup
+            title={title}
+            checked={added}
+            onCheckedChange={(checked) => setAdded(part, checked)}
+        >
+            {shown.map((parameter) => (
+                <ParameterInput
+                    key={parameter.id}
+                    inputId={`${part}-${parameter.id}`}
+                    parameter={parameter}
+                    value={selection[parameter.id]}
+                    selection={selection}
+                    parameters={parameters}
+                    onValueChange={(value) =>
+                        value !== undefined &&
+                        setPart(part, parameter.id, value)
+                    }
+                />
+            ))}
+        </ParameterGroup>
+    );
+}
+
+interface StopGroupProps {
+    settled: SettledChoices;
+    problem: (entity: OnshapeSelection) => RowProblem | undefined;
+    isChecking: boolean;
+}
+
+/** Where an automatic screw stops, and how deep into threads it goes. */
+function StopGroup(props: StopGroupProps): ReactNode {
+    const { settled, problem, isChecking } = props;
+    const stopFace = useAutoAssemblyStore((state) => state.stopFace);
+    const setStopFace = useAutoAssemblyStore((state) => state.setStopFace);
+    const isMaxLength =
+        settled.form[FormInput.STOP] === StopCondition.MAX_LENGTH;
+    const isFace = settled.form[FormInput.STOP] === StopCondition.FACE;
+    return (
+        <ParameterGroup title={m.autoAssemblyLength()}>
+            <FormInputRow id={FormInput.STOP} settled={settled} />
+            {isMaxLength && (
+                <FormInputRow id={FormInput.MAX_LENGTH} settled={settled} />
+            )}
+            {isFace && (
+                <FullWidthRow>
+                    <QueryList
+                        id="auto-assembly-stop-face"
+                        label={m.autoAssemblyStopFaceList()}
+                        entities={stopFace}
+                        onChange={setStopFace}
+                        accepts={isFaceSelection}
+                        filter={PLANAR_FACES}
+                        problem={problem}
+                        isChecking={isChecking}
+                        required
+                    />
+                </FullWidthRow>
+            )}
+            <FormInputRow id={FormInput.MAX_THREAD_DEPTH} settled={settled} />
+        </ParameterGroup>
+    );
+}

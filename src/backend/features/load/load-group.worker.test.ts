@@ -13,6 +13,8 @@ import * as ConfigurationEndpoints from "../../lib/onshape/endpoints/configurati
 import * as PartsEndpoints from "../../lib/onshape/endpoints/parts";
 import * as PartStudioEndpoints from "../../lib/onshape/endpoints/part-studios";
 import { featureList } from "../../../__test_utils__/feature-fixtures";
+import * as BlobEndpoints from "../../lib/onshape/endpoints/blob-elements";
+import { getGeneratedSet } from "../generated-parts/store";
 import * as ThumbnailStore from "../thumbnails/store";
 import { getDb } from "../../db/client";
 import { groups, insertables } from "../../db/schema";
@@ -166,6 +168,21 @@ describe("selectInsertablesToLoad", () => {
         const toLoad = select([tab("e1")], [storedRow("e1")], true);
         expect(toLoad).toHaveLength(1);
         expect(toLoad[0].insertableId).toBe("row-e1");
+    });
+
+    it("marks the tabs a released manifest names as generated", () => {
+        const nut = { set: "fasteners", key: "nut", manifestElementId: "m" };
+        const targets = selectInsertablesToLoad(
+            GROUP,
+            [tab("e-nut"), tab("e-other")],
+            [],
+            false,
+            { "e-nut": nut }
+        );
+        expect(targets.map((target) => target.generated)).toEqual([
+            nut,
+            undefined
+        ]);
     });
 
     it("seeds sortOrder from the tab position", () => {
@@ -339,6 +356,49 @@ describe("loadGroup", () => {
         for (const row of rows) {
             expect(row.versionCreatedAt).toEqual(LOADED_VERSION_CREATED_AT);
         }
+    });
+
+    it("stores a released manifest's catalog, which Auto Assembly sizes fasteners by", async () => {
+        mockContents([
+            tab("e1"),
+            {
+                id: "manifest",
+                name: "fasteners.parts.json",
+                elementType: OnshapeElementType.BLOB,
+                microversionId: "mv-1"
+            }
+        ]);
+        vi.spyOn(ConfigurationEndpoints, "getConfiguration").mockResolvedValue(
+            NO_CONFIGURATION
+        );
+        vi.spyOn(BlobEndpoints, "getBlobText").mockResolvedValue(
+            JSON.stringify({
+                source: "robot-code",
+                studios: {
+                    nut: {
+                        feature: "fastenerNut",
+                        elementId: "elsewhere",
+                        configuration: { configurationParameters: [] },
+                        records: []
+                    }
+                },
+                sizes: [{ id: "NO_10_32" }]
+            })
+        );
+
+        await loadGroup(CTX, LOADED_TARGET, false);
+
+        expect(await getGeneratedSet(db, TEST_LIBRARY_ID, "fasteners")).toEqual(
+            {
+                libraryId: TEST_LIBRARY_ID,
+                set: "fasteners",
+                groupId: TEST_GROUP_ID,
+                features: {
+                    nut: { elementId: "elsewhere", type: "fastenerNut" }
+                },
+                catalog: { sizes: [{ id: "NO_10_32" }] }
+            }
+        );
     });
 
     it("clears a new group's not-loaded issue once it saves", async () => {
@@ -624,12 +684,40 @@ describe("loadGroup", () => {
             type: BuildIssueType.INSERTABLES_FAILED
         });
 
-        // The insertable that loaded is saved; the one that failed never was.
-        const rows = await db.select().from(insertables).all();
-        expect(rows.map((row) => row.elementId)).toEqual(["e1"]);
+        // The one that failed is kept hidden, saying why, so the build card shows it.
+        const rows = await db
+            .select()
+            .from(insertables)
+            .orderBy(asc(insertables.sortOrder))
+            .all();
+        expect(rows.map((row) => row.elementId)).toEqual(["e1", "e2"]);
+        expect(rows[1]).toMatchObject({
+            isVisible: false,
+            microversionId: "",
+            buildIssues: [{ type: BuildIssueType.LOAD_FAILED, reason: "boom" }]
+        });
     });
 
-    it("adds LOAD_FAILED to a failed insertable's existing issues", async () => {
+    it("loads a tab that failed its first load in place of its hidden row", async () => {
+        mockContents([tab("e1")]);
+        const getConfiguration = vi
+            .spyOn(ConfigurationEndpoints, "getConfiguration")
+            .mockRejectedValueOnce(new Error("boom"));
+        await loadGroup(CTX, LOADED_TARGET, false);
+        getConfiguration.mockResolvedValue(NO_CONFIGURATION);
+
+        const result = await loadGroup(CTX, LOADED_TARGET, false);
+
+        expect(result).toMatchObject({ loadedElements: 1, failedElements: 0 });
+        const rows = await db.select().from(insertables).all();
+        expect(rows).toHaveLength(1);
+        expect(rows[0].buildIssues).not.toContainEqual(
+            expect.objectContaining({ type: BuildIssueType.LOAD_FAILED })
+        );
+        expect((await readGroup())?.versionId).toBe("v-2");
+    });
+
+    it("adds LOAD_FAILED, with why, to a failed insertable's existing issues", async () => {
         mockContents([tab("e1", "mv-2")]);
         // A row from a previous good load, carrying an unrelated issue.
         await seedInsertable(db, {
@@ -651,7 +739,7 @@ describe("loadGroup", () => {
             .get();
         expect(row?.buildIssues).toEqual([
             { type: BuildIssueType.NO_VENDORS },
-            { type: BuildIssueType.LOAD_FAILED }
+            { type: BuildIssueType.LOAD_FAILED, reason: "boom" }
         ]);
         // Untouched otherwise — the failed load never reached its save.
         expect(row?.name).toBe("Existing");

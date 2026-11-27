@@ -38,7 +38,7 @@ it.
 | `src/backend/features/version-manager/workflow.ts`                                | `VersionManagerWorkflow`, one class over a push or a pull                             |
 | `src/backend/features/version-manager/tasks.ts`                                   | Pure: the steps a run will take, which its status lists                               |
 | `src/backend/features/version-manager/jobs.ts`                                    | The run a workspace last started, and its status                                      |
-| `src/backend/features/version-manager/failures.ts`                                | Which Onshape failures to retry, and each in words                                    |
+| `src/backend/features/version-manager/failures.ts`                                | Each task's failure in words, on `runFailures`                                        |
 | `src/backend/features/version-manager/workspace-cache.ts`                         | Workspace names, change counts and tabs, default workspaces, and callers' permissions |
 | `src/backend/features/version-manager/routes.ts`                                  | Every route below                                                                     |
 | `src/frontend/features/version-manager/queries.ts`                                | The queries and mutations                                                             |
@@ -107,14 +107,6 @@ the permission, default-workspace and name caches above, so a miss watches it
 as a linked workspace is watched.
 
 ## Flows
-
-### Finding the page
-
-The page picker always lists the Version Manager. It marks it with a dot and a
-**New** badge for somebody signed in, with a workspace to act on, who has never
-opened the page (`useIsVersionManagerNew`). Opening it records `Hint.OPENED_VERSION_MANAGER`
-against the user in KV (`useMarkHintSeen`, see [auth.md](./auth.md)), so the
-dot stays gone on every computer they use.
 
 ### Showing the page
 
@@ -312,8 +304,9 @@ alone.
 Each step runs through `runTask` in `workflow.ts`, which reports it started, then
 makes each Onshape call in its own retried Workflow step. A failure that could
 go differently next time — a rate limit, a 408 or 5xx, or a request that never
-got an answer (`isTransient`) — is retried from the top of that step; tabs
-already moved need nothing the second time. Any other fails the step at once,
+got an answer (`isTransient`) — is retried once from the top of that step, two
+seconds later (`ONSHAPE_STEP_RETRIES`); tabs already moved need nothing the
+second time. Any other fails the step at once,
 as a `NonRetryableError` worded by `describeStepFailure` from its status and the
 call that failed ("Couldn't update this document's references."). Onshape's own
 messages are never shown: they are written for developers.
@@ -465,6 +458,7 @@ In [strings/version-manager.md](../strings/version-manager.md).
 | A linked document is unshared or deleted | The row shows "Missing access" and no name     | Remove the link                                    |
 | The caller cannot write to a child       | The push is refused before it starts           | The child's owner shares write access              |
 | Onshape rate-limits the run              | The step waits its `Retry-After` and resumes   | None needed                                        |
+| Onshape locks the caller out             | The step fails at once, saying how long        | Run it again after the wait                        |
 | Onshape errors or times out on a tab     | The step retries                               | None needed                                        |
 | Onshape refuses a document mid-run       | Its step fails at once; the run goes on        | Details names the step and why; run it again       |
 | A step runs out of retries               | It fails; the run goes on                      | Details names the step and why; run it again       |

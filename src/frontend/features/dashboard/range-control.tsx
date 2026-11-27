@@ -21,7 +21,11 @@ export function RangeControl(): ReactNode {
             onChange={(value) => {
                 // Narrows Mantine's string for the router.
                 if (!isRangePreset(value)) return;
-                void navigate({ to: ".", search: { range: value } });
+                void navigate({
+                    to: ".",
+                    search: { range: value },
+                    resetScroll: false
+                });
             }}
             data={Object.entries(RANGE_PRESETS).map(([value, { label }]) => ({
                 value,
@@ -50,7 +54,8 @@ export function ChartRangeControl({
                 if (!isRangePreset(value)) return;
                 void navigate({
                     to: ".",
-                    search: (search) => ({ ...search, [searchKey]: value })
+                    search: (search) => ({ ...search, [searchKey]: value }),
+                    resetScroll: false
                 });
             }}
             data={CHART_RANGE_PRESETS.map((value) => ({

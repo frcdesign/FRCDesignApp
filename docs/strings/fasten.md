@@ -1,0 +1,59 @@
+# Insert and fasten: strings
+
+What [fasten.md](../architecture/fasten.md) shows a person. The picking, the
+toasts' and the tip's strings are messages in `src/frontend/messages/en.json`,
+keyed `fasten…`, `placement…` and `contextBar…` (an insert's own toasts, `insert…`). The errors are written by
+the backend (`library/insertables/routes.ts`, and the check route Auto
+Assembly shares), and the app shows them as they come.
+
+## Picking
+
+In the insert menu's Fasten accordion, and under the context bar's
+Preselection button.
+
+| String                                                           | Kind               | Where                                            | When                                                                   | Review    |
+| ---------------------------------------------------------------- | ------------------ | ------------------------------------------------ | ---------------------------------------------------------------------- | --------- |
+| "Configuration"                                                  | Group title        | The insert menu, over Fasten                     | A part that can fasten, in an assembly, with parameters                | **⚑** New |
+| "Fasten"                                                         | Accordion title    | The insert menu, with a checkbox                 | A part that can fasten, in an assembly                                 | **⚑** New |
+| "Preselection"                                                   | Button             | The context bar                                  | A library page in an assembly, signed in; counts the picks             | **⚑** New |
+| "Can fasten to preselections" / "Fastens to {n} preselection(s)" | Tooltip            | The plugs icon after a part's name               | A part that can fasten, in an assembly; the count while picks are held | **⚑** New |
+| "Add insert location"                                            | Button             | The context bar                                  | The assembly has none                                                  | **⚑** New |
+| "Insert location added"                                          | Button, green      | The context bar, in place of Add insert location | Once it has added one                                                  | **⚑** New |
+| "Unexpectedly failed to add an insert location."                 | Error toast        |                                                  | Adding one failed                                                      |           |
+| "Cancel" / "Done"                                                | Buttons            | Under the bar's lists                            | Preselection open: Cancel also clears the picks                        | **⚑** New |
+| "Select by"                                                      | Input label        | Over the lists                                   | Always                                                                 | **⚑** New |
+| "Circular edges" / "Faces"                                       | Option, list label | Select by, first list                            | Always                                                                 |           |
+| "Edges to exclude"                                               | Query list label   | Second list                                      | Faces                                                                  |           |
+
+A row's problem under it is the check's, listed in
+[auto-assembly.md](./auto-assembly.md#a-picks-problem).
+
+## Toasts
+
+| String                                                                                                            | Kind          | When                                                       | Review |
+| ----------------------------------------------------------------------------------------------------------------- | ------------- | ---------------------------------------------------------- | ------ |
+| "Successfully inserted {name} and fastened it to {n} circular edge(s)."                                           | Success toast | Inserted and fastened to picks                             |        |
+| "Successfully inserted {name} and created a Fasten mate."                                                         | Success toast | Inserted into an assembly with nothing picked              |        |
+| "Successfully inserted {name}."                                                                                   | Success toast | Inserted, not into an assembly                             |        |
+| "Unexpectedly failed to insert {name}."                                                                           | Error toast   | The insert request failed                                  |        |
+| "Tip: You can select circular edges in Onshape before you insert and fasten to automatically fasten to each one." | Tip toast     | Insert and fasten with nothing picked, at most three times |        |
+
+## Errors
+
+| String                                               | Kind                | When                           | Review |
+| ---------------------------------------------------- | ------------------- | ------------------------------ | ------ |
+| "No circular edges were found in what was selected." | Error, insert route | Picks with no circular edge    |        |
+| "Select only what Select by asks for."               | Error, insert route | Picks the mode doesn't ask for |        |
+| "{name} does not support insert and fasten."         | Error, insert route | A part with no fasten info     |        |
+
+## Rate limits
+
+`rateLimitedMessage` in `src/backend/lib/onshape/failures.ts` words these, on
+the server and while the client holds a feature. `{wait}` is rounded as people
+say it: "about 5 minutes", "about 23 hours".
+
+| String                                               | Kind                          | When                                                  | Review    |
+| ---------------------------------------------------- | ----------------------------- | ----------------------------------------------------- | --------- |
+| "Onshape is limiting requests. Try again in {wait}." | Error toast                   | An insert, or adding an insert location, answered 429 | **⚑** New |
+| "Onshape is limiting requests. Try again in {wait}." | Tooltip, on disabled Insert   | Until the wait is over                                | **⚑** New |
+| "Onshape is limiting requests. Try again in {wait}." | Error callout, over the lists | The picks' check answered 429, until the wait is over | **⚑** New |

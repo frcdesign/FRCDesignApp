@@ -12,11 +12,9 @@ import {
     BooksIcon,
     CaretDownIcon,
     GearIcon,
-    GitBranchIcon,
     type Icon,
     MagnifyingGlassIcon,
     MoonIcon,
-    PuzzlePieceIcon,
     SunIcon
 } from "@phosphor-icons/react";
 import {
@@ -53,20 +51,28 @@ import {
 import { useNeedsSignIn } from "../features/auth/access-level";
 import { startSignIn } from "../features/auth/sign-in";
 import { getLibraryVersionQuery } from "../features/library/queries";
+import { getFeatureScriptsVersionQuery } from "../features/featurescripts/queries";
 import { LibraryId } from "@backend/features/library/library-id";
-import { AppColor, getLibraryColor, toShade } from "../theme";
+import { getLibraryColor, toShade } from "../theme";
 import { queryClient } from "../lib/query-client";
-import { InsertLocationStatus } from "../features/insert-location/components/insert-location-status";
-import {
-    useIsVersionManager,
-    useIsVersionManagerNew
-} from "../features/version-manager/navigation";
-import { useIsFeatureScripts } from "../features/featurescripts/navigation";
-import { FeatureScriptSearchBar } from "../features/featurescripts/components/featurescript-search-bar";
+import { ContextBar } from "./context-bar";
+import { useIsVersionManager } from "../features/version-manager/navigation";
 import { useTargetWorkspace } from "../lib/onshape-params";
+import {
+    useIsAutoAssembly,
+    useIsAutoAssemblyNew
+} from "../features/auto-assembly/navigation";
+import { useIsFeatureScripts } from "../features/featurescripts/navigation";
+import { useIsMassAnalysis } from "../features/mass-analysis/navigation";
+import { FeatureScriptSearchBar } from "../features/featurescripts/components/featurescript-search-bar";
 import { type WorkspacePath } from "@backend/features/version-manager/contract";
 import { type AppTab, UtilityTab } from "../lib/app-tab";
-import { getTabName, useNavigateToTab } from "../lib/tabs";
+import {
+    getTabName,
+    getUtilityColor,
+    getUtilityIcon,
+    useNavigateToTab
+} from "../lib/tabs";
 import { useRefreshVersionManagerMutation } from "../features/version-manager/queries";
 import { RefreshButton } from "./refresh-button";
 
@@ -95,13 +101,19 @@ export function NavbarRow(props: PropsWithChildren): ReactNode {
     );
 }
 
-/** The page picker with the brand and settings, over search and its filters. */
+/** The page picker with the brand and settings, over search and its filters, then the context bar. */
 export function AppNavbar(): ReactNode {
     // Search and its filters belong to a library; FeatureScripts has a search
-    // of its own there, and the Version Manager's page fills the room.
+    // of its own there, and the other utilities' pages fill the room.
     const isVersionManager = useIsVersionManager();
+    const isAutoAssembly = useIsAutoAssembly();
     const isFeatureScripts = useIsFeatureScripts();
-    const isLibrary = !isVersionManager && !isFeatureScripts;
+    const isMassAnalysis = useIsMassAnalysis();
+    const isLibrary =
+        !isVersionManager &&
+        !isAutoAssembly &&
+        !isFeatureScripts &&
+        !isMassAnalysis;
     const workspace = useTargetWorkspace();
 
     return (
@@ -109,8 +121,6 @@ export function AppNavbar(): ReactNode {
             <NavbarRow>
                 <PagePicker />
                 <Group gap="xs" ml="auto" className={styles.noShrink}>
-                    {/* The insert location is where a library's parts land in an assembly. */}
-                    {isLibrary && <InsertLocationStatus />}
                     <SignInButton />
                     {isVersionManager && workspace && (
                         <VersionManagerRefreshButton workspace={workspace} />
@@ -129,6 +139,7 @@ export function AppNavbar(): ReactNode {
                     <FeatureScriptSearchBar />
                 </Group>
             )}
+            <ContextBar isLibrary={isLibrary} />
         </Stack>
     );
 }
@@ -163,7 +174,7 @@ interface AppPage {
 }
 
 function useAppPages(): AppPage[] {
-    const isNew = useIsVersionManagerNew();
+    const isNew = useIsAutoAssemblyNew();
 
     const libraries = Object.values(LibraryId).map((libraryId) => ({
         tab: libraryId,
@@ -178,25 +189,24 @@ function useAppPages(): AppPage[] {
         )
     }));
 
-    // Needs no document: browsing works anywhere, and adding says why it can't.
-    const featureScripts: AppPage = {
-        tab: UtilityTab.FEATURESCRIPTS,
+    const utility = (tab: UtilityTab): AppPage => ({
+        tab,
         group: UTILITIES_GROUP,
-        icon: PuzzlePieceIcon,
-        color: AppColor.FEATURESCRIPTS
-    };
+        icon: getUtilityIcon(tab),
+        color: getUtilityColor(tab)
+    });
 
     return [
         ...libraries,
-        featureScripts,
+        // Listed everywhere: a page without what it acts on says what it needs.
+        utility(UtilityTab.FEATURESCRIPTS),
+        utility(UtilityTab.VERSION_MANAGER),
         {
-            tab: UtilityTab.VERSION_MANAGER,
-            group: UTILITIES_GROUP,
-            icon: GitBranchIcon,
-            color: AppColor.VERSION_MANAGER,
+            ...utility(UtilityTab.AUTO_ASSEMBLY),
             badge: isNew ? <NewBadge /> : undefined,
             isNew
-        }
+        },
+        utility(UtilityTab.MASS_ANALYSIS)
     ];
 }
 
@@ -214,14 +224,20 @@ function PagePicker(): ReactNode {
     const pages = useAppPages();
     const currentLibraryId = useLibraryId();
     const isVersionManager = useIsVersionManager();
+    const isAutoAssembly = useIsAutoAssembly();
     const isFeatureScripts = useIsFeatureScripts();
+    const isMassAnalysis = useIsMassAnalysis();
     const navigateToTab = useNavigateToTab();
 
     const current: AppTab = isVersionManager
         ? UtilityTab.VERSION_MANAGER
-        : isFeatureScripts
-          ? UtilityTab.FEATURESCRIPTS
-          : currentLibraryId;
+        : isAutoAssembly
+          ? UtilityTab.AUTO_ASSEMBLY
+          : isFeatureScripts
+            ? UtilityTab.FEATURESCRIPTS
+            : isMassAnalysis
+              ? UtilityTab.MASS_ANALYSIS
+              : currentLibraryId;
     const currentPage = pages.find((page) => page.tab === current);
 
     // Warm the versions on hover, so picking one has nothing left to wait for.
@@ -229,6 +245,7 @@ function PagePicker(): ReactNode {
         for (const libraryId of Object.values(LibraryId)) {
             void queryClient.prefetchQuery(getLibraryVersionQuery(libraryId));
         }
+        void queryClient.prefetchQuery(getFeatureScriptsVersionQuery());
     };
 
     const selectPage = (tab: AppTab) => {
@@ -278,10 +295,12 @@ function PagePicker(): ReactNode {
                                         shown={page.isNew ?? false}
                                         offset={-1}
                                     >
+                                        {/* Inline, it sits on a line of text above the label's center */}
                                         <AppIcon
                                             icon={page.icon}
                                             size={IconSize.MEDIUM}
                                             color={toShade(page.color)}
+                                            style={{ display: "block" }}
                                         />
                                     </DotIndicator>
                                 }

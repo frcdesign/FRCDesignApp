@@ -23,7 +23,8 @@ class ParseError extends Error {
 const TOLERANCE = {
     number: 1e-13,
     length: 1e-8,
-    angle: 1e-11
+    angle: 1e-11,
+    mass: 1e-8
 };
 
 export function valueWithUnits(value: number, unit: Unit): ValueWithUnits {
@@ -37,6 +38,8 @@ function baseUnit(type: UnitType): Unit {
             return Unit.METER;
         case "angle":
             return Unit.RADIAN;
+        case "mass":
+            return Unit.KILOGRAM;
         case "number":
             return Unit.UNITLESS;
     }
@@ -76,7 +79,10 @@ function tolerantEqualsZero(value: ValueWithUnits) {
     return tolerantEquals(value, { value: 0, type: value.type });
 }
 
-function tolerantEquals(value1: ValueWithUnits, value2: ValueWithUnits) {
+export function tolerantEquals(
+    value1: ValueWithUnits,
+    value2: ValueWithUnits
+): boolean {
     const tolerance = comparisonTolerance(value1, value2);
     return Math.abs(value1.value - value2.value) < tolerance;
 }
@@ -112,7 +118,7 @@ const lexer = buildLexer([
     [false, /^\s+/g, TokenKind.Space] // skip whitespace
 ]);
 
-type UnitType = "length" | "angle" | "number";
+type UnitType = "length" | "angle" | "mass" | "number";
 
 type Operator = "+" | "-" | "*" | "/";
 
@@ -190,6 +196,16 @@ function getUnitFactor(unit: Unit): number {
         case Unit.DEGREE:
             return Math.PI / 180;
 
+        // mass (base = kilogram)
+        case Unit.KILOGRAM:
+            return 1;
+        case Unit.GRAM:
+            return 0.001;
+        case Unit.POUND:
+            return 0.45359237;
+        case Unit.OUNCE:
+            return 0.028349523125;
+
         // unitless
         case Unit.UNITLESS:
             return 1;
@@ -211,6 +227,12 @@ function getUnitType(unit: Unit): UnitType {
         case Unit.DEGREE:
         case Unit.RADIAN:
             return "angle";
+
+        case Unit.KILOGRAM:
+        case Unit.GRAM:
+        case Unit.POUND:
+        case Unit.OUNCE:
+            return "mass";
 
         case Unit.UNITLESS:
             return "number";
@@ -260,6 +282,29 @@ function classifyUnit(identifier: string): Unit {
         case "radian":
         case "radians":
             return Unit.RADIAN;
+
+        // mass units
+        case "kg":
+        case "kilogram":
+        case "kilograms":
+            return Unit.KILOGRAM;
+
+        case "g":
+        case "gram":
+        case "grams":
+            return Unit.GRAM;
+
+        case "lb":
+        case "lbs":
+        case "lbm":
+        case "pound":
+        case "pounds":
+            return Unit.POUND;
+
+        case "oz":
+        case "ounce":
+        case "ounces":
+            return Unit.OUNCE;
 
         // Note: Unitless isn't supported by this
         default:
@@ -558,6 +603,8 @@ function expectedType(quantityType: QuantityType): UnitType {
             return "length";
         case QuantityType.ANGLE:
             return "angle";
+        case QuantityType.MASS:
+            return "mass";
         case QuantityType.INTEGER:
         case QuantityType.REAL:
             return "number";
@@ -622,7 +669,8 @@ export function evaluateBaseValue(
     }
     if (
         (quantityType === QuantityType.LENGTH ||
-            quantityType === QuantityType.ANGLE) &&
+            quantityType === QuantityType.ANGLE ||
+            quantityType === QuantityType.MASS) &&
         value.type === "number"
     ) {
         value = valueWithUnits(value.value, defaultUnit);

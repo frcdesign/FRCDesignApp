@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { onlineManager } from "@tanstack/react-query";
 import {
     type FeatureScriptOut,
     FeatureScriptProblem,
@@ -40,6 +41,9 @@ vi.mock("../../../lib/library", () => ({
 const { FeatureScriptMenu } = await import("./featurescript-menu");
 const { FeatureScriptList } = await import("./featurescript-list");
 const { FeatureScriptSearchBar } = await import("./featurescript-search-bar");
+const { loadFeatureScripts } = await import("../queries");
+const { queryClient: appQueryClient } =
+    await import("../../../lib/query-client");
 
 const FRAME: FeatureScriptOut = {
     id: "frame",
@@ -404,5 +408,30 @@ describe("FeatureScriptList", () => {
         expect(sectionNames()).toEqual(["Lightening", "Parts"]);
         expect(screen.queryByText("Quick rib")).toBeNull();
         expect(screen.getByText("Robot lighten")).toBeTruthy();
+    });
+});
+
+describe("loadFeatureScripts", () => {
+    afterEach(() => {
+        onlineManager.setOnline(true);
+        appQueryClient.clear();
+        apiGet.mockReset();
+    });
+
+    it("loads while the browser reports offline", async () => {
+        apiGet.mockImplementation((path: string) =>
+            Promise.resolve(
+                path === "/featurescripts-version"
+                    ? { version: 3 }
+                    : { features: [] }
+            )
+        );
+        onlineManager.setOnline(false);
+
+        await loadFeatureScripts();
+
+        expect(apiGet).toHaveBeenCalledWith("/featurescripts", {
+            cacheId: 3
+        });
     });
 });

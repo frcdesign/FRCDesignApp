@@ -22,6 +22,7 @@ describe("evaluateExpression", () => {
     const REAL = defaultOptions(QuantityType.REAL, Unit.UNITLESS);
     const LENGTH = defaultOptions();
     const DEGREES = defaultOptions(QuantityType.ANGLE, Unit.DEGREE);
+    const MASS = defaultOptions(QuantityType.MASS, Unit.KILOGRAM);
 
     it.each([
         ["42", REAL, "42"],
@@ -36,6 +37,9 @@ describe("evaluateExpression", () => {
         // The display unit fills in for an expression that names none.
         ["5", LENGTH, "5 mm"],
         ["1 in", LENGTH, "25.4 mm"],
+        ["2 lb", MASS, "0.91 kg"],
+        ["500 g + 0.5 kg", MASS, "1 kg"],
+        ["16 oz", MASS, "0.45 kg"],
         ["   7   mm   +   3 mm ", LENGTH, "10 mm"]
     ])("evaluates %s", (expression, options, display) => {
         const result = evaluateExpression(expression, options);

@@ -3,19 +3,23 @@
 One file per feature area, beside its document in
 [`docs/architecture/`](../architecture/README.md), listing the strings the area
 shows a user that are worth a reviewer's read: titles, labels, descriptions,
-placeholders, prompts sent to Onshape, toasts, tips, and errors written for the
+placeholders, toasts, tips, and errors written for the
 user.
 
 | File                                       | Area                                                     |
 | ------------------------------------------ | -------------------------------------------------------- |
 | [build-issues.md](./build-issues.md)       | Build issues, the admin card, and the Admin settings     |
-| [library.md](./library.md)                 | The library pages: the group page, change badges         |
+| [library.md](./library.md)                 | The splash screen, and the library pages                 |
 | [feedback.md](./feedback.md)               | Reports, the access page, and the dashboard's counts     |
 | [download.md](./download.md)               | STEP downloads from the standalone app                   |
 | [version-manager.md](./version-manager.md) | The Version Manager's page, welcome and suggested links  |
 | [analytics.md](./analytics.md)             | The dashboard's usage numbers, charts and tables         |
 | [featurescripts.md](./featurescripts.md)   | The FeatureScripts tab, its cards and details (proposed) |
 | [testbench.md](./testbench.md)             | The owner's testbench page                               |
+| [edit-parts.md](./edit-parts.md)           | Edit parts: picking the parts, and the menu              |
+| [auto-assembly.md](./auto-assembly.md)     | Auto Assembly's page, its runs, and pick problems        |
+| [fasten.md](./fasten.md)                   | Insert and fasten's card, toasts and tip                 |
+| [mass-analysis.md](./mass-analysis.md)     | Mass Analysis's page, its chart and parts without a mass |
 
 ## Shape of a file
 

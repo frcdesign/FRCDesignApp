@@ -16,6 +16,8 @@ import { Route as AppRouteRouteImport } from './routes/app/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
 import { Route as AppVersionManagerRouteImport } from './routes/app/version-manager'
+import { Route as AppMassAnalysisRouteImport } from './routes/app/mass-analysis'
+import { Route as AppAutoAssemblyRouteImport } from './routes/app/auto-assembly'
 import { Route as PagesVersionErrorRouteImport } from './routes/_pages/version-error'
 import { Route as PagesSignInErrorRouteImport } from './routes/_pages/sign-in-error'
 import { Route as PagesSetupRouteImport } from './routes/_pages/setup'
@@ -68,6 +70,16 @@ const DashboardIndexRoute = DashboardIndexRouteImport.update({
 const AppVersionManagerRoute = AppVersionManagerRouteImport.update({
   id: '/version-manager',
   path: '/version-manager',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppMassAnalysisRoute = AppMassAnalysisRouteImport.update({
+  id: '/mass-analysis',
+  path: '/mass-analysis',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppAutoAssemblyRoute = AppAutoAssemblyRouteImport.update({
+  id: '/auto-assembly',
+  path: '/auto-assembly',
   getParentRoute: () => AppRouteRoute,
 } as any)
 const PagesVersionErrorRoute = PagesVersionErrorRouteImport.update({
@@ -184,6 +196,8 @@ export interface FileRoutesByFullPath {
   '/setup': typeof PagesSetupRoute
   '/sign-in-error': typeof PagesSignInErrorRoute
   '/version-error': typeof PagesVersionErrorRoute
+  '/app/auto-assembly': typeof AppAutoAssemblyRoute
+  '/app/mass-analysis': typeof AppMassAnalysisRoute
   '/app/version-manager': typeof AppVersionManagerRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/app/library/$libraryId': typeof AppLibraryLibraryIdRouteRouteWithChildren
@@ -209,6 +223,8 @@ export interface FileRoutesByTo {
   '/setup': typeof PagesSetupRoute
   '/sign-in-error': typeof PagesSignInErrorRoute
   '/version-error': typeof PagesVersionErrorRoute
+  '/app/auto-assembly': typeof AppAutoAssemblyRoute
+  '/app/mass-analysis': typeof AppMassAnalysisRoute
   '/app/version-manager': typeof AppVersionManagerRoute
   '/dashboard': typeof DashboardIndexRoute
   '/app/featurescripts': typeof AppFeaturescriptsIndexRoute
@@ -235,6 +251,8 @@ export interface FileRoutesById {
   '/_pages/setup': typeof PagesSetupRoute
   '/_pages/sign-in-error': typeof PagesSignInErrorRoute
   '/_pages/version-error': typeof PagesVersionErrorRoute
+  '/app/auto-assembly': typeof AppAutoAssemblyRoute
+  '/app/mass-analysis': typeof AppMassAnalysisRoute
   '/app/version-manager': typeof AppVersionManagerRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/app/library/$libraryId': typeof AppLibraryLibraryIdRouteRouteWithChildren
@@ -264,6 +282,8 @@ export interface FileRouteTypes {
     | '/setup'
     | '/sign-in-error'
     | '/version-error'
+    | '/app/auto-assembly'
+    | '/app/mass-analysis'
     | '/app/version-manager'
     | '/dashboard/'
     | '/app/library/$libraryId'
@@ -289,6 +309,8 @@ export interface FileRouteTypes {
     | '/setup'
     | '/sign-in-error'
     | '/version-error'
+    | '/app/auto-assembly'
+    | '/app/mass-analysis'
     | '/app/version-manager'
     | '/dashboard'
     | '/app/featurescripts'
@@ -314,6 +336,8 @@ export interface FileRouteTypes {
     | '/_pages/setup'
     | '/_pages/sign-in-error'
     | '/_pages/version-error'
+    | '/app/auto-assembly'
+    | '/app/mass-analysis'
     | '/app/version-manager'
     | '/dashboard/'
     | '/app/library/$libraryId'
@@ -392,6 +416,20 @@ declare module '@tanstack/react-router' {
       path: '/version-manager'
       fullPath: '/app/version-manager'
       preLoaderRoute: typeof AppVersionManagerRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/app/mass-analysis': {
+      id: '/app/mass-analysis'
+      path: '/mass-analysis'
+      fullPath: '/app/mass-analysis'
+      preLoaderRoute: typeof AppMassAnalysisRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/app/auto-assembly': {
+      id: '/app/auto-assembly'
+      path: '/auto-assembly'
+      fullPath: '/app/auto-assembly'
+      preLoaderRoute: typeof AppAutoAssemblyRouteImport
       parentRoute: typeof AppRouteRoute
     }
     '/_pages/version-error': {
@@ -556,12 +594,16 @@ const AppLibraryLibraryIdRouteRouteWithChildren =
 
 interface AppRouteRouteChildren {
   AppFeaturescriptsRouteRoute: typeof AppFeaturescriptsRouteRouteWithChildren
+  AppAutoAssemblyRoute: typeof AppAutoAssemblyRoute
+  AppMassAnalysisRoute: typeof AppMassAnalysisRoute
   AppVersionManagerRoute: typeof AppVersionManagerRoute
   AppLibraryLibraryIdRouteRoute: typeof AppLibraryLibraryIdRouteRouteWithChildren
 }
 
 const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppFeaturescriptsRouteRoute: AppFeaturescriptsRouteRouteWithChildren,
+  AppAutoAssemblyRoute: AppAutoAssemblyRoute,
+  AppMassAnalysisRoute: AppMassAnalysisRoute,
   AppVersionManagerRoute: AppVersionManagerRoute,
   AppLibraryLibraryIdRouteRoute: AppLibraryLibraryIdRouteRouteWithChildren,
 }

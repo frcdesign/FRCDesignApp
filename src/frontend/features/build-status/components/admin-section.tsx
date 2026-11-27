@@ -29,7 +29,10 @@ export function InsertableSettings(props: InsertableSettingsProps): ReactNode {
                 insertableId={insertableId}
                 isVisible={status.isVisible}
             />
-            <FastenSwitch insertableId={insertableId} status={status} />
+            {/* A FeatureScript part always fastens */}
+            {!status.isGenerated && (
+                <FastenSwitch insertableId={insertableId} status={status} />
+            )}
             <HoverBubbleRow label={m.adminCardVendors()}>
                 <VendorBadges vendors={status.vendors} />
             </HoverBubbleRow>
@@ -44,12 +47,12 @@ interface VisibilitySwitchProps {
 
 function VisibilitySwitch(props: VisibilitySwitchProps): ReactNode {
     const { insertableId, isVisible } = props;
-    const mutation = useSetVisibilityMutation([insertableId], !isVisible);
+    const mutation = useSetVisibilityMutation([insertableId]);
     return (
         <SwitchRow
             label={m.adminCardVisibleToUsers()}
             checked={isVisible}
-            onToggle={() => mutation.mutate()}
+            onToggle={() => mutation.mutate(!isVisible)}
         />
     );
 }

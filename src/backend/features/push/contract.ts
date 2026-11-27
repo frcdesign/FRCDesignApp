@@ -8,6 +8,7 @@ export enum PushType {
     LIBRARY = "library",
     THUMBNAIL = "thumbnail",
     VERSION_JOB = "version-job",
+    ASSEMBLY_JOB = "assembly-job",
     FEATURESCRIPTS = "featurescripts",
     FEATURESCRIPTS_LOAD = "featurescripts-load"
 }
@@ -39,6 +40,14 @@ export interface VersionJobPush {
     workspaceKey: string;
 }
 
+/** An Auto Assembly run in an assembly has moved on; sent to everyone in its workspace. */
+export interface AssemblyJobPush {
+    type: PushType.ASSEMBLY_JOB;
+    workspaceKey: string;
+    /** The assembly, as `assemblyKey` spells it. */
+    assemblyKey: string;
+}
+
 /** A load of the FeatureScripts wrote, so their cache version moved. */
 export interface FeatureScriptsPush {
     type: PushType.FEATURESCRIPTS;
@@ -55,7 +64,8 @@ export type PushMessage =
     | JobsPush
     | LibraryPush
     | ThumbnailPush
-    | VersionJobPush;
+    | VersionJobPush
+    | AssemblyJobPush;
 
 /** Under `/api`. A client connects here naming the library it is showing. */
 export const PUSH_ROUTE = "/push";

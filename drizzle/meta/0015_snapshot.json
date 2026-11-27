@@ -1,8 +1,8 @@
 {
     "version": "6",
     "dialect": "sqlite",
-    "id": "3635afc2-5405-4884-908d-b9123add6c97",
-    "prevId": "7cc5e689-0566-405e-aec8-1a56101dcb6c",
+    "id": "f42c3965-7c1d-4298-9618-faf900c77188",
+    "prevId": "b765a9bd-883e-4dce-9709-de539bf0d0be",
     "tables": {
         "configurations": {
             "name": "configurations",
@@ -143,6 +143,75 @@
                 }
             },
             "compositePrimaryKeys": {},
+            "uniqueConstraints": {},
+            "checkConstraints": {}
+        },
+        "generated_sets": {
+            "name": "generated_sets",
+            "columns": {
+                "library_id": {
+                    "name": "library_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "set": {
+                    "name": "set",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "group_id": {
+                    "name": "group_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "features": {
+                    "name": "features",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "catalog": {
+                    "name": "catalog",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                }
+            },
+            "indexes": {},
+            "foreignKeys": {
+                "generated_sets_library_id_libraries_id_fk": {
+                    "name": "generated_sets_library_id_libraries_id_fk",
+                    "tableFrom": "generated_sets",
+                    "tableTo": "libraries",
+                    "columnsFrom": ["library_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "no action",
+                    "onUpdate": "no action"
+                },
+                "generated_sets_group_id_groups_id_fk": {
+                    "name": "generated_sets_group_id_groups_id_fk",
+                    "tableFrom": "generated_sets",
+                    "tableTo": "groups",
+                    "columnsFrom": ["group_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                }
+            },
+            "compositePrimaryKeys": {
+                "generated_sets_library_id_set_pk": {
+                    "columns": ["library_id", "set"],
+                    "name": "generated_sets_library_id_set_pk"
+                }
+            },
             "uniqueConstraints": {},
             "checkConstraints": {}
         },
@@ -422,6 +491,14 @@
                     "primaryKey": false,
                     "notNull": false,
                     "autoincrement": false
+                },
+                "is_generated": {
+                    "name": "is_generated",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false,
+                    "default": false
                 },
                 "build_issues": {
                     "name": "build_issues",
@@ -1076,6 +1153,30 @@
                     "notNull": true,
                     "autoincrement": false,
                     "default": 0
+                },
+                "fastenable_count": {
+                    "name": "fastenable_count",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false,
+                    "default": 0
+                },
+                "preselected_count": {
+                    "name": "preselected_count",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false,
+                    "default": 0
+                },
+                "auto_assembly_count": {
+                    "name": "auto_assembly_count",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false,
+                    "default": 0
                 }
             },
             "indexes": {},
@@ -1494,6 +1595,20 @@
                 },
                 "fasten": {
                     "name": "fasten",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": false,
+                    "autoincrement": false
+                },
+                "fastenable": {
+                    "name": "fastenable",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": false,
+                    "autoincrement": false
+                },
+                "preselected": {
+                    "name": "preselected",
                     "type": "integer",
                     "primaryKey": false,
                     "notNull": false,

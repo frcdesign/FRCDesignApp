@@ -17,24 +17,20 @@ describe("every retry config", () => {
 });
 
 describe("ONSHAPE_STEP_RETRIES", () => {
-    it("backs off from ten seconds, capped at five minutes", () => {
-        const delay = (attempt: number) =>
+    it("retries once, two seconds later", () => {
+        expect(ONSHAPE_STEP_RETRIES.limit).toBe(1);
+        expect(
             ONSHAPE_STEP_RETRIES.delay({
-                ctx: { attempt },
+                ctx: { attempt: 1 },
                 error: new Error("boom")
-            });
-        expect([1, 2, 3, 10].map(delay)).toEqual([
-            "10 seconds",
-            "20 seconds",
-            "40 seconds",
-            "300 seconds"
-        ]);
+            })
+        ).toBe("2 seconds");
     });
 
-    it("waits out a rate limit instead of its own curve", () => {
+    it("waits out a rate limit instead", () => {
         const delay = secondsOf(
             ONSHAPE_STEP_RETRIES.delay({
-                ctx: { attempt: 3 },
+                ctx: { attempt: 1 },
                 error: new OnshapeRateLimitError("slow down", 7)
             })
         );

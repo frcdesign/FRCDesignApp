@@ -13,7 +13,7 @@ import {
     INSERT_LOCATION_SOURCE,
     type InsertLocationOut
 } from "./contract";
-import { findInsertLocation } from "./parse";
+import { findInsertLocation, findLastInsertLocation } from "./parse";
 import { toMarkerPoint } from "./placement";
 
 export const insertLocationRoutes = getApp();
@@ -32,8 +32,9 @@ insertLocationRoutes.get(
     requireSignInMiddleware,
     validate("query", assemblyPathSchema),
     async (c) => {
-        const instanceId = await findInsertLocation(
+        const instanceId = await findLastInsertLocation(
             await c.var.getOnshapeApi(),
+            c.env.KV,
             c.req.valid("query")
         );
         return c.json({ instanceId } satisfies InsertLocationOut);
@@ -50,7 +51,11 @@ insertLocationRoutes.post(
         const { targetPath } = c.req.valid("json");
 
         // A second marker would make the lookup ambiguous.
-        const existing = await findInsertLocation(onshapeApi, targetPath);
+        const existing = await findInsertLocation(
+            onshapeApi,
+            c.env.KV,
+            targetPath
+        );
         if (existing) {
             return c.json({
                 instanceId: existing
@@ -73,7 +78,7 @@ insertLocationRoutes.post(
         // Looked up again if the insert didn't report the occurrence.
         const instanceId =
             inserted.insertInstanceResponses?.[0]?.occurrences?.[0]?.path[0] ??
-            (await findInsertLocation(onshapeApi, targetPath));
+            (await findInsertLocation(onshapeApi, c.env.KV, targetPath));
 
         return c.json({ instanceId } satisfies InsertLocationOut);
     }

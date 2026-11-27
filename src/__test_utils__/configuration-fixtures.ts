@@ -1,6 +1,8 @@
 // Import directly: the barrel reaches `cloudflare:workers`, which node tests can't resolve.
 import {
+    OptionVisibilityType,
     ParameterType,
+    VisibilityType,
     type BooleanParameter,
     type ConfigurationRecord,
     type EnumParameter,
@@ -29,6 +31,20 @@ export function enumParam(
         })),
         optionConditions: [],
         ...extra
+    };
+}
+
+/**
+ * The rule Onshape ends a list's option rules with: once a list has any,
+ * an option no rule shows is hidden.
+ */
+export function alwaysShown(
+    controlledOptions: string[]
+): EnumParameter["optionConditions"][number] {
+    return {
+        type: OptionVisibilityType.LIST,
+        controlledOptions,
+        condition: { type: VisibilityType.ALWAYS_SHOWN }
     };
 }
 
@@ -89,7 +105,9 @@ export const TEST_UNIT_INFO: UnitInfo = {
     lengthUnit: Unit.INCH,
     lengthPrecision: 4,
     anglePrecision: 3,
-    realPrecision: 3
+    realPrecision: 3,
+    massUnit: Unit.POUND,
+    massPrecision: 3
 };
 
 /** A probe of one configuration; override whichever fields a test is about. */

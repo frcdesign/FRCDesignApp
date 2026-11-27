@@ -4,6 +4,7 @@ import {
     configurations,
     favorites,
     recentInserts,
+    generatedSets,
     groups,
     insertables,
     libraries,
@@ -21,7 +22,6 @@ import {
     dailySourceMetrics,
     dailyUserActivity,
     dailyVersionMetrics,
-    events,
     insertableStats,
     userStats
 } from "../backend/features/analytics/schema";
@@ -78,12 +78,12 @@ export async function resetDb(db: Db): Promise<void> {
         db.delete(recentInserts),
         db.delete(configurations),
         db.delete(insertables),
+        db.delete(generatedSets),
         db.delete(groups),
         db.delete(users),
         db.delete(libraries),
         db.delete(onshapeWebhooks),
         // Analytics has no foreign keys, so nothing cascades these away.
-        db.delete(events),
         db.delete(dailyMetrics),
         db.delete(dailySourceMetrics),
         db.delete(dailyTargetMetrics),

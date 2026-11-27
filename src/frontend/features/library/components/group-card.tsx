@@ -143,12 +143,12 @@ interface AllElementsVisibilityProps {
 }
 
 function ShowAllElementsMenuItem(props: AllElementsVisibilityProps): ReactNode {
-    const mutation = useSetVisibilityMutation(props.insertableOrder, true);
+    const mutation = useSetVisibilityMutation(props.insertableOrder);
     return (
         <Menu.Item
             color={StatusColor.INFO}
             leftSection={<EyeIcon />}
-            onClick={() => mutation.mutate()}
+            onClick={() => mutation.mutate(true)}
         >
             Show all elements
         </Menu.Item>
@@ -156,12 +156,12 @@ function ShowAllElementsMenuItem(props: AllElementsVisibilityProps): ReactNode {
 }
 
 function HideAllElementsMenuItem(props: AllElementsVisibilityProps): ReactNode {
-    const mutation = useSetVisibilityMutation(props.insertableOrder, false);
+    const mutation = useSetVisibilityMutation(props.insertableOrder);
     return (
         <Menu.Item
             color={StatusColor.ERROR}
             leftSection={<EyeSlashIcon />}
-            onClick={() => mutation.mutate()}
+            onClick={() => mutation.mutate(false)}
         >
             Hide all elements
         </Menu.Item>

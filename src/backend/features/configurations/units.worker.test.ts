@@ -18,10 +18,15 @@ function mockUnits() {
         defaultUnits: {
             units: [
                 { key: QuantityType.ANGLE, value: Unit.DEGREE },
-                { key: QuantityType.LENGTH, value: Unit.INCH }
+                { key: QuantityType.LENGTH, value: Unit.INCH },
+                { key: "MASS", value: Unit.POUND }
             ]
         },
-        unitsDisplayPrecision: { [Unit.DEGREE]: 1, [Unit.INCH]: 3 }
+        unitsDisplayPrecision: {
+            [Unit.DEGREE]: 1,
+            [Unit.INCH]: 3,
+            [Unit.POUND]: 2
+        }
     });
 }
 
@@ -51,6 +56,30 @@ describe("a workspace's units", () => {
         const res = await unitInfo("w", "doc-once");
 
         expect(await res.json()).toMatchObject({ lengthUnit: Unit.INCH });
+        expect(fetch).toHaveBeenCalledOnce();
+    });
+
+    it("reads the mass unit and its precision", async () => {
+        mockUnits();
+
+        const res = await unitInfo("v", "doc-mass");
+
+        expect(await res.json()).toMatchObject({
+            massUnit: Unit.POUND,
+            massPrecision: 2
+        });
+    });
+
+    it("asks again for an entry kept without a mass unit", async () => {
+        const fetch = mockUnits();
+        await env.KV.put(
+            "unit-info:doc-old:v:ws",
+            JSON.stringify({ angleUnit: Unit.DEGREE, lengthUnit: Unit.INCH })
+        );
+
+        const res = await unitInfo("v", "doc-old");
+
+        expect(await res.json()).toMatchObject({ massUnit: Unit.POUND });
         expect(fetch).toHaveBeenCalledOnce();
     });
 

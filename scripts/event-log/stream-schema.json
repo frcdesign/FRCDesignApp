@@ -1,0 +1,12 @@
+{
+    "fields": [
+        { "name": "id", "type": "string", "required": true },
+        { "name": "type", "type": "string", "required": true },
+        { "name": "created_at", "type": "int64", "required": true },
+        { "name": "day", "type": "string", "required": true },
+        { "name": "user_id", "type": "string", "required": true },
+        { "name": "library_id", "type": "string", "required": false },
+        { "name": "schema_version", "type": "int32", "required": true },
+        { "name": "data", "type": "string", "required": true }
+    ]
+}

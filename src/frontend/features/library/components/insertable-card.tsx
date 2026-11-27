@@ -26,6 +26,7 @@ import { AdminMenuSection, MenuSection } from "../../../components/app-menu";
 import { ReloadThumbnailMenuItem } from "./reload-thumbnail-item";
 import { UpdateReferencesMenuItem } from "./update-references-item";
 import { InsertableChangesBadge } from "./changes-badges";
+import { FastenMark } from "../../insert/components/fasten-mark";
 import { QuickInsertButton } from "../../insert/components/quick-insert-button";
 import { DownloadStepMenuSection } from "../../download/components/download-step-menu-section";
 import { ConfigurationHoverCard } from "../../insert/components/configuration-hover-card";
@@ -121,6 +122,7 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
                             selection={hitSelection}
                         />
                     )}
+                    <FastenMark insertable={insertable} />
                     <InsertableStatusBadge
                         insertableId={insertable.id}
                         groupId={insertable.groupId}

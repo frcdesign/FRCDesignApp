@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { env } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { configurations, insertables } from "../../../db/schema";
-import { dailyConfigurationMetrics, events } from "../../analytics/schema";
+import { dailyConfigurationMetrics } from "../../analytics/schema";
 import { UseSource } from "../../analytics/usage";
 import { ElementType } from "../../../lib/onshape/element-type";
 import { Vendor } from "../vendors";
@@ -15,6 +15,7 @@ import {
 } from "../../../../__test_utils__/feature-fixtures";
 import { BuildIssueType } from "../../build-checker/issues";
 import {
+    loggedEvents,
     MOCK_ONSHAPE_API,
     TEST_ASSEMBLY_ID,
     TEST_ASSEMBLY_PATH,
@@ -33,14 +34,23 @@ import {
 import { getDb } from "../../../db/client";
 import * as PartStudioEndpoints from "../../../lib/onshape/endpoints/part-studios";
 import * as AssemblyEndpoints from "../../../lib/onshape/endpoints/assemblies";
+import * as DocumentEndpoints from "../../../lib/onshape/endpoints/documents";
 import * as PartsEndpoints from "../../../lib/onshape/endpoints/parts";
+import * as IndexHoles from "../../auto-assembly/index-holes";
 import {
     OnshapeApiError,
     OnshapeRateLimitError,
     OnshapeTimeoutError
 } from "../../../lib/onshape/client";
+import { rateLimitedMessage } from "../../../lib/onshape/failures";
 import { INSERT_RETRY, INSERT_TIMED_OUT } from "../../../lib/onshape/retry";
 import { AUTO_INDEX_THRESHOLD } from "../../configurations/combinations";
+import {
+    ASSEMBLY,
+    BODY,
+    mockAssemblyReads,
+    workspaceElements
+} from "../../../../__test_utils__/auto-assembly-fixtures";
 import {
     enumParam,
     quantityParam
@@ -79,6 +89,18 @@ const targetPath = {
     instanceId: "w-target",
     elementId: "target-element"
 };
+
+/** The target assembly's tab, at one edit, so its reads are cached. */
+function mockAssemblyTab() {
+    vi.spyOn(DocumentEndpoints, "getElements").mockResolvedValue([
+        {
+            id: targetPath.elementId,
+            name: "Assembly",
+            elementType: "ASSEMBLY",
+            microversionId: "a1"
+        }
+    ] as Awaited<ReturnType<typeof DocumentEndpoints.getElements>>);
+}
 
 describe("insertable routes", () => {
     beforeEach(async () => {
@@ -232,6 +254,17 @@ describe("insertable routes", () => {
         expect(parts).toHaveBeenCalledTimes(2);
     });
 
+    it("refuses to toggle fasten for a generated part", async () => {
+        await seedPartStudio(db, { isGenerated: true });
+
+        const res = await createTestApp().request(
+            `/api/toggle-insert-and-fasten/library/${TEST_LIBRARY_ID}/insertable/${TEST_PART_STUDIO_ID}`,
+            jsonRequest("POST", { supportsFasten: false }),
+            env
+        );
+        expect(res.status).toBe(400);
+    });
+
     it("POST /add-to-part-studio inserts via the Onshape API", async () => {
         await seedPartStudio(db);
         const spy = vi
@@ -280,7 +313,7 @@ describe("insertable routes", () => {
         );
         expect(res.status).toBe(200);
 
-        const event = await db.select().from(events).get();
+        const event = loggedEvents()[0];
         expect(event?.source).toBe(UseSource.GROUP_SEARCH);
     });
 
@@ -417,6 +450,7 @@ describe("insertable routes", () => {
 
     it("POST /add-to-assembly lands the insert on the insert location", async () => {
         await seedAssembly(db);
+        mockAssemblyTab();
         vi.spyOn(AssemblyEndpoints, "getAssembly").mockResolvedValue({
             rootAssembly: {
                 features: [],
@@ -467,7 +501,7 @@ describe("insertable routes", () => {
                 ]
             })
         );
-        expect(await db.select().from(events).get()).toMatchObject({
+        expect(loggedEvents()[0]).toMatchObject({
             atInsertLocation: true
         });
     });
@@ -475,6 +509,7 @@ describe("insertable routes", () => {
     // The marker can be deleted after the app opens.
     it("POST /add-to-assembly inserts at the origin when the location is gone", async () => {
         await seedAssembly(db);
+        mockAssemblyTab();
         vi.spyOn(AssemblyEndpoints, "getAssembly").mockResolvedValue({
             rootAssembly: { features: [], instances: [], occurrences: [] },
             parts: [],
@@ -502,7 +537,7 @@ describe("insertable routes", () => {
             ElementType.ASSEMBLY,
             expect.objectContaining({ transform: undefined })
         );
-        expect(await db.select().from(events).get()).toMatchObject({
+        expect(loggedEvents()[0]).toMatchObject({
             atInsertLocation: false
         });
     });
@@ -612,14 +647,14 @@ describe("insertable routes", () => {
 
     /** What the usage log recorded for the one insert these tests make. */
     function loggedInsert() {
-        return db.select().from(events).get();
+        return loggedEvents()[0];
     }
 
     it("records an insert nobody asked to fasten as unfastened", async () => {
         await seedFastenable();
 
         expect((await insertIntoAssembly(false)).status).toBe(200);
-        expect(await loggedInsert()).toMatchObject({ fasten: false });
+        expect(loggedInsert()).toMatchObject({ fasten: false });
     });
 
     it("records the fasten only once it has been built", async () => {
@@ -629,7 +664,7 @@ describe("insertable routes", () => {
         });
 
         expect((await insertIntoAssembly(true)).status).toBe(200);
-        expect(await loggedInsert()).toMatchObject({ fasten: true });
+        expect(loggedInsert()).toMatchObject({ fasten: true });
     });
 
     // The part is in the assembly either way.
@@ -640,7 +675,7 @@ describe("insertable routes", () => {
         );
 
         expect((await insertIntoAssembly(true)).status).toBe(500);
-        expect(await loggedInsert()).toMatchObject({ fasten: false });
+        expect(loggedInsert()).toMatchObject({ fasten: false });
     });
 
     it("keeps the insert when the part cannot fasten at all", async () => {
@@ -650,7 +685,211 @@ describe("insertable routes", () => {
         });
 
         expect((await insertIntoAssembly(true)).status).toBe(400);
-        expect(await loggedInsert()).toMatchObject({ fasten: false });
+        expect(loggedInsert()).toMatchObject({ fasten: false });
+    });
+
+    function fastenToPicks(body: Record<string, unknown>) {
+        return createTestApp().request(
+            `/api/add-to-assembly/insertable/${TEST_ASSEMBLY_ID}`,
+            jsonRequest("POST", { targetPath, fasten: true, ...body }),
+            env
+        );
+    }
+
+    const EDGE_PICKS = ["JH1", "JH2", "JH3"].map((entityId) => ({
+        occurrencePath: ["base"],
+        entityId,
+        entityType: "EDGE"
+    }));
+
+    /** What `indexHoles` finds for the picks: each edge, with these radii in metres. */
+    function mockIndexHoles(radii: Record<string, number>) {
+        return vi.spyOn(IndexHoles, "indexHoles").mockResolvedValue({
+            circularEdges: Object.entries(radii).map(([edgeId, radius]) => ({
+                key: `base|${edgeId}`,
+                occurrencePath: ["base"],
+                edgeId,
+                center: [0, 0, 0],
+                normal: [0, 0, 1],
+                radius
+            })),
+            holes: [],
+            placed: [],
+            unfound: [],
+            replacements: [],
+            pickEdges: {}
+        });
+    }
+
+    /** Feature types in the order they were added. */
+    function addedFeatureTypes(spy: { mock: { calls: unknown[][] } }) {
+        return spy.mock.calls.map(
+            (call) => (call[2] as { featureType: string }).featureType
+        );
+    }
+
+    it("fastens one inserted instance to each circular edge", async () => {
+        await seedFastenable();
+        const indexHoles = mockIndexHoles({
+            JH1: 0.0025,
+            JH2: 0.0025,
+            JH3: 0.004
+        });
+        const addFeature = vi
+            .spyOn(AssemblyEndpoints, "addAssemblyFeature")
+            .mockResolvedValue({ feature: { featureId: "f1" } });
+
+        const res = await fastenToPicks({ targets: EDGE_PICKS });
+        expect(res.status).toBe(200);
+        const body: InsertOut = await res.json();
+        expect(body).toEqual({ fastenedCount: 3 });
+
+        expect(indexHoles.mock.calls[0][3]).toEqual(EDGE_PICKS);
+        expect(AssemblyEndpoints.addElementToAssembly).toHaveBeenCalledTimes(3);
+        expect(addedFeatureTypes(addFeature)).toEqual(["mate", "mate", "mate"]);
+
+        const mate = JSON.stringify(addFeature.mock.calls[1][2]);
+        expect(mate).toContain('"implicit":true');
+        expect(mate).toContain('"inferenceType":"CENTER"');
+        expect(mate).toContain('qTransient(\\"JH2\\")');
+        expect(mate).toContain('"path":["base"]');
+        expect(loggedInsert()).toMatchObject({ fasten: true });
+    });
+
+    it("passes faces and the edges to skip through to the scan", async () => {
+        await seedFastenable();
+        const indexHoles = mockIndexHoles({ JH1: 0.0025 });
+        vi.spyOn(AssemblyEndpoints, "addAssemblyFeature").mockResolvedValue({
+            feature: { featureId: "f1" }
+        });
+        const face = {
+            occurrencePath: ["base"],
+            entityId: "JF1",
+            entityType: "FACE"
+        };
+
+        const res = await fastenToPicks({
+            selectionMode: "faces",
+            targets: [face],
+            excluded: [EDGE_PICKS[1]]
+        });
+        expect(res.status).toBe(200);
+        expect(indexHoles.mock.calls[0].slice(3, 5)).toEqual([
+            [face],
+            [EDGE_PICKS[1]]
+        ]);
+    });
+
+    it("reads nothing the check before it read, when nothing was edited between", async () => {
+        await seedFastenable();
+        vi.spyOn(AssemblyEndpoints, "addAssemblyFeature").mockResolvedValue({
+            feature: { featureId: "f1" }
+        });
+        const reads = mockAssemblyReads();
+        const app = createTestApp();
+
+        const checked = await app.request(
+            "/api/auto-assembly/check",
+            jsonRequest("POST", {
+                assembly: ASSEMBLY,
+                selectionMode: "locations",
+                targets: BODY.targets
+            }),
+            env
+        );
+        expect(checked.status).toBe(200);
+        const scans = reads.scan.mock.calls.length;
+
+        const inserted = await app.request(
+            `/api/add-to-assembly/insertable/${TEST_ASSEMBLY_ID}`,
+            jsonRequest("POST", {
+                targetPath: ASSEMBLY,
+                fasten: true,
+                targets: BODY.targets
+            }),
+            env
+        );
+        expect(await inserted.json()).toEqual({
+            fastenedCount: 1
+        } satisfies InsertOut);
+        expect(reads.assembly).toHaveBeenCalledTimes(1);
+        expect(reads.scan).toHaveBeenCalledTimes(scans);
+    });
+
+    it("reads the assembly once an insert has moved it only to land on the insert location", async () => {
+        await seedFastenable();
+        vi.spyOn(AssemblyEndpoints, "addAssemblyFeature").mockResolvedValue({
+            feature: { featureId: "f1" }
+        });
+        const reads = mockAssemblyReads();
+        const insert = (body: Record<string, unknown>) =>
+            createTestApp().request(
+                `/api/add-to-assembly/insertable/${TEST_ASSEMBLY_ID}`,
+                jsonRequest("POST", {
+                    targetPath: ASSEMBLY,
+                    fasten: true,
+                    targets: BODY.targets,
+                    ...body
+                }),
+                env
+            );
+
+        expect((await insert({})).status).toBe(200);
+        expect(reads.assembly).toHaveBeenCalledTimes(1);
+
+        reads.elements.mockResolvedValue(workspaceElements({ assembly: "a2" }));
+        expect((await insert({})).status).toBe(200);
+        expect(reads.assembly).toHaveBeenCalledTimes(1);
+
+        reads.elements.mockResolvedValue(workspaceElements({ assembly: "a3" }));
+        expect((await insert({ insertLocationId: "marker" })).status).toBe(200);
+        expect(reads.assembly).toHaveBeenCalledTimes(2);
+    });
+
+    it("refuses faces picked as circular edges", async () => {
+        await seedFastenable();
+        const res = await fastenToPicks({
+            targets: [{ ...EDGE_PICKS[0], entityType: "FACE" }]
+        });
+        expect(res.status).toBe(400);
+        expect(AssemblyEndpoints.addElementToAssembly).not.toHaveBeenCalled();
+    });
+
+    it("inserts nothing when no circular edge is found in the picks", async () => {
+        await seedFastenable();
+        mockIndexHoles({});
+
+        const res = await fastenToPicks({ targets: EDGE_PICKS });
+        expect(res.status).toBe(400);
+        expect(AssemblyEndpoints.addElementToAssembly).not.toHaveBeenCalled();
+    });
+
+    it("inserts and fastens an instance on each edge", async () => {
+        await seedFastenable();
+        mockIndexHoles({ JH1: 0.0025, JH2: 0.004, JH3: 0.0025 });
+        const addFeature = vi
+            .spyOn(AssemblyEndpoints, "addAssemblyFeature")
+            .mockResolvedValue({ feature: { featureId: "f1" } });
+
+        const res = await fastenToPicks({ targets: EDGE_PICKS });
+        expect(res.status).toBe(200);
+
+        expect(AssemblyEndpoints.addElementToAssembly).toHaveBeenCalledTimes(3);
+        expect(addedFeatureTypes(addFeature)).toEqual(["mate", "mate", "mate"]);
+        const features = addFeature.mock.calls.map((call) =>
+            JSON.stringify(call[2])
+        );
+        ["JH1", "JH2", "JH3"].forEach((edge, index) =>
+            expect(features[index]).toContain(edge)
+        );
+        // Each instance is an insert, fastened to what was preselected
+        const logged = loggedEvents();
+        expect(logged).toHaveLength(3);
+        expect(logged[0]).toMatchObject({
+            fasten: true,
+            fastenable: true,
+            preselected: true
+        });
     });
 
     it("tries an insert again when Onshape answers 5xx", async () => {
@@ -663,7 +902,7 @@ describe("insertable routes", () => {
 
         expect((await insertIntoAssembly(false)).status).toBe(200);
         expect(insert).toHaveBeenCalledTimes(2);
-        expect(await loggedInsert()).toBeDefined();
+        expect(loggedInsert()).toBeDefined();
     });
 
     it("words a timed-out insert, without inserting again", async () => {
@@ -733,6 +972,29 @@ describe("insertable routes", () => {
         ).toEqual([{ size: "l" }]);
     });
 
+    it("POST /indexing refuses a generated part, which indexes every configuration", async () => {
+        await seedPartStudio(db);
+        await db
+            .update(insertables)
+            .set({ isGenerated: true })
+            .where(eq(insertables.id, TEST_PART_STUDIO_ID));
+        const getParts = vi.spyOn(PartsEndpoints, "getParts");
+
+        const res = await createTestApp().request(
+            `/api/indexing/library/${TEST_LIBRARY_ID}/insertable/${TEST_PART_STUDIO_ID}`,
+            jsonRequest("POST", {
+                indexConfigurations: true,
+                excludedParameterIds: []
+            }),
+            env
+        );
+        expect(res.status).toBe(400);
+        expect(getParts).not.toHaveBeenCalled();
+        expect(
+            (await readInsertable(db, TEST_PART_STUDIO_ID))?.indexConfigurations
+        ).toBe(false);
+    });
+
     it("POST /indexing leaves the flag off when indexing fails", async () => {
         await seedPartStudio(db);
         vi.spyOn(PartsEndpoints, "getParts").mockRejectedValue(
@@ -742,7 +1004,7 @@ describe("insertable routes", () => {
         const res = await postIndexing({ indexConfigurations: true });
         expect(res.status).toBe(429);
         const body: { message: string } = await res.json();
-        expect(body.message).toContain("rate limit");
+        expect(body.message).toBe(rateLimitedMessage(450));
 
         const row = await readInsertable(db, TEST_PART_STUDIO_ID);
         expect(row?.indexConfigurations).toBe(false);

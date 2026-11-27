@@ -131,10 +131,13 @@ function seed(db, dump) {
             `INSERT OR IGNORE INTO configurations ("${key}") VALUES ('i${i}')`
         );
     }
-    db.exec(
-        "INSERT OR IGNORE INTO events (id, type, created_at, day, library_id, user_id)" +
-            " VALUES ('ev1','insert',1757000000000,'2026-09-04','frc-design-lib','u1')"
-    );
+    // Until 0016 drops it: the event log is in R2 from then on.
+    if (tables(db).includes("events")) {
+        db.exec(
+            "INSERT OR IGNORE INTO events (id, type, created_at, day, library_id, user_id)" +
+                " VALUES ('ev1','insert',1757000000000,'2026-09-04','frc-design-lib','u1')"
+        );
+    }
 }
 
 function run(dump, populated) {

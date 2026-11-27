@@ -1,6 +1,6 @@
 import { FeedbackTopic } from "@backend/features/feedback/contract";
 import { createFileRoute } from "@tanstack/react-router";
-import { type ReactNode, useEffect } from "react";
+import { type ReactNode } from "react";
 import {
     LinkDirection,
     type LinkedWorkspace,
@@ -16,7 +16,8 @@ import {
     PageLoading,
     PageNotice
 } from "../../components/app-notice";
-import { IconSize } from "../../lib/style-constants";
+import { AppIcon } from "../../components/app-icon";
+import { IconSize, PrimaryColor } from "../../lib/style-constants";
 import {
     SectionId,
     setSectionOpened,
@@ -44,8 +45,6 @@ import {
 } from "../../features/version-manager/queries";
 import { useNeedsSignIn } from "../../features/auth/access-level";
 import { startSignIn } from "../../features/auth/sign-in";
-import { useMarkHintSeen } from "../../features/hints/queries";
-import { Hint } from "@backend/features/hints/contract";
 import { m } from "../../paraglide/messages";
 
 export const Route = createFileRoute("/app/version-manager")({
@@ -56,18 +55,23 @@ export const Route = createFileRoute("/app/version-manager")({
     }
 });
 
+const PAGE_ICON = (
+    <AppIcon
+        icon={GitBranchIcon}
+        size={IconSize.PAGE}
+        color={PrimaryColor.FILLED}
+    />
+);
+
 function VersionManagerPage(): ReactNode {
     const workspace = useTargetWorkspace();
     const isConnected = useIsConnectedToOnshape();
     const needsSignIn = useNeedsSignIn();
-    const markOpened = useMarkHintSeen(Hint.OPENED_VERSION_MANAGER);
-
-    useEffect(markOpened, [markOpened]);
 
     if (!workspace) {
         return (
             <PageNotice
-                icon={<GitBranchIcon size={IconSize.SECTION} />}
+                icon={PAGE_ICON}
                 title={
                     isConnected
                         ? m.versionManagerWorkspaceOnlyTitle()
@@ -84,7 +88,7 @@ function VersionManagerPage(): ReactNode {
     if (needsSignIn) {
         return (
             <PageNotice
-                icon={<GitBranchIcon size={IconSize.SECTION} />}
+                icon={PAGE_ICON}
                 title={m.versionManagerSignInTitle()}
                 description={m.versionManagerSignInDescription()}
                 action={

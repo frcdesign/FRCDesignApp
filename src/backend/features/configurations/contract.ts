@@ -1,4 +1,4 @@
-import { LogicalOp, QuantityType, Unit } from "./enums";
+import { LogicalOp, MassUnit, QuantityType, Unit } from "./enums";
 
 /** Discriminator of a parsed configuration parameter. */
 export enum ParameterType {
@@ -184,4 +184,6 @@ export interface UnitInfo {
     lengthPrecision: number;
     anglePrecision: number;
     realPrecision: number;
+    massUnit: MassUnit;
+    massPrecision: number;
 }

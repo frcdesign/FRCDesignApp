@@ -29,6 +29,7 @@ import {
 } from "../../lib/notifications";
 import { useOnshapeOrigin, useTargetElement } from "../../lib/onshape-params";
 import { makeUrl } from "../../lib/url";
+import { queryClient } from "../../lib/query-client";
 import {
     featureScriptFavoritesQueryKey,
     featureScriptsLoadStatusQueryKey,
@@ -58,6 +59,14 @@ export function getFeatureScriptsQuery(cacheVersion: number) {
         placeholderData: keepPreviousData,
         staleTime: Infinity
     });
+}
+
+/** The route's loader: the version is the only wait, since the list's url is keyed by it. */
+export async function loadFeatureScripts(): Promise<void> {
+    const cacheVersion = await queryClient.ensureQueryData(
+        getFeatureScriptsVersionQuery()
+    );
+    void queryClient.prefetchQuery(getFeatureScriptsQuery(cacheVersion));
 }
 
 export function useFeatureScriptsQuery() {

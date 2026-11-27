@@ -1,8 +1,8 @@
 import { env } from "cloudflare:workers";
-import { asc } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import { getDb } from "../../db/client";
-import { groups, PLACEHOLDER_VERSION_ID } from "../../db/schema";
+import { groups, libraries, PLACEHOLDER_VERSION_ID } from "../../db/schema";
 import {
     resetDb,
     seedGroup,
@@ -11,7 +11,12 @@ import {
     TEST_GROUP_ID,
     TEST_LIBRARY_ID
 } from "../../../__test_utils__";
-import { getLibraryOut, placeNewGroup, rebuildSearchDb } from "./db";
+import {
+    bumpLibraryVersion,
+    getLibraryOut,
+    placeNewGroup,
+    rebuildSearchDb
+} from "./db";
 
 const db = getDb(env.DB);
 
@@ -26,6 +31,46 @@ async function insertGroupAt(id: string, sortOrder: number): Promise<void> {
         sortOrder
     });
 }
+
+describe("bumpLibraryVersion", () => {
+    beforeEach(() => resetDb(db));
+
+    const readVersion = async () =>
+        (
+            await db
+                .select({ cacheVersion: libraries.cacheVersion })
+                .from(libraries)
+                .where(eq(libraries.id, TEST_LIBRARY_ID))
+                .get()
+        )?.cacheVersion;
+
+    // A reset database counts from the start, where a browser may hold another's responses
+    it("moves to the time, never to a version an earlier database had", async () => {
+        await seedLibrary(db);
+        await db
+            .update(libraries)
+            .set({ cacheVersion: 2 })
+            .where(eq(libraries.id, TEST_LIBRARY_ID));
+        const before = Date.now();
+
+        await bumpLibraryVersion(db, TEST_LIBRARY_ID);
+
+        expect(await readVersion()).toBeGreaterThanOrEqual(before);
+    });
+
+    it("still moves past a version later than the time", async () => {
+        await seedLibrary(db);
+        const ahead = Date.now() + 60_000;
+        await db
+            .update(libraries)
+            .set({ cacheVersion: ahead })
+            .where(eq(libraries.id, TEST_LIBRARY_ID));
+
+        await bumpLibraryVersion(db, TEST_LIBRARY_ID);
+
+        expect(await readVersion()).toBe(ahead + 1);
+    });
+});
 
 describe("placeNewGroup", () => {
     beforeEach(() => resetDb(db));

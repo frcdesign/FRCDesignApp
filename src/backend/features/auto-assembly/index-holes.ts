@@ -1,0 +1,477 @@
+/** Indexes an assembly's holes: reads it and scans its Part Studios for everything the planner needs. */
+import { createLimiter } from "../../lib/limiter";
+import { type OnshapeApi } from "../../lib/onshape/client";
+import { type ElementPath } from "../../lib/onshape/path";
+import {
+    type AssemblyPlane,
+    isFromStudio,
+    partOccurrences,
+    pathKey,
+    placedScrew,
+    placedScrews,
+    selectionsByStudio,
+    toAssemblyCircularEdges,
+    toAssemblyHoles,
+    toAssemblyPlane,
+    withoutExcluded,
+    type PartOccurrence
+} from "./assembly";
+import { FastenerKind, type FastenerSet } from "./studios";
+import {
+    type ExistingScrew,
+    HoleStatus,
+    type PlannedHole,
+    type SelectedEntity,
+    SelectedEntityType
+} from "./contract";
+import {
+    type AssemblyCircularEdge,
+    type AssemblyHole,
+    type PlacedScrew
+} from "./planner";
+import { type Selection } from "../configurations/contract";
+import { decodeConfiguration } from "../configurations/utils";
+import { scanStudio, type StudioScan } from "./scan";
+import {
+    type AssemblyRead,
+    assemblyInstances,
+    readAssembly
+} from "./assembly-read";
+import { pickKey } from "./picked";
+import {
+    type Replacement,
+    screwLength,
+    seatEdge,
+    stackParts,
+    stackRoles
+} from "./replace";
+
+/** Part Studios evaluated at once: each is one Onshape call, and an assembly can have dozens. */
+const SCAN_CONCURRENCY = 6;
+
+export interface IndexedHoles {
+    circularEdges: AssemblyCircularEdge[];
+    holes: AssemblyHole[];
+    placed: PlacedScrew[];
+    /** Each target that gave no circular edge, and each screw to replace that can't be, and why. */
+    unfound: PlannedHole[];
+    /** The screws to replace, whose holes are among `circularEdges`. */
+    replacements: Replacement[];
+    /** The circular edges' keys each pick gave, by `pickKey`; none for one in `unfound`. */
+    pickEdges: Record<string, string[]>;
+    /** The plane of the face picked to stop at, in the assembly. */
+    stopPlane?: AssemblyPlane;
+    /** Why the face picked to stop at gave no plane. */
+    stopFaceProblem?: string;
+    /** The first screw to replace and what's on it, their studios' defaults filled in. */
+    firstScrew?: ExistingScrew;
+}
+
+/** Which holes are fastened from their far end. */
+export interface Flips {
+    /** Circular edges picked to flip. */
+    flipped: SelectedEntity[];
+    /** Every screw to replace goes in from the other end of its holes. */
+    flipScrews: boolean;
+}
+
+function isFastener(
+    occurrence: PartOccurrence,
+    fasteners: FastenerSet | undefined
+): boolean {
+    return Object.values(FastenerKind).some((kind) =>
+        isFromStudio(occurrence, fasteners?.studios[kind].location)
+    );
+}
+
+/** What an index is for, which decides what it reads. */
+export enum IndexScope {
+    /** Planning: every Part Studio's holes, at the assembly as it is now. */
+    PLAN = "plan",
+    /**
+     * The picks' circular edges alone, as insert and fasten needs them: only
+     * the Part Studios picked in are scanned, at the last assembly read that
+     * has every pick.
+     */
+    PICKS = "picks"
+}
+
+interface IndexRequest {
+    targets: SelectedEntity[];
+    excluded: SelectedEntity[];
+    fasteners: FastenerSet | undefined;
+    replaced: SelectedEntity[];
+    stopFace?: SelectedEntity;
+    flips: Flips;
+    scope: IndexScope;
+}
+
+export async function indexHoles(
+    client: OnshapeApi,
+    kv: KVNamespace,
+    assembly: ElementPath,
+    targets: SelectedEntity[],
+    excluded: SelectedEntity[],
+    // Fasteners already placed, which have no holes to fasten through; none before the library loads them
+    fasteners: FastenerSet | undefined,
+    /** Picks on screws whose stacks are taken out and their holes planned again. */
+    replaced: SelectedEntity[] = [],
+    /** The planar face to stop at, scanned for its plane. */
+    stopFace?: SelectedEntity,
+    flips: Flips = { flipped: [], flipScrews: false },
+    scope: IndexScope = IndexScope.PLAN
+): Promise<IndexedHoles> {
+    const request: IndexRequest = {
+        targets,
+        excluded,
+        fasteners,
+        replaced,
+        stopFace,
+        flips,
+        scope
+    };
+    const picks = [...targets, ...excluded];
+    const read = await readAssembly(
+        client,
+        kv,
+        assembly,
+        scope === IndexScope.PICKS
+            ? picks.map((pick) => pick.occurrencePath)
+            : undefined
+    );
+    const indexed = await indexRead(client, kv, assembly, read, request);
+    // An earlier edit's configuration can lack a picked entity
+    const isResolved = picks.every(
+        (pick) => (indexed.pickEdges[pickKey(pick)] ?? []).length > 0
+    );
+    if (read.isCurrent || isResolved) {
+        return indexed;
+    }
+    return indexRead(
+        client,
+        kv,
+        assembly,
+        await readAssembly(client, kv, assembly),
+        request
+    );
+}
+
+async function indexRead(
+    client: OnshapeApi,
+    kv: KVNamespace,
+    assembly: ElementPath,
+    { definition, microversions }: AssemblyRead,
+    {
+        targets,
+        excluded,
+        fasteners,
+        replaced,
+        stopFace,
+        flips,
+        scope
+    }: IndexRequest
+): Promise<IndexedHoles> {
+    const instances = assemblyInstances(definition);
+    const occurrences = partOccurrences(definition, assembly, microversions);
+    const byPath = new Map(
+        occurrences.map((occurrence) => [pathKey(occurrence.path), occurrence])
+    );
+
+    // Fasteners and standard content have no holes to fasten through
+    const scanned = occurrences.filter(
+        (occurrence) =>
+            !occurrence.isStandardContent && !isFastener(occurrence, fasteners)
+    );
+    const stopFaces = stopFace ? [stopFace] : [];
+    const selections = selectionsByStudio(
+        [...targets, ...excluded],
+        byPath,
+        stopFaces
+    );
+    const sources = new Map(
+        [
+            ...(scope === IndexScope.PLAN ? scanned : []),
+            ...byPathValues(byPath, [...targets, ...excluded, ...stopFaces])
+        ].map((occurrence) => [occurrence.source.key, occurrence.source])
+    );
+
+    const limit = createLimiter(SCAN_CONCURRENCY);
+    const scans = new Map<string, StudioScan>(
+        await Promise.all(
+            [...sources].map(async ([key, source]) => {
+                const selection = selections.get(key) ?? {
+                    edges: [],
+                    faces: [],
+                    planes: []
+                };
+                const scan = await limit(() =>
+                    scanStudio(client, kv, source, selection)
+                );
+                return [key, scan] as const;
+            })
+        )
+    );
+
+    const holes = scanned.flatMap((occurrence) =>
+        toAssemblyHoles(
+            scans.get(occurrence.source.key)?.parts[occurrence.partId]?.holes ??
+                [],
+            occurrence
+        )
+    );
+    const circularEdgesOf = (entities: SelectedEntity[]) =>
+        [...selections.keys()].flatMap((key) =>
+            toAssemblyCircularEdges(
+                scans.get(key)?.circles ?? [],
+                entities.filter(
+                    (entity) =>
+                        byPath.get(pathKey(entity.occurrencePath))?.source
+                            .key === key
+                ),
+                byPath
+            )
+        );
+
+    const pickEdges: Record<string, string[]> = {};
+    for (const pick of [...targets, ...excluded]) {
+        pickEdges[pickKey(pick)] = circularEdgesOf([pick]).map(
+            (circularEdge) => circularEdge.key
+        );
+    }
+
+    const unfound = targets.flatMap((target): PlannedHole[] => {
+        if (pickEdges[pickKey(target)].length > 0) {
+            return [];
+        }
+        const isFound = byPath.has(pathKey(target.occurrencePath));
+        if (!isFound) {
+            // How Onshape describes an instance we can't walk through is the only record of why
+            console.warn("Auto Assembly couldn't resolve a pick", {
+                path: target.occurrencePath,
+                instances: instances.filter((instance) =>
+                    target.occurrencePath.includes(instance.id)
+                ),
+                subAssemblies: definition.subAssemblies.map((sub) => ({
+                    documentId: sub.documentId,
+                    elementId: sub.elementId,
+                    configuration: sub.configuration,
+                    fullConfiguration: sub.fullConfiguration,
+                    documentMicroversion: sub.documentMicroversion
+                }))
+            });
+        }
+        return [
+            {
+                key: pickKey(target),
+                status: HoleStatus.NO_FIT,
+                reason: !isFound
+                    ? "Couldn't find this part in the assembly."
+                    : target.entityType === SelectedEntityType.EDGE
+                      ? "Not a circular edge."
+                      : "No circular edges in this face."
+            }
+        ];
+    });
+
+    const replacing = screwsToReplace(replaced, byPath, fasteners);
+    const seats = replacing.screws.flatMap(
+        (screw): { screw: PartOccurrence; seat: AssemblyCircularEdge }[] => {
+            const seat =
+                fasteners &&
+                seatEdge(
+                    placedScrew(screw),
+                    holes,
+                    maxWasherThickness(fasteners)
+                );
+            return seat ? [{ screw, seat }] : [];
+        }
+    );
+    const seatByPath = new Map(
+        seats.map(({ screw, seat }) => [pathKey(screw.path), seat.key])
+    );
+    const seated = new Set(seatByPath.keys());
+    const screwPaths = new Set(
+        replacing.screws.map((screw) => pathKey(screw.path))
+    );
+    const unseated: PlannedHole[] = [];
+    for (const pick of replaced) {
+        const path = pathKey(pick.occurrencePath);
+        const seat = seatByPath.get(path);
+        if (seat) {
+            pickEdges[pickKey(pick)] = [seat];
+        } else if (screwPaths.has(path)) {
+            unseated.push({
+                key: pickKey(pick),
+                status: HoleStatus.NO_FIT,
+                reason: "Couldn't find the hole this screw is in."
+            });
+        }
+    }
+    const replacements = seats.map(({ screw, seat }): Replacement => {
+        const length = fasteners && screwLength(fasteners, screw);
+        const stack =
+            fasteners && length !== undefined
+                ? stackParts(screw, length, occurrences, fasteners)
+                : [];
+        return {
+            key: seat.key,
+            // Only top-level instances are deleted, as only they are inserted
+            instanceIds: [screw, ...stack]
+                .filter((part) => part.path.length === 1)
+                .map((part) => part.path[0])
+        };
+    });
+    const stopOccurrence =
+        stopFace && byPath.get(pathKey(stopFace.occurrencePath));
+    const stopPlane =
+        stopFace &&
+        stopOccurrence &&
+        toAssemblyPlane(
+            scans.get(stopOccurrence.source.key)?.planes ?? [],
+            stopFace,
+            byPath
+        );
+    const stopFaceProblem = !stopFace
+        ? undefined
+        : !stopOccurrence
+          ? "Couldn't find this part in the assembly."
+          : !stopPlane
+            ? "Not a planar face."
+            : undefined;
+    const flippedKeys = new Set(flips.flipped.map(pickKey));
+    const picked = withoutExcluded(
+        circularEdgesOf(targets),
+        circularEdgesOf(excluded)
+    ).map((circularEdge) =>
+        targets.some(
+            (target) =>
+                flippedKeys.has(pickKey(target)) &&
+                pickEdges[pickKey(target)].includes(circularEdge.key)
+        )
+            ? { ...circularEdge, isFlipped: true }
+            : circularEdge
+    );
+    const pickedKeys = new Set(picked.map((circularEdge) => circularEdge.key));
+    const firstScrew =
+        replacing.screws[0] &&
+        fasteners &&
+        existingScrew(fasteners, replacing.screws[0], occurrences);
+
+    return {
+        circularEdges: [
+            ...picked,
+            ...seats
+                .map(({ seat }) =>
+                    flips.flipScrews ? { ...seat, isFlipped: true } : seat
+                )
+                .filter((seat) => !pickedKeys.has(seat.key))
+        ],
+        unfound: [...unfound, ...replacing.unfound, ...unseated],
+        holes,
+        // A screw being replaced leaves its hole free to plan again
+        placed: placedScrews(
+            occurrences.filter(
+                (occurrence) => !seated.has(pathKey(occurrence.path))
+            ),
+            fasteners?.studios[FastenerKind.SCREW].location
+        ),
+        replacements,
+        pickEdges,
+        ...(stopPlane ? { stopPlane } : {}),
+        ...(stopFaceProblem ? { stopFaceProblem } : {}),
+        ...(firstScrew ? { firstScrew } : {})
+    };
+}
+
+/** A placed fastener's configuration, each input it leaves out at its studio's default. */
+function studioSelection(
+    fasteners: FastenerSet,
+    kind: FastenerKind,
+    occurrence: PartOccurrence
+): Selection {
+    const chosen = decodeConfiguration(occurrence.source.configuration ?? "");
+    return Object.fromEntries(
+        fasteners.studios[kind].parameters.map((parameter) => [
+            parameter.id,
+            chosen[parameter.id] ?? parameter.default
+        ])
+    );
+}
+
+/** A screw and the washers and nut on it, as their studios' inputs. */
+function existingScrew(
+    fasteners: FastenerSet,
+    screw: PartOccurrence,
+    occurrences: PartOccurrence[]
+): ExistingScrew {
+    const length = screwLength(fasteners, screw);
+    const stack = stackRoles(
+        screw,
+        length === undefined
+            ? []
+            : stackParts(screw, length, occurrences, fasteners),
+        fasteners
+    );
+    const selection = (kind: FastenerKind, part: PartOccurrence | undefined) =>
+        part && studioSelection(fasteners, kind, part);
+    return {
+        screw: studioSelection(fasteners, FastenerKind.SCREW, screw),
+        screwWasher: selection(FastenerKind.WASHER, stack.screwWasher),
+        nut: selection(FastenerKind.NUT, stack.nut),
+        nutWasher: selection(FastenerKind.WASHER, stack.nutWasher)
+    };
+}
+
+function maxWasherThickness(fasteners: FastenerSet): number {
+    return Math.max(
+        0,
+        ...fasteners.catalog.washers.map((washer) => washer.thickness)
+    );
+}
+
+/** The library screws picked, each once, and why any other pick isn't one. */
+function screwsToReplace(
+    picks: SelectedEntity[],
+    byPath: Map<string, PartOccurrence>,
+    fasteners: FastenerSet | undefined
+): { screws: PartOccurrence[]; unfound: PlannedHole[] } {
+    const screws = new Map<string, PartOccurrence>();
+    const unfound: PlannedHole[] = [];
+    for (const pick of picks) {
+        const occurrence = byPath.get(pathKey(pick.occurrencePath));
+        let reason: string | undefined;
+        if (!occurrence) {
+            reason = "Couldn't find this part in the assembly.";
+        } else if (
+            !isFromStudio(
+                occurrence,
+                fasteners?.studios[FastenerKind.SCREW].location
+            )
+        ) {
+            reason = "Not a screw from FRCDesignLib's Fasteners group.";
+        } else if (occurrence.path.length > 1) {
+            reason =
+                "This screw is in a subassembly, which Auto Assembly doesn't change.";
+        }
+        if (reason || !occurrence) {
+            unfound.push({
+                key: pickKey(pick),
+                status: HoleStatus.NO_FIT,
+                reason
+            });
+            continue;
+        }
+        screws.set(pathKey(occurrence.path), occurrence);
+    }
+    return { screws: [...screws.values()], unfound };
+}
+
+function byPathValues(
+    byPath: Map<string, PartOccurrence>,
+    entities: SelectedEntity[]
+): PartOccurrence[] {
+    return entities.flatMap((entity) => {
+        const occurrence = byPath.get(pathKey(entity.occurrencePath));
+        return occurrence ? [occurrence] : [];
+    });
+}

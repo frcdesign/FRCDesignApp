@@ -3,8 +3,14 @@ import { type Db } from "../../db/client";
 import { type ConfigurationParameter } from "../configurations/contract";
 import { toInstanceKeys } from "../configurations/instances";
 import { earliest, increment, latest } from "../../db/updates";
-import { type AppFeature, EventType, USE_EVENT_TYPES } from "./usage";
+import {
+    type AppFeature,
+    EventType,
+    USE_EVENT_TYPES,
+    UseSource
+} from "./usage";
 import { featuresOf } from "./feature-reach";
+import { ElementType } from "../../lib/onshape/element-type";
 import { VersionJobOutcome } from "../version-manager/contract";
 import {
     asFeatureAdd,
@@ -113,12 +119,19 @@ function kindWrites(
     ];
 }
 
-/** Idempotent: one row per user per feature per day. */
+/** One row per user per feature per day; an uncounted row stays uncounted. */
 function markFeatureUsed(db: Db, event: LoggedEvent, feature: AppFeature) {
     return db
         .insert(dailyFeatureUsers)
-        .values({ day: event.day, feature, userId: event.userId })
-        .onConflictDoNothing();
+        .values({ day: event.day, feature, userId: event.userId, times: 1 })
+        .onConflictDoUpdate({
+            target: [
+                dailyFeatureUsers.feature,
+                dailyFeatureUsers.day,
+                dailyFeatureUsers.userId
+            ],
+            set: { times: increment(dailyFeatureUsers.times) }
+        });
 }
 
 function countFeatureAdd(db: Db, add: LoggedFeatureAdd) {
@@ -229,6 +242,13 @@ function countDay(db: Db, event: LoggedEvent, libraryId: LibraryId) {
     const favorite = event.isFavorite ? 1 : 0;
     const fasten = event.fasten ? 1 : 0;
     const quickInsert = event.isQuickInsert ? 1 : 0;
+    // Only an assembly is fastened to, so a derive isn't a fastenable insert
+    const fastenable =
+        event.fastenable && event.targetElementType === ElementType.ASSEMBLY
+            ? 1
+            : 0;
+    const preselected = event.preselected ? 1 : 0;
+    const autoAssembly = event.source === UseSource.AUTO_ASSEMBLY ? 1 : 0;
 
     return db
         .insert(dailyMetrics)
@@ -239,7 +259,10 @@ function countDay(db: Db, event: LoggedEvent, libraryId: LibraryId) {
             count: 1,
             favoriteCount: favorite,
             fastenCount: fasten,
-            quickInsertCount: quickInsert
+            quickInsertCount: quickInsert,
+            fastenableCount: fastenable,
+            preselectedCount: preselected,
+            autoAssemblyCount: autoAssembly
         })
         .onConflictDoUpdate({
             target: [
@@ -254,6 +277,18 @@ function countDay(db: Db, event: LoggedEvent, libraryId: LibraryId) {
                 quickInsertCount: increment(
                     dailyMetrics.quickInsertCount,
                     quickInsert
+                ),
+                fastenableCount: increment(
+                    dailyMetrics.fastenableCount,
+                    fastenable
+                ),
+                preselectedCount: increment(
+                    dailyMetrics.preselectedCount,
+                    preselected
+                ),
+                autoAssemblyCount: increment(
+                    dailyMetrics.autoAssemblyCount,
+                    autoAssembly
                 )
             }
         });

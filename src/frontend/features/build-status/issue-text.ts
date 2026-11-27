@@ -69,6 +69,9 @@ export function getIssueDescription(issue: BuildIssue): string | undefined {
             return m.buildIssueNotPublicHelp();
         case BuildIssueType.NOT_LOADED:
             return m.buildIssueNotLoadedHelp();
+        // The load's own error, for the editor to act on.
+        case BuildIssueType.LOAD_FAILED:
+            return issue.reason;
         default:
             return undefined;
     }

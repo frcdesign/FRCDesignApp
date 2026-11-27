@@ -1,0 +1,467 @@
+# Insert and fasten
+
+## Purpose
+
+Inserting a part into an assembly can also mate it in place: a fasten mate from
+the part's own mate connector either to nothing yet, for the user to finish in
+the mate dialog, or to circular edges picked in the Onshape window, with an
+instance of the part on each. The picks are circular edges, or faces whose every
+hole is fastened to, less edges to exclude; they can be made from the navbar before
+a quick insert or in the insert menu, and work the way Auto Assembly's do,
+sharing its selection store, query list and hole scan
+([auto-assembly.md](./auto-assembly.md)). Part studios derive instead and are
+not fastened.
+
+## Code map
+
+Where to start reading, in the order a fasten runs.
+
+`src/frontend/lib/selection.ts` and `src/frontend/components/query-list.tsx`,
+shared with Auto Assembly
+
+```ts
+// The one focused list, and handing it how the window's selection changed.
+const useOnshapeSelection: UseBoundStore<StoreApi<SelectionState>>;
+function toSelectedEntities(selections: OnshapeSelection[]): SelectedEntity[];
+function QueryList(props: QueryListProps): ReactNode;
+
+interface SelectionState {
+    /** The query list taking picks; none takes them when absent. */
+    focused?: string;
+    /** Takes a SELECTION message's whole selection. */
+    receive: (selection: OnshapeSelection[]) => void;
+    focus: (listId: string | undefined) => void;
+}
+
+interface OnshapeSelection {
+    entityType: string;
+    /** Its deterministic id in the Part Studio it's from. */
+    selectionId: string;
+    /** The part occurrence it's on, from the assembly down. */
+    occurrencePath: string[];
+}
+
+interface QueryListProps {
+    /** Unique on the page: which list takes picks. */
+    id: string;
+    label: string;
+    entities: OnshapeSelection[];
+    onChange: (entities: OnshapeSelection[]) => void;
+    /** Which picks it takes; the rest are refused. */
+    accepts: (entity: OnshapeSelection) => boolean;
+    /** What the Onshape window lets be picked while it's focused. */
+    filter: SelectionFilter;
+    /** A row's name; its kind and number by default. */
+    describe?: (entity: OnshapeSelection, index: number) => string;
+    /** Beside a row's name: a status, say. */
+    rowSection?: (entity: OnshapeSelection) => ReactNode;
+    /** Takes picks whenever no list does, as a form's first list should. */
+    autoFocus?: boolean;
+    /** Takes picks from what the Onshape window has selected without limiting them, until clicked. */
+    isPassive?: boolean;
+}
+```
+
+`src/frontend/features/insert/fasten-picks.ts`
+
+```ts
+// Held for the tab, so picks carry from the navbar into the insert menu.
+const useFastenPicks: UseBoundStore<StoreApi<FastenPicksState>>;
+// Clears picks of the other kind when the mode changes.
+function useFastenPicksForMode(mode: SelectionMode): void;
+function clearFastenPicks(): void;
+
+interface FastenPicksState {
+    targets: OnshapeSelection[];
+    /** Edges of holes in the faces to leave out; faces only. */
+    excluded: OnshapeSelection[];
+}
+```
+
+`src/frontend/features/insert/components/fasten-section.tsx`,
+`src/frontend/features/insert/components/fasten-mark.tsx`,
+`src/frontend/components/context-bar.tsx`,
+`src/frontend/features/insert/queries.ts` and
+`src/frontend/features/insert/insert-tips.ts`
+
+```ts
+// The insert menu's Fasten accordion: its checkbox, over the picks.
+function FastenSection(props: FastenSectionProps): ReactNode;
+// Select by and the query lists, in the menu and under the context bar.
+function FastenPicks(): ReactNode;
+// Beside a part that can insert and fasten: filled in Preselection's blue while picks are held for it.
+function FastenMark(props: FastenMarkProps): ReactNode;
+// The header's last row on a library page: Preselection, Edit parts and Add insert location.
+function ContextBar(props: ContextBarProps): ReactNode;
+// While a list limits picks: which list, and Stop selecting, in Mantine's ActionBar look.
+function SelectingBar(): ReactNode;
+// The bar stuck to the bottom of a page with no panel footer, in the page's flow.
+function SelectingActionBar(): ReactNode;
+// Sends the picks with a fasten, a quick insert's included.
+function useInsertMutation(
+    insertable: InsertableOut,
+    selection: PartialSelection | undefined,
+    insertArgs: InsertArgs
+);
+function useFastenCircularEdgesTip(): (fasten: boolean) => void;
+
+interface InsertArgs {
+    /** Whether the part is favorited — see `source` for where the insert began. */
+    isFavorite: boolean;
+    source: InsertSource;
+    isQuickInsert?: boolean;
+}
+```
+
+`src/backend/features/library/insertables/routes.ts`
+
+```text
+POST /api/add-to-assembly/insertable/:insertableId    inserts, then fastens
+```
+
+`src/backend/features/auto-assembly/picked.ts`,
+`src/backend/features/auto-assembly/index-holes.ts`,
+`src/backend/features/auto-assembly/contract.ts` and
+`src/backend/features/auto-assembly/planner.ts`, shared with Auto Assembly
+
+```ts
+const entitySchema: ZodObject<...>;
+function isConsistentPick(body: PickedEntities): boolean;
+// The picked circular edges, in the assembly, with their radii.
+async function indexHoles(
+    client: OnshapeApi,
+    kv: KVNamespace,
+    assembly: ElementPath,
+    targets: SelectedEntity[],
+    excluded: SelectedEntity[],
+    // The loaded fasteners, which have no holes to fasten through
+    fasteners: FastenerSet | undefined,
+    replaced: SelectedEntity[],
+    stopFace: SelectedEntity | undefined,
+    flips: Flips | undefined,
+    // IndexScope.PICKS here: only the picks' own edges
+    scope: IndexScope
+): Promise<IndexedHoles>;
+
+interface SelectedEntity {
+    occurrencePath: string[];
+    /** Its deterministic id in the Part Studio it's from. */
+    entityId: string;
+    entityType: SelectedEntityType;
+}
+
+enum SelectedEntityType {
+    EDGE = "EDGE",
+    FACE = "FACE"
+}
+
+enum SelectionMode {
+    FACES = "faces",
+    LOCATIONS = "locations"
+}
+
+interface PickedEntities {
+    selectionMode: SelectionMode;
+    targets: z.infer<typeof entitySchema>[];
+    excluded: z.infer<typeof entitySchema>[];
+}
+
+interface IndexedHoles {
+    circularEdges: AssemblyCircularEdge[];
+    holes: AssemblyHole[];
+    placed: PlacedScrew[];
+}
+
+interface AssemblyCircularEdge {
+    key: string;
+    occurrencePath: string[];
+    edgeId: string;
+    center: Vec3;
+    /** Unit, out of the part: a fastener goes in against it. */
+    normal: Vec3;
+    radius: number;
+}
+
+interface AssemblyHole {
+    occurrencePath: string[];
+    origin: Vec3;
+    /** Unit. */
+    direction: Vec3;
+    radius: number;
+    /** Along `direction` from `origin`. */
+    start: number;
+    end: number;
+    closedAtStart: boolean;
+    closedAtEnd: boolean;
+    threaded: boolean;
+    majorDiameter?: number;
+    edges: { id: string; at: number }[];
+}
+
+interface PlacedScrew {
+    origin: Vec3;
+    axis: Vec3;
+}
+```
+
+`src/backend/features/library/insertables/fasten-circular-edges.ts`
+
+```ts
+// An instance fastened to each edge.
+async function fastenToCircularEdges(
+    onshapeApi: OnshapeApi,
+    targetPath: ElementPath,
+    args: FastenToCircularEdgesArgs
+): Promise<void>;
+
+interface FastenToCircularEdgesArgs {
+    /** The part's, which its mates are named. */
+    name: string;
+    /** The instance already inserted, which takes the first edge. */
+    inserted: OnshapeInsertInstancesResponse;
+    /** Inserts one more instance, for each edge after the first. */
+    insert: () => Promise<OnshapeInsertInstancesResponse>;
+    /** The inserted part's own connector, in the instance at `instancePath`. */
+    fastenQuery: (instancePath: string[]) => object;
+    /** From `indexHoles`, in the order picked. */
+    edges: AssemblyCircularEdge[];
+}
+```
+
+`src/backend/lib/onshape/objects/assembly-features.ts`, shared with Quick
+fastener, and `src/backend/features/library/insertables/fasten-query.ts`
+
+```ts
+// Every fasten mate to a circular edge, Auto Assembly's included.
+function fastenMateToCircularEdge(
+    name: string,
+    query: object,
+    edge: EdgeReference
+): object;
+// The inserted part's own connector, as a query on its instance.
+function getFastenQuery(
+    targetElementType: ElementType,
+    path: string[],
+    fastenInfo: FastenInfo
+): object;
+
+type EdgeReference = EntityReference;
+
+interface EntityReference {
+    /** The id Onshape's selection reports, which is the entity's deterministic id. */
+    deterministicId: string;
+    path: string[];
+}
+```
+
+`src/backend/features/load/parse-fasten.ts` and
+`src/backend/features/library/insertables/fasten.ts`
+
+```ts
+// Finds the mate connector an insertable fastens by, at load or toggle: the
+// first unsuppressed feature that makes one, Onshape's, named by its feature
+// id, or a generated studio's, named `<featureId>.<mateConnector>`.
+async function parseFastenInfo(
+    onshapeApi: OnshapeApi,
+    elementPath: ElementPath,
+    elementType: ElementType,
+    // Every loaded set's studio features (`generatedFeatures`)
+    generatedFeatures: GeneratedFeature[]
+): Promise<FastenInfo>;
+
+interface FastenInfo {
+    mateConnectorId: string;
+    mateLocation: MateLocation;
+    path: string[];
+}
+
+// A generated studio's feature type, and the id it gives its mate connector.
+interface GeneratedFeature {
+    type: string;
+    mateConnector?: string;
+}
+
+enum MateLocation {
+    Feature = "Feature",
+    Part = "Part",
+    Subassembly = "Subassembly"
+}
+```
+
+## Storage
+
+- **D1** `insertables.supports_fasten` and `fasten_info` (`FastenInfo`): set
+  by a load or the toggle, cleared when fasten is turned off. A new row is off,
+  except a generated tab's, which is on (see
+  [generated-parts.md](./generated-parts.md)).
+- **KV** `auto-assembly-scan:`, `auto-assembly-picks:`,
+  `auto-assembly-assembly:` and `auto-assembly-latest:` — each Part Studio's
+  holes, what each pick in it gave, the assembly's definition and which read
+  of it was last. Auto Assembly owns them; the insert location reads the
+  definition through them too.
+- **KV** `seen-hints:` — `Hint.FASTENED_TO_CIRCULAR_EDGES`, once the user has
+  fastened to circular edges; see [auth.md](./auth.md).
+- **Memory** `useFastenPicks` — the targets and edges to exclude, for the tab,
+  shared by the navbar and the insert menu.
+- **localStorage** (`ui-state`): `fasten`, `fastenSelectionMode` and
+  `fastenCircularEdgesTipCount`.
+- **localStorage** `rateLimitHolds` — when inserting, and the insert location,
+  may call again after a 429 (`src/frontend/lib/rate-limit-holds.ts`).
+
+## Flows
+
+### Picking
+
+1. Once the app sends `applicationInit`, Onshape sends the window's whole
+   selection each time it changes, and `useOnshapeSelection` hands the focused
+   `QueryList` what was added and deselected, as in Auto Assembly.
+2. In an assembly, signed in, a library page's header ends in the context bar
+   (`ContextBar`). Its **Preselection** button counts the picks held. It
+   carries the plugs icon parts that fasten show, in the primary color.
+   **Edit parts** follows it ([edit-parts.md](./edit-parts.md)).
+   **Add insert location** shows beside them while the assembly has none
+   (`useInsertLocationQuery`). That's asked when the app opens, and again when
+   the panel regains focus with an answer over 30 seconds old, since the marker
+   may have been deleted in Onshape. The server answers from the assembly as
+   last read (`findLastInsertLocation`), and reads it only when it never has.
+   An insert that lands on the marker reads it afresh, so a deleted marker
+   shows as gone after the next insert.
+   Once it adds one, the button turns green and reads **Insert location
+   added** for as long as the bar is up.
+    - A part that can insert and fasten (`useCanFasten`) has a plugs icon
+      after its name (`FastenMark`). It's grey with nothing picked. While
+      picks are held it's filled in Preselection's blue, so the part reads
+      as fastening to them. Its tooltip says how many.
+3. **Preselection** opens `FastenPicks` under the bar and starts selecting
+   with the targets' list. `FastenPicks` holds **Select by** (**Circular
+   edges** or planar **Faces**), the targets' query list, and in faces mode
+   **Edges to exclude**. **Done** stops selecting and keeps the picks;
+   **Cancel** also clears them. Finishing from the selecting action bar
+   closes it too.
+    - The lists stay mounted while the bar is closed, hidden by `display`
+      alone, so they take picks then too.
+    - The targets' list is `autoFocus`, so one list always takes picks.
+    - Both lists are passive (`isPassive`): they take what's selected, without
+      limiting picks, until one is clicked or **Preselection** opens.
+    - Hovering a row lights its entity up.
+    - The insert menu shows the same picks in its **Fasten** group
+      (`FastenSection`), a `ParameterGroup` whose checkbox is `fasten`. The
+      part's parameters sit above it in a **Configuration** group. Its
+      title is its checkbox's label, and its chevron folds it. Folded, its lists
+      still take picks. While a menu is open
+      (`openInsertableId`) the bar unmounts its own lists, since two lists of
+      one id would both take picks. Both read `useFastenPicks`.
+4. Changing the mode clears the picks.
+5. A moment after the picks change, they're checked in the background with
+   Auto Assembly's `POST /api/auto-assembly/check`, without options: a pick
+   that gives no circular edge, or a hole to skip outside the faces picked,
+   turns red with why under it. See
+   [auto-assembly.md](./auto-assembly.md#checking-picks--post-apiauto-assemblycheck).
+
+### Inserting
+
+1. `useInsertMutation` reads the picks and the mode at the click, and sends
+   them with `fasten` to `POST /add-to-assembly`, from the insert menu's
+   **Insert** or a row's **Quick insert and fasten** alike.
+   `isConsistentPick` refuses edges as faces, or faces as edges.
+2. With an insert location, the route reads where the marker sits in the
+   assembly as it is now, through Auto Assembly's cache: one read of the
+   assembly after each edit to it.
+3. With picks, the route calls `indexHoles` with `IndexScope.PICKS`, which
+   answers the picked circular edges in the assembly with their radii: each
+   picked edge that is circular, or every circular edge of each picked face,
+   less the skipped holes. It scans only the Part Studios picked in, and takes
+   the assembly as last read while that has every pick. So after a check of
+   the same picks it asks Onshape only for the workspace's tabs, however many
+   inserts moved the assembly since. None found answers 400 and inserts
+   nothing.
+4. It inserts the part at the marker, then names its mates after the
+   part: its configuration's indexed record's name, the element's own part's at
+   the defaults, else the tab's (`partName`, `readStoredParts`):
+    - **No picks**: adds a fasten mate naming only the part's connector, and
+      answers its `featureId`; the client opens the mate dialog to finish it.
+    - **Picks**: `fastenToCircularEdges` mates the inserted instance to the
+      first edge, then inserts and mates one more per remaining edge, serially.
+      Each mate is the part's connector followed by an implicit connector the
+      mate owns, at the edge's centre, so the edge's part stays put. It answers
+      `fastenedCount` and records `Hint.FASTENED_TO_CIRCULAR_EDGES`.
+
+5. On `fastenedCount` the client clears the picks.
+   After a 429, **Insert** and **Quick insert** are disabled until the wait
+   is over, their tooltip saying how long, and the picks' lists stop being
+   checked, saying so above them.
+6. An insert and fasten with nothing picked shows the circular edges tip,
+   unless the quick insert tip showed, at most three times and never after the
+   hint is seen.
+
+## User-facing strings
+
+In [strings/fasten.md](../strings/fasten.md).
+
+## Invariants
+
+- A request records once, an insert per instance it placed, with `fasten` true
+  only once every mate is built and `preselected` when fastened to picks.
+- Picks are read before anything is inserted, so picks with no circular edge
+  insert nothing.
+- Each picked or found edge gets its own instance and mate.
+- While an assembly's library page is open, exactly one query list of the
+  fasten picks is mounted: the insert menu's when one is open, else the
+  context bar's.
+- Mates and inserts are added one at a time: Onshape rejects a feature-list edit
+  that races another.
+
+## Failure and recovery
+
+- **A mate fails**: the request errors, and whatever was inserted before it
+  stays in the assembly, as in the Onshape UI.
+- **The scan fails in a Part Studio**: the request errors and nothing is
+  inserted; see [auto-assembly.md](./auto-assembly.md).
+- **A pick isn't circular**: the scan finds no circular edge for it and it is left
+  out; with nothing left, the request answers 400.
+- **Onshape rate-limits the insert**: the toast says how long to wait, and the
+  insert buttons stay disabled until then, in this browser.
+
+## Decisions
+
+- **One way to pick, shared with Auto Assembly.** The app follows the
+  selection Onshape reports and lets a focused query list take it. A hovered
+  row lights its own entity up alone. The list refuses other kinds, and the
+  scan drops edges that aren't circular.
+- **Picking before an insert is passive.** Someone browsing the library is
+  also selecting in Onshape for their own reasons. Limiting their picks would
+  get in the way, so the lists only listen until someone clicks one to select
+  with it.
+- **A list is always focused.** The targets' list is focused in the navbar and
+  in the insert menu, so picking in Onshape and then inserting, or quick
+  inserting, needs no click in the panel. A list takes what's added to the
+  selection after it's focused, so what was picked before the app opened isn't
+  taken.
+- **Preselection lives in the context bar.** Quick insert opens no menu, so
+  its picks are made from the header. A button that opens the lists under
+  the bar keeps them on screen while picking; a hover card closed as the
+  pointer left for the Onshape window.
+- **The menu's picks are a section, not a card.** The Fasten group sits
+  under the parameters, so the footer holds only what acts on the part.
+  Beside it, the parameters are a **Configuration** group of the same kind,
+  so the two fold alike.
+- **The insert location's button answers from the last read.** Asking again
+  on focus read the assembly after nearly every insert, since each one moves
+  it, only to learn whether the marker was deleted. An insert that lands on
+  the marker reads the assembly anyway, so a deleted one is found there.
+- **No Replicate.** Onshape accepts a Replicate added through the API (200,
+  `featureStatus` OK, listed by the features endpoint) but makes no copies,
+  and the assembly shows nothing for it. Each edge gets its own instance and
+  mate instead.
+- **No fallbacks.** Onshape refusing a mate, or any other write, is an error
+  the user sees, not something worked around with other features.
+- **Radii from the scan.** Onshape's selection messages carry no geometry, so
+  the circular edges and their radii come from Auto Assembly's hole scan, which also
+  turns a face into its holes.
+- **Implicit connector ids.** A mate names its implicit connector by a
+  placeholder id that Onshape replaces on creation, which is undocumented but
+  is how Onshape itself stores a mate to an inferred point. It's unconfirmed
+  in Onshape; insert and fasten and Auto Assembly both build their mates with
+  `fastenMateToCircularEdge`, so they work or fail together.
+
+_Last reviewed: 2026-10-21_

@@ -54,6 +54,29 @@ describe("OnshapeApi error handling", () => {
         });
     });
 
+    it("names the call and its limit headers in a 429's message", async () => {
+        const api = new TestApi(
+            new Response("slow down", {
+                status: 429,
+                headers: {
+                    "Retry-After": "86326",
+                    "x-rate-limit-remaining": "0"
+                }
+            })
+        );
+        const path = "/assemblies/d/0123456789abcdef01234567/features";
+        await expect(api.post(path)).rejects.toThrow(
+            `Onshape API error 429 (retry after 86326s) on POST ${path}, Retry-After 86326, x-rate-limit-remaining 0: slow down`
+        );
+    });
+
+    it("says when a 429 sent no limit headers", async () => {
+        const api = new TestApi(new Response("", { status: 429 }));
+        await expect(api.get("/x")).rejects.toThrow(
+            "on GET /x, no Retry-After, no x-rate-limit-remaining"
+        );
+    });
+
     it("falls back to a default when Retry-After is missing", async () => {
         const api = new TestApi(new Response("rate limited", { status: 429 }));
         await expect(api.get("/x")).rejects.toMatchObject({

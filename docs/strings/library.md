@@ -2,9 +2,26 @@
 
 The library's pages, which have no architecture document of their own; how a
 document loads is in [loading.md](../architecture/loading.md). Messages are
-keyed `groupPage…`, `changesBadge…`, `library…` and `insert…` in
+keyed `groupPage…`, `changesBadge…`, `library…`, `insert…` and `splashScreen…` in
 `src/frontend/messages/en.json`. Only what has moved into the catalog is
 listed so far: the rest join as their strings move there.
+
+## Splash screen
+
+The modal everybody sees once on launch, until a card is picked; somebody with
+a tab already can close it instead: `src/frontend/components/splash-screen.tsx`.
+Each card shows the tab's name and its
+navbar icon over a description. FIRST's trademark notice under the cards is
+fixed wording, kept in the code.
+
+| String                                                | Kind             | Where                             | When   | Review    |
+| ----------------------------------------------------- | ---------------- | --------------------------------- | ------ | --------- |
+| "Welcome to the FRCDesignApp!"                        | Notice title     | Top of the modal                  | Always |           |
+| "Parts library for FRC®" / "Parts library for FTC®"   | Card description | FRCDesignLib's card / ConfigLib's | Always | **⚑** New |
+| "Add custom features to your Part Studios"            | Card description | FeatureScripts' card              | Always | **⚑** New |
+| "Push and pull versions between linked documents"     | Card description | Version Manager's card            | Always | **⚑** New |
+| "Quickly add hardware to an assembly"                 | Card description | Auto Assembly's card              | Always | **⚑** New |
+| "Visualize the distribution of weight in an assembly" | Card description | Mass Analysis's card              | Always | **⚑** New |
 
 ## Menus
 

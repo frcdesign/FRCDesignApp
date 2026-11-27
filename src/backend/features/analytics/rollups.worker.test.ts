@@ -1,6 +1,7 @@
 import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+    loggedEvents,
     TEST_LIBRARY_ID,
     TEST_PART_STUDIO_ID,
     TEST_PART_STUDIO_PATH,
@@ -35,7 +36,6 @@ import {
     dailyTargetMetrics,
     dailyUserActivity,
     dailyVersionMetrics,
-    events,
     insertableStats,
     userStats
 } from "./schema";
@@ -93,6 +93,8 @@ function insertEvent(overrides: Partial<InsertEvent> = {}): InsertEvent {
         isQuickInsert: false,
         source: UseSource.BROWSE,
         fasten: false,
+        fastenable: false,
+        preselected: false,
         atInsertLocation: false,
         ...overrides
     };
@@ -164,7 +166,7 @@ describe("rollupWrites", () => {
         for (const table of ROLLUPS) {
             await db.delete(table);
         }
-        const log = await db.select().from(events).all();
+        const log = loggedEvents();
         const writes = log
             .reverse()
             .flatMap((row) => rollupWrites(db, row, SIZE_PARAMETERS));
@@ -197,6 +199,25 @@ describe("rollupWrites", () => {
                 insertEvent({
                     targetElementType: ElementType.ASSEMBLY,
                     fasten: true
+                })
+            );
+            await trackInsert(
+                fakeContext("picker"),
+                insertEvent({
+                    targetElementType: ElementType.ASSEMBLY,
+                    fasten: true,
+                    fastenable: true,
+                    preselected: true
+                })
+            );
+            // Fastened by the run's planner, not by a choice to fasten.
+            await trackInsert(
+                fakeContext("planner"),
+                insertEvent({
+                    targetElementType: ElementType.ASSEMBLY,
+                    source: UseSource.AUTO_ASSEMBLY,
+                    fasten: true,
+                    fastenable: true
                 })
             );
             await trackDownload(fakeContext("downloader"), insertEvent());
@@ -252,6 +273,9 @@ describe("rollupWrites", () => {
                     `${AppFeature.RECENTS} regular`,
                     `${AppFeature.QUICK_INSERT} regular`,
                     `${AppFeature.FASTEN} assembler`,
+                    `${AppFeature.FASTEN} picker`,
+                    `${AppFeature.PRESELECTION} picker`,
+                    `${AppFeature.AUTO_ASSEMBLY} planner`,
                     `${AppFeature.INSERT_LOCATION} placer`,
                     `${AppFeature.DOWNLOAD} downloader`,
                     `${AppFeature.DEFAULT_CONFIGURATION} configurer`,
@@ -263,6 +287,35 @@ describe("rollupWrites", () => {
             expect(await readFeatureUsers()).not.toContainEqual(
                 expect.stringContaining(SIGNED_OUT_USER_ID)
             );
+        });
+
+        it("counts how many times each user used a feature, leaving an uncounted day uncounted", async () => {
+            const today = toDayKey(Date.now());
+            await db.insert(dailyFeatureUsers).values({
+                day: today,
+                feature: AppFeature.FAVORITES,
+                userId: "fan"
+            });
+            for (const userId of ["searcher", "searcher", "fan"]) {
+                const source =
+                    userId === "fan" ? UseSource.FAVORITES : UseSource.SEARCH;
+                await trackInsert(fakeContext(userId), insertEvent({ source }));
+            }
+
+            const rows = await db
+                .select({
+                    feature: dailyFeatureUsers.feature,
+                    times: dailyFeatureUsers.times
+                })
+                .from(dailyFeatureUsers)
+                .all();
+            expect(rows).toEqual(
+                expect.arrayContaining([
+                    { feature: AppFeature.SEARCH, times: 2 },
+                    { feature: AppFeature.FAVORITES, times: null }
+                ])
+            );
+            expect(rows).toHaveLength(2);
         });
 
         it("doesn't count a default configuration as activity", async () => {

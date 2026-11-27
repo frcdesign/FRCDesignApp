@@ -18,7 +18,7 @@ or the load that probes Onshape ([loading.md](./loading.md)); both consume it.
 | `src/backend/features/configurations/contract.ts`                         | Parameter, `Selection`, `ConfigurationKey`, record and result types         |
 | `src/backend/features/configurations/selection.ts`                        | The only place a selection or key is built; see the invariants              |
 | `src/backend/features/configurations/utils.ts`                            | Visibility conditions, option resolution, configuration text encodings      |
-| `src/backend/features/configurations/input-parser.ts`                     | Parses and evaluates typed quantity expressions (`(2 + 3) in`)              |
+| `src/backend/features/configurations/input-parser.ts`                     | Parses and evaluates typed quantity expressions (`(2 + 3) in`), and masses  |
 | `src/backend/features/configurations/combinations.ts`                     | Indexing limits and bands, enumeration and counting of combinations         |
 | `src/backend/features/configurations/roles.ts`                            | Recognizes parameter roles by name (derivation variable, color, ...)        |
 | `src/backend/features/configurations/instances.ts`                        | Splits a parameter by the choices that filter it, for reporting             |
@@ -30,6 +30,8 @@ or the load that probes Onshape ([loading.md](./loading.md)); both consume it.
 | `src/backend/features/load/parse-configuration-records.ts`                | `decideIndexing`, probing each combination into a record                    |
 | `src/backend/features/search/records.ts`                                  | Records to search records, each with its thumbnail key                      |
 | `src/frontend/features/insert/components/configurations.tsx`              | The parameter panel in the insert menu                                      |
+| `src/frontend/components/parameter-input.tsx`                             | `ParameterInput` and `ParameterGrid`: each parameter's row, shared          |
+| `src/frontend/lib/unit-info.ts`                                           | `useUnitInfo`: the document's units, which quantities show in               |
 | `src/frontend/features/insert/components/configuration-hover-card.tsx`    | A row's icon whose card lists the configuration it opens on                 |
 | `src/frontend/features/build-status/components/configuration-section.tsx` | The admin card's parameter table and indexing controls                      |
 | `src/frontend/features/build-status/indexing-draft.ts`                    | Indexing edits held until saved                                             |
@@ -51,7 +53,9 @@ or the load that probes Onshape ([loading.md](./loading.md)); both consume it.
 
 **KV**: `unit-info:` — a workspace's display units, for a week; a transient
 Onshape webhook drops the entry when the units change, after answering the
-delivery 200.
+delivery 200. The entry carries the mass unit and its precision too, which only
+Mass Analysis reads ([mass-analysis.md](./mass-analysis.md)). An entry without
+a mass unit is read from Onshape again.
 
 **URL**: the `config` app parameter carries the selection being edited, so a
 link reopens it.
@@ -73,7 +77,9 @@ link reopens it.
 - **Configuration key** (`ConfigurationKey`): derived from a selection only to
   name its thumbnail. It holds what the selection overrides, canonically spelled
   (base units, hidden parameters and derivation variables left out), so
-  selections that render the same part share a render.
+  selections that render the same part share a render. A parameter is hidden
+  when its condition doesn't hold, or when it's a list none of whose options
+  show (`appliedValues`).
   `DEFAULT_CONFIGURATION_KEY` is the empty string.
 
 Comparing or counting values (analytics, "is this the default") goes through
@@ -128,6 +134,10 @@ indexed parameter only multiplies the combinations, so the two counts agree
 wherever enumeration doesn't stop, and the card cannot disagree with the load
 about the band.
 
+A generated part skips all of this: every configuration is indexed from
+robot-code's records, whatever its count, and its indexing isn't configurable
+(see [generated-parts.md](./generated-parts.md)).
+
 ### Configuring and inserting
 
 1. The insert menu fetches `GET /api/configuration/insertable/:id?v={microversion}`,
@@ -143,7 +153,8 @@ about the band.
 5. On insert, the server makes the selection whole (`toSelection`) and sends
    only the overrides (`onshapeOverrides`). Onshape refuses a part studio's
    empty configuration (an assembly's is fine), so a part studio left on its
-   defaults is sent its first parameter at its default.
+   defaults is sent its first parameter at its default
+   (`partStudioInsertOverrides`, which Auto Assembly's inserts use too).
 
 ### Search
 
@@ -154,6 +165,8 @@ record for a selection, since records name only what enumeration varied.
 
 ## Invariants
 
+- An edit of a placed part lays its changes over the part's own selection
+  with `applyChanges`, in `selection.ts`.
 - `selection.ts` is the only place a `Selection` or `ConfigurationKey` is built,
   and there are only these two forms.
 - A selection is never replaced by its key in storage, and a key is never sent
@@ -185,6 +198,12 @@ record for a selection, since records name only what enumeration varied.
 | A parameter is added after a favorite was saved | Favorite's selection is short one parameter                          | `toSelection` defaults it on read                      |
 
 ## Decisions
+
+- **A list with no options showing is hidden.** Onshape hides it, and refuses
+  a configuration setting it off its default, so it's left out of what Onshape
+  is sent, of keys and of counts, as a parameter hidden by its condition is.
+  Its value is whatever it last held, so it can't tell two parts apart either:
+  a generated studio's records leave it out, and match exactly without it.
 
 - **Quantities collapse, in their own unit.** One configuration then has one
   spelling everywhere it is held: a favorite, a recent, the url, the insert

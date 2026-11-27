@@ -17,7 +17,9 @@ vi.mock("../features/feedback/open-feedback", () => ({ openErrorReport }));
 vi.mock("@mantine/notifications", () => ({ notifications: { hide: vi.fn() } }));
 
 const { AppError, handleAppError } = await import("./errors");
-const { apiGet } = await import("./api-client");
+const { apiGet, apiPost } = await import("./api-client");
+const { HoldScope, unlessHeld, useRateLimitHolds } =
+    await import("./rate-limit-holds");
 
 /** The action the last toast offered. */
 function lastAction() {
@@ -148,6 +150,56 @@ describe("handleAppError", () => {
         expect(toasts.showErrorToast).toHaveBeenLastCalledWith(
             "Failed to send the report.",
             undefined
+        );
+    });
+});
+
+describe("unlessHeld", () => {
+    afterEach(() => {
+        vi.useRealTimers();
+        vi.unstubAllGlobals();
+        useRateLimitHolds.setState({ holds: {} });
+    });
+
+    const DAY_SECONDS = 24 * 60 * 60;
+
+    const check = () => apiPost("/auto-assembly/check");
+
+    it("stops the feature a 429 came to calling until its wait is over, and only that feature", async () => {
+        vi.useFakeTimers();
+        // The server's answer once Onshape limits the check for a day
+        vi.stubGlobal(
+            "fetch",
+            vi.fn(() =>
+                Promise.resolve(
+                    Response.json(
+                        {
+                            kind: ApiErrorKind.HANDLED,
+                            message:
+                                "Onshape is limiting requests. Try again in about 24 hours.",
+                            retryAfterSeconds: DAY_SECONDS
+                        },
+                        { status: 429 }
+                    )
+                )
+            )
+        );
+        await expect(
+            unlessHeld(HoldScope.AUTO_ASSEMBLY, check)
+        ).rejects.toMatchObject({ body: { retryAfterSeconds: DAY_SECONDS } });
+
+        const call = vi.fn(() => Promise.resolve("answered"));
+        await expect(unlessHeld(HoldScope.AUTO_ASSEMBLY, call)).rejects.toThrow(
+            "Try again in about 24 hours."
+        );
+        expect(call).not.toHaveBeenCalled();
+        await expect(unlessHeld(HoldScope.INSERT, call)).resolves.toBe(
+            "answered"
+        );
+
+        vi.advanceTimersByTime(DAY_SECONDS * 1000);
+        await expect(unlessHeld(HoldScope.AUTO_ASSEMBLY, call)).resolves.toBe(
+            "answered"
         );
     });
 });

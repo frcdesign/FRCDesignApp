@@ -32,15 +32,13 @@ import {
     updateOutdatedReferences,
     type ReferenceUpdateOptions
 } from "./references";
-import {
-    describeRunFailure,
-    describeStepFailure,
-    isTransient
-} from "./failures";
+import { describeRunFailure, describeStepFailure } from "./failures";
+import { isTransient } from "../../lib/onshape/failures";
 import { reportJob } from "./jobs";
 import { planTasks } from "./tasks";
 import { trackVersionRun } from "../analytics/tracking";
 import { forgetChanges } from "./workspace-cache";
+import { failFastOnLongLimits } from "../../lib/workflow-steps";
 
 interface JobParamsBase {
     /** Whose Onshape session the run borrows; see the load workflow. */
@@ -130,7 +128,7 @@ export class VersionManagerWorkflow extends WorkflowEntrypoint<
         const ctx: RunContext = {
             env: this.env,
             params,
-            step,
+            step: failFastOnLongLimits(step),
             startedAt: event.timestamp.getTime(),
             tasks,
             result,

@@ -17,8 +17,14 @@ export function retryUnexpected(retries: number) {
 
 export const queryClient = new QueryClient({
     defaultOptions: {
+        // A browser can report offline while requests still go through, and
+        // in "online" mode every fetch, a route loader's included, waits for it.
         queries: {
+            networkMode: "always",
             retry: retryUnexpected(2)
+        },
+        mutations: {
+            networkMode: "always"
         }
     }
 });

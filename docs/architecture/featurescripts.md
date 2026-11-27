@@ -531,8 +531,10 @@ the owner's session; never a library team's.
    everywhere: browsing needs no document. Its page has no library search row
    or insert location, and themes the app in `AppColor.FEATURESCRIPTS`.
 2. The route reads `GET /api/featurescripts-version`, then
-   `GET /api/featurescripts?v=`, which answers every feature in tab order with
-   its problems, the same for every caller, so it is cached as a library is.
+   `GET /api/featurescripts?v=`. The list answers every feature in tab order
+   with its problems. It is the same for every caller, so it is cached as a
+   library is. Hovering the page picker fetches the version ahead, as it does
+   each library's, so picking the tab has nothing to wait for.
    The client leaves out the features the owner hid (`isHidden`) unless the
    owner is looking. A favorite of a hidden feature is kept, and left out of
    the list with it.

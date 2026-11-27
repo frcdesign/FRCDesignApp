@@ -1,3 +1,4 @@
+export * from "./event-log";
 export * from "./fake-step";
 export * from "./mock-onshape-api";
 export * from "./seed";

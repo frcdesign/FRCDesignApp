@@ -11,6 +11,8 @@ import {
     useTargetElementType
 } from "../insert-hooks";
 import { useInsertMutation } from "../queries";
+import { useFastenCircularEdgesTip } from "../insert-tips";
+import { HoldScope, useRateLimitHold } from "../../../lib/rate-limit-holds";
 
 interface QuickInsertButtonProps {
     insertable: InsertableOut;
@@ -36,24 +38,26 @@ export function QuickInsertButton(props: QuickInsertButtonProps): ReactNode {
         isQuickInsert: true,
         source
     });
+    const showFastenCircularEdgesTip = useFastenCircularEdgesTip();
+    const hold = useRateLimitHold(HoldScope.INSERT);
 
     if (!targetElementType) {
         return null;
     }
     const isAssembly = targetElementType === ElementType.ASSEMBLY;
+    const fasten = isAssembly && insertable.supportsFasten;
     return (
         <RowActionButton
             label={isAssembly ? m.insertQuickInsert() : m.insertQuickDerive()}
             icon={<PlusIcon />}
             loading={insertMutation.isPending}
             disabledReason={
-                isAssemblyInPartStudio
-                    ? m.insertCannotDeriveAssembly()
-                    : undefined
+                isAssemblyInPartStudio ? m.insertCannotDeriveAssembly() : hold
             }
-            onClick={() =>
-                insertMutation.mutate(isAssembly && insertable.supportsFasten)
-            }
+            onClick={() => {
+                insertMutation.mutate(fasten);
+                showFastenCircularEdgesTip(fasten);
+            }}
         />
     );
 }

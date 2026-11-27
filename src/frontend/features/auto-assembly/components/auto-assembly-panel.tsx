@@ -1,0 +1,357 @@
+import { Button, Stack } from "@mantine/core";
+import { type ReactNode, useEffect, useMemo } from "react";
+import { useShallow } from "zustand/react/shallow";
+import { Program } from "@backend/features/auto-assembly/catalog";
+import {
+    AssemblyJobState,
+    type AutoAssemblyIn,
+    FastenerMode,
+    type PickCheckIn,
+    SelectionMode,
+    StopCondition
+} from "@backend/features/auto-assembly/contract";
+import {
+    type FastenerSet,
+    headForHole,
+    settleScrew,
+    StudioInput
+} from "@backend/features/auto-assembly/studios";
+import { type ElementPath } from "@backend/lib/onshape/path";
+import {
+    PageError,
+    PageLoading,
+    PageNotice
+} from "../../../components/app-notice";
+import { StatusIcon } from "../../../components/status-icon";
+import { Callout } from "../../../components/callout";
+import { Status } from "../../../lib/status";
+import { IconSize } from "../../../lib/style-constants";
+import { ParameterGrid } from "../../../components/parameter-input";
+import { PanelFooter } from "../../../components/panel-footer";
+import { showInfoToast } from "../../../lib/notifications";
+import { QueryList } from "../../../components/query-list";
+import {
+    isBody,
+    isEdge,
+    isFace,
+    type OnshapeSelection,
+    selectionKey,
+    toSelectedEntities,
+    useOnshapeSelection
+} from "../../../lib/selection";
+import {
+    CIRCULAR_EDGES,
+    PLANAR_FACES,
+    SOLID_BODIES
+} from "../../../lib/messages";
+import { fastenerOptions, selectionMode, settleChoices } from "../options";
+import { FormInput } from "../parameters";
+import {
+    useAssemblyJobQuery,
+    useFastenerSetQuery,
+    useInsertMutation,
+    usePickProblems,
+    usePrepareHoles
+} from "../queries";
+import { useAutoAssemblyStore } from "../store";
+import { FastenerOptionsForm, FormInputRow } from "./fastener-options-form";
+import { LastRunCallout } from "./last-run-callout";
+import { m } from "../../../paraglide/messages";
+import {
+    FullWidthRow,
+    ParameterGroup
+} from "../../../components/parameter-group";
+
+interface AutoAssemblyPanelProps {
+    assembly: ElementPath;
+}
+
+/** The form, once the fasteners the library loaded are read. */
+export function AutoAssemblyPanel(props: AutoAssemblyPanelProps): ReactNode {
+    const { assembly } = props;
+    const { data: set, isPending, isError, error } = useFastenerSetQuery();
+    usePrepareHoles(assembly);
+
+    if (isPending) {
+        return <PageLoading title={m.autoAssemblyFastenersLoading()} />;
+    }
+    if (isError) {
+        return (
+            <PageError title={m.autoAssemblyFastenersFailed()} error={error} />
+        );
+    }
+    if (!set) {
+        return (
+            <PageNotice
+                icon={
+                    <StatusIcon status={Status.WARNING} size={IconSize.PAGE} />
+                }
+                title={m.autoAssemblyNoFastenersTitle()}
+            />
+        );
+    }
+    return <AutoAssemblyForm assembly={assembly} set={set} />;
+}
+
+/** One toast at a time, the latest change's. */
+const SCREW_FOLLOWED_TOAST_ID = "auto-assembly-screw-followed";
+
+/** Follows what's picked, and says so where the screw's type or size changed. */
+function followAndAnnounce(
+    set: FastenerSet,
+    followScrew: (screw: Record<string, string>) => void,
+    changes: Record<string, string>
+): void {
+    const settledScrew = () =>
+        settleScrew(set, useAutoAssemblyStore.getState().screw);
+    const before = settledScrew();
+    followScrew(changes);
+    const after = settledScrew();
+    const message = screwFollowedMessage(
+        before.head !== after.head,
+        before.size !== after.size
+    );
+    if (message) {
+        showInfoToast(message, { id: SCREW_FOLLOWED_TOAST_ID });
+    }
+}
+
+function screwFollowedMessage(
+    isTypeChanged: boolean,
+    isSizeChanged: boolean
+): string | undefined {
+    if (isTypeChanged && isSizeChanged) {
+        return m.autoAssemblyScrewTypeAndSizeUpdated();
+    }
+    if (isTypeChanged) {
+        return m.autoAssemblyScrewTypeUpdated();
+    }
+    if (isSizeChanged) {
+        return m.autoAssemblyScrewSizeUpdated();
+    }
+    return undefined;
+}
+
+interface AutoAssemblyFormProps {
+    assembly: ElementPath;
+    set: FastenerSet;
+}
+
+/** How the last run went, what to fasten with, and what to fasten. */
+function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
+    const { assembly, set } = props;
+    const choices = useAutoAssemblyStore(
+        useShallow((state) => ({
+            form: state.form,
+            mode: state.mode,
+            screw: state.screw,
+            parts: state.parts,
+            added: state.added
+        }))
+    );
+    const targets = useAutoAssemblyStore((state) => state.targets);
+    const excluded = useAutoAssemblyStore((state) => state.excluded);
+    const replaced = useAutoAssemblyStore((state) => state.replaced);
+    const stopFace = useAutoAssemblyStore((state) => state.stopFace);
+    const setTargets = useAutoAssemblyStore((state) => state.setTargets);
+    const setExcluded = useAutoAssemblyStore((state) => state.setExcluded);
+    const setReplaced = useAutoAssemblyStore((state) => state.setReplaced);
+    const followScrew = useAutoAssemblyStore((state) => state.followScrew);
+    const followParts = useAutoAssemblyStore((state) => state.followParts);
+    const open = useAutoAssemblyStore((state) => state.open);
+    const finishRun = useAutoAssemblyStore((state) => state.finishRun);
+    const { data: job } = useAssemblyJobQuery(assembly);
+    const insertMutation = useInsertMutation(assembly);
+    const settled = useMemo(() => settleChoices(set, choices), [set, choices]);
+    const mode = selectionMode(settled);
+    const isFaces = mode === SelectionMode.FACES;
+    const isScrews = mode === SelectionMode.SCREWS;
+    const isStopFace =
+        settled.mode === FastenerMode.AUTOMATIC &&
+        settled.form[FormInput.STOP] === StopCondition.FACE;
+    // Only the lists showing
+    const picks = useMemo(
+        () => ({
+            targets: isScrews ? [] : toSelectedEntities(targets),
+            excluded: isFaces ? toSelectedEntities(excluded) : [],
+            replaced: isScrews ? toSelectedEntities(replaced) : [],
+            ...(isStopFace && stopFace.length > 0
+                ? { stopFace: toSelectedEntities(stopFace)[0] }
+                : {})
+        }),
+        [isFaces, isScrews, isStopFace, targets, excluded, replaced, stopFace]
+    );
+    const pickCount =
+        picks.targets.length + picks.excluded.length + picks.replaced.length;
+    const isFtc = settled.form[FormInput.PROGRAM] === Program.FTC;
+    const checkBody = useMemo(
+        (): PickCheckIn | undefined =>
+            pickCount === 0
+                ? undefined
+                : {
+                      assembly,
+                      selectionMode: mode,
+                      ...picks,
+                      options: isFtc ? undefined : fastenerOptions(settled)
+                  },
+        [assembly, mode, isFtc, settled, picks, pickCount]
+    );
+    const {
+        problems,
+        holeSize,
+        isHoleCountersunk,
+        existingScrew,
+        isChecking,
+        hold
+    } = usePickProblems(checkBody);
+
+    // Opened afresh, as an Onshape feature dialog: nothing set by hand yet
+    useEffect(open, [open]);
+
+    // The screw follows the first hole picked, but for what's specified, as an Onshape feature's editing logic does
+    useEffect(() => {
+        if (!holeSize) {
+            return;
+        }
+        const { screw } = useAutoAssemblyStore.getState();
+        const head =
+            isHoleCountersunk === undefined
+                ? undefined
+                : headForHole(
+                      set,
+                      settleScrew(set, screw).head,
+                      isHoleCountersunk
+                  );
+        followAndAnnounce(set, followScrew, {
+            [StudioInput.SIZE]: holeSize,
+            ...(head ? { [StudioInput.HEAD]: head } : {})
+        });
+    }, [holeSize, isHoleCountersunk, set, followScrew]);
+    useEffect(() => {
+        if (existingScrew) {
+            // The screw first: a new vendor moves every part to it
+            followAndAnnounce(set, followScrew, existingScrew.screw);
+            followParts(existingScrew);
+        }
+    }, [existingScrew, set, followScrew, followParts]);
+
+    const isRunning = job?.state === AssemblyJobState.RUNNING;
+    const problem = (entity: OnshapeSelection) =>
+        problems.get(selectionKey(entity));
+
+    const insert = () => {
+        const body: AutoAssemblyIn = {
+            assembly,
+            selectionMode: mode,
+            ...picks,
+            options: fastenerOptions(settled)
+        };
+        useOnshapeSelection.getState().finishSelecting();
+        insertMutation.mutate(body, { onSuccess: finishRun });
+    };
+
+    return (
+        <>
+            <Stack gap="md" p="md">
+                <LastRunCallout assembly={assembly} />
+                {hold && <Callout status={Status.ERROR} text={hold} />}
+                <ParameterGrid>
+                    <ParameterGroup title={m.autoAssemblySelections()}>
+                        <FormInputRow
+                            id={FormInput.SELECT_BY}
+                            settled={settled}
+                        />
+                        {mode === SelectionMode.FACES && (
+                            <>
+                                <FullWidthRow>
+                                    <QueryList
+                                        id="auto-assembly-faces"
+                                        autoFocus
+                                        label={m.autoAssemblyFaces()}
+                                        entities={targets}
+                                        onChange={setTargets}
+                                        accepts={isFace}
+                                        filter={PLANAR_FACES}
+                                        problem={problem}
+                                        isChecking={isChecking}
+                                    />
+                                </FullWidthRow>
+                                <FullWidthRow>
+                                    <QueryList
+                                        id="auto-assembly-excluded"
+                                        label={m.autoAssemblyEdgesToExclude()}
+                                        entities={excluded}
+                                        onChange={setExcluded}
+                                        accepts={isEdge}
+                                        filter={CIRCULAR_EDGES}
+                                        problem={problem}
+                                        isChecking={isChecking}
+                                    />
+                                </FullWidthRow>
+                            </>
+                        )}
+                        {mode === SelectionMode.LOCATIONS && (
+                            <FullWidthRow>
+                                <QueryList
+                                    id="auto-assembly-locations"
+                                    autoFocus
+                                    label={m.autoAssemblyCircularEdges()}
+                                    entities={targets}
+                                    onChange={setTargets}
+                                    accepts={isEdge}
+                                    filter={CIRCULAR_EDGES}
+                                    problem={problem}
+                                    isChecking={isChecking}
+                                />
+                            </FullWidthRow>
+                        )}
+                        {mode === SelectionMode.SCREWS && (
+                            <FullWidthRow>
+                                <QueryList
+                                    id="auto-assembly-replaced"
+                                    autoFocus
+                                    label={m.autoAssemblyScrewsToUpdate()}
+                                    entities={replaced}
+                                    onChange={setReplaced}
+                                    accepts={isBody}
+                                    filter={SOLID_BODIES}
+                                    problem={problem}
+                                    isChecking={isChecking}
+                                    describe={(_entity, index) =>
+                                        m.autoAssemblyScrewRow({
+                                            index: index + 1
+                                        })
+                                    }
+                                />
+                            </FullWidthRow>
+                        )}
+                    </ParameterGroup>
+                    <FastenerOptionsForm
+                        settled={settled}
+                        problem={problem}
+                        isChecking={isChecking}
+                    />
+                </ParameterGrid>
+            </Stack>
+            <PanelFooter>
+                <Button
+                    fullWidth
+                    disabled={
+                        isFtc ||
+                        picks.targets.length + picks.replaced.length === 0 ||
+                        (isStopFace && !picks.stopFace) ||
+                        isRunning ||
+                        hold !== undefined ||
+                        insertMutation.isPending
+                    }
+                    loading={insertMutation.isPending}
+                    onClick={insert}
+                >
+                    {isScrews
+                        ? m.autoAssemblyReplace()
+                        : m.autoAssemblyInsert()}
+                </Button>
+            </PanelFooter>
+        </>
+    );
+}

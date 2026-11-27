@@ -5,6 +5,7 @@ import { LibraryId } from "../features/library/library-id";
 import { ApiErrorKind } from "./api-error";
 import { createTestApp, jsonRequest, resetDb } from "../../__test_utils__";
 import { getDb } from "../db/client";
+import { OnshapeRateLimitError } from "./onshape/client";
 
 const db = getDb(env.DB);
 
@@ -93,6 +94,39 @@ describe("api error responses", () => {
         expect(logged).toHaveBeenCalledWith(
             "Server error 8f00ba11-IAD: Error: Failed query: select 1 <- Error: D1_ERROR: no such table: favorites",
             error
+        );
+    });
+
+    it("names an Onshape rate limit's Ray ID and its wait, so a report finds the call and the client holds off", async () => {
+        const logged = vi
+            .spyOn(console, "warn")
+            .mockImplementation(() => undefined);
+        const app = createTestApp();
+        app.post("/api/test-limited", () => {
+            throw new OnshapeRateLimitError("slow down", 86326, {
+                method: "POST",
+                path: "/assemblies/d/x/features"
+            });
+        });
+
+        const res = await app.request(
+            "/api/test-limited",
+            { method: "POST", headers: { "cf-ray": "8f00ba11-IAD" } },
+            env
+        );
+
+        expect(res.status).toBe(429);
+        expect(await res.json<unknown>()).toEqual({
+            kind: ApiErrorKind.HANDLED,
+            message:
+                "Onshape is limiting requests. Try again in about 24 hours.",
+            retryAfterSeconds: 86326,
+            errorId: "8f00ba11-IAD"
+        });
+        expect(logged).toHaveBeenCalledWith(
+            expect.stringMatching(
+                /^Onshape refused POST \/api\/test-limited \(8f00ba11-IAD\): .*retry after 86326s\) on POST \/assemblies\/d\/x\/features/
+            )
         );
     });
 

@@ -1,7 +1,11 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { DEFAULT_LIBRARY } from "@backend/features/library/library-id";
 import { isLibraryTab, UtilityTab } from "../lib/app-tab";
-import { OnshapeLaunchType, toTargetWorkspace } from "../lib/onshape-launch";
+import {
+    OnshapeLaunchType,
+    toTargetElement,
+    toTargetWorkspace
+} from "../lib/onshape-launch";
 import { apiPost } from "../lib/api-client";
 import { getUiState } from "../lib/ui-state";
 import { RootAppError } from "../components/root-error";
@@ -45,20 +49,30 @@ function utilityRoute(tab: UtilityTab) {
     switch (tab) {
         case UtilityTab.VERSION_MANAGER:
             return "/app/version-manager" as const;
+        case UtilityTab.AUTO_ASSEMBLY:
+            return "/app/auto-assembly" as const;
         case UtilityTab.FEATURESCRIPTS:
             return "/app/featurescripts" as const;
+        case UtilityTab.MASS_ANALYSIS:
+            return "/app/mass-analysis" as const;
     }
 }
 
 /**
  * Whether a utility page has what it acts on. The Version Manager acts on the
- * workspace Onshape launched the app in.
+ * workspace Onshape launched the app in, and Auto Assembly and Mass Analysis on
+ * its tab; none has a page without one.
  */
 function canResume(tab: UtilityTab, search: Record<string, unknown>): boolean {
     switch (tab) {
         case UtilityTab.VERSION_MANAGER:
             return (
                 toTargetWorkspace(OnshapeLaunchType.parse(search)) !== undefined
+            );
+        case UtilityTab.AUTO_ASSEMBLY:
+        case UtilityTab.MASS_ANALYSIS:
+            return (
+                toTargetElement(OnshapeLaunchType.parse(search)) !== undefined
             );
         // Browsing needs nothing; adding says why it can't.
         case UtilityTab.FEATURESCRIPTS:

@@ -172,7 +172,8 @@ function ThresholdControl(): ReactNode {
                             typeof value === "number"
                                 ? value
                                 : DEFAULT_THRESHOLD
-                    }
+                    },
+                    resetScroll: false
                 })
             }
         />

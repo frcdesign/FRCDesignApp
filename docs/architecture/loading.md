@@ -46,7 +46,11 @@ stopped. One reload holds a library at a time.
   `excluded_parameter_ids` — an admin's choices, which a load reads but never
   writes.
 - `libraries.cache_version` — bumped by every load that wrote; every library
-  response is cached under it.
+  response is cached under it, for a year. A bump moves it to the time in
+  milliseconds, or one past it if that's later (`bumpLibraryVersion`), so it
+  never repeats after a database is reset, restored or replaced by a cert dump,
+  where a counter starting over would serve a browser another database's
+  cached library.
 - `groups.held_at` — when a webhook last reported a version not yet loaded;
   null when nothing is held. Set by the webhook, cleared by a load.
 - `libraries.hold_new_versions` — whether a new version waits for approval;
@@ -123,12 +127,14 @@ the reload's limiters:
    computed from the same lists.
 3. Loads each selected tab (`loadInsertable`) in parallel under the reload's
    limiter (`LOAD_CONCURRENCY`, 30, shared by every group). A tab that fails is
-   recorded and the rest carry on.
+   recorded with its error's message (`failureReason`), and the rest carry on.
 4. Stores the group's thumbnail, then saves the group in one step: its fields,
    removals, new order, and the group checks (`checkGroup`), among them
    `INSERTABLES_FAILED` if any tab failed, and `NOT_PUBLIC` from the document
    read that pinned the version (`GroupTarget.isPublic`). A save with no failed tab releases
-   the group's hold.
+   the group's hold. A failed tab's row gains `LOAD_FAILED` with the message
+   (`flagFailedInsertables`). A tab with no row yet gets a hidden one holding
+   only that issue, with no microversion, so the build card says why.
 5. Deletes stale thumbnails, which is never fatal.
 
 Every build issue is stored. The one that depends on an editor's choice,
@@ -138,7 +144,9 @@ insertables.
 
 `loadInsertable`: probes the tab under the limiter (configuration, parts, mate
 connector, vendors, and a record per indexed combination), fetches its thumbnail
-under the thumbnail limiter, runs the insertable checks, and saves the row.
+under the thumbnail limiter, runs the insertable checks, and saves the row. A
+generated tab's vendors and records are robot-code's instead, and a tab
+configured otherwise fails (see [generated-parts.md](./generated-parts.md)).
 
 Fastening (`parse-fasten.ts`):
 
@@ -264,17 +272,18 @@ approval. A failed load leaves the hold in place.
 
 ## Failure and recovery
 
-| Failure                                     | Result                                                 | Recovery                                                                                      |
-| ------------------------------------------- | ------------------------------------------------------ | --------------------------------------------------------------------------------------------- |
-| An Onshape step fails                       | Retried with backoff, honoring `Retry-After`           | Automatic; exhausted, the group or tab is flagged                                             |
-| A tab fails                                 | `LOAD_FAILED` on it, `INSERTABLES_FAILED` on the group | **Reload**                                                                                    |
-| A new document's load never starts          | The shell group keeps `NOT_LOADED`                     | **Reload**                                                                                    |
-| A reload dies holding the library           | Its claim is left behind                               | The next reload or job-status read takes over and flags what it hadn't finished `LOAD_FAILED` |
-| A queued reload dies                        | Its groups still show as waiting                       | The next job-status read drops it                                                             |
-| Workflows can't be asked about a reload     | It is taken as live                                    | The next read asks again; its mark expires regardless                                         |
-| Webhook cancelled or deactivated by Onshape | No new versions held                                   | Next load of the document registers it again                                                  |
-| A webhook lands after its version loaded    | The group shows held with nothing new                  | **Approve**: the reload finds the version current and releases the hold                       |
-| No session to borrow                        | A load whose requester's session lapses fails          | The owner or a team member opens the app                                                      |
+| Failure                                     | Result                                                                 | Recovery                                                                                      |
+| ------------------------------------------- | ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| An Onshape step fails                       | Retried once after 2 s, honoring `Retry-After`                         | Automatic; exhausted, the group or tab is flagged                                             |
+| Onshape locks the reloader out              | A step over 10 min of `Retry-After` fails at once, saying the wait     | **Reload** after the wait                                                                     |
+| A tab fails                                 | `LOAD_FAILED` on it, with the error, `INSERTABLES_FAILED` on the group | **Reload**                                                                                    |
+| A new document's load never starts          | The shell group keeps `NOT_LOADED`                                     | **Reload**                                                                                    |
+| A reload dies holding the library           | Its claim is left behind                                               | The next reload or job-status read takes over and flags what it hadn't finished `LOAD_FAILED` |
+| A queued reload dies                        | Its groups still show as waiting                                       | The next job-status read drops it                                                             |
+| Workflows can't be asked about a reload     | It is taken as live                                                    | The next read asks again; its mark expires regardless                                         |
+| Webhook cancelled or deactivated by Onshape | No new versions held                                                   | Next load of the document registers it again                                                  |
+| A webhook lands after its version loaded    | The group shows held with nothing new                                  | **Approve**: the reload finds the version current and releases the hold                       |
+| No session to borrow                        | A load whose requester's session lapses fails                          | The owner or a team member opens the app                                                      |
 
 ## Decisions
 

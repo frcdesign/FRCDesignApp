@@ -1,0 +1,349 @@
+import { HttpStatus } from "http-status-ts";
+import { z } from "zod";
+import { handledError } from "../../lib/api-error";
+import { finishEvenIfDisconnected } from "../../lib/background";
+import { CachePolicy, cacheMiddleware } from "../../lib/cache";
+import { getApp } from "../../lib/context";
+import { validate } from "../../lib/validate";
+import { requireSignInMiddleware } from "../auth/guards";
+import { getSessionId } from "../auth/session";
+import { type Db, getDb } from "../../db/client";
+import { Program } from "./catalog";
+import {
+    AssemblyJobState,
+    FastenerMode,
+    type AssemblyJobStatus,
+    pendingTasks,
+    type PickCheckOut,
+    SelectedEntityType,
+    SelectionMode,
+    StopCondition
+} from "./contract";
+import { getFastenerSet } from "./fastener-set";
+import { getJobStatus, reportJob } from "./jobs";
+import { IndexScope, indexHoles } from "./index-holes";
+import { planHoles } from "./planner";
+import { pickedHole, pickProblems } from "./check";
+import {
+    entitySchema,
+    INCONSISTENT_PICK_MESSAGE,
+    isConsistentPick,
+    MAX_SELECTIONS,
+    pickKey
+} from "./picked";
+import {
+    FastenerKind,
+    type FastenerSet,
+    isMade,
+    type PartChoice,
+    type ScrewChoice
+} from "./studios";
+
+export const autoAssemblyRoutes = getApp();
+
+/** Inches: the longest standard screw, and a gap wider than any worth ignoring. */
+const MAX_LENGTH_LIMIT = 10 * 0.0254;
+
+const optionId = z.string().min(1);
+
+const screwSchema = z.object({
+    vendor: optionId,
+    size: optionId,
+    head: optionId,
+    finish: optionId,
+    length: optionId,
+    fullyThreaded: z.enum(["true", "false"])
+});
+
+/** A washer or nut. */
+const partSchema = z.object({
+    vendor: optionId,
+    size: optionId,
+    type: optionId,
+    finish: optionId.optional()
+});
+
+function isEveryPartMade(
+    set: FastenerSet,
+    options: {
+        screw: ScrewChoice;
+        screwWasher?: PartChoice;
+        nut?: PartChoice;
+        nutWasher?: PartChoice;
+    }
+): boolean {
+    const parts: [FastenerKind, PartChoice | undefined][] = [
+        [FastenerKind.WASHER, options.screwWasher],
+        [FastenerKind.NUT, options.nut],
+        [FastenerKind.WASHER, options.nutWasher]
+    ];
+    return (
+        isMade(set, FastenerKind.SCREW, options.screw) &&
+        parts.every(
+            ([kind, part]) =>
+                !part ||
+                (part.size === options.screw.size && isMade(set, kind, part))
+        )
+    );
+}
+
+const optionsSchema = z
+    .object({
+        program: z.enum(Program),
+        mode: z.enum(FastenerMode),
+        screw: screwSchema,
+        screwWasher: partSchema.optional(),
+        nut: partSchema.optional(),
+        nutWasher: partSchema.optional(),
+        stop: z.enum(StopCondition),
+        maxLength: z.number().positive().max(MAX_LENGTH_LIMIT).optional(),
+        maxThreadDepth: z.number().positive().max(MAX_LENGTH_LIMIT)
+    })
+    .refine(
+        (options) =>
+            (options.stop === StopCondition.MAX_LENGTH) ===
+            (options.maxLength !== undefined),
+        "A maximum length goes with the Max length stop condition."
+    )
+    .refine(
+        (options) => !options.nutWasher || options.nut,
+        "A nut washer goes under a nut."
+    );
+
+/** An assembly in a workspace: fasteners are only ever added to one. */
+const assemblySchema = z.object({
+    documentId: z.string().min(1),
+    instanceId: z.string().min(1),
+    instanceType: z.literal("w"),
+    elementId: z.string().min(1)
+});
+
+/** A face to stop at goes with the Face stop condition, and only with it. */
+function hasStopFace(body: {
+    stopFace?: { entityType: SelectedEntityType };
+    options?: { stop: StopCondition };
+}): boolean {
+    if (!body.options) {
+        return true;
+    }
+    return body.options.stop === StopCondition.FACE
+        ? body.stopFace?.entityType === SelectedEntityType.FACE
+        : body.stopFace === undefined;
+}
+
+const FLIP_MESSAGE = "Flip only circular edges that are picked.";
+
+/** Each edge to flip is one of the targets. */
+function isFlipPicked(body: {
+    targets: z.infer<typeof entitySchema>[];
+    flipped: z.infer<typeof entitySchema>[];
+}): boolean {
+    const targets = new Set(body.targets.map(pickKey));
+    return body.flipped.every((edge) => targets.has(pickKey(edge)));
+}
+
+const STOP_FACE_MESSAGE =
+    "Select a face to stop at, with the Face stop condition.";
+
+const insertBody = z
+    .object({
+        assembly: assemblySchema,
+        selectionMode: z.enum(SelectionMode),
+        targets: z.array(entitySchema).max(MAX_SELECTIONS).default([]),
+        excluded: z.array(entitySchema).max(MAX_SELECTIONS).default([]),
+        replaced: z.array(entitySchema).max(MAX_SELECTIONS).default([]),
+        stopFace: entitySchema.optional(),
+        flipped: z.array(entitySchema).max(MAX_SELECTIONS).default([]),
+        flipScrews: z.boolean().default(false),
+        options: optionsSchema
+    })
+    .refine(isConsistentPick, INCONSISTENT_PICK_MESSAGE)
+    .refine(isFlipPicked, FLIP_MESSAGE)
+    .refine(hasStopFace, STOP_FACE_MESSAGE)
+    .refine(
+        (body) => body.targets.length > 0 || body.replaced.length > 0,
+        "Select holes to fasten or screws to update."
+    );
+
+const checkBody = z
+    .object({
+        assembly: assemblySchema,
+        selectionMode: z.enum(SelectionMode),
+        targets: z.array(entitySchema).max(MAX_SELECTIONS).default([]),
+        excluded: z.array(entitySchema).max(MAX_SELECTIONS).default([]),
+        replaced: z.array(entitySchema).max(MAX_SELECTIONS).default([]),
+        stopFace: entitySchema.optional(),
+        flipped: z.array(entitySchema).max(MAX_SELECTIONS).default([]),
+        flipScrews: z.boolean().default(false),
+        options: optionsSchema.optional()
+    })
+    .refine(isConsistentPick, INCONSISTENT_PICK_MESSAGE)
+    .refine(isFlipPicked, FLIP_MESSAGE)
+    .refine(hasStopFace, STOP_FACE_MESSAGE);
+
+/**
+ * POST /api/auto-assembly/prepare — reads the assembly and scans every Part
+ * Studio in it, nothing picked, so the checks that follow read their scans
+ * from the cache. Sent as the panel opens.
+ */
+autoAssemblyRoutes.post(
+    "/auto-assembly/prepare",
+    requireSignInMiddleware,
+    validate("json", z.object({ assembly: assemblySchema })),
+    async (c) => {
+        const { assembly } = c.req.valid("json");
+        const set = await getFastenerSet(getDb(c.env.DB));
+        const indexed = await finishEvenIfDisconnected(
+            c,
+            indexHoles(
+                await c.var.getOnshapeApi(),
+                c.env.KV,
+                assembly,
+                [],
+                [],
+                set
+            )
+        );
+        return c.json({ holes: indexed.holes.length });
+    }
+);
+
+/**
+ * POST /api/auto-assembly/check — what's wrong with each pick, found as a run
+ * would: the assembly read, and its Part Studios scanned, under the caller's
+ * session. Planned too when the body has options.
+ */
+autoAssemblyRoutes.post(
+    "/auto-assembly/check",
+    requireSignInMiddleware,
+    validate("json", checkBody),
+    async (c) => {
+        const request = c.req.valid("json");
+        const { targets, excluded, replaced, options } = request;
+        if (targets.length + excluded.length + replaced.length === 0) {
+            return c.json({ problems: [] } satisfies PickCheckOut);
+        }
+        const set = await getFastenerSet(getDb(c.env.DB));
+        const indexed = await indexHoles(
+            await c.var.getOnshapeApi(),
+            c.env.KV,
+            request.assembly,
+            targets,
+            excluded,
+            set,
+            replaced,
+            request.stopFace,
+            { flipped: request.flipped, flipScrews: request.flipScrews },
+            // Nothing is planned, so only the picks' own edges matter
+            !options && replaced.length === 0 && !request.stopFace
+                ? IndexScope.PICKS
+                : IndexScope.PLAN
+        );
+        // Only parts the catalog makes can be planned with
+        const canPlan =
+            set &&
+            options &&
+            options.program === Program.FRC &&
+            isEveryPartMade(set, options);
+        const planned = canPlan
+            ? planHoles(
+                  indexed.circularEdges,
+                  indexed.holes,
+                  indexed.placed,
+                  options,
+                  set.catalog,
+                  { stopPlane: indexed.stopPlane }
+              ).map((plan) => plan.planned)
+            : undefined;
+        return c.json({
+            problems: pickProblems(request, indexed, planned),
+            ...(planned ? pickedHole(request, indexed, planned) : {}),
+            ...(indexed.firstScrew ? { existingScrew: indexed.firstScrew } : {})
+        } satisfies PickCheckOut);
+    }
+);
+
+const assemblyQuery = z.object({
+    documentId: z.string().min(1),
+    instanceId: z.string().min(1),
+    elementId: z.string().min(1)
+});
+
+/** POST /api/auto-assembly/insert — starts a run fastening the picked holes. */
+autoAssemblyRoutes.post(
+    "/auto-assembly/insert",
+    requireSignInMiddleware,
+    validate("json", insertBody),
+    async (c) => {
+        const request = c.req.valid("json");
+        if (request.options.program !== Program.FRC) {
+            throw handledError(
+                "Auto Assembly doesn't have FTC fasteners yet.",
+                HttpStatus.BAD_REQUEST
+            );
+        }
+        // Refused before a run starts, rather than by its insert step
+        const set = await requireFastenerSet(getDb(c.env.DB));
+        if (!isEveryPartMade(set, request.options)) {
+            throw handledError(
+                "Every part must be one its vendor makes, in the screw's size.",
+                HttpStatus.BAD_REQUEST
+            );
+        }
+        const current = await getJobStatus(c.env, request.assembly);
+        if (current.state === AssemblyJobState.RUNNING) {
+            throw handledError(
+                "Fasteners are already being inserted in this assembly.",
+                HttpStatus.CONFLICT
+            );
+        }
+
+        const run = await c.env.AUTO_ASSEMBLY_WORKFLOW.create({
+            params: {
+                sessionId: getSessionId(c),
+                userId: await c.var.getUserId(),
+                request
+            }
+        });
+        const status: AssemblyJobStatus = {
+            state: AssemblyJobState.RUNNING,
+            jobId: run.id,
+            tasks: pendingTasks(),
+            result: { inserted: 0, fastened: 0, replaced: 0 }
+        };
+        await reportJob(c.env, request.assembly, status);
+        return c.json(status);
+    }
+);
+
+async function requireFastenerSet(db: Db): Promise<FastenerSet> {
+    const set = await getFastenerSet(db);
+    if (!set) {
+        throw handledError(
+            "Auto Assembly's parts aren't published yet.",
+            HttpStatus.SERVICE_UNAVAILABLE
+        );
+    }
+    return set;
+}
+
+/** GET /api/auto-assembly/parts?v=:cacheVersion — the fasteners FRCDesignLib loaded, by its cache version; null before it loads them. */
+autoAssemblyRoutes.get(
+    "/auto-assembly/parts",
+    cacheMiddleware(CachePolicy.PUBLIC_CACHE),
+    async (c) => c.json((await getFastenerSet(getDb(c.env.DB))) ?? null)
+);
+
+/** GET /api/auto-assembly/job?documentId=&instanceId=&elementId= — the run this assembly last started. */
+autoAssemblyRoutes.get(
+    "/auto-assembly/job",
+    requireSignInMiddleware,
+    cacheMiddleware(),
+    validate("query", assemblyQuery),
+    async (c) => {
+        const query = c.req.valid("query");
+        return c.json(
+            await getJobStatus(c.env, { ...query, instanceType: "w" })
+        );
+    }
+);

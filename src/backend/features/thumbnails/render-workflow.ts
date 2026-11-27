@@ -19,6 +19,7 @@ import { type ConfigurationKey } from "../configurations/contract";
 import { ThumbnailSize } from "./contract";
 import { putThumbnail } from "./store";
 import { pushThumbnailRendered } from "../push/notify";
+import { failFastOnLongLimits } from "../../lib/workflow-steps";
 
 /** One stored size: where it goes, and what to ask Onshape for. */
 export interface RenderTarget {
@@ -60,8 +61,9 @@ export class RenderThumbnailWorkflow extends WorkflowEntrypoint<
         step: WorkflowStep
     ): Promise<void> {
         // One at a time: asking for one size abandons the other's render.
+        const steps = failFastOnLongLimits(step);
         for (const target of event.payload.targets) {
-            await step.do(
+            await steps.do(
                 `store-${target.size}`,
                 { retries: RENDER_RETRIES },
                 () => storeRender(this.env, event.payload, target)

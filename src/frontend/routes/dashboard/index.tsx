@@ -1,4 +1,4 @@
-import { Stack } from "@mantine/core";
+import { SimpleGrid, Stack } from "@mantine/core";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { type ReactNode } from "react";
@@ -19,7 +19,11 @@ import {
 import { DashboardState } from "../../features/dashboard/dashboard-state";
 import { UsesByLibraryChart } from "../../features/dashboard/uses-chart";
 import { ChartRangeControl } from "../../features/dashboard/range-control";
-import { UseSourceBreakdown } from "../../features/dashboard/use-mix";
+import {
+    FastenMethodBreakdown,
+    InsertMethodBreakdown,
+    UseSourceBreakdown
+} from "../../features/dashboard/use-mix";
 import {
     OVERVIEW_TOTALS_PRESET,
     RANGE_PRESETS,
@@ -64,9 +68,11 @@ function DashboardOverview(): ReactNode {
     const series = useQuery(getOverviewSeriesQuery(usesRange));
     const sources = useQuery(getOverviewSourcesQuery(range));
     const health = useQuery(getOverviewHealthQuery());
-    const versionManager = useQuery(getVersionManagerQuery(range));
-    const featureScripts = useQuery(getOverviewFeatureScriptsQuery(range));
-    const reports = useQuery(getOverviewReportsQuery(range));
+    // Rare enough that a month of them says little
+    const versionManager = useQuery(getVersionManagerQuery(allTime));
+    const featureScripts = useQuery(getOverviewFeatureScriptsQuery(allTime));
+    const reports = useQuery(getOverviewReportsQuery(allTime));
+    const allTimeCaption = m.dashboardRangeAllTime();
     const featureReach = useQuery(getOverviewFeatureReachQuery(featureRange));
     const allParts = useAllParts(range);
     const pendingParts = firstPending(allParts);
@@ -122,39 +128,42 @@ function DashboardOverview(): ReactNode {
             {versionManager.data ? (
                 <VersionManagerTiles
                     totals={versionManager.data}
-                    caption={caption}
+                    caption={allTimeCaption}
                 />
             ) : (
                 <DashboardState
                     query={versionManager}
                     loading={m.dashboardLoadingVersionManager()}
                     title={m.dashboardVersionManager()}
-                    caption={caption}
+                    caption={allTimeCaption}
                 />
             )}
 
             {featureScripts.data ? (
                 <FeatureScriptUsageSection
                     usage={featureScripts.data}
-                    caption={caption}
+                    caption={allTimeCaption}
                 />
             ) : (
                 <DashboardState
                     query={featureScripts}
                     loading={m.dashboardLoadingFeatureScripts()}
                     title={m.dashboardFeatureScripts()}
-                    caption={caption}
+                    caption={allTimeCaption}
                 />
             )}
 
             {reports.data ? (
-                <OverviewReports reports={reports.data} caption={caption} />
+                <OverviewReports
+                    reports={reports.data}
+                    caption={allTimeCaption}
+                />
             ) : (
                 <DashboardState
                     query={reports}
                     loading={m.dashboardLoadingReports()}
                     title={m.dashboardReports()}
-                    caption={caption}
+                    caption={allTimeCaption}
                 />
             )}
 
@@ -168,6 +177,12 @@ function DashboardOverview(): ReactNode {
                     />
                 )}
             </SectionCard>
+            {usage.data && (
+                <SimpleGrid cols={{ base: 1, sm: 2 }}>
+                    <InsertMethodBreakdown totals={usage.data.totals} />
+                    <FastenMethodBreakdown totals={usage.data.totals} />
+                </SimpleGrid>
+            )}
 
             {pendingParts ? (
                 <DashboardState

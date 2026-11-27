@@ -6,6 +6,8 @@ import { ElementType } from "../element-type";
 import { IDENTITY_TRANSFORM } from "../objects/transform";
 import {
     OnshapeAssemblyDefinition,
+    OnshapeAssemblyFeatureList,
+    OnshapeBom,
     OnshapeBoundingBox,
     OnshapeCreatedFeature,
     OnshapeInsertInstancesResponse
@@ -34,6 +36,27 @@ export function getAssembly(
     });
 }
 
+/**
+ * Every row of every level, subassemblies expanded, including what the BOM
+ * excludes and ignoring each subassembly's BOM behavior, so nothing's mass is
+ * left out.
+ */
+export function getAssemblyBom(
+    client: OnshapeApi,
+    assemblyPath: ElementPath
+): Promise<OnshapeBom> {
+    return client.get(`/assemblies${toElementApiPath(assemblyPath)}/bom`, {
+        query: {
+            indented: "true",
+            multiLevel: "true",
+            generateIfAbsent: "true",
+            includeExcluded: "true",
+            ignoreSubassemblyBomBehavior: "true",
+            thumbnail: "false"
+        }
+    });
+}
+
 /** For a part studio, `options.partTypes` defaults to PARTS and COMPOSITE_PARTS. */
 export function addElementToAssembly(
     client: OnshapeApi,
@@ -50,8 +73,22 @@ export function addElementToAssembly(
     } = {}
 ): Promise<OnshapeInsertInstancesResponse> {
     assertWorkspace(assemblyPath);
+    return insertInstance(
+        client,
+        assemblyPath,
+        elementInstance(elementPath, elementType, options),
+        options.transform,
+        options.timeoutMs
+    );
+}
 
-    const { configuration, partTypes, transform, timeoutMs } = options;
+/** An element as an insert names it: a whole Part Studio, or an assembly. */
+export function elementInstance(
+    elementPath: ElementPath,
+    elementType: ElementType,
+    options: { configuration?: string; partTypes?: PartType[] } = {}
+): Record<string, unknown> {
+    const { configuration, partTypes } = options;
 
     const instance: Record<string, unknown> = {
         ...toElementApiObject(elementPath)
@@ -72,7 +109,7 @@ export function addElementToAssembly(
         instance.isWholePartStudio = true;
     }
 
-    return insertInstance(client, assemblyPath, instance, transform, timeoutMs);
+    return instance;
 }
 
 /** In metres. Excludes sketches, so a marker doesn't widen it. */
@@ -111,19 +148,25 @@ function insertInstance(
     transform?: number[],
     timeoutMs?: number
 ): Promise<OnshapeInsertInstancesResponse> {
+    return insertTransformedInstances(
+        client,
+        assemblyPath,
+        [{ instances: [instance], transform: transform ?? IDENTITY_TRANSFORM }],
+        timeoutMs
+    );
+}
+
+/** Instances, each group landed by its transform; the response answers the groups in order. */
+export function insertTransformedInstances(
+    client: OnshapeApi,
+    assemblyPath: ElementPath,
+    transformGroups: { instances: object[]; transform: number[] }[],
+    timeoutMs?: number
+): Promise<OnshapeInsertInstancesResponse> {
+    assertWorkspace(assemblyPath);
     return client.post(
         `/assemblies${toElementApiPath(assemblyPath)}/transformedinstances`,
-        {
-            body: {
-                transformGroups: [
-                    {
-                        instances: [instance],
-                        transform: transform ?? IDENTITY_TRANSFORM
-                    }
-                ]
-            },
-            timeoutMs
-        }
+        { body: { transformGroups }, timeoutMs }
     );
 }
 
@@ -137,5 +180,38 @@ export function addAssemblyFeature(
     return client.post(
         `/assemblies${toElementApiPath(assemblyPath)}/features`,
         { body: { feature } }
+    );
+}
+
+/** Deletes instances, by node id, in one change to the assembly's history. */
+export function deleteAssemblyInstances(
+    client: OnshapeApi,
+    assemblyPath: ElementPath,
+    nodeIds: string[],
+    editDescription: string
+): Promise<void> {
+    assertWorkspace(assemblyPath);
+    return client.postNone(
+        `/assemblies${toElementApiPath(assemblyPath)}/modify`,
+        { body: { deleteInstances: nodeIds, editDescription } }
+    );
+}
+
+/** Every feature in an assembly's feature list: its mates, mate connectors and the rest. */
+export function getAssemblyFeatures(
+    client: OnshapeApi,
+    assemblyPath: ElementPath
+): Promise<OnshapeAssemblyFeatureList> {
+    return client.get(`/assemblies${toElementApiPath(assemblyPath)}/features`);
+}
+
+export function deleteAssemblyFeature(
+    client: OnshapeApi,
+    assemblyPath: ElementPath,
+    featureId: string
+): Promise<void> {
+    assertWorkspace(assemblyPath);
+    return client.deleteNone(
+        `/assemblies${toElementApiPath(assemblyPath)}/features/featureid/${encodeURIComponent(featureId)}`
     );
 }

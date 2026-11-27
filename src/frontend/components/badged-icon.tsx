@@ -11,6 +11,8 @@ interface BadgedIconProps {
     /** What the status is about: the target tab, a build, a connection. */
     icon: Icon;
     status: Status;
+    /** @default CONTROL_ICON_COLOR */
+    color?: string;
 }
 
 /** The size of any other icon-only control in the bar. */
@@ -20,7 +22,7 @@ const BADGE_OVERHANG = 4;
 
 /** An icon with its {@link StatusIcon} on the corner, sized to line up with plain icons. */
 export function BadgedIcon(props: BadgedIconProps): ReactNode {
-    const { icon, status } = props;
+    const { icon, status, color = CONTROL_ICON_COLOR } = props;
     return (
         <Box
             pos="relative"
@@ -30,11 +32,7 @@ export function BadgedIcon(props: BadgedIconProps): ReactNode {
             // Or the box takes a text row's height and the badge floats off the corner.
             lh={0}
         >
-            <AppIcon
-                icon={icon}
-                size={SUBJECT_SIZE}
-                color={CONTROL_ICON_COLOR}
-            />
+            <AppIcon icon={icon} size={SUBJECT_SIZE} color={color} />
             <Box
                 pos="absolute"
                 right={-BADGE_OVERHANG}

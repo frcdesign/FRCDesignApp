@@ -72,7 +72,11 @@ function collapseQuantity(parameter: QuantityParameter, value: string): string {
     return base === undefined ? value : formatValueInUnit(base, parameter.unit);
 }
 
-/** Drops parameters hidden by a condition, which Onshape never applies. */
+/**
+ * Drops hidden parameters, which Onshape never applies: one whose condition
+ * doesn't hold, and a list none of whose options show. Onshape refuses a
+ * configuration setting the latter off its default.
+ */
 export function appliedValues(
     selection: Selection,
     parameters: ConfigurationParameter[]
@@ -80,14 +84,25 @@ export function appliedValues(
     const values: Selection = {};
     for (const parameter of parameters) {
         const value = selection[parameter.id];
-        if (
-            value !== undefined &&
-            evaluateCondition(parameter.condition, selection, parameters)
-        ) {
+        if (value !== undefined && isShown(parameter, selection, parameters)) {
             values[parameter.id] = value;
         }
     }
     return values;
+}
+
+function isShown(
+    parameter: ConfigurationParameter,
+    selection: Selection,
+    parameters: ConfigurationParameter[]
+): boolean {
+    if (!evaluateCondition(parameter.condition, selection, parameters)) {
+        return false;
+    }
+    return (
+        parameter.type !== ParameterType.ENUM ||
+        getVisibleOptions(parameter, selection, parameters).length > 0
+    );
 }
 
 /** Quantities in base units, so "1in", "1 in" and "25.4 mm" agree. */
@@ -147,6 +162,23 @@ export function onshapeOverrides(
         }
     }
     return overrides;
+}
+
+/**
+ * A Part Studio's overrides as an insert sends them. Onshape won't insert a
+ * Part Studio from an empty configuration, so at the defaults the first
+ * parameter is named at its default.
+ */
+export function partStudioInsertOverrides(
+    selection: Selection,
+    parameters: ConfigurationParameter[]
+): Selection {
+    const overrides = onshapeOverrides(selection, parameters);
+    const [first] = parameters;
+    if (Object.keys(overrides).length > 0 || !first) {
+        return overrides;
+    }
+    return { [first.id]: selection[first.id] };
 }
 
 /**
@@ -377,4 +409,23 @@ function displayValue(parameter: ConfigurationParameter, value: string) {
         );
     }
     return formatValue(parameter, value);
+}
+
+/**
+ * A selection with `changes` laid over it and settled, for editing a part
+ * that's already placed. Undefined when a change doesn't hold once settled:
+ * this selection's other values hide the parameter, or the option.
+ */
+export function applyChanges(
+    selection: Selection,
+    changes: PartialSelection,
+    parameters: ConfigurationParameter[]
+): Selection | undefined {
+    const changed = toSelection({ ...selection, ...changes }, parameters);
+    const settled = normalizeSelection(changed, parameters);
+    const applied = appliedValues(settled, parameters);
+    const holds = Object.keys(changes).every(
+        (id) => applied[id] !== undefined && applied[id] === changed[id]
+    );
+    return holds ? settled : undefined;
 }

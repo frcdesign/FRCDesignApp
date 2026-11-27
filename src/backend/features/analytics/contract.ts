@@ -1,6 +1,6 @@
 import { LibraryId } from "../library/library-id";
 import type { ElementPath } from "../../lib/onshape/path";
-import { type AppFeature, UseSource, UseTarget } from "./usage";
+import { AppFeature, UseSource, UseTarget } from "./usage";
 import type {
     FeedbackCategory,
     FeedbackSource,
@@ -16,6 +16,11 @@ export function emptyTargets(): UseTargets {
     ) as UseTargets;
 }
 
+/** The uses that were inserts: into a Part Studio or an assembly. */
+export function insertsOf(targets: UseTargets): number {
+    return targets[UseTarget.PART_STUDIO] + targets[UseTarget.ASSEMBLY];
+}
+
 /** Lifetime counts, either overall or scoped to one library. */
 export interface AnalyticsTotals {
     /** Inserts and downloads; `targets` splits them. */
@@ -25,6 +30,14 @@ export interface AnalyticsTotals {
     uniqueUsers: number;
     /** A subset of `uses`. */
     favoriteUses: number;
+    /** A subset of the inserts, from a row's own Insert or Derive button. */
+    quickInserts: number;
+    /** Into an assembly, of a part offering insert and fasten when it was inserted; the base of the next two. */
+    fastenableInserts: number;
+    /** Fastened to edges or faces picked in Onshape beforehand. */
+    preselectedInserts: number;
+    /** Placed by Auto Assembly; also its entry of the sources. */
+    autoAssemblyInserts: number;
     targets: UseTargets;
     /** Current, not over the range: a favorite is state, not an event. */
     favorites: number;
@@ -253,30 +266,58 @@ export interface InsertableReportOut {
 /** How recently a person must have been first seen to count as new: this week or the three before. */
 export const NEW_USER_WEEKS = 4;
 
-/** One week of feature reach: who was about, and who used each feature. */
-export interface FeatureReachWeek {
-    /** The Monday it starts on, which may fall before the range does. */
-    week: string;
-    /** Everybody active that week, every feature's users among them. */
+/** How long each point of feature reach covers. */
+export enum ReachInterval {
+    DAY = "day",
+    WEEK = "week"
+}
+
+/** The longest range feature reach shows a point a day for; a week a point past it. */
+export const REACH_DAILY_DAYS = 90;
+
+/** One day or week of feature reach: who was about, and who used each feature. */
+export interface FeatureReachBucket {
+    /** The day, or the Monday a week starts on, which may fall before the range does. */
+    start: string;
+    /** Everybody active then, every feature's users among them. */
     activeUsers: number;
-    /** Distinct users of each feature that week; a feature nobody used is absent. */
+    /** Distinct users of each feature then; a feature nobody used is absent. */
     users: Partial<Record<AppFeature, number>>;
     /**
+     * How many times each feature was used then, over its counted days; a
+     * report's counts signed-out reports too.
+     */
+    times: Partial<Record<AppFeature, number>>;
+    /**
      * Of `activeUsers`, those first seen in the {@link NEW_USER_WEEKS} weeks up
-     * to and including this one. Absent for a week whose window reaches back
-     * to when tracking began, where first seen isn't first used.
+     * to and including this one. Absent where that window reaches back to when
+     * tracking began, where first seen isn't first used.
      */
     newActiveUsers?: number;
     /** Of `users`, the new ones; set whenever `newActiveUsers` is. */
     newUsers?: Partial<Record<AppFeature, number>>;
+    /** Of `times`, the new users'; set whenever `newActiveUsers` is, and never for a report. */
+    newTimes?: Partial<Record<AppFeature, number>>;
 }
 
-/** Each week of the range, oldest first, and where each feature's record starts. */
+/** Each day or week of the range, oldest first, and where each feature's record starts. */
 export interface FeatureReachOut {
-    weeks: FeatureReachWeek[];
+    interval: ReachInterval;
+    buckets: FeatureReachBucket[];
     /**
      * Each feature's first recorded use, all time; absent for one never used.
-     * Before it, nothing tells a week nobody used it from one nothing recorded.
+     * Before it, nothing tells a time nobody used it from one nothing recorded.
+     * A report's is the first report, signed out or not.
      */
     firstUsed: Partial<Record<AppFeature, string>>;
+    /**
+     * The day a feature's times are counted from, where days before it hold
+     * uses nobody counted; absent where every recorded use is counted.
+     */
+    timesSince: Partial<Record<AppFeature, string>>;
+}
+
+/** Reports are counted from `daily_report_metrics`, which names nobody. */
+export function splitsNewUsers(feature: AppFeature): boolean {
+    return feature !== AppFeature.REPORT;
 }

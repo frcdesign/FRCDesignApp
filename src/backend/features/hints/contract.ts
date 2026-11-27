@@ -1,8 +1,12 @@
 /** Features the app points out until somebody has opened them. A leaf, so the frontend can import it. */
 export enum Hint {
     /** Spelled as records already hold them, so nobody who used one sees its dot again. */
-    OPENED_VERSION_MANAGER = "ran-version-job",
+    OPENED_AUTO_ASSEMBLY = "opened-auto-assembly",
     OPENED_INSERT_LOCATION = "added-insert-location",
     OPENED_SET_DEFAULT_CONFIGURATION = "opened-set-default-configuration",
-    OPENED_REPORT_ISSUE = "opened-report-issue"
+    OPENED_REPORT_ISSUE = "opened-report-issue",
+    /** Seen once an insert has fastened to picked circular edges, rather than on opening. */
+    FASTENED_TO_CIRCULAR_EDGES = "fastened-to-circular-edges",
+    /** Seen once the splash screen is answered or closed. */
+    SAW_SPLASH_SCREEN = "saw-splash-screen"
 }

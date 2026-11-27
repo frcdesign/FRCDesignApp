@@ -71,6 +71,11 @@
             "class_name": "VersionManagerWorkflow"
         },
         {
+            "name": "auto-assembly-workflow",
+            "binding": "AUTO_ASSEMBLY_WORKFLOW",
+            "class_name": "AutoAssemblyWorkflow"
+        },
+        {
             "name": "load-featurescripts-workflow",
             "binding": "LOAD_FEATURESCRIPTS_WORKFLOW",
             "class_name": "LoadFeatureScriptsWorkflow"
@@ -146,6 +151,13 @@
                     "bucket_name": "frc-design-app-cert-blob"
                 }
             ],
+            // The analytics event log; see scripts/event-log/README.md.
+            "pipelines": [
+                {
+                    "binding": "EVENT_LOG",
+                    "stream": "12af67a1c9a641c4a0859f21c94e11ce"
+                }
+            ],
             "workflows": [
                 {
                     "name": "reload-library-workflow-cert",
@@ -163,6 +175,11 @@
                     "name": "version-manager-workflow-cert",
                     "binding": "VERSION_MANAGER_WORKFLOW",
                     "class_name": "VersionManagerWorkflow"
+                },
+                {
+                    "name": "auto-assembly-workflow-cert",
+                    "binding": "AUTO_ASSEMBLY_WORKFLOW",
+                    "class_name": "AutoAssemblyWorkflow"
                 },
                 {
                     "name": "load-featurescripts-workflow-cert",
@@ -212,6 +229,13 @@
                     "bucket_name": "frc-design-app-prod-blob"
                 }
             ],
+            // The analytics event log; see scripts/event-log/README.md.
+            "pipelines": [
+                {
+                    "binding": "EVENT_LOG",
+                    "stream": "3cedda77a4d1482eaf30b96db0e73d4a"
+                }
+            ],
             "workflows": [
                 {
                     "name": "reload-library-workflow-prod",
@@ -229,6 +253,11 @@
                     "name": "version-manager-workflow-prod",
                     "binding": "VERSION_MANAGER_WORKFLOW",
                     "class_name": "VersionManagerWorkflow"
+                },
+                {
+                    "name": "auto-assembly-workflow-prod",
+                    "binding": "AUTO_ASSEMBLY_WORKFLOW",
+                    "class_name": "AutoAssemblyWorkflow"
                 },
                 {
                     "name": "load-featurescripts-workflow-prod",

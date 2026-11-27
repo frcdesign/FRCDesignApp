@@ -3,7 +3,8 @@ import type { BatchItem } from "drizzle-orm/batch";
 import { runInBackground } from "../../lib/background";
 import { type AppBindings, type AppContext } from "../../lib/context";
 import { getDb, type Db } from "../../db/client";
-import { events, type LoggedEvent } from "./schema";
+import { type LoggedEvent } from "./schema";
+import { logEvents } from "./event-log";
 import {
     NO_ELEMENT,
     NOT_A_USE,
@@ -61,67 +62,102 @@ export interface InsertEvent extends UseEvent {
     targetElementType: ElementType;
     isQuickInsert: boolean;
     fasten: boolean;
+    /** Whether the part offered insert and fasten. */
+    fastenable: boolean;
+    /** Fastened to circular edges or faces picked in Onshape beforehand. */
+    preselected: boolean;
     /** Placed at the assembly's insert location marker. */
     atInsertLocation: boolean;
 }
 
-/** After the response, and never failing it: tracking is not what was asked for. */
-export function trackInsert(c: AppContext, event: InsertEvent): Promise<void> {
-    return trackUse(c, EventType.INSERT, event, {
-        targetElementType: event.targetElementType,
-        isQuickInsert: event.isQuickInsert,
-        fasten: event.fasten,
-        atInsertLocation: event.atInsertLocation
-    });
+/**
+ * After the response, and never failing it: tracking is not what was asked
+ * for. Each of the `instances` the insert placed is a use of its own.
+ */
+export function trackInsert(
+    c: AppContext,
+    event: InsertEvent,
+    instances = 1
+): Promise<void> {
+    return runInBackground(c, "record an insert", async () =>
+        recordInserts(
+            c.env,
+            await c.var.getUserId(),
+            Array.from({ length: instances }, () => event)
+        )
+    );
+}
+
+/** One event per insert, all in one batch; for a caller with no request to track from. */
+export async function recordInserts(
+    env: TrackingBindings,
+    userId: string,
+    inserts: InsertEvent[]
+): Promise<void> {
+    await recordBatch(
+        env,
+        inserts.map((event) => ({
+            event: {
+                ...columnsOfUse(EventType.INSERT, event, userId),
+                targetElementType: event.targetElementType,
+                isQuickInsert: event.isQuickInsert,
+                fasten: event.fasten,
+                fastenable: event.fastenable,
+                preselected: event.preselected,
+                atInsertLocation: event.atInsertLocation
+            },
+            parameters: event.parameters
+        }))
+    );
 }
 
 /** As `trackInsert`, for a STEP export Onshape has accepted. */
 export function trackDownload(c: AppContext, event: UseEvent): Promise<void> {
-    return trackUse(c, EventType.DOWNLOAD, event, {
-        targetElementType: null,
-        isQuickInsert: null,
-        fasten: null,
-        atInsertLocation: null
-    });
-}
-
-/** The columns only an insert fills in. */
-type InsertOnlyColumns = Pick<
-    LoggedEvent,
-    "targetElementType" | "isQuickInsert" | "fasten" | "atInsertLocation"
->;
-
-function trackUse(
-    c: AppContext,
-    type: EventType.INSERT | EventType.DOWNLOAD,
-    event: UseEvent,
-    insertOnly: InsertOnlyColumns
-): Promise<void> {
-    return runInBackground(c, `record a ${type}`, async () =>
+    return runInBackground(c, "record a download", async () =>
         record(
-            getDb(c.env.DB),
+            c.env,
             {
-                ...eventCore(type, event.libraryId, await c.var.getUserId()),
-                ...NOT_A_VERSION_RUN,
-                ...NOT_A_REPORT,
-                ...NOT_A_FEATURE_ADD,
-                ...event.path,
-                insertableId: event.insertableId,
-                selection: appliedSelection(event.selection, event.parameters),
-                isFavorite: event.isFavorite,
-                source: event.source,
-                ...insertOnly
+                ...columnsOfUse(
+                    EventType.DOWNLOAD,
+                    event,
+                    await c.var.getUserId()
+                ),
+                targetElementType: null,
+                isQuickInsert: null,
+                fasten: null,
+                fastenable: null,
+                preselected: null,
+                atInsertLocation: null
             },
             event.parameters
         )
     );
 }
 
+/** The columns every use fills in; its kind adds the rest. */
+function columnsOfUse(
+    type: EventType.INSERT | EventType.DOWNLOAD,
+    event: UseEvent,
+    userId: string
+) {
+    return {
+        ...eventCore(type, event.libraryId, userId),
+        ...NOT_A_VERSION_RUN,
+        ...NOT_A_REPORT,
+        ...NOT_A_FEATURE_ADD,
+        ...event.path,
+        insertableId: event.insertableId,
+        selection: appliedSelection(event.selection, event.parameters),
+        isFavorite: event.isFavorite,
+        source: event.source
+    };
+}
+
 /** As `trackInsert`, for a launch from Onshape. */
 export function trackAppOpen(c: AppContext): Promise<void> {
     return runInBackground(c, "record an app open", async () =>
         record(
-            getDb(c.env.DB),
+            c.env,
             {
                 ...eventCore(EventType.APP_OPEN, null, await c.var.getUserId()),
                 ...NO_ELEMENT,
@@ -179,7 +215,7 @@ export async function trackVersionRun(
 ): Promise<void> {
     const { status } = event;
     await record(
-        getDb(env.DB),
+        env,
         {
             ...eventCore(EventType.VERSION_RUN, null, event.userId),
             ...NO_ELEMENT,
@@ -224,7 +260,7 @@ export function trackReport(c: AppContext, event: ReportEvent): Promise<void> {
         : NO_ELEMENT;
     return runInBackground(c, "record a report", () =>
         record(
-            getDb(c.env.DB),
+            c.env,
             {
                 ...eventCore(
                     EventType.REPORT,
@@ -259,7 +295,7 @@ export function trackFeatureAdd(
 ): Promise<void> {
     return runInBackground(c, "record a FeatureScript add", async () =>
         record(
-            getDb(c.env.DB),
+            c.env,
             {
                 ...eventCore(
                     EventType.FEATURE_ADD,
@@ -292,7 +328,7 @@ export function trackDefaultSelection(
 ): Promise<void> {
     return runInBackground(c, "record a default configuration", async () =>
         record(
-            getDb(c.env.DB),
+            c.env,
             {
                 ...eventCore(
                     EventType.DEFAULT_SELECTION,
@@ -311,19 +347,80 @@ export function trackDefaultSelection(
     );
 }
 
+/** As `trackInsert`, once the BOM is read. Not a use: it belongs to no library. */
+export function trackMassReport(
+    c: AppContext,
+    assembly: ElementPath
+): Promise<void> {
+    return runInBackground(c, "record a mass report", async () =>
+        record(
+            c.env,
+            {
+                ...eventCore(
+                    EventType.MASS_REPORT,
+                    null,
+                    await c.var.getUserId()
+                ),
+                documentId: assembly.documentId,
+                instanceType: assembly.instanceType,
+                instanceId: assembly.instanceId,
+                elementId: assembly.elementId,
+                insertableId: null,
+                ...NOT_A_USE,
+                ...NOT_A_VERSION_RUN,
+                ...NOT_A_REPORT,
+                ...NOT_A_FEATURE_ADD
+            },
+            []
+        )
+    );
+}
+
 /** Batched so neither half lands without the other. */
-async function record(
-    db: Db,
+function record(
+    env: TrackingBindings,
     event: LoggedEvent,
     parameters: ConfigurationParameter[]
 ): Promise<void> {
-    const writes: BatchItem<"sqlite">[] = [
-        db.insert(events).values(event),
-        ...rollupWrites(db, event, parameters),
-        ...(namesPerson(event) ? [createUser(db, event)] : [])
-    ];
+    return recordBatch(env, [{ event, parameters }]);
+}
 
-    await db.batch(writes as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
+interface Recorded {
+    event: LoggedEvent;
+    parameters: ConfigurationParameter[];
+}
+
+/** What recording reaches: D1 for the rollups, and the event log's stream. */
+type TrackingBindings = Pick<AppBindings, "DB" | "EVENT_LOG">;
+
+/**
+ * The rollups first, in one batch so none lands without the rest, then the
+ * events to the log. A failed send is reported, not thrown: a workflow step
+ * retried for it would count its rollups twice.
+ */
+async function recordBatch(
+    env: TrackingBindings,
+    recorded: Recorded[]
+): Promise<void> {
+    if (recorded.length === 0) return;
+    const db = getDb(env.DB);
+    const writes: BatchItem<"sqlite">[] = recorded.flatMap(
+        ({ event, parameters }) => [
+            ...rollupWrites(db, event, parameters),
+            ...(namesPerson(event) ? [createUser(db, event)] : [])
+        ]
+    );
+    if (writes.length > 0) {
+        await db.batch(
+            writes as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]
+        );
+    }
+    await logEvents(
+        env,
+        recorded.map(({ event }) => event)
+    ).catch((error: unknown) => {
+        console.error("Failed to send events to the event log", error);
+    });
 }
 
 /**

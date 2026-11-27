@@ -20,6 +20,7 @@ interface __BaseEnv_Env {
 	RENDER_THUMBNAIL_WORKFLOW: Workflow<Parameters<import("./src/backend/index").RenderThumbnailWorkflow['run']>[0]['payload']>;
 	VERSION_MANAGER_WORKFLOW: Workflow<Parameters<import("./src/backend/index").VersionManagerWorkflow['run']>[0]['payload']>;
 	LOAD_FEATURESCRIPTS_WORKFLOW: Workflow<Parameters<import("./src/backend/index").LoadFeatureScriptsWorkflow['run']>[0]['payload']>;
+	AUTO_ASSEMBLY_WORKFLOW: Workflow<Parameters<import("./src/backend/index").AutoAssemblyWorkflow['run']>[0]['payload']>;
 }
 declare namespace Cloudflare {
 	interface GlobalProps {
@@ -45,6 +46,7 @@ declare namespace Cloudflare {
 		RENDER_THUMBNAIL_WORKFLOW: Workflow<Parameters<import("./src/backend/index").RenderThumbnailWorkflow['run']>[0]['payload']>;
 		VERSION_MANAGER_WORKFLOW: Workflow<Parameters<import("./src/backend/index").VersionManagerWorkflow['run']>[0]['payload']>;
 		LOAD_FEATURESCRIPTS_WORKFLOW: Workflow<Parameters<import("./src/backend/index").LoadFeatureScriptsWorkflow['run']>[0]['payload']>;
+		AUTO_ASSEMBLY_WORKFLOW: Workflow<Parameters<import("./src/backend/index").AutoAssemblyWorkflow['run']>[0]['payload']>;
 	}
 	interface ProductionEnv {
 		KV: KVNamespace;
@@ -65,6 +67,7 @@ declare namespace Cloudflare {
 		RENDER_THUMBNAIL_WORKFLOW: Workflow<Parameters<import("./src/backend/index").RenderThumbnailWorkflow['run']>[0]['payload']>;
 		VERSION_MANAGER_WORKFLOW: Workflow<Parameters<import("./src/backend/index").VersionManagerWorkflow['run']>[0]['payload']>;
 		LOAD_FEATURESCRIPTS_WORKFLOW: Workflow<Parameters<import("./src/backend/index").LoadFeatureScriptsWorkflow['run']>[0]['payload']>;
+		AUTO_ASSEMBLY_WORKFLOW: Workflow<Parameters<import("./src/backend/index").AutoAssemblyWorkflow['run']>[0]['payload']>;
 	}
 	interface Env extends __BaseEnv_Env {}
 }
