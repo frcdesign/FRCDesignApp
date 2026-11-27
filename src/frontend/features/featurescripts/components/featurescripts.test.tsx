@@ -41,7 +41,7 @@ vi.mock("../../../lib/library", () => ({
 const { FeatureScriptMenu } = await import("./featurescript-menu");
 const { FeatureScriptList } = await import("./featurescript-list");
 const { FeatureScriptSearchBar } = await import("./featurescript-search-bar");
-const { Route } = await import("../../../routes/app/featurescripts/route");
+const { loadFeatureScripts } = await import("../queries");
 const { queryClient: appQueryClient } =
     await import("../../../lib/query-client");
 
@@ -411,7 +411,7 @@ describe("FeatureScriptList", () => {
     });
 });
 
-describe("the FeatureScripts route", () => {
+describe("loadFeatureScripts", () => {
     afterEach(() => {
         onlineManager.setOnline(true);
         appQueryClient.clear();
@@ -428,7 +428,7 @@ describe("the FeatureScripts route", () => {
         );
         onlineManager.setOnline(false);
 
-        await Route.options.loader?.({});
+        await loadFeatureScripts();
 
         expect(apiGet).toHaveBeenCalledWith("/featurescripts", {
             cacheId: 3

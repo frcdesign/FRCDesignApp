@@ -24,5 +24,12 @@
         "noUnusedLocals": true,
         "noUnusedParameters": true
     },
-    "include": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/__test_utils__"]
+    // The route tree and router declare the routes, which a test importing one needs.
+    "include": [
+        "src/**/*.test.ts",
+        "src/**/*.test.tsx",
+        "src/__test_utils__",
+        "src/frontend/routeTree.gen.ts",
+        "src/frontend/router.ts"
+    ]
 }
