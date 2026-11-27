@@ -172,23 +172,23 @@ endpoint for about a day ([ONSHAPE.md](../ONSHAPE.md#calling-the-api)), so a
 
 ## Retries and timeouts
 
-| Where                           | Setting                            | Policy                                                                                  |
-| ------------------------------- | ---------------------------------- | --------------------------------------------------------------------------------------- |
-| Any Onshape request             | `REQUEST_TIMEOUT_MS`               | Aborts after 60 s                                                                       |
-| An insert's Onshape call        | `INSERT_RETRY`                     | Aborts after 60 s; 1 retry after 1 s on a 5xx, none on a timeout, a 4xx or a 429        |
-| An insert after a disconnect    | `finishEvenIfDisconnected`         | Keeps running up to 30 s past the client leaving, so Onshape's insert is still recorded |
-| Steps calling Onshape           | `ONSHAPE_STEP_RETRIES`             | 1 retry after 2 s; a 429 waits its `Retry-After` plus 0–20 s of jitter, up to 10 min    |
-| Load thumbnail steps            | `THUMBNAIL_RETRIES`                | 3 retries after 10, 20, 40 s; a 429 as above                                            |
-| Configuration renders           | `RENDER_RETRIES`                   | 30 retries every 2 s; a 429 waits its `Retry-After` plus jitter, up to 10 min           |
-| A longer `Retry-After`          | `failFastOnLongLimits`             | No retry: the step fails at once, saying the wait                                       |
-| A reload waiting its turn       | `TURN_INTERVAL`                    | Checks the library again every 30 s                                                     |
-| Client queries                  | `queryClient` default              | 2 retries after 1 and 2 s, none for an `AppError` that isn't `internal`                 |
-| After a 429, on the client      | `unlessHeld`                       | That feature sends nothing until the `Retry-After` is over                              |
-| A library's cache version       | `LIBRARY_VERSION_RETRIES`          | 5 retries after 1, 2, 4, 8 and 16 s, none for an `AppError` that isn't `internal`       |
-| D1 reads                        | D1's own                           | D1 retries a read-only query twice on a retryable error; the app adds none              |
-| Stored thumbnails on the client | `STORED_RETRIES`                   | 1 retry                                                                                 |
-| Waiting on a render             | `RENDER_TIMEOUT_MS`                | Gives up after 60 s without the image                                                   |
-| Push socket                     | `FIRST_RETRY_MS` → `LAST_RETRY_MS` | Reconnects after 1 s, doubling to 30 s                                                  |
+| Where                           | Setting                            | Policy                                                                                     |
+| ------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------ |
+| Any Onshape request             | `REQUEST_TIMEOUT_MS`               | Aborts after 60 s                                                                          |
+| An insert's Onshape call        | `INSERT_RETRY`                     | Aborts after 60 s; 1 retry after 1 s on a 5xx, none on a timeout, a 4xx or a 429           |
+| An insert after a disconnect    | `finishEvenIfDisconnected`         | Keeps running up to 30 s past the client leaving, so Onshape's insert is still recorded    |
+| Steps calling Onshape           | `ONSHAPE_STEP_RETRIES`             | 1 retry after 2 s; a 429 waits its `Retry-After` plus 0–20 s of jitter, up to 10 min       |
+| Load thumbnail steps            | `THUMBNAIL_RETRIES`                | 3 retries after 10, 20, 40 s; a 429 as above                                               |
+| Configuration renders           | `RENDER_RETRIES`                   | 30 retries every 2 s; a 429 waits its `Retry-After` plus jitter, up to 10 min              |
+| A longer `Retry-After`          | `failFastOnLongLimits`             | No retry: the step fails at once, saying the wait                                          |
+| A reload waiting its turn       | `TURN_INTERVAL`                    | Checks the library again every 30 s                                                        |
+| Client queries                  | `queryClient` default              | 2 retries after 1 and 2 s, none for an `AppError` that isn't `internal`; sent even offline |
+| After a 429, on the client      | `unlessHeld`                       | That feature sends nothing until the `Retry-After` is over                                 |
+| A library's cache version       | `LIBRARY_VERSION_RETRIES`          | 5 retries after 1, 2, 4, 8 and 16 s, none for an `AppError` that isn't `internal`          |
+| D1 reads                        | D1's own                           | D1 retries a read-only query twice on a retryable error; the app adds none                 |
+| Stored thumbnails on the client | `STORED_RETRIES`                   | 1 retry                                                                                    |
+| Waiting on a render             | `RENDER_TIMEOUT_MS`                | Gives up after 60 s without the image                                                      |
+| Push socket                     | `FIRST_RETRY_MS` → `LAST_RETRY_MS` | Reconnects after 1 s, doubling to 30 s                                                     |
 
 Workflows multiply a retry's delay by its backoff curve, so every policy returns
 its own delay from a function and sets `backoff: "constant"`.
@@ -334,6 +334,12 @@ that reconnects refreshes the library, since pushes during the outage are lost.
   succeeds. A tab two releases old, or one whose release's cache GitHub has
   evicted (seven days unused), still misses, and `reloadOnStaleBuild` reloads
   it.
+- **Client queries ignore the browser's online flag.** TanStack Query's
+  default `networkMode` pauses every fetch from an `offline` event until an
+  `online` one. A browser can report offline while requests still go through,
+  and a paused fetch a route loader awaits leaves the page spinning until a
+  reload. With `networkMode: "always"`, a request
+  made offline fails and retries like any other.
 - **One push hub.** Pushes are few and small; one instance keeps fan-out simple.
 - **Errors by kind, not status.** The client decides wording from `kind`, so a
   status can change without changing what the user reads.

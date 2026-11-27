@@ -51,6 +51,7 @@ import {
 import { useNeedsSignIn } from "../features/auth/access-level";
 import { startSignIn } from "../features/auth/sign-in";
 import { getLibraryVersionQuery } from "../features/library/queries";
+import { getFeatureScriptsVersionQuery } from "../features/featurescripts/queries";
 import { LibraryId } from "@backend/features/library/library-id";
 import { getLibraryColor, toShade } from "../theme";
 import { queryClient } from "../lib/query-client";
@@ -258,6 +259,7 @@ function PagePicker(): ReactNode {
         for (const libraryId of Object.values(LibraryId)) {
             void queryClient.prefetchQuery(getLibraryVersionQuery(libraryId));
         }
+        void queryClient.prefetchQuery(getFeatureScriptsVersionQuery());
     };
 
     const selectPage = (tab: AppTab) => {
