@@ -612,7 +612,7 @@ describe("planScrews", () => {
         configuration: { type: "NYLOCK" },
         name: "#10-32 Nut"
     };
-    /** Robot bearing's screw, on a connector at the origin, Z up, out of its holes. */
+    /** Robot bearing retention's screw, on a connector at the origin, Z up, out of its holes. */
     const declared = (
         configuration: Record<string, string>,
         more: Partial<DeclaredPlan["connector"]["declaration"]> = {}
