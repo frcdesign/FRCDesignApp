@@ -1039,6 +1039,11 @@ vectors, Onshape's 4×4 transforms and `LINEAR_TOLERANCE`.
 
 ### Finding the page
 
+The page picker lists Auto Assembly under Utilities everywhere. Standalone,
+the page is a notice that it is only available inside Onshape. Inside Onshape
+but outside an assembly, the notice says to open it from one. Signed out, it
+is a notice with a sign-in button.
+
 The page picker marks Auto Assembly with a dot and a **New** badge for somebody
 who has an element to act on and has never opened the page
 (`useIsAutoAssemblyNew`). Opening it records `Hint.OPENED_AUTO_ASSEMBLY`

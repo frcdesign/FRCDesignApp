@@ -192,11 +192,11 @@ read again on a refresh.
 
 ### Finding the page
 
-1. The page picker lists Mass Analysis under Utilities whenever the panel was
-   opened on an element, or the page is showing.
-   The splash screen offers it among the utilities.
-2. Outside an assembly the page is a notice saying to open it from one. Signed
-   out, it is a notice with a sign-in button.
+1. The page picker lists Mass Analysis under Utilities everywhere. The splash
+   screen offers it among the utilities.
+2. Standalone, the page is a notice that it is only available inside Onshape.
+   Inside Onshape but outside an assembly, the notice says to open it from
+   one. Signed out, it is a notice with a sign-in button.
 3. `/` resumes into it only when the launch names an element, as for Auto
    Assembly (`canResume` in `src/frontend/routes/index.tsx`).
 
